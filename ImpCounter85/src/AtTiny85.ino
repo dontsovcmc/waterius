@@ -6,9 +6,9 @@
 #include <TinyDebugSerial.h>
 
 #include "Setup.h"
-//#include <USIWire.h>
+#include <USIWire.h>
 #include "Power.h"
-//#include "SlaveI2C.h"
+#include "SlaveI2C.h"
 #include "Storage.h"
 
 TinyDebugSerial mySerial;
@@ -27,7 +27,7 @@ struct SensorData {
 };
 
 Storage storage( sizeof( SensorData ) );
-//SlaveI2C slaveI2C;
+SlaveI2C slaveI2C;
 
 void setup() 
 {
@@ -43,7 +43,7 @@ void loop()
 
 	switch ( state ) {
 		case SLEEP:
-			//slaveI2C.end();			// We don't want to be i2c slave anymore. 
+			slaveI2C.end();			// We don't want to be i2c slave anymore. 
 			gotoDeepSleep( MEASUREMENT_EVERY, &counter);		// Deep sleep for X seconds
 			secondsSleeping += MEASUREMENT_EVERY;	// Keep a track of how many seconds we have been sleeping
 			state = MEASURING;
@@ -64,7 +64,7 @@ void loop()
 			break;
 
 		case MASTER_WAKE:
-			//slaveI2C.begin();		// Now we are slave for the ESP
+			slaveI2C.begin();		// Now we are slave for the ESP
 			//wakeESP();
 			masterWokenUpAt = millis(); 
 			state = SENDING;
@@ -75,12 +75,11 @@ void loop()
 			delay(GIVEUP_ON_MASTER_AFTER * 1000UL);
 			secondsSleeping = 0;
 			state = SLEEP;
-			/*
 			if ( slaveI2C.masterGoingToSleep() ) {
 				if ( slaveI2C.masterGotOurData() ) storage.clear();		// If Master has confirmed our data. We can start with new measurements
 				secondsSleeping = 0;
 				state = SLEEP;
-			}*/
+			}
 			if ( millis() - masterWokenUpAt > GIVEUP_ON_MASTER_AFTER * 1000UL ) {
 				secondsSleeping = 0;
 				state = SLEEP;
