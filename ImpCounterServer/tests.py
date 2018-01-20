@@ -38,3 +38,5 @@ class TestPacket(unittest.TestCase):
         devID1parse = deviceID1Parse(logging, db)
         devID1parse.parsePacket(p)
 
+#0c 00 02 00 03 00 06 01 03 00 00 dd 0c 00 00 00 00 dd 0c 00 00
+#ERROR integer division or modulo by zero

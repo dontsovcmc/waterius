@@ -32,7 +32,6 @@ void gotoDeepSleep( uint16_t seconds, uint16_t *counter) {
 	pinMode( 0, INPUT );
 	pinMode( 2, INPUT );
 
-	pinMode(SENSOR_POWER_PIN, OUTPUT);  //debug
 	pinMode(4, INPUT_PULLUP);
 	wdtInterrupt = false;
 
@@ -59,8 +58,6 @@ void gotoDeepSleep( uint16_t seconds, uint16_t *counter) {
 			wdtInterrupt = false;
 			seconds--;
 		}
-
-		digitalWrite(SENSOR_POWER_PIN, btnCount % 2); 
 	}
 	power_all_enable();   // power everything back on
 
@@ -79,13 +76,13 @@ void resetWatchdog() {
 } 
 
 /* Remove Wakes up the ESP by pulling it's reset pin low for a short time  */
-/*void wakeESP() {
+void wakeESP() {
 	pinMode( ESP_RESET_PIN, OUTPUT );
 	digitalWrite( ESP_RESET_PIN, LOW );
 	delay( 10 );
 	digitalWrite( ESP_RESET_PIN, HIGH );
 	pinMode( ESP_RESET_PIN, INPUT_PULLUP );
-}*/
+}
 
 uint16_t readVcc() 
 {

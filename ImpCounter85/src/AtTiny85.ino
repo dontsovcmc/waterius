@@ -65,7 +65,7 @@ void loop()
 
 		case MASTER_WAKE:
 			slaveI2C.begin();		// Now we are slave for the ESP
-			//wakeESP();
+			wakeESP();
 			masterWokenUpAt = millis(); 
 			state = SENDING;
 			break;
