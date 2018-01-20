@@ -51,10 +51,11 @@ void gotoDeepSleep( uint16_t seconds, uint16_t *counter) {
 		sleep_cpu();          // sleep                
 		sleep_disable();      // precaution
 		
+		wdt_disable();  // disable watchdog
+		
 		noInterrupts();       // timed sequence coming up
 		PCMSK &= ~_BV(PCINT4);   // Turn off PB3 as interrupt pin
 		if (wdtInterrupt) {
-			wdt_disable();  // disable watchdog
 			wdtInterrupt = false;
 			seconds--;
 		}
