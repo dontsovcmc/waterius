@@ -18,10 +18,12 @@ class deviceID1Parse(generalParse):
         # Counter
         if sensorNumber == 0:
             counter = self.getUInt()
+            self.logging.info("counter = " + str(counter))
             #self.db.writeData("device1", "counter", counter, at )
         # voltage
         elif sensorNumber == 1:
             voltage =  (self.getUInt() / 1000.0 ) # Convert raw humidity to real humidity
+            self.logging.info("temp = " + str(voltage))
             #self.db.writeData( "device1", "voltage", voltage, at )
         # SI7021 temperature
         elif sensorNumber == 2:

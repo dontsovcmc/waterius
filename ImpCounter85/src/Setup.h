@@ -1,6 +1,27 @@
 #ifndef _SETUP_h
 #define _SETUP_h
 
+enum State { // Our state machine
+		SLEEP,
+		MEASURING,
+		MASTER_WAKE,
+		SENDING
+};
+
+#define DEBUG
+
+#ifdef DEBUG
+  #define DEBUG_CONNECT(x)  mySerial.begin(x)
+  #define DEBUG_PRINT(x)    mySerial.print(x)
+  #define DEBUG_PRINTLN(x)    mySerial.println(x)
+  #define DEBUG_FLUSH()     mySerial.flush()
+#else
+  #define DEBUG_CONNECT(x)
+  #define DEBUG_PRINT(x)
+  #define DEBUG_PRINTLN(x) 
+  #define DEBUG_FLUSH()
+#endif
+
 const uint8_t DEVICE_ID = 1;                // Unique identifier of this device
 const uint8_t NUMBER_OF_SENSORS = 3;		// How many sensors deliver data
 

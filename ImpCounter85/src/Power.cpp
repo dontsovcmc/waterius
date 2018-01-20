@@ -8,21 +8,22 @@
 EdgeDebounceLite debounce;
 
 volatile bool wdtInterrupt;    //watchdog timer interrupt flag
-
 volatile uint16_t btnCount;
 
-#define BUTTON_PIN 4
+
+//Disabling ADC saves ~230uAF. Needs to be re-enable for the internal voltage check
+#define adc_disable() (ADCSRA &= ~(1<<ADEN)) // disable ADC
+#define adc_enable()  (ADCSRA |=  (1<<ADEN)) // re-enable ADC
+
 
 /* Watchdog interrupt vector */
 ISR( WDT_vect ) { 
-	wdt_disable();  // disable watchdog
 	wdtInterrupt = true;
 }  
 
 ISR(PCINT0_vect)
 {
 	btnCount += (debounce.pin(BUTTON_PIN) == LOW);
-	digitalWrite(3, btnCount % 2); 
 }
 
 /* Makes a deep sleep for X second using as little power as possible */
@@ -31,12 +32,13 @@ void gotoDeepSleep( uint16_t seconds, uint16_t *counter) {
 	pinMode( 0, INPUT );
 	pinMode( 2, INPUT );
 
+	pinMode(SENSOR_POWER_PIN, OUTPUT);  //debug
 	pinMode(4, INPUT_PULLUP);
 	wdtInterrupt = false;
 
 	while ( seconds > 0 ) {
 		set_sleep_mode( SLEEP_MODE_PWR_DOWN );
-		ADCSRA = 0;            // turn off ADC
+		adc_disable();            // turn off ADC
 		power_all_disable();  // power off ADC, Timer 0 and 1, serial interface
 		noInterrupts();       // timed sequence coming up
 		resetWatchdog();      // get watchdog ready
@@ -45,14 +47,19 @@ void gotoDeepSleep( uint16_t seconds, uint16_t *counter) {
 		
 		sleep_enable();       // ready to sleep
 		interrupts();         // interrupts are required now
+
 		sleep_cpu();          // sleep                
 		sleep_disable();      // precaution
 		
+		noInterrupts();       // timed sequence coming up
 		PCMSK &= ~_BV(PCINT4);   // Turn off PB3 as interrupt pin
 		if (wdtInterrupt) {
+			wdt_disable();  // disable watchdog
 			wdtInterrupt = false;
 			seconds--;
 		}
+
+		digitalWrite(SENSOR_POWER_PIN, btnCount % 2); 
 	}
 	power_all_enable();   // power everything back on
 
@@ -71,29 +78,13 @@ void resetWatchdog() {
 } 
 
 /* Remove Wakes up the ESP by pulling it's reset pin low for a short time  */
-void wakeESP() {
+/*void wakeESP() {
 	pinMode( ESP_RESET_PIN, OUTPUT );
 	digitalWrite( ESP_RESET_PIN, LOW );
 	delay( 10 );
 	digitalWrite( ESP_RESET_PIN, HIGH );
 	pinMode( ESP_RESET_PIN, INPUT_PULLUP );
-}
-
-/* Can turn on/off power to sensors. Might save battery if sensor doesn't have good power down mode  */
-void sensorPower(bool powerOn) {
-	if ( powerOn ) {
-		pinMode( SENSOR_POWER_PIN, OUTPUT );
-		digitalWrite( SENSOR_POWER_PIN, HIGH );
-		delay( 5 ); // Make sure sensors are powered up before asking them
-	} else {
-		digitalWrite( SENSOR_POWER_PIN, LOW );
-		pinMode( SENSOR_POWER_PIN, INPUT );
-	}
-}
-
-//Disabling ADC saves ~230uAF. Needs to be re-enable for the internal voltage check
-#define adc_disable() (ADCSRA &= ~(1<<ADEN)) // disable ADC
-#define adc_enable()  (ADCSRA |=  (1<<ADEN)) // re-enable ADC
+}*/
 
 uint16_t readVcc() 
 {

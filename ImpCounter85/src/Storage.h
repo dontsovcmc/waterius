@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define STORAGE_SIZE 350
+#define STORAGE_SIZE 60
 
 
 
