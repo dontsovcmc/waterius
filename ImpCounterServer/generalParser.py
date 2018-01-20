@@ -34,7 +34,7 @@ class generalParse:
         sensorNumber = 0
         # The first measurement timestamp is calculated back from when we received the data and the number of values received.
         at = packetReceivedAt - datetime.timedelta( seconds=timeBetweenMeasurents * self.measurementsReceived() )
-        while self.bytesLeft()>1: # While we still have unprocessed bytes in the packet
+        while self.bytesLeft() > 1: # While we still have unprocessed bytes in the packet
             self.handleNextMeasurement(at, sensorNumber) # Here lies all the intelligence of interpreting datastructure
             sensorNumber += 1
             if sensorNumber >= self.sensorCount: # When iterated all sensors, we prepare for a new measurement

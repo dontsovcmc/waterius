@@ -16,6 +16,7 @@ class server:
 
         self.incomingData = ""
         self.thread = None
+        self.run = True
 
 
     # Validates the size of the incoming packet. If ok it's sent on the the parser
@@ -64,7 +65,7 @@ class server:
         soc.listen(10)
         self.logging.info("Socket now listening")
 
-        while True:
+        while self.run:
             conn, addr = soc.accept()
             ip, port = str(addr[0]), str(addr[1])
             self.logging.info("Accepting connection from " + ip + ":" + port)
@@ -72,14 +73,16 @@ class server:
                 t = Thread(target=self.clientThread, args=(conn, ip, port))
                 t.start()
                 t.join(2.0)
-            except:
+            except KeyboardInterrupt:
+                self.run = False
+            except Exception, err:
                 self.logging.error("Terible error!")
         soc.close()
 
 
     # Debug function that will print out a received datapacket byte by byte
     def printHex(self):
-        new_str = "Received raw data (%d) = " % len(self.incomingData)
+        new_str = "Received (%d) = " % len(self.incomingData)
         for i in self.incomingData:
             new_str += str(format(i, '02x')) + " "
         self.logging.info( new_str )
