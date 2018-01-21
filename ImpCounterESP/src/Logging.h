@@ -1,5 +1,5 @@
-#ifndef _LOGGING_h
-#define _LOGGING_h
+#ifndef _LOGGING1_h
+#define _LOGGING1_h
 
 #define LOGLEVEL 6
 #define LOG_TIME_FORMAT 2

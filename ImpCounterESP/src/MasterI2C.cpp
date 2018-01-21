@@ -7,7 +7,7 @@
 
 /* Set up I2c bus */
 void MasterI2C::begin() {
-	Wire.begin( SDA, SCL );
+	Wire.begin( SDA_PIN, SDL_PIN );
 	Wire.setClock( 100000L );
 }
 

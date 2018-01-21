@@ -3,8 +3,6 @@
 #include "Logging.h"
 #include <user_interface.h>
 
-
-
 MasterI2C masterI2C;
 MyWifi myWifi;
 byte buffer[512];
@@ -12,13 +10,14 @@ byte buffer[512];
 
 void setup()
 {
-	Serial.begin( 115200 ); Serial.println();
+	Serial.begin( 115200 ,SERIAL_8N1, SERIAL_TX_ONLY); Serial.println();
 	LOG_NOTICE( "ESP", "Booted" );
 
 	myWifi.begin();
+	LOG_NOTICE( "ESP", "Wifi-begined" );
 	masterI2C.begin();
+	LOG_NOTICE( "ESP", "I2C-begined" );
 }
-
 
 
 void loop()
