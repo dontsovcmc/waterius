@@ -91,13 +91,10 @@ void SlaveI2C::receiveEvent( int howMany ) {
 }
 
 
-
 /* Returns true if master has sent a 'Z' command, indicating that he is going to sleep */
 bool SlaveI2C::masterGoingToSleep() {
 	return masterSentSleep;
 }
-
-
 
 /* Returns true if master has acknowledged all data sent to him */
 bool SlaveI2C::masterGotOurData() {

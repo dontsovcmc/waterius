@@ -9,3 +9,7 @@ lib/USIWire-master/*
 *.pyc
 temp/
 .idea
+*/Backup*
+*/Last Loaded*
+*.user.workspace
+*/*/readme.txt

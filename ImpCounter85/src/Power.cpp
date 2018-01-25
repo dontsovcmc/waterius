@@ -25,7 +25,9 @@ ISR( WDT_vect ) {
 ISR(PCINT0_vect)
 {
 	btnCount += (debounce.pin(BUTTON_PIN) == LOW);
-	btn2Count += (debounce.pin(BUTTON2_PIN) == LOW);
+//#ifndef DEBUG
+//	btn2Count += (debounce.pin(BUTTON2_PIN) == LOW);
+//#endif
 }
 
 /* Makes a deep sleep for X second using as little power as possible */
@@ -36,9 +38,11 @@ void gotoDeepSleep( uint32_t seconds, uint32_t *counter, uint32_t *counter2)
 
 	pinMode( 0, INPUT );
 	pinMode( 2, INPUT );
-
-	pinMode(3, INPUT_PULLUP);
+//#ifndef DEBUG
+//	pinMode(3, INPUT_PULLUP);
+//#endif
 	pinMode(4, INPUT_PULLUP);
+
 	wdtInterrupt = false;
 
 	while ( seconds > 0 ) {
@@ -48,8 +52,12 @@ void gotoDeepSleep( uint32_t seconds, uint32_t *counter, uint32_t *counter2)
 		noInterrupts();       // timed sequence coming up
 		resetWatchdog();      // get watchdog ready
 		GIMSK |= (1 << PCIE);   // pin change interrupt enable
-		PCMSK |= (1 << PCINT4 | 1 << PCINT3); // pin change interrupt enabled for PCINT4
-		
+
+//#ifndef DEBUG		
+		//PCMSK |= (1 << PCINT4 | 1 << PCINT3); // pin change interrupt enabled for PCINT4
+//#else
+		PCMSK |= (1 << PCINT4); // pin change interrupt enabled for PCINT4
+//#endif
 		sleep_enable();       // ready to sleep
 		interrupts();         // interrupts are required now
 
@@ -59,7 +67,11 @@ void gotoDeepSleep( uint32_t seconds, uint32_t *counter, uint32_t *counter2)
 		wdt_disable();  // disable watchdog
 		
 		noInterrupts();       // timed sequence coming up
-		PCMSK &= ~_BV(PCINT4 | PCINT3);   // Turn off PB3 as interrupt pin
+///#ifndef DEBUG		
+		//PCMSK &= ~_BV(PCINT4 | PCINT3);   // Turn off PB3 as interrupt pin
+//#else
+		PCMSK &= ~_BV(PCINT4);   // Turn off PB3 as interrupt pin
+//#endif		
 		if (wdtInterrupt) {
 			wdtInterrupt = false;
 			seconds--;

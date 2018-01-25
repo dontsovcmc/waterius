@@ -48,7 +48,8 @@ void loop()
 			secondsSleeping += MEASUREMENT_EVERY;	// Keep a track of how many seconds we have been sleeping
 			state = MEASURING;
 
-			DEBUG_PRINT(F("COUNTER=")); DEBUG_PRINTLN(counter);
+			DEBUG_PRINT(F("COUNTER=")); DEBUG_PRINT(counter);
+			DEBUG_PRINT(F(" COUNTER2=")); DEBUG_PRINTLN(counter2);
 			break;
 		case MEASURING:
 			SensorData sensorData;
@@ -62,6 +63,7 @@ void loop()
 			break;
 
 		case MASTER_WAKE:
+			DEBUG_PRINTLN(F("WAKE"));
 			slaveI2C.begin();		// Now we are slave for the ESP
 			wakeESP();
 			masterWokenUpAt = millis(); 
@@ -70,7 +72,6 @@ void loop()
 
 		case SENDING:
 			DEBUG_PRINTLN(F("SENDING"));
-			delay(GIVEUP_ON_MASTER_AFTER * 1000UL);
 			secondsSleeping = 0;
 			state = SLEEP;
 			if ( slaveI2C.masterGoingToSleep() ) {

@@ -69,6 +69,7 @@ SlaveStats MasterI2C::getSlaveStats() {
 	slaveStats.bytesReady = getUint();
 	slaveStats.masterWakeEvery = getUint();
 	slaveStats.measurementEvery = getUint();
+	slaveStats.voltage = getUint();
 	slaveStats.bytesPerMeasurement = getByte();
 	slaveStats.deviceID = getByte();
 	slaveStats.numberOfSensors = getByte();
@@ -76,18 +77,17 @@ SlaveStats MasterI2C::getSlaveStats() {
 	return slaveStats;
 }
 
-
 /* Retrieves one uint from slave*/
-uint16_t MasterI2C::getUint() {
-	byte lsb = getByte();
-	byte msb = getByte();
-	return (msb * 256 + lsb);
+uint32_t MasterI2C::getUint() {
+	byte i1 = getByte();
+	byte i2 = getByte();
+	byte i3 = getByte();
+	byte i4 = getByte();
+	return i4 << 12 | i3 << 8 | i2 << 4 | i1;
 }
-
 
 /* Retrieves one byte from slave*/
 uint8_t MasterI2C::getByte() {
 	Wire.requestFrom( I2C_SLAVE_ADDR, 1 );
-	uint8_t value = Wire.read();
-	return value;
+	return Wire.read();
 }
