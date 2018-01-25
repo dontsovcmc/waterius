@@ -3,6 +3,7 @@
 #include "Storage.h"
 #include <USIWire.h>
 #include "Setup.h"
+#include "Power.h"
 
 extern Storage storage;
 
@@ -62,16 +63,18 @@ void SlaveI2C::receiveEvent( int howMany ) {
 	newCommand();
 	switch ( command ) {
 		case 'B': // If we get the cmd 'B' he asks for the number of bytes in storage that he can expect.
-			uint16_t sendInt;
+			uint32_t sendInt;
 			sendInt = storage.getStoredByteCount();
 			memcpy( txBuffer, &sendInt, sizeof( sendInt) );
 			sendInt = WAKE_MASTER_EVERY;			// We also give him info about wake up frequency
-			memcpy( txBuffer+2, &sendInt, sizeof( sendInt ) );
-			sendInt = MEASUREMENT_EVERY;			// And measurement frequency
 			memcpy( txBuffer + 4, &sendInt, sizeof( sendInt ) );
-			txBuffer[6] = storage.getElementSize();	// And size of each measurements in bytes
-			txBuffer[7] = DEVICE_ID;				// And the device ID
-			txBuffer[8] = NUMBER_OF_SENSORS;		// And the number of sersors that give data per measurement
+			sendInt = MEASUREMENT_EVERY;			// And measurement frequency
+			memcpy( txBuffer + 8, &sendInt, sizeof( sendInt ) );
+			sendInt = readVcc();
+			memcpy( txBuffer + 12, &sendInt, sizeof( sendInt ) );
+			txBuffer[13] = storage.getElementSize();	// And size of each measurements in bytes
+			txBuffer[14] = DEVICE_ID;				// And the device ID
+			txBuffer[15] = NUMBER_OF_SENSORS;		// And the number of sersors that give data per measurement
 			break;
 		case 'D': // If we get the cmd 'D' from master, read the next element number and give it to him
 			storage.gotoFirstByte();

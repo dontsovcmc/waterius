@@ -3,9 +3,7 @@
 
 #include <Arduino.h>
 
-#define STORAGE_SIZE 60
-
-
+#include "Setup.h"
 
 class Storage
 {

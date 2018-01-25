@@ -15,15 +15,15 @@ TinyDebugSerial mySerial;
 
 
 static enum State state = SLEEP;
-static uint16_t secondsSleeping = 0;
+static uint32_t secondsSleeping = 0;
 static unsigned long masterWokenUpAt;
 
-static uint16_t counter = 0;
+static uint32_t counter = 0;
+static uint32_t counter2 = 0;
 
 struct SensorData {
-	uint16_t counter;		  
-	uint16_t voltage;	      
-	uint16_t temperature;     
+	uint32_t counter;	     
+	uint32_t counter2;     
 };
 
 Storage storage( sizeof( SensorData ) );
@@ -44,7 +44,7 @@ void loop()
 	switch ( state ) {
 		case SLEEP:
 			slaveI2C.end();			// We don't want to be i2c slave anymore. 
-			gotoDeepSleep( MEASUREMENT_EVERY, &counter);		// Deep sleep for X seconds
+			gotoDeepSleep( MEASUREMENT_EVERY, &counter, &counter2);		// Deep sleep for X seconds
 			secondsSleeping += MEASUREMENT_EVERY;	// Keep a track of how many seconds we have been sleeping
 			state = MEASURING;
 
@@ -53,9 +53,7 @@ void loop()
 		case MEASURING:
 			SensorData sensorData;
 			sensorData.counter = counter;
-			sensorData.voltage = readVcc();
-			sensorData.temperature = 0;
-			DEBUG_PRINT(F("volt=")); DEBUG_PRINTLN(sensorData.voltage);
+			sensorData.counter2 = counter2;
 			storage.addElement( &sensorData );
 
 			state = SLEEP;			// Sucessfully stored the data, starting sleeping again
