@@ -5,7 +5,7 @@ from sensorParser import *
 
 
 # Configuration
-LISTEN_HOST = ''
+LISTEN_HOST = '192.168.50.10'
 LISTEN_PORT = 5001
 
 INFLUX_HOST = 'localhost'

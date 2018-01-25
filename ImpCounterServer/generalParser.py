@@ -43,32 +43,29 @@ class generalParse:
 
         self.lastPacketReceivedAt = packetReceivedAt
 
-
     # Extracts a byte from received data and moves the data pointer forward
     def getByte(self):
         value = self.packet[self.dataPos]
         self.dataPos += 1
         return value
 
-
     # Extracts an unsigned integer from received data and moves the data pointer forward
     def getUInt(self):
-        lsb = self.packet[self.dataPos]
-        self.dataPos += 1
-        msb = self.packet[self.dataPos]
-        self.dataPos += 1
-        return msb*256 + lsb
-
+        binFloat = bytearray(4)
+        for i in range(0, 4):
+            binFloat[i] = self.packet[self.dataPos]
+            self.dataPos += 1
+        floatValue = struct.unpack('I', binFloat)
+        return floatValue[0]
 
     # Extracts a float from received data and moves the data pointer forward 
     def getFloat(self):
         binFloat = bytearray(4)
-        for i in range(0,4):
+        for i in range(0, 4):
             binFloat[i] = self.packet[self.dataPos]
             self.dataPos += 1
         floatValue = struct.unpack('f', binFloat)
         return floatValue[0]
-
 
     # Returns the amount of unprocessed bytes in the packet
     def bytesLeft(self):

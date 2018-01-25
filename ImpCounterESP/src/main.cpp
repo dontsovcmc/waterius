@@ -10,8 +10,8 @@ byte buffer[512];
 
 void setup()
 {
-	Serial.begin( 115200 ,SERIAL_8N1, SERIAL_TX_ONLY); Serial.println();
 	LOG_NOTICE( "ESP", "Booted" );
+	Serial.begin( 115200 ,SERIAL_8N1, SERIAL_TX_ONLY); Serial.println();
 
 	myWifi.begin();
 	LOG_NOTICE( "ESP", "Wifi-begined" );
@@ -26,7 +26,13 @@ void loop()
 	SlaveStats slaveStats = masterI2C.getSlaveStats(); 
 	memcpy( buffer, &slaveStats, sizeof( slaveStats ) );
 
-	
+	LOG_NOTICE( "Stat: bytesReady", slaveStats.bytesReady);
+	LOG_NOTICE( "Stat: masterWakeEvery", slaveStats.masterWakeEvery);
+	LOG_NOTICE( "Stat: measurementEvery", slaveStats.measurementEvery);
+	LOG_NOTICE( "Stat: voltage", slaveStats.voltage);
+	LOG_NOTICE( "Stat: bytesPerMeasurement", slaveStats.bytesPerMeasurement);
+	LOG_NOTICE( "Stat: deviceID", slaveStats.deviceID);
+	LOG_NOTICE( "Stat: numberOfSensors", slaveStats.numberOfSensors);
 
 	// Read all stored measurements from slave and place after statistics in buffer after statistics
 	uint16_t bytesRead = masterI2C.getSlaveStorage( buffer + sizeof(slaveStats) -1 , sizeof(buffer), slaveStats.bytesReady );	
