@@ -4,10 +4,9 @@
 #include <Arduino.h>
 
 
-
 /* Set up I2c bus */
 void MasterI2C::begin() {
-	Wire.begin( SDA_PIN, SCL_PIN );
+	Wire.begin( SDA_PIN, SDL_PIN );
 	Wire.setClock( 100000L );
 }
 
