@@ -31,7 +31,8 @@ void loop()
 
 	if ( bytesRead > 0 ) {
 		bool dataSent = myWifi.send( buffer, bytesRead + sizeof(slaveStats) - 1 ); // Try to send them to the server.
-		if ( dataSent ) masterI2C.sendCmd( 'A' ); // Tell slave that we succesfully passed the data on to the server. He can delete it.
+		if ( dataSent ) 
+            masterI2C.sendCmd( 'A' ); // Tell slave that we succesfully passed the data on to the server. He can delete it.
 	}
 	masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep
 

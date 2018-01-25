@@ -1,9 +1,7 @@
 #ifndef _WIFI_h
 #define _WIFI_h
 
-#define SETUP_PIN 3  //RX  pin of ESP-01
-#define WIFI_TIMEOUT 1000UL // ms
-
+#include "setup.h"
 
 #include <Arduino.h>
 #include <WiFiClient.h>

@@ -3,24 +3,7 @@
 
 #include <Arduino.h>
 
-#define I2C_SLAVE_ADDR 10
-
-//ESP-01 SDA_PIN 0 SDL_PIN 2
-//NodeMCU SDA_PIN SDA SDL_PIN SDL
-#define SDA_PIN 0
-#define SDL_PIN 2
-
-/*
-platformio.ini for ESP-01 1m
-
-[env:esp01_1m]
-platform = espressif8266
-board = esp01_1m
-framework = arduino
-
-upload_port = /dev/tty.SLAB_USBtoUART
-*/
-
+#include "setup.h"
 
 struct SlaveStats {
 	uint16_t bytesReady;
