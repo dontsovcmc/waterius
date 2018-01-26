@@ -16,8 +16,8 @@ class MyWifi
 	 IPAddress remoteIP; 
 	 uint16_t remotePort;
 
-	 void storeConfig( IPAddress ip, IPAddress subnet, IPAddress gw, IPAddress remoteIP, uint16_t remotePort );
-	 void loadConfig();
+	 void storeConfig( IPAddress ip, IPAddress subnet, IPAddress gw, IPAddress remoteIP, uint16_t remotePort);
+	 bool loadConfig();
 
  public:
 	 void begin();

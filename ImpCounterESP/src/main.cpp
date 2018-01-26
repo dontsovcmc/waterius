@@ -26,6 +26,8 @@ void loop()
 	SlaveStats slaveStats = masterI2C.getSlaveStats(); 
 	memcpy( buffer, &slaveStats, sizeof( slaveStats ) );
 
+	
+
 	// Read all stored measurements from slave and place after statistics in buffer after statistics
 	uint16_t bytesRead = masterI2C.getSlaveStorage( buffer + sizeof(slaveStats) -1 , sizeof(buffer), slaveStats.bytesReady );	
 

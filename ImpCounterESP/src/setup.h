@@ -11,19 +11,19 @@
 #ifdef ESP_01
     #define SETUP_PIN 3  //RX pin of ESP-01
     #define SDA_PIN 0
-    #define SDL_PIN 2
+    #define SCL_PIN 2
 #endif
 
 #ifdef WEMOS
     #define SETUP_PIN D4
     #define SDA_PIN SDA
-    #define SDL_PIN SDL
+    #define SCL_PIN SCL
 #endif
 
 #ifdef NODEMCU
     #define SETUP_PIN D5
     #define SDA_PIN SDA
-    #define SDL_PIN SDL
+    #define SCL_PIN SCL
 #endif
 
 #endif

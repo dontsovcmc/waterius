@@ -21,21 +21,27 @@ void MyWifi::begin() {
 	// If the Wifi setup-pin is held low while booting, then we start up the wifimanager portal.
 	if (digitalRead( SETUP_PIN ) == LOW) 
 	{
+		loadConfig();
+		ip.toString().c_str();
+		
 		LOG_NOTICE( "WIF", "User requested captive portal" );
 		WiFi.disconnect( true );
 		WiFiManager wifiManager;
 
 		// Setup wifimanager with extra input fields. All the fields we want to save en EEPROM.
 		// Values here are default values that will show up on the configuration web page
-		WiFiManagerParameter parm_ip( "IP", "Static IP", "192.168.1.200", 20 );
+		WiFiManagerParameter parm_ip( "IP", "Static IP", ip.toString().c_str(), 20 );
 		wifiManager.addParameter( &parm_ip );
-		WiFiManagerParameter parm_subnet( "Subnet", "Subnet", "255.255.255.0", 20 );
+		WiFiManagerParameter parm_subnet( "Subnet", "Subnet",  subnet.toString().c_str(), 20 );
 		wifiManager.addParameter( &parm_subnet );
-		WiFiManagerParameter parm_gw( "GW", "Gateway", "192.168.0.1", 20 );
+		WiFiManagerParameter parm_gw( "GW", "Gateway",  gw.toString().c_str(), 20 );
 		wifiManager.addParameter( &parm_gw );
-		WiFiManagerParameter parm_remoteIP( "RemoteIP", "Remote IP", "192.168.1.100", 20 );
+		WiFiManagerParameter parm_remoteIP( "RemoteIP", "Remote IP",  remoteIP.toString().c_str(), 20 );
 		wifiManager.addParameter( &parm_remoteIP );
-		WiFiManagerParameter parm_remotePort( "Port", "Remote Port", "5001", 6 );
+		
+		char rp[16];
+		itoa(remotePort, rp, 10);
+		WiFiManagerParameter parm_remotePort( "Port", "Remote Port", rp, 6 );
 		wifiManager.addParameter( &parm_remotePort );
 
 		// Start the portal with the SSID ENV_SENSOR
@@ -69,8 +75,6 @@ void MyWifi::begin() {
 	
 }
 
-
-
 /* Takes all the IP information we got from Wifimanger and saves it in EEPROM */
 void MyWifi::storeConfig(IPAddress ip, IPAddress subnet, IPAddress gw, IPAddress remoteIP, uint16_t remotePort) {
 	byte* portPtr = (byte*)&remotePort;
@@ -80,6 +84,9 @@ void MyWifi::storeConfig(IPAddress ip, IPAddress subnet, IPAddress gw, IPAddress
 	for ( int i = 0; i < 4; i++ ) EEPROM.write( i + 8 , gw[i] );
 	for ( int i = 0; i < 4; i++ ) EEPROM.write( i + 12, remoteIP[i] );
 	for ( int i = 0; i < 2; i++ ) EEPROM.write( i + 16, portPtr[i] );
+	uint32_t crc = 1234;
+	portPtr = (byte*)&crc;
+	for ( int i = 0; i < 4; i++ ) EEPROM.write( i + 20, portPtr[i] );
 	EEPROM.commit();
 	LOG_NOTICE( "WIF", "Config stored: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
 }
@@ -87,15 +94,28 @@ void MyWifi::storeConfig(IPAddress ip, IPAddress subnet, IPAddress gw, IPAddress
 
 
 /* At every boot the IP information is loaded from EEPROM */
-void MyWifi::loadConfig() {
+bool MyWifi::loadConfig() {
 	EEPROM.begin( 512 );
-	byte* portPtr = (byte*) &remotePort;
-	for ( int i = 0; i < 4; i++ ) ip[i] = EEPROM.read( i + 0 );
-	for ( int i = 0; i < 4; i++ ) subnet[i] = EEPROM.read( i + 4 );
-	for ( int i = 0; i < 4; i++ ) gw[i] = EEPROM.read( i + 8 );
-	for ( int i = 0; i < 4; i++ ) remoteIP[i] = EEPROM.read( i + 12 );
-	for ( int i = 0; i < 2; i++ ) portPtr[i] = EEPROM.read( i + 16 );
-	LOG_NOTICE( "WIF", "Config loaded: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
+	uint32_t crc;
+	byte* portPtr = (byte*) &crc;
+	for ( int i = 0; i < 4; i++ ) portPtr[i] = EEPROM.read( i + 20 );
+	if (crc == 1234) {
+		portPtr = (byte*) &remotePort;
+		for ( int i = 0; i < 4; i++ ) ip[i] = EEPROM.read( i + 0 );
+		for ( int i = 0; i < 4; i++ ) subnet[i] = EEPROM.read( i + 4 );
+		for ( int i = 0; i < 4; i++ ) gw[i] = EEPROM.read( i + 8 );
+		for ( int i = 0; i < 4; i++ ) remoteIP[i] = EEPROM.read( i + 12 );
+		for ( int i = 0; i < 2; i++ ) portPtr[i] = EEPROM.read( i + 16 );
+		LOG_NOTICE( "WIF", "Config loaded: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
+	}
+	else {
+		ip.fromString( "10.0.24.245" );
+		subnet.fromString( "255.255.255.0" );
+		gw.fromString( "10.0.24.1" );
+		remoteIP.fromString( "192.168.50.10" );
+		remotePort = atoi( "5001" );
+		LOG_NOTICE( "WIF", "Init config: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
+	}
 }
 
 
