@@ -54,12 +54,9 @@ void gotoDeepSleep( uint32_t seconds, uint32_t *counter, uint32_t *counter2)
 		GIMSK |= (1 << PCIE);   // pin change interrupt enable
 		PCMSK |= BUTTON_INTERRUPT; // pin change interrupt enabled for PCINT4
 
-		sleep_enable();       // ready to sleep
 		interrupts();         // interrupts are required now
-
-		sleep_cpu();          // sleep
-
-		sleep_disable();      // precaution
+		
+		sleep_mode();
 		
 		wdt_disable();  // disable watchdog
 		
