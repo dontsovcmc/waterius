@@ -7,7 +7,7 @@
 
 EdgeDebounceLite debounce;
 
-volatile bool wdtInterrupt;    //watchdog timer interrupt flag
+volatile uint32_t wdt_count;
 volatile uint32_t btnCount;
 volatile uint32_t btn2Count;
 
@@ -18,7 +18,7 @@ volatile uint32_t btn2Count;
 
 /* Watchdog interrupt vector */
 ISR( WDT_vect ) { 
-	wdtInterrupt = true;
+	wdt_count--;
 }  
 
 /* External interrupt */
@@ -35,7 +35,8 @@ void gotoDeepSleep( uint32_t seconds, uint32_t *counter, uint32_t *counter2)
 {
 	btnCount = *counter;
 	btn2Count = *counter2;
-	wdtInterrupt = false;
+
+	wdt_count = seconds;
 
 	pinMode(BUTTON_PIN, INPUT_PULLUP);
 #ifdef BUTTON2_PIN
@@ -45,36 +46,31 @@ void gotoDeepSleep( uint32_t seconds, uint32_t *counter, uint32_t *counter2)
 	adc_disable();            // turn off ADC
 	power_all_disable();  // power off ADC, Timer 0 and 1, serial interface
 
-	while ( seconds > 0 ) 
+	set_sleep_mode( SLEEP_MODE_PWR_DOWN );
+	noInterrupts();       // timed sequence coming up
+	resetWatchdog();      // get watchdog ready
+
+	GIMSK |= (1 << PCIE);   // pin change interrupt enable
+	PCMSK |= BUTTON_INTERRUPT; // pin change interrupt enabled for PCINTx
+
+	interrupts();         // interrupts are required now
+		
+	while ( wdt_count > 0 ) 
 	{
-		set_sleep_mode( SLEEP_MODE_PWR_DOWN );
-		noInterrupts();       // timed sequence coming up
-		resetWatchdog();      // get watchdog ready
-
-		GIMSK |= (1 << PCIE);   // pin change interrupt enable
-		PCMSK |= BUTTON_INTERRUPT; // pin change interrupt enabled for PCINT4
-
-		interrupts();         // interrupts are required now
-		
 		sleep_mode();
-		
-		wdt_disable();  // disable watchdog
-		
-		noInterrupts();       // timed sequence coming up
-
-		PCMSK &= ~BUTTON_INTERRUPT;   // Turn off PB3 as interrupt pin
-
-		if (wdtInterrupt) {
-			wdtInterrupt = false;
-			seconds--;
-		}
 	}
+		
+	wdt_disable();  // disable watchdog
+	noInterrupts();       // timed sequence coming up
+
+	PCMSK &= ~BUTTON_INTERRUPT;   // Turn off PBx as interrupt pin
+
 	power_all_enable();   // power everything back on
 
 	*counter = btnCount;
 	*counter2 = btn2Count;
 
-	pinMode(BUTTON_PIN, OUTPUT);
+	pinMode(BUTTON_PIN, OUTPUT);  //save power
 #ifdef BUTTON2_PIN
 	pinMode(BUTTON2_PIN, OUTPUT);
 #endif
