@@ -42,13 +42,16 @@ void loop()
 
     DEBUG_PRINT("1: counter=");
     DEBUG_PRINT(counter);
+#ifdef BUTTON2_PIN
     DEBUG_PRINT(", counter2=");
     DEBUG_PRINTLN(counter2);
-
+#endif
     delay(2000);
 
     DEBUG_PRINT("2: counter=");
     DEBUG_PRINT(counter);
+#ifdef BUTTON2_PIN
     DEBUG_PRINT(", counter2=");
     DEBUG_PRINTLN(counter2);
+#endif
 }

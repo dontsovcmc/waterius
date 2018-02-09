@@ -5,8 +5,8 @@
 #define I2C_SLAVE_ADDR 10
 
 //#define WEMOS
-#define ESP_01
-//#define NODEMCU
+//#define ESP_01
+#define NODEMCU
 
 #ifdef ESP_01
     #define SETUP_PIN 3  //RX pin of ESP-01

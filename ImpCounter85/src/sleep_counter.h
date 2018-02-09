@@ -3,13 +3,15 @@
 
 #include <Arduino.h>
 
-#define BUTTON_PIN    3
-//#define BUTTON2_PIN   2
+#define BUTTON_PIN    4 
+
+//#define BUTTON2_PIN   3
+
 
 #ifdef BUTTON2_PIN
-#define BUTTON_INTERRUPT (1 << PCINT3 | 1 << PCINT2)
+#define BUTTON_INTERRUPT (1 << PCINT4 | 1 << PCINT3)
 #else
-#define BUTTON_INTERRUPT (1 << PCINT3)
+#define BUTTON_INTERRUPT (1 << PCINT4)
 #endif
 
 /*

@@ -1,9 +1,11 @@
-#include "sleep_counter.h"
+
 #include <Arduino.h>
+
 #include <avr/sleep.h>
 #include <avr/power.h>    
 #include <avr/wdt.h>
 #include <EdgeDebounceLite.h>
+#include "sleep_counter.h"
 
 EdgeDebounceLite debounce;
 

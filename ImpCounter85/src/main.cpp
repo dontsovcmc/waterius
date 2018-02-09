@@ -1,18 +1,18 @@
 
-#include <Arduino.h>
+#include "Setup.h"
 
 #include <avr/pgmspace.h>
-#include <stdlib.h>
 #include <TinyDebugSerial.h>
-
-#include "Setup.h"
 #include <USIWire.h>
+
 #include "Power.h"
 #include "SlaveI2C.h"
 #include "Storage.h"
+#include "sleep_counter.h"
 
-TinyDebugSerial mySerial;
-
+#ifdef DEBUG
+	TinyDebugSerial mySerial;
+#endif
 
 static enum State state = SLEEP;
 static uint32_t secondsSleeping = 0;
@@ -35,6 +35,7 @@ void setup()
   	DEBUG_PRINTLN(F("==== START ===="));
 
 	resetWatchdog(); // Needed for deep sleep to succeed
+	adc_disable(); //Disable ADC
 }
 
 void loop() 
@@ -51,6 +52,7 @@ void loop()
 			DEBUG_PRINT(F("COUNTER=")); DEBUG_PRINT(counter);
 			DEBUG_PRINT(F(" COUNTER2=")); DEBUG_PRINTLN(counter2);
 			break;
+
 		case MEASURING:
 			SensorData sensorData;
 			sensorData.counter = counter;
@@ -72,14 +74,16 @@ void loop()
 
 		case SENDING:
 			DEBUG_PRINTLN(F("SENDING"));
-			secondsSleeping = 0;
-			state = SLEEP;
-			if ( slaveI2C.masterGoingToSleep() ) {
-				if ( slaveI2C.masterGotOurData() ) storage.clear();		// If Master has confirmed our data. We can start with new measurements
+
+			if (slaveI2C.masterGoingToSleep()) 
+			{
+				if (slaveI2C.masterGotOurData()) 
+					storage.clear();		// If Master has confirmed our data. We can start with new measurements
 				secondsSleeping = 0;
 				state = SLEEP;
 			}
-			if ( millis() - masterWokenUpAt > GIVEUP_ON_MASTER_AFTER * 1000UL ) {
+			if (millis() - masterWokenUpAt > GIVEUP_ON_MASTER_AFTER * 1000UL) 
+			{
 				secondsSleeping = 0;
 				state = SLEEP;
 			}
