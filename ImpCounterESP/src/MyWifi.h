@@ -20,7 +20,7 @@ class MyWifi
 	 bool loadConfig();
 
  public:
-	 void begin();
+	 bool begin();
 	 bool send( const void * data, uint16_t length );
 };
 

@@ -15,7 +15,8 @@ WiFiClient client;
 
 /* Handles wifi connection. If user boots wit setup-pin low, we start a configuration portal AP.
    Otherwise just connect the wifi so that it is ready for data transfer */
-void MyWifi::begin() {
+bool MyWifi::begin() 
+{
 	pinMode( SETUP_PIN, INPUT_PULLUP );
 
 	// If the Wifi setup-pin is held low while booting, then we start up the wifimanager portal.
@@ -56,21 +57,35 @@ void MyWifi::begin() {
 		remotePort = atoi( parm_remotePort.getValue() );
 		
 		storeConfig( ip, subnet, gw, remoteIP, remotePort );
-
+		
 		//TODO: do some led flashing
-	} else {
+	} 
+	else 
+	{
 		// Under normal boot we load config from EEPROM and start the wifi normally
 		loadConfig();
 		LOG_NOTICE( "WIF", "Starting Wifi" );
 		WiFi.config( ip, gw, subnet );
 		WiFi.begin();
-		while ( WiFi.status() != WL_CONNECTED )
+
+		uint32_t now = millis();
+		while ( WiFi.status() != WL_CONNECTED && millis() - now < 5000)
 		{
 			LOG_ERROR( "WIF", "Wifi status: " << WiFi.status());
 			delay(100);
 		}
-		LOG_NOTICE( "WIF", "Wifi connected, got IP address: " << WiFi.localIP().toString() );
-		client.setTimeout( WIFI_TIMEOUT ); // If things doesn't happen within XX milliseconds, we are loosing battery!
+
+		if (millis() - now > 5000)
+		{
+			LOG_ERROR( "WIF", "Wifi connect error");
+			return false;
+		}
+		else
+		{
+			LOG_NOTICE( "WIF", "Wifi connected, got IP address: " << WiFi.localIP().toString() );
+			client.setTimeout( WIFI_TIMEOUT ); // If things doesn't happen within XX milliseconds, we are loosing battery!
+			return true;
+		}
 	}
 	
 }
