@@ -43,29 +43,36 @@ class generalParse:
 
         self.lastPacketReceivedAt = packetReceivedAt
 
+
     # Extracts a byte from received data and moves the data pointer forward
     def getByte(self):
         value = self.packet[self.dataPos]
         self.dataPos += 1
         return value
 
+
     # Extracts an unsigned integer from received data and moves the data pointer forward
     def getUInt(self):
-        binFloat = bytearray(4)
-        for i in range(0, 4):
-            binFloat[i] = self.packet[self.dataPos]
-            self.dataPos += 1
-        floatValue = struct.unpack('I', binFloat)
-        return floatValue[0]
+        i1 = self.packet[self.dataPos]
+        self.dataPos += 1
+        i2 = self.packet[self.dataPos]
+        self.dataPos += 1
+        i3 = self.packet[self.dataPos]
+        self.dataPos += 1
+        i4 = self.packet[self.dataPos]
+        self.dataPos += 1
+        return i1 | i2 << 8 | i3 << 16 | i4 << 24
+
 
     # Extracts a float from received data and moves the data pointer forward 
     def getFloat(self):
         binFloat = bytearray(4)
-        for i in range(0, 4):
+        for i in range(0,4):
             binFloat[i] = self.packet[self.dataPos]
             self.dataPos += 1
         floatValue = struct.unpack('f', binFloat)
         return floatValue[0]
+
 
     # Returns the amount of unprocessed bytes in the packet
     def bytesLeft(self):
@@ -89,15 +96,18 @@ class generalParse:
         self.bytesReady = self.getUInt()
         self.expectedWakeupTime = self.getUInt()
         self.measurementsEvery = self.getUInt()
+        self.vcc = self.getUInt()
         self.bytesPerMeasurement = self.getByte()
         self.deviceID = self.getByte()
         self.sensorCount = self.getByte()
+        dymmy = self.getByte()
         self.expectedMeasurementsPerWakeup = self.expectedWakeupTime / self.measurementsEvery
         self.logging.info("Device ID=" + str(self.deviceID) +
                           ", Sensors=" + str(self.sensorCount) +
                           ", Measurement bytes="  + str(self.bytesReady) +
                           ", Bytes/Meas=" + str(self.bytesPerMeasurement) + 
                           ", Measure every=" + str(self.measurementsEvery) +
-                          ", Wakeup every=" + str(self.expectedWakeupTime) )
+                          ", Wakeup every=" + str(self.expectedWakeupTime) +
+                          ", vcc=" + str(self.vcc)  )
 
         
