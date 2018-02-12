@@ -31,12 +31,12 @@ class server:
             self.incomingData = [ord(i) for i in self.incomingData]
 
             if packetSize >= 4096 or packetSize < 9:
-                self.logging.error("Invalid packet length: {}".format(siz))
+                self.logging.error("Invalid packet length: {}".format(packetSize))
             else:
                 self.printHex()
                 # Find the ID of the device talking and call the parser for it.
                 if len(self.incomingData) > 7:
-                    deviceID = self.incomingData[7]
+                    deviceID = self.incomingData[17]
                     self.logging.info("deviceID=%d" % deviceID)
                     if deviceID in self.parserCallbackList:
                         self.parserCallbackList[deviceID](self.incomingData) # We pass on the packet to the paser of the deviceID. This threads job is over
@@ -76,7 +76,7 @@ class server:
             except KeyboardInterrupt:
                 self.run = False
             except Exception, err:
-                self.logging.error("Terible error!")
+                self.logging.error("Terrible error!")
         soc.close()
 
 

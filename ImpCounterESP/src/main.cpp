@@ -44,17 +44,17 @@ void loop()
 	LOG_NOTICE( "Stat: bytesReady", slaveStats.bytesReady);
 	LOG_NOTICE( "Stat: masterWakeEvery", slaveStats.masterWakeEvery);
 	LOG_NOTICE( "Stat: measurementEvery", slaveStats.measurementEvery);
-	LOG_NOTICE( "Stat: voltage", slaveStats.voltage);
+	LOG_NOTICE( "Stat: voltage", slaveStats.vcc);
 	LOG_NOTICE( "Stat: bytesPerMeasurement", slaveStats.bytesPerMeasurement);
 	LOG_NOTICE( "Stat: deviceID", slaveStats.deviceID);
 	LOG_NOTICE( "Stat: numberOfSensors", slaveStats.numberOfSensors);
 
 	// Read all stored measurements from slave and place after statistics in buffer after statistics
-	uint16_t bytesRead = masterI2C.getSlaveStorage( buffer + sizeof(slaveStats) -1 , sizeof(buffer), slaveStats.bytesReady );	
+	uint16_t bytesRead = masterI2C.getSlaveStorage( buffer + sizeof(slaveStats), sizeof(buffer), slaveStats.bytesReady );	
 
 	if ( bytesRead > 0 ) 
 	{
-		bool dataSent = myWifi.send( buffer, bytesRead + sizeof(slaveStats) - 1 ); // Try to send them to the server.
+		bool dataSent = myWifi.send( buffer, bytesRead + sizeof(slaveStats)); // Try to send them to the server.
 		if ( dataSent ) 
             masterI2C.sendCmd( 'A' ); // Tell slave that we succesfully passed the data on to the server. He can delete it.
 	}

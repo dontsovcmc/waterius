@@ -46,6 +46,8 @@ void gotoDeepSleep( uint32_t seconds, uint32_t *counter, uint32_t *counter2)
 	noInterrupts();       // timed sequence coming up
 	resetWatchdog();      // get watchdog ready
 
+	//wdt_enable(WDTO_1S);
+
 	GIMSK |= (1 << PCIE);   // pin change interrupt enable
 	PCMSK |= BUTTON_INTERRUPT; // pin change interrupt enabled for PCINTx
 
@@ -57,9 +59,10 @@ void gotoDeepSleep( uint32_t seconds, uint32_t *counter, uint32_t *counter2)
 	}
 		
 	wdt_disable();  // disable watchdog
-	noInterrupts();       // timed sequence coming up
+	//noInterrupts();       // timed sequence coming up
 
 	PCMSK &= ~BUTTON_INTERRUPT;   // Turn off PBx as interrupt pin
+	//GIMSK &= ~(1 << PCIE);   // pin change interrupt enable
 
 	power_all_enable();   // power everything back on
 

@@ -3,9 +3,29 @@
 #include "Storage.h"
 #include <USIWire.h>
 #include "Setup.h"
-#include "Power.h"
 
 extern Storage storage;
+
+//https://github.com/esp8266/Arduino/issues/1825
+struct SlaveStats {
+	uint32_t bytesReady;
+	uint32_t masterWakeEvery;
+	uint32_t measurementEvery;
+	uint32_t vcc;
+	uint8_t bytesPerMeasurement;
+	uint8_t deviceID;
+	uint8_t numberOfSensors;
+	uint8_t dummy;
+} info = {
+	0, //bytesReady
+	WAKE_MASTER_EVERY,
+	MEASUREMENT_EVERY,
+	0, //vcc
+	0,
+	DEVICE_ID,
+	NUMBER_OF_SENSORS,
+	0 //dummy
+};
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -49,7 +69,7 @@ void SlaveI2C::requestEvent() {
 
 /* Makes txbuffer ready */
 void SlaveI2C::newCommand() {
-	memset( txBuffer, 0xAA, 10 );	// Zero the tx buffer (with 0xAA so master has a chance to see he is stupid)
+	memset( txBuffer, 0xAA, TX_BUFFER_SIZE );	// Zero the tx buffer (with 0xAA so master has a chance to see he is stupid)
 	txBufferPos = 0;				// The next read from master starts from begining of buffer
 	lastCommand = 0;				// No previous command was received
 }
@@ -63,18 +83,9 @@ void SlaveI2C::receiveEvent( int howMany ) {
 	newCommand();
 	switch ( command ) {
 		case 'B': // If we get the cmd 'B' he asks for the number of bytes in storage that he can expect.
-			uint32_t sendInt;
-			sendInt = storage.getStoredByteCount();
-			memcpy( txBuffer, &sendInt, sizeof( sendInt) );
-			sendInt = WAKE_MASTER_EVERY;			// We also give him info about wake up frequency
-			memcpy( txBuffer + 4, &sendInt, sizeof( sendInt ) );
-			sendInt = MEASUREMENT_EVERY;			// And measurement frequency
-			memcpy( txBuffer + 8, &sendInt, sizeof( sendInt ) );
-			sendInt = readVcc();
-			memcpy( txBuffer + 12, &sendInt, sizeof( sendInt ) );
-			txBuffer[13] = storage.getElementSize();	// And size of each measurements in bytes
-			txBuffer[14] = DEVICE_ID;				// And the device ID
-			txBuffer[15] = NUMBER_OF_SENSORS;		// And the number of sersors that give data per measurement
+			info.bytesReady = storage.getStoredByteCount();
+			info.bytesPerMeasurement = storage.getElementSize();	// And size of each measurements in bytes
+			memcpy( txBuffer, &info, sizeof(info));
 			break;
 		case 'D': // If we get the cmd 'D' from master, read the next element number and give it to him
 			storage.gotoFirstByte();
@@ -91,10 +102,13 @@ void SlaveI2C::receiveEvent( int howMany ) {
 }
 
 
+
 /* Returns true if master has sent a 'Z' command, indicating that he is going to sleep */
 bool SlaveI2C::masterGoingToSleep() {
 	return masterSentSleep;
 }
+
+
 
 /* Returns true if master has acknowledged all data sent to him */
 bool SlaveI2C::masterGotOurData() {

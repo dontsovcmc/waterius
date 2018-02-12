@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include <Arduino.h>
 
+#include "setup.h"
 
 /* Set up I2c bus */
 void MasterI2C::begin() {
@@ -40,7 +41,8 @@ byte MasterI2C::getNextByte() {
 /* Retrieves the full slave storage byte by byte. 
    Returns the number of bytes that we received.
    Retuns 0 if there are no bytes or if it doesn't fit in our buffer */
-uint16_t MasterI2C::getSlaveStorage( byte* storage, const uint16_t maxStorageSize, const uint16_t bytesToFetch ) {
+uint16_t MasterI2C::getSlaveStorage( byte* storage, const uint16_t maxStorageSize, const uint32_t bytesToFetch ) 
+{
 	uint16_t storagePos;
 
 	if ( bytesToFetch <= maxStorageSize ) {
@@ -69,7 +71,7 @@ SlaveStats MasterI2C::getSlaveStats() {
 	slaveStats.bytesReady = getUint();
 	slaveStats.masterWakeEvery = getUint();
 	slaveStats.measurementEvery = getUint();
-	slaveStats.voltage = getUint();
+	slaveStats.vcc = getUint();
 	slaveStats.bytesPerMeasurement = getByte();
 	slaveStats.deviceID = getByte();
 	slaveStats.numberOfSensors = getByte();
@@ -77,17 +79,25 @@ SlaveStats MasterI2C::getSlaveStats() {
 	return slaveStats;
 }
 
+
 /* Retrieves one uint from slave*/
-uint32_t MasterI2C::getUint() {
+uint32_t MasterI2C::getUint() 
+{
 	byte i1 = getByte();
 	byte i2 = getByte();
 	byte i3 = getByte();
 	byte i4 = getByte();
-	return i4 << 12 | i3 << 8 | i2 << 4 | i1;
+	LOG_NOTICE( "i1", i1);
+	LOG_NOTICE( "i2", i2);
+	LOG_NOTICE( "i3", i3);
+	LOG_NOTICE( "i4", i4);
+	uint32_t v = i1 | (i2 << 8) | (i3 << 16) | (i4 << 24);
+	return v;
 }
 
 /* Retrieves one byte from slave*/
 uint8_t MasterI2C::getByte() {
 	Wire.requestFrom( I2C_SLAVE_ADDR, 1 );
-	return Wire.read();
+	uint8_t value = Wire.read();
+	return value;
 }

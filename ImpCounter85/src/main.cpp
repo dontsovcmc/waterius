@@ -34,7 +34,7 @@ void setup()
 	DEBUG_CONNECT(9600);
   	DEBUG_PRINTLN(F("==== START ===="));
 
-	resetWatchdog(); // Needed for deep sleep to succeed
+	resetWatchdog(); //??? Needed for deep sleep to succeed
 	adc_disable(); //Disable ADC
 }
 
@@ -45,6 +45,7 @@ void loop()
 	switch ( state ) {
 		case SLEEP:
 			slaveI2C.end();			// We don't want to be i2c slave anymore. 
+			//delay(3000);
 			gotoDeepSleep( MEASUREMENT_EVERY, &counter, &counter2);		// Deep sleep for X seconds
 			secondsSleeping += MEASUREMENT_EVERY;	// Keep a track of how many seconds we have been sleeping
 			state = MEASURING;

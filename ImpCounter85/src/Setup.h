@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define DEBUG  // use TinySerial on 3 pin. 
+//#define DEBUG  // use TinySerial on 3 pin. 
 // DON'T DEBUG WITH #define BUTTON2 3 (!)
 
 #define ESP_RESET_PIN 1			// Pin number connected to ESP reset pin. This is for waking it up.
