@@ -72,8 +72,8 @@ bool MyWifi::begin()
 		uint32_t now = millis();
 		while ( WiFi.status() != WL_CONNECTED && millis() - now < 5000)
 		{
-			LOG_ERROR( "WIF", "Wifi status: " << WiFi.status());
-			delay(100);
+			LOG_NOTICE( "WIF", "Wifi status: " << WiFi.status());
+			delay(50);
 		}
 
 		if (millis() - now > 5000)

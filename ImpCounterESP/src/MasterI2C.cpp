@@ -88,10 +88,6 @@ uint32_t MasterI2C::getUint()
 	byte i2 = getByte();
 	byte i3 = getByte();
 	byte i4 = getByte();
-	LOG_NOTICE( "i1", i1);
-	LOG_NOTICE( "i2", i2);
-	LOG_NOTICE( "i3", i3);
-	LOG_NOTICE( "i4", i4);
 	uint32_t v = i1 | (i2 << 8) | (i3 << 16) | (i4 << 24);
 	return v;
 }
