@@ -26,6 +26,18 @@ struct SensorData {
 	uint32_t counter2;     
 };
 
+//https://github.com/esp8266/Arduino/issues/1825
+struct SlaveStats info = {
+	0, //bytesReady
+	WAKE_MASTER_EVERY,
+	MEASUREMENT_EVERY,
+	0, //vcc
+	0,
+	DEVICE_ID,
+	NUMBER_OF_SENSORS,
+	0 //dummy
+};
+
 Storage storage( sizeof( SensorData ) );
 SlaveI2C slaveI2C;
 
@@ -67,6 +79,7 @@ void loop()
 
 		case MASTER_WAKE:
 			DEBUG_PRINTLN(F("WAKE"));
+			info.vcc = readVcc();  //заранее
 			slaveI2C.begin();		// Now we are slave for the ESP
 			wakeESP();
 			masterWokenUpAt = millis(); 

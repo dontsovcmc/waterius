@@ -59,6 +59,7 @@ bool MyWifi::begin()
 		storeConfig( ip, subnet, gw, remoteIP, remotePort );
 		
 		//TODO: do some led flashing
+		return true;
 	} 
 	else 
 	{

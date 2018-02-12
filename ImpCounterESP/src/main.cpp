@@ -7,47 +7,32 @@ MasterI2C masterI2C;
 MyWifi myWifi;
 byte buffer[512];
 
-bool connected;
 
 void setup()
 {
 	LOG_NOTICE( "ESP", "Booted" );
 	Serial.begin( 115200 ,SERIAL_8N1, SERIAL_TX_ONLY); Serial.println();
-
-	connected = myWifi.begin();
-	if (connected)
-	{
-		LOG_NOTICE( "ESP", "Wifi-begined" );
-	}else
-	{
-		LOG_ERROR( "ESP", "Wifi-connected false" );
-	}
-
-	masterI2C.begin();
-	LOG_NOTICE( "ESP", "I2C-begined" );
 }
-
 
 void loop()
 {
-	if (!connected)
+	if (!myWifi.begin())
 	{
 		LOG_ERROR( "ESP", "Wifi connected false, go sleep" );
 		ESP.deepSleep( 0, RF_DEFAULT );			// Sleep until I2C slave wakes us up again.
 		return;
 	}
+	LOG_NOTICE( "ESP", "Wifi-begined" );
 
-	// Get slave statistic like wakeuptime, measurementfrequency and store them in the beginning of the transmissionbuffer
+	masterI2C.begin();
+	LOG_NOTICE( "ESP", "I2C-begined" );
+
+	// Get slave statistic like wakeuptime, measurement frequency and store them in the beginning of the transmissionbuffer
 	SlaveStats slaveStats = masterI2C.getSlaveStats(); 
 	memcpy( buffer, &slaveStats, sizeof( slaveStats ) );
 
 	LOG_NOTICE( "Stat: bytesReady", slaveStats.bytesReady);
-	LOG_NOTICE( "Stat: masterWakeEvery", slaveStats.masterWakeEvery);
-	LOG_NOTICE( "Stat: measurementEvery", slaveStats.measurementEvery);
 	LOG_NOTICE( "Stat: voltage", slaveStats.vcc);
-	LOG_NOTICE( "Stat: bytesPerMeasurement", slaveStats.bytesPerMeasurement);
-	LOG_NOTICE( "Stat: deviceID", slaveStats.deviceID);
-	LOG_NOTICE( "Stat: numberOfSensors", slaveStats.numberOfSensors);
 
 	// Read all stored measurements from slave and place after statistics in buffer after statistics
 	uint16_t bytesRead = masterI2C.getSlaveStorage( buffer + sizeof(slaveStats), sizeof(buffer), slaveStats.bytesReady );	

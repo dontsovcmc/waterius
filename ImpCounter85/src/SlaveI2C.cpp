@@ -5,27 +5,8 @@
 #include "Setup.h"
 
 extern Storage storage;
+extern struct SlaveStats info;
 
-//https://github.com/esp8266/Arduino/issues/1825
-struct SlaveStats {
-	uint32_t bytesReady;
-	uint32_t masterWakeEvery;
-	uint32_t measurementEvery;
-	uint32_t vcc;
-	uint8_t bytesPerMeasurement;
-	uint8_t deviceID;
-	uint8_t numberOfSensors;
-	uint8_t dummy;
-} info = {
-	0, //bytesReady
-	WAKE_MASTER_EVERY,
-	MEASUREMENT_EVERY,
-	0, //vcc
-	0,
-	DEVICE_ID,
-	NUMBER_OF_SENSORS,
-	0 //dummy
-};
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;

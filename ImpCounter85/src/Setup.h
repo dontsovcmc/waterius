@@ -18,14 +18,24 @@ const uint8_t GIVEUP_ON_MASTER_AFTER = 3;	// If master havn't confirmed getting 
 const uint32_t WAKE_MASTER_EVERY = 10;	// Every XX seconds we wake up ESP master for it to poll our data
 const uint32_t MEASUREMENT_EVERY = 3;		// How often we take a measurement from our sensors
 
-#define STORAGE_SIZE 60  //bytes, 8 byte 1 measure
-
+#define STORAGE_SIZE 80  //bytes, 8 byte 1 measure
 
 enum State { // Our state machine
 		SLEEP,
 		MEASURING,
 		MASTER_WAKE,
 		SENDING
+};
+
+struct SlaveStats {
+	uint32_t bytesReady;
+	uint32_t masterWakeEvery;
+	uint32_t measurementEvery;
+	uint32_t vcc;
+	uint8_t bytesPerMeasurement;
+	uint8_t deviceID;
+	uint8_t numberOfSensors;
+	uint8_t dummy;
 };
 
 #ifdef DEBUG
