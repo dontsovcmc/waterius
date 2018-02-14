@@ -4,9 +4,9 @@
 #define WIFI_TIMEOUT 1000UL // ms
 #define I2C_SLAVE_ADDR 10
 
-//#define WEMOS
+#define WEMOS
 //#define ESP_01
-#define NODEMCU
+//#define NODEMCU
 
 #ifdef ESP_01
     #define SETUP_PIN 3  //RX pin of ESP-01
@@ -15,7 +15,7 @@
 #endif
 
 #ifdef WEMOS
-    #define SETUP_PIN D4
+    #define SETUP_PIN RX   //3
     #define SDA_PIN SDA
     #define SCL_PIN SCL
 #endif

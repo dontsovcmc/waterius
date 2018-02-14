@@ -10,6 +10,11 @@ byte buffer[512];
 
 void setup()
 {
+#ifdef WEMOS
+	pinMode(D5, INPUT_PULLUP);
+	pinMode(D6, INPUT_PULLUP);
+	pinMode(D7, INPUT_PULLUP);
+#endif
 	LOG_NOTICE( "ESP", "Booted" );
 	Serial.begin( 115200 ,SERIAL_8N1, SERIAL_TX_ONLY); Serial.println();
 }

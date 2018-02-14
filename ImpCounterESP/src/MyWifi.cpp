@@ -103,8 +103,12 @@ void MyWifi::storeConfig(IPAddress ip, IPAddress subnet, IPAddress gw, IPAddress
 	uint32_t crc = 1234;
 	portPtr = (byte*)&crc;
 	for ( int i = 0; i < 4; i++ ) EEPROM.write( i + 20, portPtr[i] );
-	EEPROM.commit();
-	LOG_NOTICE( "WIF", "Config stored: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
+	
+	bool ret = EEPROM.commit();
+	if (!ret)
+		LOG_ERROR("WIF", "Config stored FAILED");
+	else
+		LOG_NOTICE( "WIF", "Config stored: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
 }
 
 
@@ -125,6 +129,7 @@ bool MyWifi::loadConfig() {
 		LOG_NOTICE( "WIF", "Config loaded: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
 	}
 	else {
+		LOG_NOTICE( "WIF", "crc failed=" << crc );
 		ip.fromString( "10.0.24.245" );
 		subnet.fromString( "255.255.255.0" );
 		gw.fromString( "10.0.24.1" );
