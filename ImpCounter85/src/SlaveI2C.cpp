@@ -3,10 +3,13 @@
 #include "Storage.h"
 #include <USIWire.h>
 #include "Setup.h"
+#include <TinyDebugSerial.h>
 
 extern Storage storage;
 extern struct SlaveStats info;
-
+#ifdef DEBUG
+	extern TinyDebugSerial mySerial;
+#endif
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -60,6 +63,8 @@ void SlaveI2C::newCommand() {
 /* Depending on the received command from master, set up the content of the txbuffer so he can get his data */
 void SlaveI2C::receiveEvent( int howMany ) {
 	byte command = Wire.read(); // Get instructions from master
+
+	DEBUG_PRINTLN("I2C: cmd " + command);
 
 	newCommand();
 	switch ( command ) {
