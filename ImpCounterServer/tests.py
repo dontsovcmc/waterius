@@ -1,20 +1,5 @@
 __author__ = 'dontsov'
 import unittest
-from sensorParser import deviceID1Parse
-
-
-class FakeDB:
-    def writeData(self, obj, title, value, timestamp):
-        pass
-
-
-class FakeLogging:
-    def info(self, info):
-        pass
-
-
-db = FakeDB()
-logging = FakeLogging()
 
 def parse_log(s):
     packet = s.split(' ')
@@ -37,6 +22,12 @@ class TestPacket(unittest.TestCase):
         p = parse_log("30 00 05 00 03 00 06 01 03 00 00 dd 0c 02 00 00 00 dd 0c 02 00 00 00 dd 0c 02 00 00 00 dd 0c 02 00 00 00 dd 0c 02 00 00 00 dd 0c 02 00 00 00 dd 0c 02 00 00 00 dd 0c 02 00")
         devID1parse = deviceID1Parse(logging, db)
         devID1parse.parsePacket(p)
+
+    def test_4(self):
+        p = parse_log("48 00 00 00 0a 00 00 00 03 00 00 00 38 06 00 00 08 01 02 00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 ff ff ff ff ff")
+
+    def test_5(self):
+        p = parse_log("48 00 00 00 0a 00 00 00 03 00 00 00 38 0c 00 00 08 01 02 00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 03 00 00 00 00 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff")
 
 #0c 00 02 00 03 00 06 01 03 00 00 dd 0c 00 00 00 00 dd 0c 00 00
 #ERROR integer division or modulo by zero

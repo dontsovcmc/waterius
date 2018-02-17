@@ -1,39 +1,100 @@
-import logging
-from server import server
-from influx import influx
-from sensorParser import *
 
 
-# Configuration
-LISTEN_HOST = '192.168.50.10'
-LISTEN_PORT = 5001
+'''Using Webhook and self-signed certificate'''
 
-INFLUX_HOST = 'localhost'
-INFLUX_PORT = 8086
-INFLUX_USER = 'Username'
-INFLUX_PASS = 'Password'
-INFLUX_DB   = 'Weather'
+# This file is an annotated example of a webhook based bot for
+# telegram. It does not do anything useful, other than provide a quick
+# template for whipping up a testbot. Basically, fill in the CONFIG
+# section and run it.
+# Dependencies (use pip to install them):
+# - python-telegram-bot: https://github.com/leandrotoledo/python-telegram-bot
+# - Flask              : http://flask.pocoo.org/
+# Self-signed SSL certificate (make sure 'Common Name' matches your FQDN):
+# $ openssl req -new -x509 -nodes -newkey rsa:1024 -keyout server.key -out server.crt -days 3650
+# You can test SSL handshake running this script and trying to connect using wget:
+# $ wget -O /dev/null https://$HOST:$PORT/
 
-LOG_LEVEL   = logging.INFO
+import os
+import sys
+import argparse
+from flask import Flask, request
+from signal import signal, SIGINT, SIGTERM, SIGABRT
+
+from telegram.ext import Updater, CommandHandler
+from storage import db
+from logger import log
+from bot import start_handler, add_handler
+
+CERT     = 'server.crt'
+CERT_KEY = 'server.key'
+
+# CONFIG
+TOKEN = os.environ['BOT_TOKEN'] if 'BOT_TOKEN' in os.environ else sys.argv[1]
+
+app = Flask(__name__)
 
 
-# Setup logging object for passing to all modules
-logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(levelname)s %(message)s')
+@app.route('/log/<int:device_id>', methods=['POST'])
+def log_message(device_id):
+    # show the user profile for that user
+    print 'device %d' % device_id
+    print request.get_data()
+    return 'OK'
 
-# Create database object used for communicating with influxdb
-db = influx(logging, INFLUX_HOST, INFLUX_PORT, INFLUX_USER, INFLUX_PASS, INFLUX_DB)
 
-# Create a parser object for each device. Each one is responsible of discecting packets into measurement data and then store it in the database
-# We give it a reference to our database object
-devID1parse = deviceID1Parse(logging, db)
+@app.route('/data/add/<int:device_id>', methods=['POST'])
+def add_data(device_id):
+    content = request.get_json(force=True, silent=True)
+    print 'Device %d data:\n%s' % (device_id, content)
+    return 'OK'
 
-# Now we create a parser list of the callback functions of each paser. The TCP listener needs this
-# in order to know what to do with each device ID
-parserList = {}
-parserList[1] = devID1parse.parsePacket
 
-# Startup the TCP listener. Tell it that it should throw received raw packets at the parser
-srv = server(logging, LISTEN_HOST, LISTEN_PORT, parserList )
-srv.startServer()
+if __name__ == '__main__':
 
-# We will never end here, because startServer is in an infinite loop.
+    parser = argparse.ArgumentParser(description='PhotoSliceBot')
+    parser.add_argument('key')
+    parser.add_argument('-i', '--host', default='', help='webhook: your IP address')
+    parser.add_argument('-p', '--port', type=int, default=8443, help='webhook: port 443, 80, 88 or 8443')
+    parser.add_argument('-s', '--shost', default='', help='server host')
+    parser.add_argument('-o', '--sport', type=int, default=5001, help='server port')
+    parser.add_argument('-a', '--admin_id', type=int, default=1234, help='admin user id')
+    args = parser.parse_args()
+
+    log.info("BOT:\ntoken: %s\nhost: %s\nport: %d" % (TOKEN, args.host, args.port))
+
+    updater = Updater(token=TOKEN)
+    updater.dispatcher.add_handler(CommandHandler('start', start_handler))
+    updater.dispatcher.add_handler(CommandHandler('add', add_handler))
+
+    if args.host:
+        updater.start_webhook(listen=args.host,
+                              port=args.port,
+                              url_path=TOKEN,
+                              key=CERT_KEY,
+                              cert=CERT,
+                              webhook_url='https://%s:8443/%s' % (args.host, TOKEN))
+
+        #updater.bot.set_webhook(url='https://%s:8443/%s/' % (args.host, TOKEN))
+        #                                certificate=open(CERT, 'rb'))
+        log.info('webhook started')
+
+    else:
+        updater.start_polling()
+        log.info('start polling')
+
+    #updater.idle()
+
+    for sig in (SIGINT, SIGTERM, SIGABRT):
+        signal(sig, updater.signal_handler)
+
+    updater.is_idle = True
+
+    app.run(host=args.shost,
+            port=args.sport,
+            #ssl_context=(CERT, CERT_KEY),
+            #debug=True
+    )
+
+    log.info("correct exit")
+    db.close()
+
