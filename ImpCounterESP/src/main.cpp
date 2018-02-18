@@ -19,6 +19,7 @@ void setup()
 	Serial.begin( 115200 ,SERIAL_8N1, SERIAL_TX_ONLY); Serial.println();
 }
 
+
 void loop()
 {
 	if (!myWifi.begin())
@@ -40,12 +41,10 @@ void loop()
 	LOG_NOTICE( "Stat: voltage", slaveStats.vcc);
 
 	// Read all stored measurements from slave and place after statistics in buffer after statistics
-	uint16_t bytesRead = masterI2C.getSlaveStorage( buffer + sizeof(slaveStats), sizeof(buffer), slaveStats.bytesReady );	
-
+	uint16_t bytesRead = masterI2C.getSlaveStorage( buffer + sizeof(slaveStats), sizeof(buffer), slaveStats.bytesReady );
 	if ( bytesRead > 0 ) 
 	{
-		bool dataSent = myWifi.send( buffer, bytesRead + sizeof(slaveStats)); // Try to send them to the server.
-		if ( dataSent ) 
+		if (myWifi.send( buffer, bytesRead + sizeof(slaveStats)))  // Try to send them to the server.
             masterI2C.sendCmd( 'A' ); // Tell slave that we succesfully passed the data on to the server. He can delete it.
 	}
 	masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep

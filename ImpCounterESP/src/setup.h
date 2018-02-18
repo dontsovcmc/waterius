@@ -4,6 +4,8 @@
 #define WIFI_TIMEOUT 1000UL // ms
 #define I2C_SLAVE_ADDR 10
 
+#define DEVICE_ID 111111
+
 #define WEMOS
 //#define ESP_01
 //#define NODEMCU

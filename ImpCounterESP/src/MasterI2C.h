@@ -12,10 +12,11 @@ struct SlaveStats {
 	uint32_t measurementEvery;
 	uint32_t vcc;
 	uint8_t bytesPerMeasurement;
-	uint8_t deviceID;
+	uint8_t version;
 	uint8_t numberOfSensors;
 	uint8_t dummy;
-}; //https://github.com/esp8266/Arduino/issues/1825
+	uint32_t deviceID;
+}; //should be *16bit https://github.com/esp8266/Arduino/issues/1825
 
 
 class MasterI2C

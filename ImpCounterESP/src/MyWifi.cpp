@@ -46,7 +46,7 @@ bool MyWifi::begin()
 		wifiManager.addParameter( &parm_remotePort );
 
 		// Start the portal with the SSID ENV_SENSOR
-		wifiManager.startConfigPortal( "ENV_SENSOR" );
+		wifiManager.startConfigPortal( "Impuls_Counter" );
 		LOG_NOTICE( "WIF", "Connected to wifi" );
 
 		// Get all the values that user entered in the portal and save it in EEPROM

@@ -1,5 +1,3 @@
-
-
 '''Using Webhook and self-signed certificate'''
 
 # This file is an annotated example of a webhook based bot for
@@ -17,36 +15,20 @@
 import os
 import sys
 import argparse
-from flask import Flask, request
 from signal import signal, SIGINT, SIGTERM, SIGABRT
 
-from telegram.ext import Updater, CommandHandler
+from server import TcpServer
+from parser import Parser
+from telegram.ext import Updater, MessageHandler, Filters
 from storage import db
 from logger import log
-from bot import start_handler, add_handler
+from bot import conv_handler, error_handler, outside_handler
 
 CERT     = 'server.crt'
 CERT_KEY = 'server.key'
 
 # CONFIG
 TOKEN = os.environ['BOT_TOKEN'] if 'BOT_TOKEN' in os.environ else sys.argv[1]
-
-app = Flask(__name__)
-
-
-@app.route('/log/<int:device_id>', methods=['POST'])
-def log_message(device_id):
-    # show the user profile for that user
-    print 'device %d' % device_id
-    print request.get_data()
-    return 'OK'
-
-
-@app.route('/data/add/<int:device_id>', methods=['POST'])
-def add_data(device_id):
-    content = request.get_json(force=True, silent=True)
-    print 'Device %d data:\n%s' % (device_id, content)
-    return 'OK'
 
 
 if __name__ == '__main__':
@@ -60,11 +42,14 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--admin_id', type=int, default=1234, help='admin user id')
     args = parser.parse_args()
 
-    log.info("BOT:\ntoken: %s\nhost: %s\nport: %d" % (TOKEN, args.host, args.port))
+    log.info("bot:\ntoken: %s\nhost: %s\nport: %d" % (TOKEN, args.host, args.port))
 
+    #Telegram bot
     updater = Updater(token=TOKEN)
-    updater.dispatcher.add_handler(CommandHandler('start', start_handler))
-    updater.dispatcher.add_handler(CommandHandler('add', add_handler))
+
+    updater.dispatcher.add_handler(conv_handler)
+    updater.dispatcher.add_handler(MessageHandler([Filters.text], outside_handler))
+    updater.dispatcher.add_error_handler(error_handler)
 
     if args.host:
         updater.start_webhook(listen=args.host,
@@ -73,27 +58,21 @@ if __name__ == '__main__':
                               key=CERT_KEY,
                               cert=CERT,
                               webhook_url='https://%s:8443/%s' % (args.host, TOKEN))
-
-        #updater.bot.set_webhook(url='https://%s:8443/%s/' % (args.host, TOKEN))
-        #                                certificate=open(CERT, 'rb'))
         log.info('webhook started')
 
     else:
         updater.start_polling()
         log.info('start polling')
 
-    #updater.idle()
-
     for sig in (SIGINT, SIGTERM, SIGABRT):
         signal(sig, updater.signal_handler)
 
     updater.is_idle = True
 
-    app.run(host=args.shost,
-            port=args.sport,
-            #ssl_context=(CERT, CERT_KEY),
-            #debug=True
-    )
+    #Tcp server
+    h = Parser(updater.bot)
+    server = TcpServer(args.shost, args.sport, h.handle_data)
+    server.loop()
 
     log.info("correct exit")
     db.close()

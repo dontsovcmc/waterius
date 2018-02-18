@@ -36,5 +36,52 @@ class Shelve(object):
         except KeyError:
             return default
 
+    #
+
+    def add_device(self, device_id, chat_id):
+
+        if device_id in self.get_devices(chat_id):
+            return
+        device_list = self.get(chat_id, 'device_list')
+        if not device_list:
+            device_list = device_id
+        else:
+            device_list += ';' + device_id
+        db.set(chat_id, 'device_list', device_list)
+
+        chat_list = self.get(device_id, 'chat_list')
+        if not chat_list:
+            chat_list = str(chat_id)
+        else:
+            chat_list += ';' + str(chat_id)
+        db.set(device_id, 'chat_list', chat_list)
+
+    def remove_device(self, device_id, chat_id):
+        device_list = self.get(chat_id, 'device_list')
+        if not device_list:
+            return
+        else:
+            l = device_list.split(';')
+            l.remove(device_id)
+            db.set(chat_id, 'device_list', ';'.join(l))
+
+        chat_list = self.get(device_id, 'chat_list')
+        if not chat_list:
+            return
+        else:
+            db.set(chat_id, 'chat_list', '')
+
+    def get_devices(self, chat_id):
+        device_list = self.get(chat_id, 'device_list')
+        if device_list:
+            return device_list.split(';')
+        return []
+
+    def get_chats(self, device_id):
+        chat_list = self.get(device_id, 'chat_list')
+        if chat_list:
+            return chat_list.split(';')
+        return []
+
 db = Shelve()
 db.open()

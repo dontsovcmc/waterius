@@ -74,8 +74,9 @@ SlaveStats MasterI2C::getSlaveStats() {
 	slaveStats.measurementEvery = getUint();
 	slaveStats.vcc = getUint();
 	slaveStats.bytesPerMeasurement = getByte();
-	slaveStats.deviceID = getByte();
+	slaveStats.version = getByte();
 	slaveStats.numberOfSensors = getByte();
+	slaveStats.deviceID = DEVICE_ID;
 
 	return slaveStats;
 }
