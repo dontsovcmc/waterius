@@ -59,12 +59,12 @@ bool MyWifi::begin()
 		storeConfig( ip, subnet, gw, remoteIP, remotePort );
 		
 		//TODO: do some led flashing
-		return true;
 	} 
 	else 
 	{
 		// Under normal boot we load config from EEPROM and start the wifi normally
-		loadConfig();
+		if (!loadConfig())
+			return false;
 		LOG_NOTICE( "WIF", "Starting Wifi" );
 		WiFi.config( ip, gw, subnet );
 		WiFi.begin();
@@ -85,10 +85,10 @@ bool MyWifi::begin()
 		{
 			LOG_NOTICE( "WIF", "Wifi connected, got IP address: " << WiFi.localIP().toString() );
 			client.setTimeout( WIFI_TIMEOUT ); // If things doesn't happen within XX milliseconds, we are loosing battery!
-			return true;
 		}
 	}
 	
+	return true;
 }
 
 /* Takes all the IP information we got from Wifimanger and saves it in EEPROM */
@@ -127,15 +127,17 @@ bool MyWifi::loadConfig() {
 		for ( int i = 0; i < 4; i++ ) remoteIP[i] = EEPROM.read( i + 12 );
 		for ( int i = 0; i < 2; i++ ) portPtr[i] = EEPROM.read( i + 16 );
 		LOG_NOTICE( "WIF", "Config loaded: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
+		return true;
 	}
 	else {
 		LOG_NOTICE( "WIF", "crc failed=" << crc );
-		ip.fromString( "10.0.24.245" );
+		ip.fromString( "192.168.1.100" );
 		subnet.fromString( "255.255.255.0" );
-		gw.fromString( "10.0.24.1" );
-		remoteIP.fromString( "192.168.50.10" );
+		gw.fromString( "192.168.1.1" );
+		remoteIP.fromString( "46.101.164.167" );
 		remotePort = atoi( "5001" );
 		LOG_NOTICE( "WIF", "Init config: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
+		return false;
 	}
 }
 

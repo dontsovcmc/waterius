@@ -43,3 +43,4 @@ class TestPacket(unittest.TestCase):
 
 #0c 00 02 00 03 00 06 01 03 00 00 dd 0c 00 00 00 00 dd 0c 00 00
 #ERROR integer division or modulo by zero
+

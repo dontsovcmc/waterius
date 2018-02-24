@@ -6,9 +6,9 @@
 
 #define DEVICE_ID 111111
 
-#define WEMOS
+//#define WEMOS
 //#define ESP_01
-//#define NODEMCU
+#define NODEMCU
 
 #ifdef ESP_01
     #define SETUP_PIN 3  //RX pin of ESP-01
@@ -23,9 +23,9 @@
 #endif
 
 #ifdef NODEMCU
-    #define SETUP_PIN D5
-    #define SDA_PIN SDA
-    #define SCL_PIN SCL
+    #define SETUP_PIN 3 //D5
+    #define SDA_PIN 4 //SDA
+    #define SCL_PIN 5 //SCL
 #endif
 
 #endif

@@ -48,6 +48,10 @@ void setup()
 
 	resetWatchdog(); //??? Needed for deep sleep to succeed
 	adc_disable(); //Disable ADC
+
+	//wake up when turn on
+	secondsSleeping = WAKE_MASTER_EVERY;
+	state = MEASURING;
 }
 
 void loop() 

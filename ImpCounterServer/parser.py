@@ -37,7 +37,11 @@ class Parser(object):
 
     def handle_data(self, data):
         try:
-            print "parser get data lenght: %d" % len(data)
+            if not data:
+                log.error("Data lenght=0")
+                return
+            else:
+                log.info("handle_data length: %d" % len(data))
 
             #data = [ord(i) for i in data]
             d = Data()
