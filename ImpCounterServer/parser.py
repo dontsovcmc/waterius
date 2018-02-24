@@ -36,17 +36,21 @@ class Parser(object):
         self.data = Data()
 
     def handle_data(self, data):
-        print "parser: %d" % len(data)
+        try:
+            print "parser get data lenght: %d" % len(data)
 
-        #data = [ord(i) for i in data]
-        d = Data()
-        d.bytes, d.wake, d.period, d.voltage = struct.unpack('IIII', data[0:16])
-        d.bytes_per_measure, d.version, d.sensors, dummy, d.device_id = struct.unpack('BBBBI', data[16:24])
+            #data = [ord(i) for i in data]
+            d = Data()
+            d.bytes, d.wake, d.period, d.voltage = struct.unpack('IIII', data[0:16])
+            d.bytes_per_measure, d.version, d.sensors, dummy, d.device_id = struct.unpack('BBBBI', data[16:24])
 
-        if d.version == 1:
-            parse_type_1(data, d, self.bot)
+            if d.version == 1:
+                parse_type_1(data, d, self.bot)
 
-        self.data = d
+            self.data = d
+        except Exception, err:
+            data = [format(ord(i), '02x') for i in data]
+            log.error("Handle error: %s, data=%s" % (str(err), ' '.join(data)))
 
 
 def parse_type_1(data, d, bot):
@@ -56,21 +60,25 @@ def parse_type_1(data, d, bot):
             value1, value2 = struct.unpack('II', data[k:k+8])
             if value1 < 1000000000 and value2 < 1000000000:  #проблемы с i2c
                 d.values.append((value1, value2))
+
+        if d.values:
+            chat_list = db.get_chats(unicode(d.device_id))
+            for chat_id in chat_list:
+                text = 'Счетчик №{0}, V={1:.2f}\n'.format(d.device_id, d.voltage/1000.0)
+                text += 'ХВС: {0}л ГВС: {1}л'.format(d.values[-1][0],d.values[-1][1])
+                if bot:
+                    bot.send_message(chat_id=chat_id, text=text)
+
+                text = 'вода добавить {0:.1f} {1:.1f}'.format(d.values[-1][0]/1000.0, d.values[-1][1]/1000.0)
+                if bot:
+                    bot.send_message(chat_id=chat_id, text=text)
+
+
+            if not chat_list:
+                log.warn('Нет получателя для устройства #' + str(d.device_id))
+        else:
+            raise Exception("no values")
+
     except Exception, err:
-        pass
-
-    chat_list = db.get_chats(unicode(d.device_id))
-    for chat_id in chat_list:
-        text = 'Счетчик №{0}, V={1:.2f}\n'.format(d.device_id, d.voltage)
-        text += 'ХВС: {0}л ГВС: {1}л'.format(d.values[-1][0],d.values[-1][1])
-        if bot:
-            bot.send_message(chat_id=chat_id, text=text)
-
-        text = 'вода добавить {0:.1f} {1:.1f}'.format(d.values[-1][0]/1000.0, d.values[-1][1]/1000.0)
-        if bot:
-            bot.send_message(chat_id=chat_id, text=text)
-
-
-    if not chat_list:
-        log.warn('Нет получателя для устройства #' + str(d.device_id))
-
+        data = [format(ord(i), '02x') for i in data]
+        log.error("parser1 error: %s, data=%s" % (str(err), ' '.join(data)))
