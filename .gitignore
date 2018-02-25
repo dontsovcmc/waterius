@@ -13,3 +13,5 @@ temp/
 */Last Loaded*
 *.user.workspace
 */*/readme.txt
+*/logs
+*.db
