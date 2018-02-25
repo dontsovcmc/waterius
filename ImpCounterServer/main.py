@@ -57,7 +57,7 @@ if __name__ == '__main__':
                               url_path=TOKEN,
                               key=CERT_KEY,
                               cert=CERT,
-                              webhook_url='https://%s:8443/%s' % (args.host, TOKEN))
+                              webhook_url='https://%s:%d/%s' % (args.host, args.port, TOKEN))
         log.info('webhook started')
 
     else:
