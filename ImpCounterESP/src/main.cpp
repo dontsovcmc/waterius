@@ -10,6 +10,7 @@ byte buffer[512];
 
 void setup()
 {
+	ESP.wdtDisable();
 #ifdef WEMOS
 	pinMode(D5, INPUT_PULLUP);
 	pinMode(D6, INPUT_PULLUP);

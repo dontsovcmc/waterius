@@ -48,6 +48,8 @@ class Parser(object):
             d.bytes, d.wake, d.period, d.voltage = struct.unpack('IIII', data[0:16])
             d.bytes_per_measure, d.version, d.sensors, dummy, d.device_id = struct.unpack('BBBBI', data[16:24])
 
+            log.info("device_id = %d" % d.device_id)
+
             if d.version == 1:
                 parse_type_1(data, d, self.bot)
 
