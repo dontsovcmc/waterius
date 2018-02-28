@@ -15,8 +15,8 @@ const uint8_t NUMBER_OF_SENSORS = 2;		// How many sensors deliver data
 
 const uint8_t GIVEUP_ON_MASTER_AFTER = 4;	// If master havn't confirmed getting our data within XX seconds, we give up and continue measuring
 
-const uint32_t WAKE_MASTER_EVERY = 60*60*24;	// Every XX seconds we wake up ESP master for it to poll our data
-const uint32_t MEASUREMENT_EVERY = 60*60*4;	// How often we take a measurement from our sensors
+const unsigned long WAKE_MASTER_EVERY = 60*60*24;	// Every XX seconds we wake up ESP master for it to poll our data
+const unsigned long MEASUREMENT_EVERY = 60*60*4;	// How often we take a measurement from our sensors
 
 #define STORAGE_SIZE 80  //bytes, 8 byte 1 measure
 
@@ -28,10 +28,10 @@ enum State { // Our state machine
 };
 
 struct SlaveStats {
-	uint32_t bytesReady;
-	uint32_t masterWakeEvery;
-	uint32_t measurementEvery;
-	uint32_t vcc;
+	unsigned long bytesReady;       //4 byte
+	unsigned long masterWakeEvery;
+	unsigned long measurementEvery;
+	unsigned long vcc;
 	uint8_t bytesPerMeasurement;
 	uint8_t deviceID;
 	uint8_t numberOfSensors;

@@ -19,7 +19,7 @@
   - 
 */
 
-void gotoDeepSleep( uint32_t seconds, uint32_t *counter, uint32_t *counter2);
+void gotoDeepSleep( unsigned long seconds, unsigned long *counter, unsigned long *counter2);
 void resetWatchdog();
 
 #endif

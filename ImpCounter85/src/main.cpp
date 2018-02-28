@@ -15,15 +15,15 @@
 #endif
 
 static enum State state = SLEEP;
-static uint32_t secondsSleeping = 0;
+static unsigned long secondsSleeping = 0;
 static unsigned long masterWokenUpAt;
 
-static uint32_t counter = 0;
-static uint32_t counter2 = 0;
+static unsigned long counter = 0;
+static unsigned long counter2 = 0;
 
 struct SensorData {
-	uint32_t counter;	     
-	uint32_t counter2;     
+	unsigned long counter;	     
+	unsigned long counter2;     
 };
 
 //https://github.com/esp8266/Arduino/issues/1825

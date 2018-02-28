@@ -9,9 +9,9 @@
 
 EdgeDebounceLite debounce;
 
-volatile uint32_t wdt_count;
-volatile uint32_t btnCount;
-volatile uint32_t btn2Count;
+volatile unsigned long wdt_count;
+volatile unsigned long btnCount;
+volatile unsigned long btn2Count;
 
 /* Watchdog interrupt vector */
 ISR( WDT_vect ) { 
@@ -28,7 +28,7 @@ ISR(PCINT0_vect)
 }
 
 /* Makes a deep sleep for X second using as little power as possible */
-void gotoDeepSleep( uint32_t seconds, uint32_t *counter, uint32_t *counter2) 
+void gotoDeepSleep( unsigned long seconds, unsigned long *counter, unsigned long *counter2) 
 {
 	btnCount = *counter;
 	btn2Count = *counter2;
