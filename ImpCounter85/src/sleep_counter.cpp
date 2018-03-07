@@ -9,9 +9,9 @@
 
 EdgeDebounceLite debounce;
 
-volatile unsigned long wdt_count;
-volatile unsigned long btnCount;
-volatile unsigned long btn2Count;
+volatile uint16_t wdt_count;
+volatile uint16_t btnCount;
+volatile uint16_t btn2Count;
 
 /* Watchdog interrupt vector */
 ISR( WDT_vect ) { 
@@ -28,12 +28,11 @@ ISR(PCINT0_vect)
 }
 
 /* Makes a deep sleep for X second using as little power as possible */
-void gotoDeepSleep( unsigned long seconds, unsigned long *counter, unsigned long *counter2) 
+void gotoDeepSleep( uint16_t minutes, uint16_t *counter, uint16_t *counter2) 
 {
 	btnCount = *counter;
 	btn2Count = *counter2;
 
-	wdt_count = seconds;
 
 	pinMode(BUTTON_PIN, INPUT_PULLUP);
 #ifdef BUTTON2_PIN
@@ -52,10 +51,14 @@ void gotoDeepSleep( unsigned long seconds, unsigned long *counter, unsigned long
 	PCMSK |= BUTTON_INTERRUPT; // pin change interrupt enabled for PCINTx
 
 	interrupts();         // interrupts are required now
-		
-	while ( wdt_count > 0 ) 
+	
+	for (uint8_t i = 0; i < minutes; ++i)
 	{
-		sleep_mode();
+		wdt_count = 60;
+		while ( wdt_count > 0 ) 
+		{
+			sleep_mode();
+		}
 	}
 		
 	wdt_disable();  // disable watchdog

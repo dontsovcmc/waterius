@@ -8,7 +8,7 @@
 
 /* Set up I2c bus */
 void MasterI2C::begin() {
-	Wire.begin( SDA, SCL );
+	Wire.begin( SDA_PIN, SCL_PIN );
 	Wire.setClock( 100000L );
 }
 
@@ -42,7 +42,7 @@ byte MasterI2C::getNextByte() {
 /* Retrieves the full slave storage byte by byte. 
    Returns the number of bytes that we received.
    Retuns 0 if there are no bytes or if it doesn't fit in our buffer */
-uint16_t MasterI2C::getSlaveStorage( byte* storage, const uint16_t maxStorageSize, const uint32_t bytesToFetch ) 
+uint16_t MasterI2C::getSlaveStorage( byte* storage, const uint16_t maxStorageSize, const uint16_t bytesToFetch ) 
 {
 	uint16_t storagePos;
 
@@ -83,14 +83,11 @@ SlaveStats MasterI2C::getSlaveStats() {
 
 
 /* Retrieves one uint from slave*/
-uint32_t MasterI2C::getUint() 
+uint16_t MasterI2C::getUint() 
 {
 	byte i1 = getByte();
 	byte i2 = getByte();
-	byte i3 = getByte();
-	byte i4 = getByte();
-	uint32_t v = i1 | (i2 << 8) | (i3 << 16) | (i4 << 24);
-	return v;
+	return i1 | (i2 << 8);
 }
 
 /* Retrieves one byte from slave*/

@@ -15,22 +15,22 @@
 #endif
 
 static enum State state = SLEEP;
-static unsigned long secondsSleeping = 0;
-static unsigned long masterWokenUpAt;
+static uint16_t minSleeping = 0;
+static uint16_t masterWokenUpAt;
 
-static unsigned long counter = 0;
-static unsigned long counter2 = 0;
+static uint16_t counter = 0;
+static uint16_t counter2 = 0;
 
 struct SensorData {
-	unsigned long counter;	     
-	unsigned long counter2;     
+	uint16_t counter;	     
+	uint16_t counter2;     
 };
 
 //https://github.com/esp8266/Arduino/issues/1825
 struct SlaveStats info = {
 	0, //bytesReady
-	WAKE_MASTER_EVERY,
-	MEASUREMENT_EVERY,
+	WAKE_MASTER_EVERY_MIN,
+	MEASUREMENT_EVERY_MIN,
 	0, //vcc
 	0,
 	DEVICE_ID,
@@ -50,7 +50,7 @@ void setup()
 	adc_disable(); //Disable ADC
 
 	//wake up when turn on
-	secondsSleeping = WAKE_MASTER_EVERY;
+	minSleeping = WAKE_MASTER_EVERY_MIN;
 	state = MEASURING;
 }
 
@@ -62,8 +62,8 @@ void loop()
 		case SLEEP:
 			slaveI2C.end();			// We don't want to be i2c slave anymore. 
 			//delay(3000);
-			gotoDeepSleep( MEASUREMENT_EVERY, &counter, &counter2);		// Deep sleep for X seconds
-			secondsSleeping += MEASUREMENT_EVERY;	// Keep a track of how many seconds we have been sleeping
+			gotoDeepSleep( MEASUREMENT_EVERY_MIN, &counter, &counter2);		// Deep sleep for X seconds
+			minSleeping += MEASUREMENT_EVERY_MIN;	// Keep a track of how many seconds we have been sleeping
 			state = MEASURING;
 
 			DEBUG_PRINT(F("COUNTER=")); DEBUG_PRINT(counter);
@@ -77,7 +77,7 @@ void loop()
 			storage.addElement( &sensorData );
 
 			state = SLEEP;			// Sucessfully stored the data, starting sleeping again
-			if ( secondsSleeping >= WAKE_MASTER_EVERY ) 
+			if ( minSleeping >= WAKE_MASTER_EVERY_MIN ) 
 				state = MASTER_WAKE; // Unless it's wakeup time
 			break;
 
@@ -97,12 +97,12 @@ void loop()
 			{
 				if (slaveI2C.masterGotOurData()) 
 					storage.clear();		// If Master has confirmed our data. We can start with new measurements
-				secondsSleeping = 0;
+				minSleeping = 0;
 				state = SLEEP;
 			}
 			if (millis() - masterWokenUpAt > GIVEUP_ON_MASTER_AFTER * 1000UL) 
 			{
-				secondsSleeping = 0;
+				minSleeping = 0;
 				state = SLEEP;
 			}
 			break;
