@@ -45,8 +45,8 @@ class Parser(object):
 
             #data = [ord(i) for i in data]
             d = Data()
-            d.bytes, d.wake, d.period, d.voltage = struct.unpack('IIII', data[0:16])
-            d.bytes_per_measure, d.version, d.sensors, dummy, d.device_id = struct.unpack('BBBBI', data[16:24])
+            d.bytes, d.wake, d.period, d.voltage = struct.unpack('HHHH', data[0:8])
+            d.bytes_per_measure, d.version, d.sensors, dummy, d.device_id = struct.unpack('BBBBH', data[8:14])
 
             log.info("device_id = %d" % d.device_id)
 
@@ -62,8 +62,8 @@ class Parser(object):
 def parse_type_1(data, d, bot):
 
     try:
-        for k in xrange(24, len(data), 8):
-            value1, value2 = struct.unpack('II', data[k:k+8])
+        for k in xrange(14, len(data), 4):
+            value1, value2 = struct.unpack('HH', data[k:k+4])
             if value1 < 1000000000 and value2 < 1000000000:  #проблемы с i2c
                 d.values.append((value1, value2))
 
