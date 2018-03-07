@@ -86,7 +86,7 @@ def list_handler(bot, update):
 def confirm_delete_handler(bot, update):
     try:
         id = update.message.text
-        if len(id) == 6 and int(id):
+        if len(id) >= 5 and int(id):
             db.remove_device(id, update.message.chat_id)
             bot.sendMessage(update.message.chat_id,
                             text=u'Удален счетчик #' + id)
@@ -98,7 +98,7 @@ def confirm_delete_handler(bot, update):
 def id_handler(bot, update):
     try:
         id = update.message.text
-        if len(id) == 6 and int(id):
+        if len(id) >= 5 and int(id):
             db.add_device(id, update.message.chat_id)
             bot.sendMessage(update.message.chat_id,
                             text=u'Добавлен новый счетчик #' + id)
