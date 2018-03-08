@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-//#define DEBUG  // use TinySerial on 3 pin. 
+#define DEBUG  // use TinySerial on 3 pin. 
 // DON'T DEBUG WITH #define BUTTON2 3 (!)
 
 #define ESP_RESET_PIN 1			// Pin number connected to ESP reset pin. This is for waking it up.
@@ -15,10 +15,10 @@ const uint8_t NUMBER_OF_SENSORS = 2;		// How many sensors deliver data
 
 const uint8_t GIVEUP_ON_MASTER_AFTER = 4;	// If master havn't confirmed getting our data within XX seconds, we give up and continue measuring
 
-const uint16_t WAKE_MASTER_EVERY_MIN = 1;	// Every XX  we wake up ESP master for it to poll our data
-const uint16_t MEASUREMENT_EVERY_MIN = 1;	// How often we take a measurement from our sensors
+const uint16_t WAKE_MASTER_EVERY_MIN = 60*6;	// Every XX  we wake up ESP master for it to poll our data
+const uint16_t MEASUREMENT_EVERY_MIN = 60;	// How often we take a measurement from our sensors
 
-#define STORAGE_SIZE 80  //bytes, 4 byte 1 measure
+#define STORAGE_SIZE 100  //bytes, 4 byte 1 measure
 
 enum State { // Our state machine
 		SLEEP,

@@ -9,7 +9,7 @@
 
 EdgeDebounceLite debounce;
 
-volatile uint16_t wdt_count;
+volatile uint8_t wdt_count; //0-60
 volatile uint16_t btnCount;
 volatile uint16_t btn2Count;
 
@@ -52,7 +52,7 @@ void gotoDeepSleep( uint16_t minutes, uint16_t *counter, uint16_t *counter2)
 
 	interrupts();         // interrupts are required now
 	
-	for (uint8_t i = 0; i < minutes; ++i)
+	for (uint16_t i = 0; i < minutes; ++i)
 	{
 		wdt_count = 60;
 		while ( wdt_count > 0 ) 

@@ -54,20 +54,30 @@ void setup()
 	state = MEASURING;
 }
 
+static uint8_t shift = 0;
+static uint8_t prev_state = SLEEP;
 void loop() 
 {
-  	DEBUG_PRINT(F("LOOP (")); DEBUG_PRINT(state); DEBUG_PRINTLN(F(")"));
+	if (prev_state != state)
+	{
+  		DEBUG_PRINT("LOOP ("); 
+		
+		DEBUG_PRINT(state); 
+		  
+		DEBUG_PRINTLN(")");
+		prev_state = state;
+	}
 
 	switch ( state ) {
 		case SLEEP:
 			slaveI2C.end();			// We don't want to be i2c slave anymore. 
 			//delay(3000);
-			gotoDeepSleep( MEASUREMENT_EVERY_MIN, &counter, &counter2);		// Deep sleep for X seconds
-			minSleeping += MEASUREMENT_EVERY_MIN;	// Keep a track of how many seconds we have been sleeping
+			gotoDeepSleep( MEASUREMENT_EVERY_MIN, &counter, &counter2);		// Deep sleep for X minutes
+			minSleeping += MEASUREMENT_EVERY_MIN;	// Keep a track of how many minutes we have been sleeping
 			state = MEASURING;
 
-			DEBUG_PRINT(F("COUNTER=")); DEBUG_PRINT(counter);
-			DEBUG_PRINT(F(" COUNTER2=")); DEBUG_PRINTLN(counter2);
+			DEBUG_PRINT("COUNTER="); DEBUG_PRINTLN(counter);
+			DEBUG_PRINT("COUNTER2="); DEBUG_PRINTLN(counter2);
 			break;
 
 		case MEASURING:
@@ -82,7 +92,6 @@ void loop()
 			break;
 
 		case MASTER_WAKE:
-			DEBUG_PRINTLN(F("WAKE"));
 			info.vcc = readVcc();  //заранее
 			slaveI2C.begin();		// Now we are slave for the ESP
 			wakeESP();
@@ -91,8 +100,6 @@ void loop()
 			break;
 
 		case SENDING:
-			DEBUG_PRINTLN(F("SENDING"));
-
 			if (slaveI2C.masterGoingToSleep()) 
 			{
 				if (slaveI2C.masterGotOurData()) 
@@ -100,6 +107,7 @@ void loop()
 				minSleeping = 0;
 				state = SLEEP;
 			}
+
 			if (millis() - masterWokenUpAt > GIVEUP_ON_MASTER_AFTER * 1000UL) 
 			{
 				minSleeping = 0;

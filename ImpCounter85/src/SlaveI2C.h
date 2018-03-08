@@ -7,7 +7,6 @@
 #define TX_BUFFER_SIZE 20
 
 
-
 class SlaveI2C
 {
  protected:

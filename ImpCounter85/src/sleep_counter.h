@@ -2,9 +2,12 @@
 #define _SLEEP_COUNTER_h
 
 #include <Arduino.h>
+#include "Setup.h"
 
 #define BUTTON_PIN    4 
-#define BUTTON2_PIN   3
+#ifndef DEBUG
+  #define BUTTON2_PIN   3
+#endif
 
 
 #ifdef BUTTON2_PIN
