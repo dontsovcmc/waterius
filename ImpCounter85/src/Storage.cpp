@@ -1,14 +1,10 @@
 #include "Storage.h"
 
-
-
 /* Storage constructor. We point to the start of storage */
 Storage::Storage( const uint8_t elementSize ) {
 	this->elementSize = elementSize;
 	clear();
 }
-
-
 
 /* Adds a provided data element to storage. 
    If storage is full, the oldest element is thrown away */
@@ -23,8 +19,6 @@ void Storage::addElement( const void * element ) {
 		addrPtr++;
 	}
 }
-
-
 
 /* Resets the storage address pointer, so we can start writing in the beginning of the eeprom (or ram)
 There is no need to zero it out because that wears out the EEPROM unnesecaryly*/
@@ -51,8 +45,6 @@ byte Storage::getNextByte() {
 		return readByte;
 	} else return 0;
 }
-
-
 
 /* Returns the number of bytes stored */
 uint16_t Storage::getStoredByteCount() {

@@ -3,32 +3,33 @@
 
 #include <Arduino.h>
 
-//#define DEBUG  // use TinySerial on 3 pin. 
-// DON'T DEBUG WITH #define BUTTON2 3 (!)
+// Включение логгирования с TinySerial: 3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
+// При логгировании не работает счетчик на 3-м пине.
+// #define DEBUG 
 
-#define ESP_RESET_PIN 1			// Pin number connected to ESP reset pin. This is for waking it up.
+#define ESP_RESET_PIN 1			// Номер пина, которым будим ESP8266. Если менять на 3/4, то нужно поменять пины в прерываниях.
 
-const uint8_t DEVICE_ID = 1;                // Unique identifier of this device
-//add device_type !!!!!
+const uint8_t DEVICE_ID = 1;                // Модель устройства
 
-const uint8_t NUMBER_OF_SENSORS = 2;		// How many sensors deliver data
+const uint8_t NUMBER_OF_SENSORS = 2;		// Сколько счетчиков
 
-const uint8_t GIVEUP_ON_MASTER_AFTER = 4;	// If master havn't confirmed getting our data within XX seconds, we give up and continue measuring
+const uint8_t GIVEUP_ON_MASTER_AFTER = 4;	// Сколько секунд ждем передачи данных в ESP
 
-const uint16_t WAKE_MASTER_EVERY_MIN = 60*6;	// Every XX  we wake up ESP master for it to poll our data
-const uint16_t MEASUREMENT_EVERY_MIN = 60;	// How often we take a measurement from our sensors
+const uint16_t WAKE_MASTER_EVERY_MIN = 60*6;	// Период передачи данных на сервер, мин
+const uint16_t MEASUREMENT_EVERY_MIN = 60;	// Период измерений данных
 
-#define STORAGE_SIZE 100  //bytes, 4 byte 1 measure
+#define STORAGE_SIZE 100  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
-enum State { // Our state machine
-		SLEEP,
-		MEASURING,
-		MASTER_WAKE,
-		SENDING
+enum State { 
+		SLEEP, //глубокий сон
+		MEASURING, //сохраняем измерение
+		MASTER_WAKE, //пробуждаем ESP8266, i2c
+		SENDING //ждем от ESP8266 команды, i2c
 };
 
+// attiny не поддерживает 4байт, используем 2байт
 struct SlaveStats {
-	uint16_t bytesReady;       //2 byte
+	uint16_t bytesReady; 
 	uint16_t masterWakeEvery;
 	uint16_t measurementEvery;
 	uint16_t vcc;

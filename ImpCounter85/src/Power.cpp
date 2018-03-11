@@ -6,7 +6,7 @@
 #include <avr/wdt.h>
 #include "Setup.h"
 
-/* Remove Wakes up the ESP by pulling it's reset pin low for a short time  */
+// Перезагружаем ESP8266 для передачи данных
 void wakeESP() 
 {
 	pinMode( ESP_RESET_PIN, OUTPUT );
@@ -16,12 +16,14 @@ void wakeESP()
 	pinMode( ESP_RESET_PIN, INPUT_PULLUP );
 }
 
+// Меряем напряжение питания Attiny85. 
+// Для каждой attiny будет своя константа.
 uint16_t readVcc() 
 {
 	// Read 1.1V reference against AVcc
 	// set the reference to Vcc and the measurement to the internal 1.1V reference
 
-	//Re-enable ADC 
+	//Включаем ADC 
 	adc_enable();
 
 	#if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
@@ -42,8 +44,8 @@ uint16_t readVcc()
 	//result = 1126400L / result; // calculate Vcc (in mV); 1126400 = 1.1*1024*1000 // generally
 	result = 1126400L / result; // calculate Vcc (in mV); 1168538 = 1.14115*1024*1000 // for this ATtiny
 
-	//Disable ADC
+	//Выключаем ADC
 	adc_disable();
 
-	return result; // Vcc in millivolts
+	return result; //милиВольт
 }

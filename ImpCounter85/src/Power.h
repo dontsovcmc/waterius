@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-//Disabling ADC saves ~230uAF. Needs to be re-enable for the internal voltage check
+//Выключение ADC сохраняет ~230uAF. 
 #define adc_disable() (ADCSRA &= ~(1<<ADEN)) // disable ADC
 #define adc_enable()  (ADCSRA |=  (1<<ADEN)) // re-enable ADC
 
