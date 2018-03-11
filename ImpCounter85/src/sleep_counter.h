@@ -22,7 +22,7 @@
   - 
 */
 
-void gotoDeepSleep( uint16_t seconds, uint16_t *counter, uint16_t *counter2);
+void gotoDeepSleep( uint16_t minutes, uint16_t *counter, uint16_t *counter2);
 void resetWatchdog();
 
 #endif
