@@ -2,7 +2,7 @@
 ## (проект в стадии разработки)
 Автономный счётчик импульсов с питанием от батареек АА 2шт или 3.3В. Данные передаются по Wi-Fi через Вашу точку доступа на мой сервер, который подключен к Телеграм-боту https://web.telegram.org/#/im?p=@ZKHBot.
 
-<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/imp_counter.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/imp_counter.jpg" width="400"/>
+<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" width="400"/> <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" width="400"/>
 
 Подключение 2-х счётчиков. Измерения сохраняются в буфер и отправляются на вебсервер через заданный промежуток времени. Период измерения и период отправки данных можно задать с точностью до минуты.
 
@@ -44,7 +44,7 @@
 + плата размером 
 
 ## Изготовление
-- создание платы ([1 слойный вариант под ESP-01](https://github.com/dontsovcmc/ImpCounter/blob/master/Board/ESP-01-1layer-v0.1.png))
+- создание платы ([1 слойный вариант под ESP-01](https://github.com/dontsovcmc/ImpCounter/blob/master/Board/board-ESP-01-1layer-v0.1.png))
 - прошивка Attiny85 
 - прошивка ESP (измените ID на любой уникальный)
 - установите ESP на плате
