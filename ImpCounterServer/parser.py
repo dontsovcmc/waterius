@@ -45,13 +45,16 @@ class Parser(object):
 
             #data = [ord(i) for i in data]
             d = Data()
-            d.bytes, d.wake, d.period, d.voltage = struct.unpack('HHHH', data[0:8])
-            d.bytes_per_measure, d.version, d.sensors, dummy, d.device_id = struct.unpack('BBBBH', data[8:14])
+            d.bytes, d.version, d.dymmy, d.wake, d.period, d.voltage = struct.unpack('HBBHHH', data[0:10])
+            d.device_id, d.device_pwd = struct.unpack('HH', data[10:14])
 
             log.info("device_id = %d" % d.device_id)
 
             if d.version == 1:
-                parse_type_1(data, d, self.bot)
+                if db.check_pwd(d.device_id, d.device_pwd):
+                    parse_type_1(data, d, self.bot)
+                else:
+                    log.error("Incorrect password")
 
             self.data = d
         except Exception, err:
@@ -64,26 +67,29 @@ def parse_type_1(data, d, bot):
     try:
         for k in xrange(14, len(data), 4):
             value1, value2 = struct.unpack('HH', data[k:k+4])
-            if value1 < 1000000000 and value2 < 1000000000:  #проблемы с i2c
+            if value1 < 65535 and value2 < 65535:  #проблемы с i2c возможно изза частоты 3%
                 d.values.append((value1, value2))
 
-        if d.values:
-            chat_list = db.get_chats(unicode(d.device_id))
-            for chat_id in chat_list:
+        chat_list = db.get_chats(unicode(d.device_id))
+        factor = db.get_factor(unicode(d.device_id))
+        for chat_id in chat_list:
+            if d.values:
                 text = 'Счетчик №{0}, V={1:.2f}\n'.format(d.device_id, d.voltage/1000.0)
-                text += 'ХВС: {0}л ГВС: {1}л'.format(d.values[-1][0],d.values[-1][1])
+                text += 'ХВС: {0}л ГВС: {1}л'.format(int(d.values[-1][0]*factor), int(d.values[-1][1]*factor))
                 if bot:
                     bot.send_message(chat_id=chat_id, text=text)
 
-                text = 'вода добавить {0:.1f} {1:.1f}'.format(d.values[-1][0]/1000.0, d.values[-1][1]/1000.0)
+                text = 'вода добавить {0:.1f} {1:.1f}'.format(d.values[-1][0]*factor/1000.0, d.values[-1][1]*factor/1000.0)
                 if bot:
                     bot.send_message(chat_id=chat_id, text=text)
 
-
-            if not chat_list:
-                log.warn('Нет получателя для устройства #' + str(d.device_id))
-        else:
-            raise Exception("no values")
+                if not chat_list:
+                    log.warn('Нет получателя для устройства #' + str(d.device_id))
+            else:
+                if bot:
+                    text = ' '.join(format(ord(i), '02x') for i in data[14:len(data)])
+                    bot.send_message(chat_id=chat_id, text="bad message: %s" % text)
+                log.error("no values")
 
     except Exception, err:
         data = [format(ord(i), '02x') for i in data]

@@ -22,9 +22,10 @@ from parser import Parser
 from telegram.ext import Updater, MessageHandler, Filters
 from storage import db
 from logger import log
-from bot import conv_handler, error_handler, outside_handler
+from bot import conv_handler, error_handler, outside_handler, newid_handler
+from telegram.ext import CommandHandler
 
-CERT     = 'server.crt'
+CERT = 'server.crt'
 CERT_KEY = 'server.key'
 
 # CONFIG
@@ -39,7 +40,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', type=int, default=8443, help='webhook: port 443, 80, 88 or 8443')
     parser.add_argument('-s', '--shost', default='', help='server host')
     parser.add_argument('-o', '--sport', type=int, default=5001, help='server port')
-    parser.add_argument('-a', '--admin_id', type=int, default=1234, help='admin user id')
+    parser.add_argument('-u', '--admin', type=str, help='admin username for add new counters')
     args = parser.parse_args()
 
     log.info("bot:\ntoken: %s\nhost: %s\nport: %d" % (TOKEN, args.host, args.port))
@@ -47,6 +48,8 @@ if __name__ == '__main__':
     #Telegram bot
     updater = Updater(token=TOKEN)
 
+    if args.admin:
+        updater.dispatcher.add_handler(CommandHandler('newid', newid_handler, Filters.chat(username=args.admin)))
     updater.dispatcher.add_handler(conv_handler)
     updater.dispatcher.add_handler(MessageHandler([Filters.text], outside_handler))
     updater.dispatcher.add_error_handler(error_handler)
