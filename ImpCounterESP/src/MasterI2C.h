@@ -5,17 +5,19 @@
 
 #define I2C_SLAVE_ADDR 10
 
-
+/*
+d.bytes, d.version, d.dymmy, d.wake, d.period, d.voltage = struct.unpack('HBBHHH', data[0:10])
+d.device_id, d.device_pwd = struct.unpack('HH', data[10:14])
+*/
 struct SlaveStats {
 	uint16_t bytesReady;
+	uint8_t version;
 	uint16_t masterWakeEvery;
 	uint16_t measurementEvery;
 	uint16_t vcc;
-	uint8_t bytesPerMeasurement;
-	uint8_t version;
-	uint8_t numberOfSensors;
-	uint8_t dummy;
 	uint16_t deviceID;
+	uint16_t devicePWD;
+	uint8_t dummy;
 }; //should be *16bit https://github.com/esp8266/Arduino/issues/1825
 
 

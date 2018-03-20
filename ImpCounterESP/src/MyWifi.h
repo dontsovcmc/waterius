@@ -14,9 +14,11 @@ class MyWifi
 	 IPAddress subnet; 
 	 IPAddress gw;
 	 IPAddress remoteIP; 
-	 uint16_t remotePort;
+	 uint16_t  remotePort;
+	 uint16_t  deviceID;
+	 uint16_t  devicePWD;
 
-	 void storeConfig( IPAddress ip, IPAddress subnet, IPAddress gw, IPAddress remoteIP, uint16_t remotePort);
+	 void storeConfig();
 	 bool loadConfig();
 
  public:

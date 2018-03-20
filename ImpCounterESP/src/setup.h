@@ -4,8 +4,8 @@
 #define WIFI_TIMEOUT 3000UL // ms
 #define I2C_SLAVE_ADDR 10
 
-#define DEVICE_ID 123456
-#define AP_NAME "Impuls_Counter_123456"
+#define DEVICE_ID 12345
+#define AP_NAME "Impuls_Counter_12345"
 
 //#define WEMOS
 #define ESP_01

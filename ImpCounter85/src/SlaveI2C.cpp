@@ -30,13 +30,10 @@ void SlaveI2C::begin() {
 }
 
 
-
 /* Finishes talking to the slave - this allows us to become a master when talking to sensors*/
 void SlaveI2C::end() {
 	Wire.end();
 }
-
-
 
 /* When master pulls a byte from us give him the current byte of the txbuffer and increase the position */
 void SlaveI2C::requestEvent() {
@@ -49,16 +46,12 @@ void SlaveI2C::requestEvent() {
 	}
 }
 
-
-
 /* Makes txbuffer ready */
 void SlaveI2C::newCommand() {
 	memset( txBuffer, 0xAA, TX_BUFFER_SIZE );	// Zero the tx buffer (with 0xAA so master has a chance to see he is stupid)
 	txBufferPos = 0;				// The next read from master starts from begining of buffer
 	lastCommand = 0;				// No previous command was received
 }
-
-
 
 /* Depending on the received command from master, set up the content of the txbuffer so he can get his data */
 void SlaveI2C::receiveEvent( int howMany ) {
@@ -70,7 +63,6 @@ void SlaveI2C::receiveEvent( int howMany ) {
 	switch ( command ) {
 		case 'B': // If we get the cmd 'B' he asks for the number of bytes in storage that he can expect.
 			info.bytesReady = storage.getStoredByteCount();
-			info.bytesPerMeasurement = storage.getElementSize();	// And size of each measurements in bytes
 			memcpy( txBuffer, &info, sizeof(info));
 			break;
 		case 'D': // If we get the cmd 'D' from master, read the next element number and give it to him
@@ -87,14 +79,10 @@ void SlaveI2C::receiveEvent( int howMany ) {
 	lastCommand = command;
 }
 
-
-
 /* Returns true if master has sent a 'Z' command, indicating that he is going to sleep */
 bool SlaveI2C::masterGoingToSleep() {
 	return masterSentSleep;
 }
-
-
 
 /* Returns true if master has acknowledged all data sent to him */
 bool SlaveI2C::masterGotOurData() {

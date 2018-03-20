@@ -11,12 +11,10 @@
 
 const uint8_t DEVICE_ID = 1;                // Модель устройства
 
-const uint8_t NUMBER_OF_SENSORS = 2;		// Сколько счетчиков
-
 const uint8_t GIVEUP_ON_MASTER_AFTER = 4;	// Сколько секунд ждем передачи данных в ESP
 
-const uint16_t WAKE_MASTER_EVERY_MIN = 60*6;	// Период передачи данных на сервер, мин
-const uint16_t MEASUREMENT_EVERY_MIN = 60;	// Период измерений данных
+const uint16_t WAKE_MASTER_EVERY_MIN = 2;	// Период передачи данных на сервер, мин
+const uint16_t MEASUREMENT_EVERY_MIN = 1;	// Период измерений данных
 
 #define STORAGE_SIZE 100  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
@@ -30,12 +28,10 @@ enum State {
 // attiny не поддерживает 4байт, используем 2байт
 struct SlaveStats {
 	uint16_t bytesReady; 
+	uint8_t  deviceID;
 	uint16_t masterWakeEvery;
 	uint16_t measurementEvery;
 	uint16_t vcc;
-	uint8_t bytesPerMeasurement;
-	uint8_t deviceID;
-	uint8_t numberOfSensors;
 	uint8_t dummy;
 };
 

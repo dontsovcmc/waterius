@@ -39,11 +39,20 @@ bool MyWifi::begin()
 		wifiManager.addParameter( &parm_gw );
 		WiFiManagerParameter parm_remoteIP( "RemoteIP", "Remote IP",  remoteIP.toString().c_str(), 20 );
 		wifiManager.addParameter( &parm_remoteIP );
-		
+
 		char rp[16];
 		itoa(remotePort, rp, 10);
 		WiFiManagerParameter parm_remotePort( "Port", "Remote Port", rp, 6 );
 		wifiManager.addParameter( &parm_remotePort );
+
+		itoa(deviceID, rp, 10);
+		WiFiManagerParameter parm_deviceID( "deviceID", "Device ID",  rp, 6);
+		wifiManager.addParameter( &parm_deviceID );
+		
+		itoa(devicePWD, rp, 10);
+		WiFiManagerParameter parm_devicePWD( "devicePWD", "Device password", rp, 6);
+		wifiManager.addParameter( &parm_devicePWD );
+		
 
 		// Start the portal with the SSID ENV_SENSOR
 		wifiManager.startConfigPortal( AP_NAME );
@@ -56,7 +65,7 @@ bool MyWifi::begin()
 		remoteIP.fromString( parm_remoteIP.getValue() );
 		remotePort = atoi( parm_remotePort.getValue() );
 		
-		storeConfig( ip, subnet, gw, remoteIP, remotePort );
+		storeConfig();
 		
 		//TODO: do some led flashing
 	} 
@@ -92,7 +101,8 @@ bool MyWifi::begin()
 }
 
 /* Takes all the IP information we got from Wifimanger and saves it in EEPROM */
-void MyWifi::storeConfig(IPAddress ip, IPAddress subnet, IPAddress gw, IPAddress remoteIP, uint16_t remotePort) {
+void MyWifi::storeConfig() 
+{
 	byte* portPtr = (byte*)&remotePort;
 	EEPROM.begin( 512 );
 	for ( int i = 0; i < 4; i++ ) EEPROM.write( i + 0 , ip[i] );
@@ -118,7 +128,8 @@ bool MyWifi::loadConfig() {
 	EEPROM.begin( 512 );
 	uint32_t crc;
 	byte* portPtr = (byte*) &crc;
-	for ( int i = 0; i < 4; i++ ) portPtr[i] = EEPROM.read( i + 20 );
+	for ( int i = 0; i < 4; i++ ) portPtr[i] = EEPROM.read( i + 30 );
+
 	if (crc == 1234) {
 		portPtr = (byte*) &remotePort;
 		for ( int i = 0; i < 4; i++ ) ip[i] = EEPROM.read( i + 0 );
@@ -126,17 +137,25 @@ bool MyWifi::loadConfig() {
 		for ( int i = 0; i < 4; i++ ) gw[i] = EEPROM.read( i + 8 );
 		for ( int i = 0; i < 4; i++ ) remoteIP[i] = EEPROM.read( i + 12 );
 		for ( int i = 0; i < 2; i++ ) portPtr[i] = EEPROM.read( i + 16 );
+		portPtr = (byte*) &deviceID;
+		for ( int i = 0; i < 2; i++ ) portPtr[i] = EEPROM.read( i + 18 );
+		portPtr = (byte*) &devicePWD;
+		for ( int i = 0; i < 2; i++ ) portPtr[i] = EEPROM.read( i + 20 );
 		LOG_NOTICE( "WIF", "Config loaded: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
+		LOG_NOTICE( "WIF", "Device Id=" << deviceID << ", password=" << devicePWD );
 		return true;
 	}
 	else {
 		LOG_NOTICE( "WIF", "crc failed=" << crc );
-		ip.fromString( "192.168.1.100" );
+		ip.fromString( "192.168.1.70" );
 		subnet.fromString( "255.255.255.0" );
 		gw.fromString( "192.168.1.1" );
 		remoteIP.fromString( "46.101.164.167" );
 		remotePort = atoi( "5001" );
+		deviceID = DEVICE_ID;
+		devicePWD = DEVICE_ID;
 		LOG_NOTICE( "WIF", "Init config: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
+		LOG_NOTICE( "WIF", "Device Id=" << deviceID << ", password=" << devicePWD );
 		return false;
 	}
 }

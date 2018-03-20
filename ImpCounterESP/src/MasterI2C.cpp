@@ -13,7 +13,6 @@ void MasterI2C::begin() {
 }
 
 
-
 /* Send a one byte command to slave */
 void MasterI2C::sendCmd( const char cmd ) {
 	Wire.beginTransmission( I2C_SLAVE_ADDR );
@@ -21,7 +20,6 @@ void MasterI2C::sendCmd( const char cmd ) {
 	Wire.endTransmission();
 	delay( 1 ); // Because attiny is running slow cpu clock speed. Give him a little time to process the command.
 }
-
 
 
 /* Tell slave that we want to read the first byte of the storage */
@@ -63,20 +61,18 @@ uint16_t MasterI2C::getSlaveStorage( byte* storage, const uint16_t maxStorageSiz
 }
 
 
-
 /* Returns the statistics from the slave */
 SlaveStats MasterI2C::getSlaveStats() {
 	sendCmd( 'B' );
 	SlaveStats slaveStats;
 
 	slaveStats.bytesReady = getUint();
+	slaveStats.version = getByte();
 	slaveStats.masterWakeEvery = getUint();
 	slaveStats.measurementEvery = getUint();
 	slaveStats.vcc = getUint();
-	slaveStats.bytesPerMeasurement = getByte();
-	slaveStats.version = getByte();
-	slaveStats.numberOfSensors = getByte();
 	slaveStats.deviceID = DEVICE_ID;
+	slaveStats.devicePWD = DEVICE_ID;
 
 	return slaveStats;
 }
