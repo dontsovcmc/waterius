@@ -18,3 +18,4 @@ temp/
 */*/readme.txt
 */logs
 *.db
+ImpCounterServer/run.sh
