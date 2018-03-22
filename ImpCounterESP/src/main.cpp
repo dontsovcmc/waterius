@@ -35,6 +35,9 @@ void loop()
 
 	// Get slave statistic like wakeuptime, measurement frequency and store them in the beginning of the transmissionbuffer
 	SlaveStats slaveStats = masterI2C.getSlaveStats(); 
+	slaveStats.deviceID = myWifi.deviceID;
+	slaveStats.devicePWD = myWifi.devicePWD;
+
 	memcpy( buffer, &slaveStats, sizeof( slaveStats ) );
 
 	LOG_NOTICE( "Stat: bytesReady", slaveStats.bytesReady);

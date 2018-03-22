@@ -71,8 +71,6 @@ SlaveStats MasterI2C::getSlaveStats() {
 	slaveStats.masterWakeEvery = getUint();
 	slaveStats.measurementEvery = getUint();
 	slaveStats.vcc = getUint();
-	slaveStats.deviceID = DEVICE_ID;
-	slaveStats.devicePWD = DEVICE_ID;
 
 	return slaveStats;
 }

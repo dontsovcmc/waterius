@@ -166,7 +166,7 @@ bool MyWifi::loadConfig() {
 		remoteIP.fromString( "192.168.1.42" ); //46.101.164.167
 		remotePort = atoi( "5001" );
 		deviceID = DEVICE_ID;
-		devicePWD = DEVICE_ID;
+		devicePWD = DEVICE_PWD;
 		LOG_NOTICE( "WIF", "Init config: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
 		LOG_NOTICE( "WIF", "Device Id=" << deviceID << ", password=" << devicePWD );
 		return false;

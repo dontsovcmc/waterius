@@ -83,16 +83,16 @@ class Shelve(object):
         if len(all) == 65534:
             raise Exception('DB full')
 
-        i = randint(1, 65535)
-        while i in all:
-            i = randint(1, 65535)
+        id = randint(1, 65535)
+        while id in all:
+            id = randint(1, 65535)
 
-        all.append(i)
+        all.append(id)
         self.set('', 'ids', all)
         pwd = randint(1000, 9999)
 
-        self.set('pwd', str(i), str(pwd))
-        return i, pwd
+        self.set('pwd', str(id), str(pwd))
+        return id, pwd
 
     def get_pwd(self, counter_id):
         return self.get('pwd', str(counter_id))
@@ -107,7 +107,7 @@ class Shelve(object):
         self.remove_from_list(chat_id, 'ids', id)
 
     def check_pwd(self, id, pwd):
-        return self.get('pwd', str(id)) == pwd
+        return self.get('pwd', str(id)) == str(pwd)
 
 db = Shelve()
 db.open()

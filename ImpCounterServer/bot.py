@@ -234,6 +234,7 @@ def device_handler(bot, update):
 def newid_handler(bot, update):
 
     id, pwd = db.generate_id()
+
     bot.sendMessage(update.message.chat_id, text="Новое устройство зарегистрировано\n"
                                                  "Уникальный ID: %s\n"
                                                  "Пароль: %s" % (id, pwd))

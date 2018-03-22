@@ -5,6 +5,7 @@
 #define I2C_SLAVE_ADDR 10
 
 #define DEVICE_ID 12345
+#define DEVICE_PWD 1234
 #define AP_NAME "Impuls_Counter_12345"
 
 //#define WEMOS
