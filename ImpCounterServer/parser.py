@@ -67,21 +67,31 @@ class Parser(object):
 def parse_type_1(data, d, bot):
 
     try:
+        value1_ = 0
+        value2_ = 0
         for k in xrange(14, len(data), 4):
             value1, value2 = struct.unpack('HH', data[k:k+4])
-            if value1 < 65535 and value2 < 65535:  #проблемы с i2c возможно изза частоты 3%
+
+            #проблемы с i2c возможно изза частоты 3%, иногда приходят FF
+            if abs(value1 - value1_) < 1000 and abs(value2 - value2_) < 1000:
                 d.values.append((value1, value2))
+                value1_ = value1
+                value2_ = value2
+            else:
+                log.error("incorrect data ({}): {}, {}".format(d.device_id, value1, value2))
 
         chat_list = db.get_chats(unicode(d.device_id))
         factor = db.get_factor(unicode(d.device_id))
         for chat_id in chat_list:
             if d.values:
+
+                value1, value2 = d.values[-1]
                 text = 'Счетчик №{0}, V={1:.2f}\n'.format(d.device_id, d.voltage/1000.0)
-                text += 'ХВС: {0}л ГВС: {1}л'.format(int(d.values[-1][0]*factor), int(d.values[-1][1]*factor))
+                text += 'ХВС: {0}л ГВС: {1}л'.format(int(value1*factor), int(value2*factor))
                 if bot:
                     bot.send_message(chat_id=chat_id, text=text)
 
-                text = 'вода добавить {0:.1f} {1:.1f}'.format(d.values[-1][0]*factor/1000.0, d.values[-1][1]*factor/1000.0)
+                text = 'вода добавить {0:.1f} {1:.1f}'.format(value1*factor/1000.0, value2*factor/1000.0)
                 if bot:
                     bot.send_message(chat_id=chat_id, text=text)
 

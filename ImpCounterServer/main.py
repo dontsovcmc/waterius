@@ -1,16 +1,4 @@
-'''Using Webhook and self-signed certificate'''
-
-# This file is an annotated example of a webhook based bot for
-# telegram. It does not do anything useful, other than provide a quick
-# template for whipping up a testbot. Basically, fill in the CONFIG
-# section and run it.
-# Dependencies (use pip to install them):
-# - python-telegram-bot: https://github.com/leandrotoledo/python-telegram-bot
-# - Flask              : http://flask.pocoo.org/
-# Self-signed SSL certificate (make sure 'Common Name' matches your FQDN):
-# $ openssl req -new -x509 -nodes -newkey rsa:1024 -keyout server.key -out server.crt -days 3650
-# You can test SSL handshake running this script and trying to connect using wget:
-# $ wget -O /dev/null https://$HOST:$PORT/
+# -*- coding: utf-8 -*-
 
 import os
 import sys
@@ -28,7 +16,7 @@ from telegram.ext import CommandHandler
 CERT = 'server.crt'
 CERT_KEY = 'server.key'
 
-# CONFIG
+# Token бота, полученный от BotFather
 TOKEN = os.environ['BOT_TOKEN'] if 'BOT_TOKEN' in os.environ else sys.argv[1]
 
 
@@ -38,12 +26,12 @@ if __name__ == '__main__':
     parser.add_argument('key')
     parser.add_argument('-i', '--host', default='', help='webhook: your IP address')
     parser.add_argument('-p', '--port', type=int, default=8443, help='webhook: port 443, 80, 88 or 8443')
-    parser.add_argument('-s', '--shost', default='', help='server host')
-    parser.add_argument('-o', '--sport', type=int, default=5001, help='server port')
+    parser.add_argument('-s', '--shost', default='', help='TCP server host')
+    parser.add_argument('-o', '--sport', type=int, default=5001, help='TCP server port')
     parser.add_argument('-u', '--admin', type=str, help='admin username for add new counters')
     args = parser.parse_args()
 
-    log.info("bot:\ntoken: %s\nhost: %s\nport: %d" % (TOKEN, args.host, args.port))
+    log.info("bot:\nhost: %s\nport: %d\nshost: %s\nsport: %d" % (args.host, args.port, args.shost, args.sport))
 
     #Telegram bot
     updater = Updater(token=TOKEN)
