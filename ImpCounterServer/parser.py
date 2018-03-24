@@ -45,7 +45,7 @@ class Parser(object):
             else:
                 log.info("handle_data length: %d" % len(data))
 
-            #data = [ord(i) for i in data]
+            log.info("data=%s" % ''.join( [format(ord(i), '02x') for i in data]))
             d = Data()
             d.bytes, d.version, d.dymmy, d.wake, d.period, d.voltage = struct.unpack('HBBHHH', data[0:10])
             d.device_id, d.device_pwd = struct.unpack('HH', data[10:14])

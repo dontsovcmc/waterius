@@ -24,11 +24,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='PhotoSliceBot')
     parser.add_argument('key')
-    parser.add_argument('-i', '--host', default='', help='webhook: your IP address')
-    parser.add_argument('-p', '--port', type=int, default=8443, help='webhook: port 443, 80, 88 or 8443')
+    parser.add_argument('-i', '--host', default='', help='only for webhook: your IP address')
+    parser.add_argument('-p', '--port', type=int, default=8443, help='only for webhook: port 443, 80, 88 or 8443')
     parser.add_argument('-s', '--shost', default='', help='TCP server host')
     parser.add_argument('-o', '--sport', type=int, default=5001, help='TCP server port')
-    parser.add_argument('-u', '--admin', type=str, help='admin username for add new counters')
+    parser.add_argument('-u', '--admin', type=str, help='admin username for add new devices')
     args = parser.parse_args()
 
     log.info("bot:\nhost: %s\nport: %d\nshost: %s\nsport: %d" % (args.host, args.port, args.shost, args.sport))
