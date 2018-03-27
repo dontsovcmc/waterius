@@ -100,8 +100,8 @@ def device_menu(bot, update, id):
     pwd = db.get_pwd(id)
 
     keyboard = [
-        [InlineKeyboardButton(u'Множитель (%dимп/л)' % factor, callback_data=u'Множитель')],
-        [InlineKeyboardButton(u'Значение: {0:.1f} {1:.1f}'.format(v1, v2), callback_data=u'Значение')],
+        [InlineKeyboardButton(u'Множитель (%dимп/л)' % factor, callback_data=u'Множитель'),
+         InlineKeyboardButton(u'Значение: {0:.1f} {1:.1f}'.format(v1, v2), callback_data=u'Значение')],
         [InlineKeyboardButton(u'Текст СМС', callback_data=u'Текст СМС')],
         [InlineKeyboardButton(u'Удалить', callback_data=u'Удалить'), InlineKeyboardButton(u'Выход', callback_data=u'Выход')]
     ]

@@ -93,7 +93,7 @@ def parse_type_1(data, d, bot):
                 imp1, imp2 = db.get_impulses(d.device_id)
 
                 text = 'Счетчик №{0}, V={1:.2f}\n'.format(d.device_id, d.voltage/1000.0)
-                text += 'ХВС: {0:.1f}м3 [{1}] ГВС: {2:.1f}м3 [{3}]'.format(v1, imp1, v2, imp2)
+                text += 'ГВС: {0:.1f}м3 [{1}] ХВС: {2:.1f}м3 [{3}]'.format(v1, imp1, v2, imp2)
                 if bot:
                     bot.send_message(chat_id=chat_id,
                                      text=text)
