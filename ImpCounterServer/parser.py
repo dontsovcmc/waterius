@@ -4,6 +4,7 @@ __author__ = 'dontsov'
 from storage import db
 from logger import log
 import struct
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 class Data(object):
     def __init__(self):
@@ -85,15 +86,21 @@ def parse_type_1(data, d, bot):
         for chat_id in chat_list:
             if d.values:
 
-                value1, value2 = d.values[-1]
-                text = 'Счетчик №{0}, V={1:.2f}\n'.format(d.device_id, d.voltage/1000.0)
-                text += 'ХВС: {0}л ГВС: {1}л'.format(int(value1*factor), int(value2*factor))
-                if bot:
-                    bot.send_message(chat_id=chat_id, text=text)
+                imp1, imp2 = d.values[-1]
+                db.set_impulses(d.device_id, imp1, imp2)
 
-                text = 'вода добавить {0:.1f} {1:.1f}'.format(value1*factor/1000.0, value2*factor/1000.0)
+                v1, v2 = db.get_current_value(d.device_id)
+                imp1, imp2 = db.get_impulses(d.device_id)
+
+                text = 'Счетчик №{0}, V={1:.2f}\n'.format(d.device_id, d.voltage/1000.0)
+                text += 'ХВС: {0:.1f}м3 [{1}] ГВС: {2:.1f}м3 [{3}]'.format(v1, imp1, v2, imp2)
                 if bot:
-                    bot.send_message(chat_id=chat_id, text=text)
+                    bot.send_message(chat_id=chat_id,
+                                     text=text)
+                if bot:
+                    bot.send_message(chat_id=chat_id,
+                                     text=db.sms_text(d.device_id),
+                                     reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(u'Меню', callback_data=u'Меню')]]))
 
                 if not chat_list:
                     log.warn('Нет получателя для устройства #' + str(d.device_id))

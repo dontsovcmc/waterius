@@ -69,6 +69,10 @@ class Shelve(object):
         factor = self.get(device_id, 'factor')
         return int(factor) if factor else 10
 
+    def sms_text(self, device_id):
+        v1, v2 = self.get_current_value(device_id)
+        return u'вода добавить {0:.1f} {1:.1f}'.format(v1, v2)
+
     def set_factor(self, device_id, factor):
         self.set(device_id, 'factor', factor)
 
@@ -111,8 +115,57 @@ class Shelve(object):
     def remove_id(self, chat_id, id):
         self.remove_from_list(chat_id, 'ids', id)
 
+    def get_pwd(self, id):
+        return self.get('pwd', str(id), 0)
+
     def check_pwd(self, id, pwd):
-        return self.get('pwd', str(id)) == str(pwd)
+        return self.get_pwd(id) == str(pwd)
+
+    def set_impulses(self, id, imp1, imp2):
+        '''
+        :param id:
+        :param imp1: штук
+        :param imp2: штук
+        '''
+        self.set(id, 'imp1', imp1)
+        self.set(id, 'imp2', imp2)
+
+    def get_impulses(self, id):
+        imp1 = self.get(id, 'imp1', 0)
+        imp2 = self.get(id, 'imp2', 0)
+        return imp1, imp2
+
+    def set_start_value(self, id, v1, v2):
+        '''
+        :param id:
+        :param v1: кубометров
+        :param v2: кубометров
+        :return:
+        '''
+        self.set(id, 'start1', v1)
+        self.set(id, 'start2', v2)
+
+        imp1, imp2 = self.get_impulses(id)
+        self.set(id, 'start_imp1', imp1)
+        self.set(id, 'start_imp2', imp2)
+
+    def get_current_value(self, id):
+        '''
+        :param id: номер устройства
+        :return: кубометров, кубометров
+        '''
+        imp1, imp2 = self.get_impulses(id)
+
+        imp1_0 = self.get(id, 'start_imp1', 0)
+        imp2_0 = self.get(id, 'start_imp2', 0)
+
+        factor = self.get_factor(id)
+
+        value1 = (imp1 - imp1_0)*factor/1000.0 + self.get(id, 'start1', 0)
+        value2 = (imp2 - imp2_0)*factor/1000.0 + self.get(id, 'start2', 0)
+
+        return value1, value2
+
 
 db = Shelve()
 db.open()

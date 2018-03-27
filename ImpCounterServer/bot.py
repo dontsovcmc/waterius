@@ -10,7 +10,7 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, Rege
 from storage import db
 from logger import log
 
-STATE_START, STATE_MENU, STATE_ADD_ID, STATE_ADD_PWD, STATE_DEVICE = range(5)
+STATE_START, STATE_MENU, STATE_ADD_ID, STATE_ADD_PWD, STATE_DEVICE, STATE_INPUT_VALUE = range(6)
 
 
 def outside_handler(bot, update):
@@ -96,8 +96,13 @@ def menu_handler(bot, update):
 def device_menu(bot, update, id):
 
     factor = db.get_factor(id)
+    v1, v2 = db.get_current_value(id)
+    pwd = db.get_pwd(id)
+
     keyboard = [
         [InlineKeyboardButton(u'Множитель (%dимп/л)' % factor, callback_data=u'Множитель')],
+        [InlineKeyboardButton(u'Значение: {0:.1f} {1:.1f}'.format(v1, v2), callback_data=u'Значение')],
+        [InlineKeyboardButton(u'Текст СМС', callback_data=u'Текст СМС')],
         [InlineKeyboardButton(u'Удалить', callback_data=u'Удалить'), InlineKeyboardButton(u'Выход', callback_data=u'Выход')]
     ]
 
@@ -106,12 +111,12 @@ def device_menu(bot, update, id):
         bot.editMessageText(
                 message_id=query.message.message_id,
                 chat_id=query.message.chat_id,
-                text=u'Счетчик #%s' % id,
+                text=u'Счетчик #%s (%s)' % (id, pwd),
                 inline_message_id=query.message.message_id,
                 reply_markup=InlineKeyboardMarkup(keyboard))
     else:
         bot.sendMessage(update.message.chat_id,
-                text=u'Счетчик #%s' % id,
+                text=u'Счетчик #%s (%s)' % (id, pwd),
                 reply_markup=InlineKeyboardMarkup(keyboard))
 
     return STATE_DEVICE
@@ -178,6 +183,20 @@ def device_handler(bot, update):
     if query.data == u'Выход':
         return start_handler(bot, update)
 
+    elif query.data == u'Значение':
+        bot.editMessageText(
+            message_id=query.message.message_id,
+            chat_id=query.message.chat.id,
+            text=u'Введите текущие значения через пробел: ',
+            inline_message_id=query.message.message_id,
+            reply_markup=InlineKeyboardMarkup([keyboard]))
+        return STATE_INPUT_VALUE
+
+    elif query.data == u'Текст СМС':
+        text = db.sms_text(id)
+        bot.sendMessage(chat_id, text=text)
+        return start_handler(bot, update)
+
     elif query.data == u'Множитель':
         factor = db.get_factor(id)
 
@@ -230,6 +249,28 @@ def device_handler(bot, update):
     return device_menu(bot, update, id)
 
 
+def input_value(bot, update):
+    chat_id = update.message.chat_id
+    device_id = db.selected_id(chat_id)
+    id = db.selected_id(chat_id)
+    factor = db.get_factor(device_id)
+    try:
+        v1, v2 = update.message.text.split(' ')
+
+        db.set_start_value(device_id, float(v1), float(v2))
+
+        value1, value2 = db.get_current_value(device_id)
+        text = u'Текущее значение: {0:.1f} {0:.1f}\n'.format(value1, value2)
+        bot.sendMessage(chat_id, text=text)
+
+        return device_menu(bot, update, id)
+
+    except Exception, err:
+        text = u'Ошибка {}'.format(err)
+        bot.sendMessage(chat_id, text=text)
+        return device_menu(bot, update, id)
+
+
 # Пользователь ввел команду /newid
 def newid_handler(bot, update):
 
@@ -258,6 +299,8 @@ conv_handler = ConversationHandler(
 
         STATE_DEVICE: [CallbackQueryHandler(device_handler),
                        MessageHandler(Filters.all, device_handler)],  #id
+
+        STATE_INPUT_VALUE: [MessageHandler(Filters.all, input_value)]
     },
 
     fallbacks=[CommandHandler('exit', error_handler)],
