@@ -19,10 +19,10 @@ const uint16_t MEASUREMENT_EVERY_MIN = 60*1;	// Период измерений 
 #define STORAGE_SIZE 100  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
 enum State { 
-		SLEEP, //глубокий сон
-		MEASURING, //сохраняем измерение
-		MASTER_WAKE, //пробуждаем ESP8266, i2c
-		SENDING //ждем от ESP8266 команды, i2c
+	SLEEP, //глубокий сон
+	MEASURING, //сохраняем измерение
+	MASTER_WAKE, //пробуждаем ESP8266, i2c
+	SENDING //ждем от ESP8266 команды, i2c
 };
 
 // attiny не поддерживает 4байт, используем 2байт
