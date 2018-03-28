@@ -9,9 +9,14 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, Rege
 
 from storage import db
 from logger import log
+from emoji import emojize
+from storage import COLD_HOT, HOT_COLD
 
 STATE_START, STATE_MENU, STATE_ADD_ID, STATE_ADD_PWD, STATE_DEVICE, STATE_INPUT_VALUE = range(6)
 
+BLUE = emojize(':large_blue_circle:', use_aliases=True)  # https://www.webpagefx.com/tools/emoji-cheat-sheet/
+RED = emojize(':red_circle:', use_aliases=True)
+ARROWS = emojize(':arrows_counterclockwise:', use_aliases=True)
 
 def outside_handler(bot, update):
     bot.sendMessage(update.message.chat_id,
@@ -99,10 +104,18 @@ def device_menu(bot, update, id):
     v1, v2 = db.get_current_value(id)
     pwd = db.get_pwd(id)
 
+    order = db.get_order(id, COLD_HOT)
+
+    if order == COLD_HOT:
+        value_button = InlineKeyboardButton(BLUE + u'{0:.3f} '.format(v1) + RED + u'{0:.3f}'.format(v2), callback_data=u'Значение')
+        order_button = InlineKeyboardButton(ARROWS + u' ' + BLUE + u'ХВС ' + RED + u'ГВС', callback_data=u'ГВС  ХВС')
+    else:
+        value_button = InlineKeyboardButton(RED + u'{0:.3f} '.format(v1) + BLUE + u'{0:.3f}'.format(v2), callback_data=u'Значение')
+        order_button = InlineKeyboardButton(ARROWS + u' ' + RED + u'ГВС ' + BLUE + u'ХВС', callback_data=u'ХВС  ГВС')
+
     keyboard = [
-        [InlineKeyboardButton(u'Множитель (%dимп/л)' % factor, callback_data=u'Множитель'),
-         InlineKeyboardButton(u'Значение: {0:.1f} {1:.1f}'.format(v1, v2), callback_data=u'Значение')],
-        [InlineKeyboardButton(u'Текст СМС', callback_data=u'Текст СМС')],
+        [InlineKeyboardButton(u'%dимп/л' % factor, callback_data=u'Множитель'), value_button],
+        [InlineKeyboardButton(u'Текст СМС', callback_data=u'Текст СМС'), order_button],
         [InlineKeyboardButton(u'Удалить', callback_data=u'Удалить'), InlineKeyboardButton(u'Выход', callback_data=u'Выход')]
     ]
 
@@ -227,6 +240,11 @@ def device_handler(bot, update):
         db.set_factor(id, 100)
     elif query.data == u'1000':
         db.set_factor(id, 1000)
+
+    elif query.data == u'ХВС  ГВС':
+        db.set_order(id, COLD_HOT)
+    elif query.data == u'ГВС  ХВС':
+        db.set_order(id, HOT_COLD)
 
     elif query.data == u'да':
         db.remove_device(id, chat_id)

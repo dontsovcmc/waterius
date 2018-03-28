@@ -4,6 +4,7 @@ __author__ = 'dontsov'
 import shelve
 from random import randint
 
+COLD_HOT, HOT_COLD = range(2)
 
 class Shelve(object):
 
@@ -66,15 +67,24 @@ class Shelve(object):
         return self.get(device_id, 'chat_list', [])
 
     def get_factor(self, device_id):
-        factor = self.get(device_id, 'factor')
-        return int(factor) if factor else 10
+        return self.get(device_id, 'factor', 1)
 
     def sms_text(self, device_id):
         v1, v2 = self.get_current_value(device_id)
-        return u'вода добавить {0:.1f} {1:.1f}'.format(v1, v2)
+        order = self.get_order(device_id, COLD_HOT)
+        if order == COLD_HOT:
+            return u'вода добавить {0:.1f} {1:.1f}'.format(v1, v2)
+        else:
+            return u'вода добавить {0:.1f} {1:.1f}'.format(v2, v1)
 
     def set_factor(self, device_id, factor):
         self.set(device_id, 'factor', factor)
+
+    def set_order(self, device_id, order):
+        self.set(device_id, 'order', order)
+
+    def get_order(self, device_id, default):
+        return self.get(device_id, 'order', default)
 
     def set_select_id(self, chat_id, id):
         self.set(chat_id, 'selected', id)
