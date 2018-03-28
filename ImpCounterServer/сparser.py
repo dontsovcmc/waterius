@@ -6,8 +6,21 @@ from logger import log
 import struct
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+
 class Data(object):
     def __init__(self):
+        '''
+        struct SlaveStats {
+        	uint32_t bytesReady;
+        	uint32_t masterWakeEvery;
+        	uint32_t measurementEvery;
+        	uint32_t vcc;
+        	uint8_t bytesPerMeasurement;
+            uint8_t version;
+            uint8_t numberOfSensors;
+            uint8_t dummy;
+        }; //should be *16bit https://github.com/esp8266/Arduino/issues/1825
+        '''
         self.bytes = 0
         self.wake = 0
         self.period = 0
@@ -19,21 +32,10 @@ class Data(object):
         self.sensors = 0
         self.values = []
 
-'''
-struct SlaveStats {
-	uint32_t bytesReady;
-	uint32_t masterWakeEvery;
-	uint32_t measurementEvery;
-	uint32_t vcc;
-	uint8_t bytesPerMeasurement;
-	uint8_t version;
-	uint8_t numberOfSensors;
-	uint8_t dummy;
-}; //should be *16bit https://github.com/esp8266/Arduino/issues/1825
-'''
 
 
-class Parser(object):
+
+class CounterParser(object):
     def __init__(self, bot):
         self.bot = bot
         self.data = Data()
@@ -82,7 +84,6 @@ def parse_type_1(data, d, bot):
                 log.error("incorrect data ({}): {}, {}".format(d.device_id, value1, value2))
 
         chat_list = db.get_chats(unicode(d.device_id))
-        factor = db.get_factor(unicode(d.device_id))
         for chat_id in chat_list:
             if d.values:
 
