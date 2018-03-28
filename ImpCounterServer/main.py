@@ -6,7 +6,7 @@ import argparse
 from signal import signal, SIGINT, SIGTERM, SIGABRT
 
 from server import TcpServer
-from parser import Parser
+from cparser import CounterParser
 from telegram.ext import Updater, MessageHandler, Filters
 from storage import db
 from logger import log
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     updater.is_idle = True
 
     #Tcp server
-    h = Parser(updater.bot)
+    h = CounterParser(updater.bot)
     server = TcpServer(args.shost, args.sport, h.handle_data)
     server.loop()
 
