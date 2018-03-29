@@ -102,19 +102,19 @@ def device_menu(bot, update, id):
 
     factor = db.get_factor(id)
     v1, v2 = db.get_current_value(id)
+    imp1, imp2 = db.get_impulses(id)
     pwd = db.get_pwd(id)
 
     order = db.get_order(id, COLD_HOT)
 
     if order == COLD_HOT:
-        value_button = InlineKeyboardButton(BLUE + u'{0:.3f} '.format(v1) + RED + u'{0:.3f}'.format(v2), callback_data=u'Значение')
         order_button = InlineKeyboardButton(ARROWS + u' ' + BLUE + u'ХВС ' + RED + u'ГВС', callback_data=u'ГВС  ХВС')
     else:
-        value_button = InlineKeyboardButton(RED + u'{0:.3f} '.format(v1) + BLUE + u'{0:.3f}'.format(v2), callback_data=u'Значение')
         order_button = InlineKeyboardButton(ARROWS + u' ' + RED + u'ГВС ' + BLUE + u'ХВС', callback_data=u'ХВС  ГВС')
 
     keyboard = [
-        [InlineKeyboardButton(u'%dимп/л' % factor, callback_data=u'Множитель'), value_button],
+        [InlineKeyboardButton(u'%dимп/л' % factor, callback_data=u'Множитель'),
+         InlineKeyboardButton(RED + u'{0:.3f} '.format(v1) + BLUE + u'{0:.3f}'.format(v2), callback_data=u'Значение')],
         [InlineKeyboardButton(u'Текст СМС', callback_data=u'Текст СМС'), order_button],
         [InlineKeyboardButton(u'Удалить', callback_data=u'Удалить'), InlineKeyboardButton(u'Выход', callback_data=u'Выход')]
     ]
@@ -124,12 +124,12 @@ def device_menu(bot, update, id):
         bot.editMessageText(
                 message_id=query.message.message_id,
                 chat_id=query.message.chat_id,
-                text=u'Счетчик #%s (%s)' % (id, pwd),
+                text=u'Счетчик #%s (%s) _ [%d, %d]' % (id, pwd, imp1, imp2),
                 inline_message_id=query.message.message_id,
                 reply_markup=InlineKeyboardMarkup(keyboard))
     else:
         bot.sendMessage(update.message.chat_id,
-                text=u'Счетчик #%s (%s)' % (id, pwd),
+                text=u'Счетчик #%s (%s) _ [%d, %d]' % (id, pwd, imp1, imp2),
                 reply_markup=InlineKeyboardMarkup(keyboard))
 
     return STATE_DEVICE
@@ -200,7 +200,7 @@ def device_handler(bot, update):
         bot.editMessageText(
             message_id=query.message.message_id,
             chat_id=query.message.chat.id,
-            text=u'Введите текущие значения через пробел: ',
+            text=u'Введите текущие значения через пробел ' + RED + u'ГВС,' + BLUE + u' ХВС: ',
             inline_message_id=query.message.message_id,
             reply_markup=InlineKeyboardMarkup([keyboard]))
         return STATE_INPUT_VALUE
@@ -274,13 +274,7 @@ def input_value(bot, update):
     factor = db.get_factor(device_id)
     try:
         v1, v2 = update.message.text.split(' ')
-
         db.set_start_value(device_id, float(v1), float(v2))
-
-        value1, value2 = db.get_current_value(device_id)
-        text = u'Текущее значение: {0:.1f} {0:.1f}\n'.format(value1, value2)
-        bot.sendMessage(chat_id, text=text)
-
         return device_menu(bot, update, id)
 
     except Exception, err:
