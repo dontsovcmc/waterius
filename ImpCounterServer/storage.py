@@ -3,6 +3,7 @@ __author__ = 'dontsov'
 
 import shelve
 from random import randint
+from datetime import datetime, timedelta
 
 COLD_HOT, HOT_COLD = range(2)
 
@@ -154,6 +155,19 @@ class Shelve(object):
         self.set(id, 'start2', v2)
         imp1, imp2 = self.get_impulses(id)
         self.set(id, 'start_imp2', imp2)
+
+    def set_connect_time(self, id, timestamp):
+        self.set(id, "connect_time", timestamp)
+
+    def get_connect_time(self, id):
+        return self.get(id, "connect_time", None)
+
+    def get_next_connect_str(self, id):
+        prev = db.get_connect_time(id)
+        if prev:
+            next_connect = datetime.now() + timedelta(seconds=(datetime.now() - prev).total_seconds())
+            return str(next_connect)
+        return "см.настройки счетчика"
 
     def get_current_value(self, id):
         '''

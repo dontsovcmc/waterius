@@ -5,7 +5,7 @@ from storage import db
 from logger import log
 import struct
 from bot import RED, BLUE
-
+from datetime import datetime, timedelta
 
 def data2log(data):
     data = [format(ord(i), '02x') for i in data]
@@ -63,8 +63,12 @@ def parse_type_1(data, d, bot):
             if value1 < 65535 and value2 < 65535:  #проблемы с i2c возможно изза частоты 3%
                 d.values.append((value1, value2))
 
-        chat_list = db.get_chats(unicode(d.device_id))
-        factor = db.get_factor(unicode(d.device_id))
+        chat_list = db.get_chats(d.device_id)
+        factor = db.get_factor(d.device_id)
+
+        next_connect_str = db.get_next_connect_str(d.device_id)
+        db.set_connect_time(d.device_id, datetime.utcnow())
+
         for chat_id in chat_list:
             if d.values:
                 # Проверим, что счетчик не перезапустился
@@ -74,16 +78,16 @@ def parse_type_1(data, d, bot):
                 if imp1 < prev_imp1: #либо ресет, либо 65535
                     bot.send_message(chat_id=chat_id, text=u"Переполнение счетчика ГВС. Введите тек.значение.")
                     db.set_start_value1(d.device_id, v1)
-                    log.warning("Переполнение ГВС: было %d имп., стало %d. Перезаписана точка старта." % (prev_imp1, imp1))
+                    log.warning(u"Переполнение ГВС: было %d имп., стало %d. Перезаписана точка старта." % (prev_imp1, imp1))
                 if imp2 < prev_imp2:
                     bot.send_message(chat_id=chat_id, text=u"Переполнение счетчика ХВС. Проверьте тек.значение.")
                     db.set_start_value2(d.device_id, v2)
-                    log.warning("Переполнение ХВС: было %d имп., стало %d. Перезаписана точка старта." % (prev_imp1, imp1))
+                    log.warning(u"Переполнение ХВС: было %d имп., стало %d. Перезаписана точка старта." % (prev_imp1, imp1))
 
                 # Пришле пользователю сообщение с показаниями
                 db.set_impulses(d.device_id, imp1, imp2)
                 v1, v2 = db.get_current_value(d.device_id)
-                text = u'Счетчик №{0}, V={1:.2f}\n'.format(d.device_id, d.voltage/1000.0)
+                text = u'Счетчик №{0}, V={1:.2f}\nСлед.связь: {2}\n'.format(d.device_id, d.voltage/1000.0, next_connect_str)
                 text += RED + u'{0:.3f} '.format(v1) + BLUE + u'{0:.3f}'.format(v2)
                 if bot:
                     bot.send_message(chat_id=chat_id, text=text)
