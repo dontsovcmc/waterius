@@ -145,18 +145,14 @@ class Shelve(object):
         imp2 = self.get(id, 'imp2', 0)
         return imp1, imp2
 
-    def set_start_value(self, id, v1, v2):
-        '''
-        :param id:
-        :param v1: кубометров
-        :param v2: кубометров
-        :return:
-        '''
+    def set_start_value1(self, id, v1):
         self.set(id, 'start1', v1)
-        self.set(id, 'start2', v2)
-
         imp1, imp2 = self.get_impulses(id)
         self.set(id, 'start_imp1', imp1)
+
+    def set_start_value2(self, id, v2):
+        self.set(id, 'start2', v2)
+        imp1, imp2 = self.get_impulses(id)
         self.set(id, 'start_imp2', imp2)
 
     def get_current_value(self, id):

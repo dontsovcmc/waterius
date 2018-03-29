@@ -274,7 +274,8 @@ def input_value(bot, update):
     factor = db.get_factor(device_id)
     try:
         v1, v2 = update.message.text.split(' ')
-        db.set_start_value(device_id, float(v1), float(v2))
+        db.set_start_value1(device_id, float(v1))
+        db.set_start_value2(device_id, float(v2))
         return device_menu(bot, update, id)
 
     except Exception, err:
