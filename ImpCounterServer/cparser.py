@@ -82,7 +82,7 @@ def parse_type_1(data, d, bot):
                 if imp2 < prev_imp2:
                     bot.send_message(chat_id=chat_id, text=u"Переполнение счетчика ХВС. Проверьте тек.значение.")
                     db.set_start_value2(d.device_id, v2)
-                    log.warning(u"Переполнение ХВС: было %d имп., стало %d. Перезаписана точка старта." % (prev_imp1, imp1))
+                    log.warning(u"Переполнение ХВС: было %d имп., стало %d. Перезаписана точка старта." % (prev_imp2, imp2))
 
                 # Пришле пользователю сообщение с показаниями
                 db.set_impulses(d.device_id, imp1, imp2)

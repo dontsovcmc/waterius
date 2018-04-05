@@ -2,13 +2,13 @@
 
 __author__ = 'dontsov'
 import unittest
-from сparser import CounterParser
+from cparser import CounterParser
 from storage import db
 import socket
 
 
 def log2data(s):
-    d = s.split(' ') if ' ' in s else d = [s[i:i + 2] for i in range(0, len(s), 2)]
+    d = s.split(' ') if ' ' in s else [s[i:i + 2] for i in range(0, len(s), 2)]
     d = [chr(int(i, 16)) for i in d]
     return ''.join(d)
 
@@ -31,7 +31,7 @@ class TestDB(unittest.TestCase):
             assert imp1 == 5 and imp2 == 6
 
             factor = db.get_factor(id)
-            assert factor == 10
+            assert factor == 1
 
             v1, v2 = db.get_current_value(id)
             assert v1 == 5*factor and v2 == 6*factor
@@ -48,7 +48,8 @@ class TestDB(unittest.TestCase):
             assert v2 == (11-6)*factor + 200
         finally:
             db.set_impulses(id, 0, 0)
-            db.set_start_value(id, 0, 0)
+            db.set_start_value1(id, 0)
+            db.set_start_value2(id, 0)
 
 
 class TestServer(unittest.TestCase):
@@ -99,7 +100,7 @@ class TestPacket(unittest.TestCase):
         self.assertEqual(p.data.values[0], (1, 2))
 
     def test_3(self):
-        d = log2data('6000013fa0053c00660b338baf1e000001000000020000000200000002000000020000000200000002000800110012001200120012001200120012001200120012ffffffffff')
+        d = log2data('6000013fa0053c00660b338baf1e0000010000000200080012ffffffffff')
 
         db.add_id_to_db(35635, 7855)  # код счетчика с паролем из сообщения
 
@@ -112,7 +113,21 @@ class TestPacket(unittest.TestCase):
         self.assertEqual(p.data.voltage, 2918)
         self.assertEqual(p.data.device_id, 35635)
         self.assertEqual(p.data.device_pwd, 7855)
-        self.assertEqual(len(p.data.values), 12)
+        self.assertEqual(len(p.data.values), 3)
+
+    def test_4(self):
+        d = log2data('60 00 01 3f a0 05 3c 00 75 0b 33 8b af 1e 52 00 64 00 52 00 64 00 52 00 64 00 52 00 64 00 52 00 32 00 54 00 66 00 55 00 69 00 55 00 69 00 55 00 69 00 55 00 69 00 55 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff')
+        db.add_id_to_db(35635, 7855)  # код счетчика с паролем из сообщения
+        p = CounterParser(None)
+        p.handle_data(d)
+        self.assertEqual(p.data.bytes, 96)
+        self.assertEqual(p.data.version, 1)
+        self.assertEqual(p.data.wake, 1440)
+        self.assertEqual(p.data.period, 60)
+        self.assertEqual(p.data.voltage, 2933)
+        self.assertEqual(p.data.device_id, 35635)
+        self.assertEqual(p.data.device_pwd, 7855)
+        self.assertEqual(len(p.data.values), 10)
 
 #0c 00 02 00 03 00 06 01 03 00 00 dd 0c 00 00 00 00 dd 0c 00 00
 #ERROR integer division or modulo by zero
