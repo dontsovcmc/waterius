@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "Setup.h"
+#include <EdgeDebounceLite.h>
 
 #define BUTTON_PIN    4 
 #ifndef DEBUG
@@ -10,13 +11,19 @@
 #endif
 
 
-#ifdef BUTTON2_PIN
-#define BUTTON_INTERRUPT (1 << PCINT4 | 1 << PCINT3)
-#else
-#define BUTTON_INTERRUPT (1 << PCINT4)
-#endif
+struct Counter {
+	uint16_t i;
+	bool state;
+  
+  uint8_t pin;
+	EdgeDebounceLite debounce;
 
-void gotoDeepSleep( uint16_t minutes, uint16_t *counter, uint16_t *counter2);
+	Counter();
+	void check();
+};
+
+void blink(uint16_t msec);
+void gotoDeepSleep( uint16_t minutes, Counter *counter, Counter *counter2);
 void resetWatchdog();
 
 #endif

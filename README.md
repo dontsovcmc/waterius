@@ -1,6 +1,7 @@
-# Wi-Fi счётчик импульсов 
+# Wi-Fi модуль для счётчиков воды
 ## (проект в стадии разработки)
-Автономный счётчик импульсов с питанием от батареек АА 2шт или 3.3В. Данные передаются по Wi-Fi в Телеграм-бота https://web.telegram.org/#/im?p=@ZKHBot.
+Автономное устройство, передающее показания воды по Wi-fi.
+Питанием от батареек АА 2шт. Данные передаются в Телеграм-бота.
 
 <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" width="400"/> <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" width="400"/>
 

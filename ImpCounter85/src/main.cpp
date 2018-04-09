@@ -19,8 +19,7 @@ static uint16_t minSleeping = 0;
 static uint16_t masterWokenUpAt;
 
 //глобальный счетчик до 65535
-static uint16_t counter = 0;
-static uint16_t counter2 = 0;
+static Counter counter, counter2;
 
 //одно измерение
 struct SensorData {
@@ -44,6 +43,10 @@ SlaveI2C slaveI2C;
 
 void setup() 
 {
+	counter.pin = BUTTON_PIN;
+#ifdef BUTTON2_PIN
+	counter2.pin = BUTTON2_PIN;
+#endif
 	DEBUG_CONNECT(9600);
   	DEBUG_PRINTLN(F("==== START ===="));
 
@@ -51,6 +54,17 @@ void setup()
 	adc_disable(); //выключаем ADC
 
 	//при включении проснемся и будем готовы передать 0 на сервер.
+	
+#ifdef BUTTON2_PIN
+	while (counter.i == 0 || counter2.i == 0)
+#else
+	while (counter.i == 0)
+#endif
+	{
+		gotoDeepSleep(1, &counter, &counter2);
+	}
+	DEBUG_PRINTLN(F("Counters ok"));
+
 	minSleeping = WAKE_MASTER_EVERY_MIN;
 	state = MEASURING;
 }
@@ -65,14 +79,14 @@ void loop()
 			minSleeping += MEASUREMENT_EVERY_MIN;
 			state = MEASURING;
 
-			DEBUG_PRINT("COUNTERS:"); DEBUG_PRINTLN(counter); DEBUG_PRINT("; "); DEBUG_PRINTLN(counter2);
+			DEBUG_PRINT("COUNTERS:"); DEBUG_PRINTLN(counter.i); DEBUG_PRINT("; "); DEBUG_PRINTLN(counter2.i);
 			break;
 
 		case MEASURING:
 			DEBUG_PRINT(F("LOOP (MEASURING)"));
 			SensorData sensorData;
-			sensorData.counter = counter;
-			sensorData.counter2 = counter2;
+			sensorData.counter = counter.i;
+			sensorData.counter2 = counter2.i;
 			storage.addElement( &sensorData );
 
 			state = SLEEP;			// Сохранили текущие значения
