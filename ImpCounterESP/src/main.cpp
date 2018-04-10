@@ -3,6 +3,20 @@
 #include "Logging.h"
 #include <user_interface.h>
 
+
+#ifdef LOGLEVEL
+void BLINK(uint16_t msec) {}
+#else
+void BLINK(uint16_t msec)
+{
+	pinMode(LED_PIN, OUTPUT);
+	digitalWrite(LED_PIN, HIGH);
+	delay(msec);
+	digitalWrite(LED_PIN, LOW);
+	pinMode(LED_PIN, INPUT);
+}
+#endif
+
 MasterI2C masterI2C;
 MyWifi myWifi;
 byte buffer[512];
@@ -16,7 +30,9 @@ void setup()
 	pinMode(SETUP_PIN, INPUT);
 	
 	LOG_NOTICE( "ESP", "Booted" );
+	BLINK(200);
 	Serial.begin( 115200 ,SERIAL_8N1, SERIAL_TX_ONLY); Serial.println();
+
 }
 
 
@@ -25,6 +41,9 @@ void loop()
 	if (!myWifi.begin())
 	{
 		LOG_ERROR( "ESP", "Wifi connected false, go sleep" );
+		BLINK(200);
+		delay(100);
+		BLINK(200);
 		ESP.deepSleep( 0, RF_DEFAULT );			// Sleep until I2C slave wakes us up again.
 		return;
 	}
@@ -48,7 +67,21 @@ void loop()
 	if ( bytesRead > 0 ) 
 	{
 		if (myWifi.send( buffer, bytesRead + sizeof(slaveStats)))  // Try to send them to the server.
-            masterI2C.sendCmd( 'A' ); // Tell slave that we succesfully passed the data on to the server. He can delete it.
+		{
+			masterI2C.sendCmd( 'A' ); // Tell slave that we succesfully passed the data on to the server. He can delete it.
+			BLINK(50);
+		}
+        else
+		{
+			BLINK(50);delay(100);
+			BLINK(50);
+		}    
+	}
+	else
+	{
+		BLINK(50);delay(100);
+		BLINK(50);delay(100);
+		BLINK(50);
 	}
 	masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep
 

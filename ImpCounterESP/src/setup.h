@@ -1,6 +1,8 @@
 #ifndef _SETUP_h
 #define _SETUP_h
 
+//#define LOGLEVEL 6
+
 #define WIFI_TIMEOUT 3000UL // ms
 #define I2C_SLAVE_ADDR 10
 
@@ -16,6 +18,7 @@
     #define SETUP_PIN 3  //RX pin of ESP-01
     #define SDA_PIN 0
     #define SCL_PIN 2
+    #define LED_PIN 4  //TX pin
 #endif
 
 #ifdef WEMOS

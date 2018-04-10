@@ -29,13 +29,13 @@ class Shelve(object):
             self.storage.close()
         self.storage = None
 
-    def set(self, chat_id, field, value):
-        self.storage[str(chat_id) + field] = value
+    def set(self, id, field, value):
+        self.storage[str(id) + field] = value
         self.storage.sync()  # !!!!
 
-    def get(self, chat_id, field, default=None):
+    def get(self, id, field, default=None):
         try:
-            return self.storage[str(chat_id) + field]
+            return self.storage[str(id) + field]
         except KeyError:
             return default
 
@@ -113,9 +113,6 @@ class Shelve(object):
         all.append(id)
         self.set('', 'ids', all)
         self.set('pwd', str(id), str(pwd))
-
-    def get_pwd(self, counter_id):
-        return self.get('pwd', str(counter_id))
 
     def get_chat_ids(self, chat_id):
         return self.get(chat_id, 'ids', [])
