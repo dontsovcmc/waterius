@@ -95,7 +95,7 @@ class Shelve(object):
 
     def generate_id(self):
         id = randint(1, 65535)
-        while not self.id_exist(id):
+        while self.id_exist(id):
             id = randint(1, 65535)
         pwd = randint(1000, 9999)
 
