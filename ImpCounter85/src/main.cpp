@@ -53,18 +53,14 @@ void setup()
 	resetWatchdog(); //??? Needed for deep sleep to succeed
 	adc_disable(); //выключаем ADC
 
-	//Инициализация. 
 	//Проверим, что входы считают или 5 мин задержка.
-	unsigned long t = millis();
 #ifdef BUTTON2_PIN
-	while ((counter.i == 0 || counter2.i == 0) 
-		&& (millis() - t < 300000))
-#else
-	while (counter.i == 0)
-#endif
+	unsigned long t = millis();
+	while ((counter.i == 0 || counter2.i == 0) && (millis() - t < 300000))
 	{
 		gotoDeepSleep(1, &counter, &counter2);
 	}
+#endif
 	DEBUG_PRINTLN(F("Counters ok"));
 
 	minSleeping = WAKE_MASTER_EVERY_MIN;

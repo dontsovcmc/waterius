@@ -7,9 +7,6 @@
 
 extern Storage storage;
 extern struct SlaveStats info;
-#ifdef DEBUG
-	extern TinyDebugSerial mySerial;
-#endif
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
