@@ -2,6 +2,7 @@
 #include "MasterI2C.h"
 #include "Logging.h"
 #include <user_interface.h>
+#include <ESP8266WiFi.h>
 
 
 #ifdef LOGLEVEL
@@ -66,6 +67,8 @@ void loop()
 	uint16_t bytesRead = masterI2C.getSlaveStorage( buffer + sizeof(slaveStats), sizeof(buffer), slaveStats.bytesReady );
 	if ( bytesRead > 0 ) 
 	{
+		SlaveStats *ss = (SlaveStats*)(&buffer);
+		ss->message_type = ATTINY_OK;
 		if (myWifi.send( buffer, bytesRead + sizeof(slaveStats)))  // Try to send them to the server.
 		{
 			masterI2C.sendCmd( 'A' ); // Tell slave that we succesfully passed the data on to the server. He can delete it.
@@ -79,12 +82,16 @@ void loop()
 	}
 	else
 	{
+		SlaveStats *ss = (SlaveStats*)(&buffer);
+		ss->message_type = ATTINY_FAIL;
+		myWifi.send( buffer, sizeof(slaveStats)); // Try to send error
 		BLINK(50);delay(100);
 		BLINK(50);delay(100);
 		BLINK(50);
 	}
 	masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep
 
+	//WiFi.disconnect( true );
 	LOG_NOTICE( "ESP", "Going to sleep" );
 	ESP.deepSleep( 0, RF_DEFAULT );			// Sleep until I2C slave wakes us up again.
 }

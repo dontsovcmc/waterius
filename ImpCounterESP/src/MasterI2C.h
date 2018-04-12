@@ -11,8 +11,8 @@ d.device_id, d.device_pwd = struct.unpack('HH', data[10:14])
 */
 struct SlaveStats {
 	uint16_t bytesReady;
-	uint8_t version;
-	uint8_t dummy;
+	uint8_t  version;
+	uint8_t  message_type;
 	uint16_t masterWakeEvery;
 	uint16_t measurementEvery;
 	uint16_t vcc;
@@ -20,6 +20,11 @@ struct SlaveStats {
 	uint16_t devicePWD;
 }; //should be *16bit https://github.com/esp8266/Arduino/issues/1825
 
+
+enum msg_type {
+	ATTINY_OK = 1,
+	ATTINY_FAIL = 2
+};
 
 class MasterI2C
 {

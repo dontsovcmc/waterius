@@ -33,6 +33,7 @@ void MasterI2C::gotoFirstByte() {
 byte MasterI2C::getNextByte() {
 	Wire.requestFrom( I2C_SLAVE_ADDR, 1 );
 	byte rxByte = Wire.read();
+	delay( 1 ); 
 	return rxByte;
 }
 
