@@ -9,7 +9,7 @@
 /* Set up I2c bus */
 void MasterI2C::begin() {
 	Wire.begin( SDA_PIN, SCL_PIN );
-	Wire.setClock( 100000L );
+	Wire.setClock( 33000L );
 }
 
 
@@ -32,8 +32,8 @@ void MasterI2C::gotoFirstByte() {
 /* Get the next byte from the slave. */
 byte MasterI2C::getNextByte() {
 	Wire.requestFrom( I2C_SLAVE_ADDR, 1 );
+	delay( 1 );
 	byte rxByte = Wire.read();
-	delay( 1 ); 
 	return rxByte;
 }
 
