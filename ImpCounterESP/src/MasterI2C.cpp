@@ -9,7 +9,7 @@
 /* Set up I2c bus */
 void MasterI2C::begin() {
 	Wire.begin( SDA_PIN, SCL_PIN );
-	Wire.setClock( 33000L );
+	Wire.setClock( 100000L );
 }
 
 
@@ -18,7 +18,6 @@ void MasterI2C::sendCmd( const char cmd ) {
 	Wire.beginTransmission( I2C_SLAVE_ADDR );
 	Wire.write( cmd );
 	Wire.endTransmission();
-	delay( 1 ); // Because attiny is running slow cpu clock speed. Give him a little time to process the command.
 }
 
 
@@ -28,13 +27,11 @@ void MasterI2C::gotoFirstByte() {
 }
 
 
-
-/* Get the next byte from the slave. */
-byte MasterI2C::getNextByte() {
+/* Retrieves one byte from slave*/
+uint8_t MasterI2C::getByte() {
 	Wire.requestFrom( I2C_SLAVE_ADDR, 1 );
-	delay( 1 );
-	byte rxByte = Wire.read();
-	return rxByte;
+	uint8_t value = Wire.read();
+	return value;
 }
 
 
@@ -49,7 +46,7 @@ uint16_t MasterI2C::getSlaveStorage( byte* storage, const uint16_t maxStorageSiz
 		LOG_NOTICE( "I2C", "Polling slave for " << bytesToFetch << " bytes" );
 		gotoFirstByte();
 		for ( storagePos = 0; storagePos < bytesToFetch; storagePos++ ) {
-			byte rxByte = getNextByte();
+			byte rxByte = getByte();
 			LOG_DEBUG( "I2C", "Byte Number " << storagePos << ": " << (int) rxByte );
 			*( storage + storagePos ) = rxByte;
 		}
@@ -83,11 +80,4 @@ uint16_t MasterI2C::getUint()
 	byte i1 = getByte();
 	byte i2 = getByte();
 	return i1 | (i2 << 8);
-}
-
-/* Retrieves one byte from slave*/
-uint8_t MasterI2C::getByte() {
-	Wire.requestFrom( I2C_SLAVE_ADDR, 1 );
-	uint8_t value = Wire.read();
-	return value;
 }

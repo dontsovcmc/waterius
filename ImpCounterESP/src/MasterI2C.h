@@ -30,7 +30,6 @@ class MasterI2C
 {
  protected:
 	 void gotoFirstByte();
-	 byte getNextByte();
 	 uint16_t getUint();
 	 uint8_t getByte();
 
