@@ -29,7 +29,8 @@ void gotoDeepSleep(uint16_t minutes, Counter *counter, Counter *counter2)
 	
 	//60 * 4 = 250мс сон
 	//30 = 2c сон
-	for (uint16_t i = 0; i < 30; ++i)  
+	//3750 раз - 16мс
+	for (uint16_t i = 0; i < 3750; ++i)  
 	{
 		wdt_count = minutes; 
 		while ( wdt_count > 0 ) 
@@ -54,10 +55,11 @@ void resetWatchdog()
 	MCUSR = 0; // clear various "reset" flags
 	WDTCR = bit( WDCE ) | bit( WDE ) | bit( WDIF ); // allow changes, disable reset, clear existing interrupt
 	// set interrupt mode and an interval (WDE must be changed from 1 to 0 here)
+	WDTCR = bit( WDIE ) ;    // set WDIE, and 16 ms
 	//WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // set WDIE, and 0.5 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // set WDIE, and 1 seconds delay
-	WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );    // set WDIE, and 2 seconds delay
+	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );    // set WDIE, and 2 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP3 ) | bit( WDP0 );    // set WDIE, and 8 seconds delay
 														
 	wdt_reset(); // pat the dog
