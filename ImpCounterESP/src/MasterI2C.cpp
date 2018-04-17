@@ -10,6 +10,7 @@
 void MasterI2C::begin() {
 	Wire.begin( SDA_PIN, SCL_PIN );
 	Wire.setClock( 100000L );
+	Wire.setClockStretchLimit(1500L);
 }
 
 

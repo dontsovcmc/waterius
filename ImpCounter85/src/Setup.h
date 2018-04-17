@@ -13,10 +13,10 @@ const uint8_t DEVICE_ID = 1;                // Модель устройства
 
 const uint8_t GIVEUP_ON_MASTER_AFTER = 4;	// Сколько секунд ждем передачи данных в ESP
 
-const uint16_t WAKE_MASTER_EVERY_MIN = 30; //60*24;	// Период передачи данных на сервер, мин
-const uint16_t MEASUREMENT_EVERY_MIN = 1;  //60*2;	// Период измерений данных. Кратно минутам строго!
+const uint16_t WAKE_MASTER_EVERY_MIN = 24*60;	// Период передачи данных на сервер, мин
+const uint16_t MEASUREMENT_EVERY_MIN = 1*60;	// Период измерений данных. Кратно минутам строго!
 
-#define STORAGE_SIZE 100  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
+#define STORAGE_SIZE 120  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
 enum State { 
 	SLEEP, //глубокий сон

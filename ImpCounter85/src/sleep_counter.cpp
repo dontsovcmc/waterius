@@ -27,10 +27,11 @@ void gotoDeepSleep(uint16_t minutes, Counter *counter, Counter *counter2)
 	//wdt_enable(WDTO_1S);
 	interrupts();         // interrupts are required now
 	
-	//60 * 4 = 250мс сон
 	//30 = 2c сон
-	//3750 раз - 16мс
-	for (uint16_t i = 0; i < 3750; ++i)  
+	//60 * 4 = 250мс сон
+	//62.5 * 60 раз - 16мс
+	//31.25 * 60 раз - 32мс
+	for (uint16_t i = 0; i < 240; ++i)  
 	{
 		wdt_count = minutes; 
 		while ( wdt_count > 0 ) 
@@ -52,11 +53,13 @@ void gotoDeepSleep(uint16_t minutes, Counter *counter, Counter *counter2)
 /* Prepare watchdog */
 void resetWatchdog() 
 {
-	MCUSR = 0; // clear various "reset" flags
+	MCUSR = 0; // clear various "reset" flags // bit( WDIF ) удалить
+	// MCUSR нужно ли ? MCU Status Register
 	WDTCR = bit( WDCE ) | bit( WDE ) | bit( WDIF ); // allow changes, disable reset, clear existing interrupt
 	// set interrupt mode and an interval (WDE must be changed from 1 to 0 here)
-	WDTCR = bit( WDIE ) ;    // set WDIE, and 16 ms
-	//WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
+	//WDTCR = bit( WDIE );    // set WDIE, and 16 ms
+	//WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
+	WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // set WDIE, and 0.5 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // set WDIE, and 1 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );    // set WDIE, and 2 seconds delay
@@ -81,7 +84,7 @@ void Counter::check()
 	{
 		if (state == false)
 		{
-			delayMicroseconds(20000); //delay failed (?)
+			delayMicroseconds(10000); //delay failed (?)
 			if (debounce.pin(pin) == LOW)
 			{
 				i++;
