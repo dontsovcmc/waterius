@@ -2,13 +2,13 @@
 #include "Setup.h"
 
 #include <avr/pgmspace.h>
-#include <TinyDebugSerial.h>
 #include <USIWire.h>
 
 #include "Power.h"
 #include "SlaveI2C.h"
 #include "Storage.h"
 #include "sleep_counter.h"
+#include <avr/wdt.h>
 
 #ifdef DEBUG
 	TinyDebugSerial mySerial;
@@ -50,7 +50,7 @@ void setup()
 	DEBUG_CONNECT(9600);
   	DEBUG_PRINTLN(F("==== START ===="));
 
-	resetWatchdog(); //??? Needed for deep sleep to succeed
+	resetWatchdog(); 
 	adc_disable(); //выключаем ADC
 
 	//Проверим, что входы считают или 2 мин задержка.

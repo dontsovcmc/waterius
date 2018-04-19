@@ -2,6 +2,7 @@
 #define _SETUP_h
 
 #include <Arduino.h>
+#include <TinyDebugSerial.h>
 
 // Включение логгирования с TinySerial: 3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
 // При логгировании не работает счетчик на 3-м пине.
@@ -13,8 +14,8 @@ const uint8_t DEVICE_ID = 1;                // Модель устройства
 
 const uint8_t GIVEUP_ON_MASTER_AFTER = 4;	// Сколько секунд ждем передачи данных в ESP
 
-const uint16_t WAKE_MASTER_EVERY_MIN = 24*60;	// Период передачи данных на сервер, мин
-const uint16_t MEASUREMENT_EVERY_MIN = 1*60;	// Период измерений данных. Кратно минутам строго!
+const uint16_t WAKE_MASTER_EVERY_MIN = 30;	// Период передачи данных на сервер, мин
+const uint16_t MEASUREMENT_EVERY_MIN = 1;	// Период измерений данных. Кратно минутам строго!
 
 #define STORAGE_SIZE 120  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
@@ -36,6 +37,7 @@ struct SlaveStats {
 };
 
 #ifdef DEBUG
+  extern TinyDebugSerial mySerial;
   #define DEBUG_CONNECT(x)  mySerial.begin(x)
   #define DEBUG_PRINT(x)    mySerial.print(x)
   #define DEBUG_PRINTLN(x)    mySerial.println(x)
