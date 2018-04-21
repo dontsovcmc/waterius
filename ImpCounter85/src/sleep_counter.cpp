@@ -31,7 +31,7 @@ void gotoDeepSleep(uint16_t minutes, Counter *counter, Counter *counter2)
 	//60 * 4 = 250мс сон
 	//62.5 * 60 раз - 16мс
 	//31.25 * 60 раз - 32мс
-	for (uint16_t i = 0; i < 240; ++i)  
+	for (uint16_t i = 0; i < 8; ++i)  
 	{
 		wdt_count = minutes; 
 		while ( wdt_count > 0 ) 

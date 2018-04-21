@@ -54,13 +54,7 @@ void setup()
 	adc_disable(); //выключаем ADC
 
 	//Проверим, что входы считают или 2 мин задержка.
-#ifdef BUTTON2_PIN
-	unsigned long t = millis();
-	while ((counter.i == 0 || counter2.i == 0) && (millis() - t < 120000))
-	{
-		gotoDeepSleep(1, &counter, &counter2);
-	}
-#endif
+	gotoDeepSleep(1, &counter, &counter2);
 	DEBUG_PRINTLN(F("Counters ok"));
 
 	minSleeping = WAKE_MASTER_EVERY_MIN;
@@ -123,6 +117,7 @@ void loop()
 				minSleeping = 0;
 				state = SLEEP;
 			}
+			
 			break;
 	}
 }
