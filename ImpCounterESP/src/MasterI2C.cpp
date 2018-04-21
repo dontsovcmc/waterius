@@ -37,7 +37,7 @@ void MasterI2C::gotoFirstByte() {
 
 /* Retrieves one byte from slave*/
 uint8_t MasterI2C::getByte() {
-	if (Wire.requestFrom( I2C_SLAVE_ADDR, 1 ))
+	if (Wire.requestFrom( I2C_SLAVE_ADDR, 1 ) != 1)
 	{
 		LOG_ERROR("I2C", "requestFrom failed");
 	}
