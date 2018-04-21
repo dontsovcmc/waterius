@@ -2,10 +2,11 @@
 #define _SETUP_h
 
 #include <Arduino.h>
+#include <TinyDebugSerial.h>
 
 // Включение логгирования с TinySerial: 3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
 // При логгировании не работает счетчик на 3-м пине.
-//#define DEBUG 
+#define DEBUG 
 
 #define ESP_RESET_PIN 1			// Номер пина, которым будим ESP8266. Если менять на 3/4, то нужно поменять пины в прерываниях.
 
@@ -36,6 +37,7 @@ struct SlaveStats {
 };
 
 #ifdef DEBUG
+  extern TinyDebugSerial mySerial;
   #define DEBUG_CONNECT(x)  mySerial.begin(x)
   #define DEBUG_PRINT(x)    mySerial.print(x)
   #define DEBUG_PRINTLN(x)    mySerial.println(x)
