@@ -1,7 +1,7 @@
 #ifndef _SETUP_h
 #define _SETUP_h
 
-//#define LOGLEVEL 6
+#define LOGLEVEL 6
 
 #define WIFI_TIMEOUT 3000UL // ms
 #define I2C_SLAVE_ADDR 10

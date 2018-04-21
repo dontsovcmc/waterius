@@ -35,6 +35,7 @@ class MasterI2C
 
  public:
 	 void begin();
+	 void end();
 	 void sendCmd( const char cmd );
 	 uint16_t getSlaveStorage( byte* storage, const uint16_t maxStorageSize, const uint16_t bytesToFetch );
 	 SlaveStats getSlaveStats();
