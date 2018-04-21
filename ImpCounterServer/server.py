@@ -55,6 +55,7 @@ class ClientHandler(asyncore.dispatcher):
             #self.data_to_write.insert(0, data)
         except Exception, err:
             self.logger.error('handle_read(): %s' % err)
+        self.close()
 
     def handle_close(self):
         self.logger.debug('handle_close()')
