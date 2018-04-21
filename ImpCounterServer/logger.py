@@ -6,10 +6,12 @@ import os
 import sys
 from datetime import datetime
 
+level = logging.DEBUG
+
 class Logger(object):
     def __init__(self):
         log = logging.getLogger('')
-        log.setLevel(logging.INFO)
+        log.setLevel(level)
 
         filename = datetime.utcnow().strftime('%Y.%m.%d_%H.%M_UTC.log')
 
@@ -17,7 +19,7 @@ class Logger(object):
             os.makedirs('logs')
 
         fh = logging.FileHandler(os.path.join('logs', filename), mode='w')
-        fh.setLevel(logging.INFO)
+        fh.setLevel(level)
 
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
@@ -29,7 +31,7 @@ class Logger(object):
         if console is not None:
             # Вывод лога производится и на консоль и в файл (одновременно)
             console = logging.StreamHandler(console)
-            console.setLevel(logging.INFO)
+            console.setLevel(level)
             console.setFormatter(formatter)
             log.addHandler(console)
 
