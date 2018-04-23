@@ -2,7 +2,7 @@
 #define _LOGGING1_h
 
 #include "setup.h"
-#define LOG_TIME_FORMAT 1
+#define LOG_TIME_FORMAT 2
 
 #include <Arduino.h>
 

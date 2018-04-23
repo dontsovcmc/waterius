@@ -17,8 +17,15 @@ void MasterI2C::begin() {
 /* Send a one byte command to slave */
 void MasterI2C::sendCmd( const char cmd ) {
 	Wire.beginTransmission( I2C_SLAVE_ADDR );
-	Wire.write( cmd );
-	Wire.endTransmission();
+	if (Wire.write(cmd) != 1)
+	{
+		LOG_ERROR("I2C", "write cmd failed");
+	}
+	int err = Wire.endTransmission(true);
+	if (err != 0)
+	{
+		LOG_ERROR("I2C end", err);
+	}	
 	delay( 1 ); // Because attiny is running slow cpu clock speed. Give him a little time to process the command.
 }
 
@@ -31,7 +38,10 @@ void MasterI2C::gotoFirstByte() {
 
 /* Get the next byte from the slave. */
 byte MasterI2C::getNextByte() {
-	Wire.requestFrom( I2C_SLAVE_ADDR, 1 );
+	if (Wire.requestFrom( I2C_SLAVE_ADDR, 1 ) != 1)
+	{
+		LOG_ERROR("I2C", "requestFrom failed");
+	}
 	delay( 1 );
 	byte rxByte = Wire.read();
 	return rxByte;
@@ -39,7 +49,10 @@ byte MasterI2C::getNextByte() {
 
 /* Retrieves one byte from slave*/
 uint8_t MasterI2C::getByte() {
-	Wire.requestFrom( I2C_SLAVE_ADDR, 1 );
+	if (Wire.requestFrom( I2C_SLAVE_ADDR, 1 ) != 1)
+	{
+		LOG_ERROR("I2C", "requestFrom failed");
+	}
 	uint8_t value = Wire.read();
 	return value;
 }

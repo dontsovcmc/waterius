@@ -25,6 +25,10 @@ byte buffer[512];
 
 void setup()
 {
+#ifdef LOGLEVEL
+	Serial.begin( 115200 ,SERIAL_8N1, SERIAL_TX_ONLY);
+#endif
+
 	ESP.wdtDisable();
 	pinMode(SETUP_PIN, OUTPUT);
 	digitalWrite(SETUP_PIN, LOW);
@@ -32,8 +36,6 @@ void setup()
 	
 	LOG_NOTICE( "ESP", "Booted" );
 	BLINK(200);
-	Serial.begin( 115200 ,SERIAL_8N1, SERIAL_TX_ONLY); Serial.println();
-
 }
 
 
@@ -42,9 +44,6 @@ void loop()
 	if (!myWifi.begin())
 	{
 		LOG_ERROR( "ESP", "Wifi connected false, go sleep" );
-		BLINK(200);
-		delay(100);
-		BLINK(200);
 		ESP.deepSleep( 0, RF_DEFAULT );			// Sleep until I2C slave wakes us up again.
 		return;
 	}
@@ -76,6 +75,7 @@ void loop()
 	{
 		ss->message_type = ATTINY_FAIL;
 		myWifi.send( buffer, sizeof(slaveStats)); // Try to send error
+		BLINK(50); delay(100); BLINK(50);
 	}
 	masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep
 
