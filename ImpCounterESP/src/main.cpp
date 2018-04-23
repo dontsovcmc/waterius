@@ -42,9 +42,8 @@ void loop()
 	if (!myWifi.begin())
 	{
 		LOG_ERROR( "ESP", "Wifi connected false, go sleep" );
-		BLINK(200);
-		delay(100);
-		BLINK(200);
+		BLINK(50);delay(200);
+		BLINK(50);
 		ESP.deepSleep( 0, RF_DEFAULT );			// Sleep until I2C slave wakes us up again.
 		return;
 	}
@@ -76,7 +75,7 @@ void loop()
 		}
         else
 		{
-			BLINK(50);delay(100);
+			BLINK(50);delay(300);
 			BLINK(50);
 		}    
 	}
@@ -85,9 +84,6 @@ void loop()
 		SlaveStats *ss = (SlaveStats*)(&buffer);
 		ss->message_type = ATTINY_FAIL;
 		myWifi.send( buffer, sizeof(slaveStats)); // Try to send error
-		BLINK(50);delay(100);
-		BLINK(50);delay(100);
-		BLINK(50);
 	}
 	masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep
 

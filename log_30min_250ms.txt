@@ -1,0 +1,64 @@
+2018-04-10 21:d:17,920 - root - INFO - handle_data (18): 04 00 01 40 1e 00 01 00 0e 0b eb 2c 43 0a 02 00 01 00
+2018-04-10 21:21:17,921 - root - INFO - device_id = 11499
+2018-04-10 21:21:18,010 - root - WARNING - Переполнение ХВС: было 2 имп., стало 1. Перезаписана точка старта.
+2018-04-10 21:21:18,091 - root - ERROR - Data lenght=0
+2018-04-10 21:51:47,209 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 01 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-10 21:51:47,211 - root - INFO - device_id = 11499
+2018-04-10 21:51:47,380 - root - ERROR - Data lenght=0
+2018-04-10 22:22:18,808 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-10 22:22:18,810 - root - INFO - device_id = 11499
+2018-04-10 22:22:18,928 - root - WARNING - Переполнение ХВС: было 65281 имп., стало 1. Перезаписана точка старта.
+2018-04-10 22:22:19,009 - root - ERROR - Data lenght=0
+2018-04-10 22:52:50,399 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-10 22:52:50,400 - root - INFO - device_id = 11499
+2018-04-10 22:52:50,572 - root - ERROR - Data lenght=0
+2018-04-10 23:23:21,962 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 01 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-10 23:23:21,963 - root - INFO - device_id = 11499
+2018-04-10 23:23:22,134 - root - ERROR - Data lenght=0
+2018-04-10 23:53:53,443 - root - INFO - handle_data (134): 78 00 00 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-10 23:53:53,444 - root - INFO - device_id = 11499
+2018-04-10 23:53:53,444 - root - ERROR - Data lenght=0
+2018-04-11 00:24:24,856 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 00 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-11 00:24:24,857 - root - INFO - device_id = 11499
+2018-04-11 00:24:24,962 - root - WARNING - Переполнение ХВС: было 65281 имп., стало 1. Перезаписана точка старта.
+2018-04-11 00:24:25,034 - root - ERROR - Data lenght=0
+2018-04-11 00:54:55,967 - root - INFO - handle_data (134): 78 00 01 40 1e ff ff ff ff ff eb 2c 43 0a ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-11 00:54:55,968 - root - INFO - device_id = 11499
+2018-04-11 00:54:56,100 - root - ERROR - no values
+2018-04-11 00:54:56,101 - root - ERROR - Data lenght=0
+2018-04-11 01:25:26,886 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-11 01:25:26,888 - root - INFO - device_id = 11499
+2018-04-11 01:25:27,059 - root - ERROR - Data lenght=0
+2018-04-11 01:55:57,728 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 05 eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 01 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 ff ff ff ff ff ff ff ff ff
+2018-04-11 01:55:57,729 - root - INFO - device_id = 11499
+2018-04-11 01:55:57,883 - root - ERROR - Data lenght=0
+2018-04-11 02:26:28,318 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-11 02:26:28,321 - root - INFO - device_id = 11499
+2018-04-11 02:26:28,424 - root - WARNING - Переполнение ХВС: было 65281 имп., стало 1. Перезаписана точка старта.
+2018-04-11 02:26:28,491 - root - ERROR - Data lenght=0
+2018-04-11 02:56:58,787 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 05 eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-11 02:56:58,788 - root - INFO - device_id = 11499
+2018-04-11 02:56:58,933 - root - ERROR - Data lenght=0
+2018-04-11 03:27:29,241 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 01 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-11 03:27:29,241 - root - INFO - device_id = 11499
+2018-04-11 03:27:29,392 - root - ERROR - Data lenght=0
+2018-04-11 03:57:59,629 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-11 03:57:59,629 - root - INFO - device_id = 11499
+2018-04-11 03:57:59,827 - root - ERROR - Data lenght=0
+2018-04-11 04:28:30,128 - root - INFO - handle_data (74): 3c 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 01 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-11 04:28:30,129 - root - INFO - device_id = 11499
+2018-04-11 04:28:30,327 - root - ERROR - Data lenght=0
+2018-04-11 04:59:00,536 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-11 04:59:00,537 - root - INFO - device_id = 11499
+2018-04-11 04:59:00,703 - root - WARNING - Переполнение ХВС: было 65281 имп., стало 1. Перезаписана точка старта.
+2018-04-11 04:59:00,824 - root - ERROR - Data lenght=0
+2018-04-11 05:29:30,956 - root - INFO - handle_data (134): 78 00 01 40 1e 00 01 00 1c 0b eb 2c 43 0a 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 01 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 01 00 02 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+2018-04-11 05:29:30,957 - root - INFO - device_id = 11499
+2018-04-11 05:29:31,170 - root - ERROR - Data lenght=0
+2018-04-11 05:54:25,472 - root - INFO - handle_data (517): 16 03 01 02 00 01 00 01 fc 03 03 37 ff eb 42 3f cc 99 58 9f 11 b4 6a e7 08 4b eb a9 d6 42 69 62 35 c1 72 37 3a f6 c5 93 28 1a 9d 00 00 f4 c0 30 c0 2c c0 28 c0 24 c0 14 c0 0a 00 a5 00 a3 00 a1 00 9f 00 6b 00 6a 00 69 00 68 00 39 00 38 00 37 00 36 00 88 00 87 00 86 00 85 c0 19 00 a7 00 6d 00 3a 00 89 c0 32 c0 2e c0 2a c0 26 c0 0f c0 05 00 9d 00 3d 00 35 00 84 c0 2f c0 2b c0 27 c0 23 c0 13 c0 09 00 a4 00 a2 00 a0 00 9e 00 67 00 40 00 3f 00 3e 00 33 00 32 00 31 00 30 00 9a 00 99 00 98 00 97 00 45 00 44 00 43 00 42 c0 18 00 a6 00 6c 00 34 00 9b 00 46 c0 31 c0 2d c0 29 c0 25 c0 0e c0 04 00 9c 00 3c 00 2f 00 96 00 41 00 07 c0 11 c0 07 c0 16 00 18 c0 0c c0 02 00 05 00 04 c0 12 c0 08 00 16 00 13 00 10 00 0d c0 17 00 1b c0 0d c0 03 00 0a 00 15 00 12 00 0f 00 0c 00 1a 00 09 00 14 00 11 00 19 00 08 00 06 00 17 00 03 c0 10 c0 06 c0 15 c0 0b c0 01 00 3b 00 02 00 01 00 ff 01 00 00 df 00 0b 00 04 03 00 01 02 00 0a 00 1c 00 1a 00 17 00 19 00 1c 00 1b 00 18 00 1a 00 16 00 0e 00 0d 00 0b 00 0c 00 09 00 0a 00 23 00 00 00 0d 00 20 00 1e 06 01 06 02 06 03 05 01 05 02 05 03 04 01 04 02 04 03 03 01 03 02 03 03 02 01 02 02 02 03 00 0f 00 01 01 00 15 00 86 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+2018-04-11 05:54:25,473 - root - INFO - device_id = 14083
+2018-04-11 05:54:25,474 - root - ERROR - Incorrect password
+2018-04-11 05:54:28,413 - root - INFO - handle_data (40): 47 45 54 20 2f 20 48 54 54 50 2f 31 2e 31 0d 0a 48 6f 73 74 3a 20 34 36 2e 31 30 31 2e 31 36 34 2e 31 36 37 0d 0a 0d 0a
+2018-04-11 05:54:28,414 - root - INFO - device_id = 12591
+2018-04-11 05:54:55,815 - root - ERROR - Data lenght=0
+2018-04-11 05:54:55,815 - root - ERROR - Data lenght=0

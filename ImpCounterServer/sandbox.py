@@ -23,7 +23,7 @@ if __name__ == '__main__':
     d = log2data('60 00 01 3f a0 05 3c 00 75 0b 33 8b af 1e 52 00 64 00 52 00 64 00 52 00 64 00 52 00 64 00 52 00 32 00 54 00 66 00 55 00 69 00 55 00 69 00 55 00 69 00 55 00 69 00 55 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff')
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = "46.101.164.167"
+    host = "192.168.1.42"
     port = 5001
     s.connect((host, port))
     s.send(d)
