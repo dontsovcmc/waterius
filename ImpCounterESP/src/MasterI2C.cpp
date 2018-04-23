@@ -9,7 +9,8 @@
 /* Set up I2c bus */
 void MasterI2C::begin() {
 	Wire.begin( SDA_PIN, SCL_PIN );
-	Wire.setClock( 33000L );
+	Wire.setClock( 100000L );
+	Wire.setClockStretchLimit(1500L);
 }
 
 
@@ -28,7 +29,6 @@ void MasterI2C::gotoFirstByte() {
 }
 
 
-
 /* Get the next byte from the slave. */
 byte MasterI2C::getNextByte() {
 	Wire.requestFrom( I2C_SLAVE_ADDR, 1 );
@@ -37,6 +37,12 @@ byte MasterI2C::getNextByte() {
 	return rxByte;
 }
 
+/* Retrieves one byte from slave*/
+uint8_t MasterI2C::getByte() {
+	Wire.requestFrom( I2C_SLAVE_ADDR, 1 );
+	uint8_t value = Wire.read();
+	return value;
+}
 
 /* Retrieves the full slave storage byte by byte. 
    Returns the number of bytes that we received.
@@ -83,11 +89,4 @@ uint16_t MasterI2C::getUint()
 	byte i1 = getByte();
 	byte i2 = getByte();
 	return i1 | (i2 << 8);
-}
-
-/* Retrieves one byte from slave*/
-uint8_t MasterI2C::getByte() {
-	Wire.requestFrom( I2C_SLAVE_ADDR, 1 );
-	uint8_t value = Wire.read();
-	return value;
 }

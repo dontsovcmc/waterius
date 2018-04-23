@@ -65,29 +65,17 @@ void loop()
 
 	// Read all stored measurements from slave and place after statistics in buffer after statistics
 	uint16_t bytesRead = masterI2C.getSlaveStorage( buffer + sizeof(slaveStats), sizeof(buffer), slaveStats.bytesReady );
+	SlaveStats *ss = (SlaveStats*)(&buffer);
 	if ( bytesRead > 0 ) 
 	{
-		SlaveStats *ss = (SlaveStats*)(&buffer);
 		ss->message_type = ATTINY_OK;
 		if (myWifi.send( buffer, bytesRead + sizeof(slaveStats)))  // Try to send them to the server.
-		{
 			masterI2C.sendCmd( 'A' ); // Tell slave that we succesfully passed the data on to the server. He can delete it.
-			BLINK(50);
-		}
-        else
-		{
-			BLINK(50);delay(100);
-			BLINK(50);
-		}    
 	}
 	else
 	{
-		SlaveStats *ss = (SlaveStats*)(&buffer);
 		ss->message_type = ATTINY_FAIL;
 		myWifi.send( buffer, sizeof(slaveStats)); // Try to send error
-		BLINK(50);delay(100);
-		BLINK(50);delay(100);
-		BLINK(50);
 	}
 	masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep
 
