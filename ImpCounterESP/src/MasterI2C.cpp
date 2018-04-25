@@ -10,7 +10,7 @@
 void MasterI2C::begin() {
 	Wire.begin( SDA_PIN, SCL_PIN );
 	Wire.setClock( 100000L );
-	Wire.setClockStretchLimit(5000L);
+	Wire.setClockStretchLimit(1500L);
 }
 
 
@@ -25,7 +25,8 @@ void MasterI2C::sendCmd( const char cmd ) {
 	if (err != 0)
 	{
 		LOG_ERROR("I2C end", err);
-	}
+	}	
+	delay( 1 ); // Because attiny is running slow cpu clock speed. Give him a little time to process the command.
 }
 
 
@@ -34,6 +35,17 @@ void MasterI2C::gotoFirstByte() {
 	sendCmd( 'D' );
 }
 
+
+/* Get the next byte from the slave. */
+byte MasterI2C::getNextByte() {
+	if (Wire.requestFrom( I2C_SLAVE_ADDR, 1 ) != 1)
+	{
+		LOG_ERROR("I2C", "requestFrom failed");
+	}
+	delay( 1 );
+	byte rxByte = Wire.read();
+	return rxByte;
+}
 
 /* Retrieves one byte from slave*/
 uint8_t MasterI2C::getByte() {
@@ -44,7 +56,6 @@ uint8_t MasterI2C::getByte() {
 	uint8_t value = Wire.read();
 	return value;
 }
-
 
 /* Retrieves the full slave storage byte by byte. 
    Returns the number of bytes that we received.
@@ -57,7 +68,7 @@ uint16_t MasterI2C::getSlaveStorage( byte* storage, const uint16_t maxStorageSiz
 		LOG_NOTICE( "I2C", "Polling slave for " << bytesToFetch << " bytes" );
 		gotoFirstByte();
 		for ( storagePos = 0; storagePos < bytesToFetch; storagePos++ ) {
-			byte rxByte = getByte();
+			byte rxByte = getNextByte();
 			LOG_DEBUG( "I2C", "Byte Number " << storagePos << ": " << (int) rxByte );
 			*( storage + storagePos ) = rxByte;
 		}
