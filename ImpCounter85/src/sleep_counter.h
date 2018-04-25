@@ -3,7 +3,6 @@
 
 #include <Arduino.h>
 #include "Setup.h"
-#include <EdgeDebounceLite.h>
 
 #define BUTTON_PIN    4 
 #ifndef DEBUG
@@ -11,12 +10,16 @@
 #endif
 
 
+#define OPENED       0  //разомкнут
+#define FIRST_CHECK  1  //1й раз прочитал замыкание
+#define CLOSED       2  //2й раз замыкание - значит точно замкнут
+
 struct Counter {
 	uint16_t i;
-	bool state;
+
+	uint8_t state;  
   
   uint8_t pin;
-	EdgeDebounceLite debounce;
 
 	Counter();
 	void check();

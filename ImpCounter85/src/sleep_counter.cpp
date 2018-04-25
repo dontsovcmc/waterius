@@ -72,30 +72,28 @@ void resetWatchdog()
 
 Counter::Counter()
 	: i(0)
-	, state(false)
-{
-	debounce.setSensitivity(4);
-}
+	, state(OPENED)
+{ }
 
 void Counter::check()
 {
 	pinMode(pin, INPUT_PULLUP);
 
-	if (debounce.pin(pin) == LOW)
+	if (digitalRead(pin) == LOW)
 	{
-		if (state == false)
+		if (state == OPENED)
 		{
-			delayMicroseconds(30000UL);  //delay doesn't work cause power_all_disable !!
-			if (debounce.pin(pin) == LOW)
-			{
-				i++;
-				state = true;
-			}
+			state = FIRST_CHECK;
+		}
+		else if (state == FIRST_CHECK)
+		{
+			i++;
+			state = CLOSED;
 		}
 	}
 	else
 	{
-		state = false;
+		state = OPENED;
 	}
 
 	pinMode(pin, INPUT);
