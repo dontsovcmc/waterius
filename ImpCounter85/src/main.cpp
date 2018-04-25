@@ -55,10 +55,6 @@ void setup()
 
 	//Проверим, что входы считают или 2 мин задержка.
 	gotoDeepSleep(1, &counter, &counter2);
-<<<<<<< HEAD
-=======
-
->>>>>>> d82097f1d94f054b4f8f968ba4676b25a3e1592d
 	DEBUG_PRINTLN(F("Counters ok"));
 
 	minSleeping = WAKE_MASTER_EVERY_MIN;
