@@ -12,7 +12,7 @@
 #define LOG_LEVEL_INFO
 #define LOG_LEVEL_DEBUG
 */
-#define LOG_LEVEL_DEBUG
+//#define LOG_LEVEL_DEBUG
 
 #define ESP_RESET_PIN 1			// Номер пина, которым будим ESP8266. Если менять на 3/4, то нужно поменять пины в прерываниях.
 
