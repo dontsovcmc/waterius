@@ -13,8 +13,6 @@ Storage::Storage( const uint8_t elementSize ) {
 void Storage::addElement( const void * element ) {
 	if ( addrPtr + elementSize >= STORAGE_SIZE ) { // Storage Full
 		LOG_ERROR(F("Storage full!!"));
-		LOG_INFO(F("stack size:"));
-		LOG_INFO(freeRam());
 		memcpy( ramStorage, ramStorage + elementSize, STORAGE_SIZE - elementSize ); // Make space for an extra element.
 		addrPtr -= elementSize;
 	}

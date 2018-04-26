@@ -25,7 +25,7 @@ void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2)
 	resetWatchdog();      // get watchdog ready
 
 	//30 = 2c сон
-	//60 * 4 = 240 раз/сек при 250мс сон (лучше 239, т.к. 1.2мс * 240 = 288мс будем считать)
+	//60 * 4 = 240 раз - 250мс сон (лучше 239, т.к. 1.2мс * 240 = 288мс будем считать)
 	//62.5 * 60 раз = 3750 - 16мс
 	//31.25 * 60 раз = 1875 - 32мс
 	for (unsigned int i = 0; i < 240; ++i)  
@@ -38,7 +38,7 @@ void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2)
 				counter2->check();
 			#endif
 
-			//digitalWrite( ESP_RESET_PIN, LOW );
+			//digitalWrite( ESP_RESET_PIN, LOW ); //для отладки по осциллографу
 			sleep_mode();
 			//digitalWrite( ESP_RESET_PIN, HIGH );
 		}

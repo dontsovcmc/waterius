@@ -54,8 +54,6 @@ void SlaveI2C::newCommand() {
 void SlaveI2C::receiveEvent( int howMany ) {
 	byte command = Wire.read(); // Get instructions from master
 
-	LOG_DEBUG("I2C: cmd " + command);
-
 	newCommand();
 	switch ( command ) {
 		case 'B': // If we get the cmd 'B' he asks for the number of bytes in storage that he can expect.

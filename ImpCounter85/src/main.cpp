@@ -15,16 +15,17 @@
 #endif
 
 static enum State state = SLEEP;
-static unsigned long minSleeping = 0;
-static unsigned long masterWokenUpAt;
+static unsigned short minSleeping = 0;
+
+static unsigned long masterWokenUpAt; //millis
 
 //глобальный счетчик до 65535
 static Counter counter, counter2;
 
 //одно измерение
 struct SensorData {
-	uint16_t counter;	     
-	uint16_t counter2;     
+	unsigned short counter;	     
+	unsigned short counter2;     
 };
 
 
@@ -95,12 +96,8 @@ void loop()
 			LOG_DEBUG(F("LOOP (MASTER_WAKE)"));
 			info.vcc = readVcc();   // заранее запишем текущее напряжение
 			slaveI2C.begin();		// Включаем i2c slave
-			//LOG_DEBUG(F("free ram:"));
-			//LOG_DEBUG(freeRam());
 			wakeESP();              // импульс на reset ESP
 			masterWokenUpAt = millis();  //запомнили время пробуждения
-			LOG_DEBUG(F("masterWokenUpAt:"));
-			LOG_DEBUG(masterWokenUpAt);
 			state = SENDING;
 			break;
 
@@ -122,8 +119,6 @@ void loop()
 
 			if (millis() - masterWokenUpAt > GIVEUP_ON_MASTER_AFTER * 1000UL) 
 			{
-				LOG_DEBUG(F("GIVEUP_ON_MASTER_AFTER:"));
-				LOG_DEBUG(GIVEUP_ON_MASTER_AFTER);
 				LOG_ERROR(F("ESP wake up fail"));
 				minSleeping = 0;
 				state = SLEEP;
