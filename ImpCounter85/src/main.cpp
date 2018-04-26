@@ -15,8 +15,8 @@
 #endif
 
 static enum State state = SLEEP;
-static uint16_t minSleeping = 0;
-static uint16_t masterWokenUpAt;
+static unsigned long minSleeping = 0;
+static unsigned long masterWokenUpAt;
 
 //глобальный счетчик до 65535
 static Counter counter, counter2;
@@ -26,6 +26,7 @@ struct SensorData {
 	uint16_t counter;	     
 	uint16_t counter2;     
 };
+
 
 //Заголовок данных для ESP.
 //размер кратен 2байтам (https://github.com/esp8266/Arduino/issues/1825)
@@ -48,14 +49,16 @@ void setup()
 	counter2.pin = BUTTON2_PIN;
 #endif
 	DEBUG_CONNECT(9600);
-  	DEBUG_PRINTLN(F("==== START ===="));
+  	LOG_DEBUG(F("==== START ===="));
 
 	resetWatchdog(); 
 	adc_disable(); //выключаем ADC
 
 	//Проверим, что входы считают или 2 мин задержка.
 	gotoDeepSleep(1, &counter, &counter2);
-	DEBUG_PRINTLN(F("Counters ok"));
+	LOG_DEBUG(F("Counters ok"));
+	LOG_DEBUG(counter.i); 
+	LOG_DEBUG(counter2.i);
 
 	minSleeping = WAKE_MASTER_EVERY_MIN;
 	state = MEASURING;
@@ -65,17 +68,19 @@ void loop()
 {
 	switch ( state ) {
 		case SLEEP:
-			DEBUG_PRINT(F("LOOP (SLEEP)"));
+			LOG_DEBUG(F("LOOP (SLEEP)"));
 			slaveI2C.end();			// выключаем i2c slave. 
 			gotoDeepSleep( MEASUREMENT_EVERY_MIN, &counter, &counter2);	// Глубокий сон X минут
 			minSleeping += MEASUREMENT_EVERY_MIN;
 			state = MEASURING;
 
-			DEBUG_PRINT("COUNTERS:"); DEBUG_PRINTLN(counter.i); DEBUG_PRINT("; "); DEBUG_PRINTLN(counter2.i);
+			LOG_DEBUG(F("COUNTERS:")); 
+			LOG_DEBUG(counter.i); 
+			LOG_DEBUG(counter2.i);
 			break;
 
 		case MEASURING:
-			DEBUG_PRINT(F("LOOP (MEASURING)"));
+			LOG_DEBUG(F("LOOP (MEASURING)"));
 			SensorData sensorData;
 			sensorData.counter = counter.i;
 			sensorData.counter2 = counter2.i;
@@ -87,11 +92,15 @@ void loop()
 			break;
 
 		case MASTER_WAKE:
-			DEBUG_PRINT(F("LOOP (MASTER_WAKE)"));
+			LOG_DEBUG(F("LOOP (MASTER_WAKE)"));
 			info.vcc = readVcc();   // заранее запишем текущее напряжение
 			slaveI2C.begin();		// Включаем i2c slave
+			//LOG_DEBUG(F("free ram:"));
+			//LOG_DEBUG(freeRam());
 			wakeESP();              // импульс на reset ESP
 			masterWokenUpAt = millis();  //запомнили время пробуждения
+			LOG_DEBUG(F("masterWokenUpAt:"));
+			LOG_DEBUG(masterWokenUpAt);
 			state = SENDING;
 			break;
 
@@ -100,12 +109,12 @@ void loop()
 			{
 				if (slaveI2C.masterGotOurData()) 
 				{
-					DEBUG_PRINT(F("ESP ok"));
+					LOG_DEBUG(F("ESP ok"));
 					storage.clear();
 				}
 				else
 				{
-					DEBUG_PRINT(F("ESP send fail"));
+					LOG_ERROR(F("ESP send fail"));
 				}
 				minSleeping = 0;
 				state = SLEEP;
@@ -113,7 +122,9 @@ void loop()
 
 			if (millis() - masterWokenUpAt > GIVEUP_ON_MASTER_AFTER * 1000UL) 
 			{
-				DEBUG_PRINT(F("ESP wake up fail"));
+				LOG_DEBUG(F("GIVEUP_ON_MASTER_AFTER:"));
+				LOG_DEBUG(GIVEUP_ON_MASTER_AFTER);
+				LOG_ERROR(F("ESP wake up fail"));
 				minSleeping = 0;
 				state = SLEEP;
 			}

@@ -1,4 +1,6 @@
 #include "Storage.h"
+#include "Power.h"
+
 
 /* Storage constructor. We point to the start of storage */
 Storage::Storage( const uint8_t elementSize ) {
@@ -10,11 +12,15 @@ Storage::Storage( const uint8_t elementSize ) {
    If storage is full, the oldest element is thrown away */
 void Storage::addElement( const void * element ) {
 	if ( addrPtr + elementSize >= STORAGE_SIZE ) { // Storage Full
+		LOG_ERROR(F("Storage full!!"));
+		LOG_INFO(F("stack size:"));
+		LOG_INFO(freeRam());
 		memcpy( ramStorage, ramStorage + elementSize, STORAGE_SIZE - elementSize ); // Make space for an extra element.
 		addrPtr -= elementSize;
 	}
-	for ( uint8_t i=0; i < elementSize; i++ ) {
-		byte toWrite = *( (byte*) element + i );
+	for ( uint8_t i=0; i < elementSize; i++) 
+	{
+		byte toWrite = *((byte*) element + i);
 		ramStorage[addrPtr] = toWrite;
 		addrPtr++;
 	}

@@ -54,7 +54,7 @@ void SlaveI2C::newCommand() {
 void SlaveI2C::receiveEvent( int howMany ) {
 	byte command = Wire.read(); // Get instructions from master
 
-	DEBUG_PRINTLN("I2C: cmd " + command);
+	LOG_DEBUG("I2C: cmd " + command);
 
 	newCommand();
 	switch ( command ) {

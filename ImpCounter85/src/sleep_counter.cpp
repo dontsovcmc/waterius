@@ -6,7 +6,7 @@
 #include <avr/wdt.h>
 #include "sleep_counter.h"
 
-volatile int16_t wdt_count; //not unsigned, cause timer can lost 0 
+volatile int wdt_count; //not unsigned, cause timer can lost 0 
 
 /* Watchdog interrupt vector */
 ISR( WDT_vect ) { 
@@ -15,7 +15,7 @@ ISR( WDT_vect ) {
 
 /* Makes a deep sleep for X second using as little power as possible */
 // 32767 minutes ~ 22 days
-void gotoDeepSleep(uint16_t minutes, Counter *counter, Counter *counter2) 
+void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2) 
 {
 	//pinMode( ESP_RESET_PIN, OUTPUT );  //for test
 	power_all_disable();  // power off ADC, Timer 0 and 1, serial interface
@@ -26,9 +26,9 @@ void gotoDeepSleep(uint16_t minutes, Counter *counter, Counter *counter2)
 
 	//30 = 2c сон
 	//60 * 4 = 240 раз/сек при 250мс сон (лучше 239, т.к. 1.2мс * 240 = 288мс будем считать)
-	//62.5 * 60 раз - 16мс
-	//31.25 * 60 раз - 32мс
-	for (uint16_t i = 0; i < 60; ++i)  
+	//62.5 * 60 раз = 3750 - 16мс
+	//31.25 * 60 раз = 1875 - 32мс
+	for (unsigned int i = 0; i < 1875; ++i)  
 	{
 		wdt_count = minutes; 
 		while ( wdt_count > 0 ) 
@@ -59,8 +59,8 @@ void resetWatchdog()
 	WDTCR = bit( WDCE ) | bit( WDE ); // allow changes, disable reset, clear existing interrupt
 	// set interrupt mode and an interval (WDE must be changed from 1 to 0 here)
 	//WDTCR = bit( WDIE );    // set WDIE, and 16 ms
-	//WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
-	WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
+	WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
+	//WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // set WDIE, and 0.5 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // set WDIE, and 1 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );    // set WDIE, and 2 seconds delay

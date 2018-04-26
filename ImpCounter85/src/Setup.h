@@ -6,7 +6,13 @@
 
 // Включение логгирования с TinySerial: 3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
 // При логгировании не работает счетчик на 3-м пине.
-#define DEBUG 
+
+/*
+#define LOG_LEVEL_ERROR
+#define LOG_LEVEL_INFO
+#define LOG_LEVEL_DEBUG
+*/
+#define LOG_LEVEL_DEBUG
 
 #define ESP_RESET_PIN 1			// Номер пина, которым будим ESP8266. Если менять на 3/4, то нужно поменять пины в прерываниях.
 
@@ -15,7 +21,7 @@ const uint8_t DEVICE_ID = 1;                // Модель устройства
 const uint8_t GIVEUP_ON_MASTER_AFTER = 4;	// Сколько секунд ждем передачи данных в ESP
 
 const uint16_t WAKE_MASTER_EVERY_MIN = 30;	// Период передачи данных на сервер, мин
-const uint16_t MEASUREMENT_EVERY_MIN = 1;	// Период измерений данных. Кратно минутам строго!
+const int MEASUREMENT_EVERY_MIN = 1;	// Период измерений данных. Кратно минутам строго!
 
 #define STORAGE_SIZE 120  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
@@ -36,18 +42,31 @@ struct SlaveStats {
 	uint8_t dummy;
 };
 
-#ifdef DEBUG
-  extern TinyDebugSerial mySerial;
-  #define DEBUG_CONNECT(x)  mySerial.begin(x)
-  #define DEBUG_PRINT(x)    mySerial.print(x)
-  #define DEBUG_PRINTLN(x)    mySerial.println(x)
-  #define DEBUG_FLUSH()     mySerial.flush()
-#else
-  #define DEBUG_CONNECT(x)
-  #define DEBUG_PRINT(x)
-  #define DEBUG_PRINTLN(x) 
-  #define DEBUG_FLUSH()
+
+#define LOG_DEBUG(x)
+#define LOG_INFO(x)  
+#define LOG_ERROR(x) 
+#define DEBUG_CONNECT(x)  
+
+class TinyDebugSerial;
+
+#if defined (LOG_LEVEL_DEBUG) || defined (LOG_LEVEL_INFO) || defined (LOG_LEVEL_ERROR)
+	#define DEBUG
+  	extern TinyDebugSerial mySerial;
+    #define DEBUG_CONNECT(x)  mySerial.begin(x)
+    #define PRINT_NOW(x) mySerial.print(millis()); mySerial.print(x);
+#endif
+
+#ifdef LOG_LEVEL_DEBUG
+	#define LOG_DEBUG(x) PRINT_NOW(F(" [D]: ")); mySerial.println(x)
+	#define LOG_LEVEL_INFO
+#endif
+#ifdef LOG_LEVEL_INFO
+	#define LOG_INFO(x) PRINT_NOW(F(" [I]: ")); mySerial.println(x)
+	#define LOG_LEVEL_ERROR
+#endif
+#ifdef LOG_LEVEL_ERROR
+	#define LOG_ERROR(x) PRINT_NOW(F(" [E]: ")); mySerial.println(x)
 #endif
 
 #endif
-

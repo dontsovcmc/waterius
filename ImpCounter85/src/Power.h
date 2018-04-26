@@ -10,5 +10,7 @@
 void wakeESP();
 uint16_t readVcc();
 
+
+int freeRam();
 #endif
 

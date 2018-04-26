@@ -26,7 +26,7 @@ struct Counter {
 };
 
 void blink(uint16_t msec);
-void gotoDeepSleep( uint16_t minutes, Counter *counter, Counter *counter2);
+void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2);
 void resetWatchdog();
 
 #endif
