@@ -47,6 +47,7 @@ struct SlaveStats {
 #define LOG_INFO(x)  
 #define LOG_ERROR(x) 
 #define DEBUG_CONNECT(x)  
+#define DEBUG_FLUSH()   //not implemented
 
 class TinyDebugSerial;
 
@@ -54,6 +55,7 @@ class TinyDebugSerial;
 	#define DEBUG
   	extern TinyDebugSerial mySerial;
     #define DEBUG_CONNECT(x)  mySerial.begin(x)
+	#define DEBUG_FLUSH() mySerial.flush()
     #define PRINT_NOW(x) mySerial.print(millis()); mySerial.print(x);
 #endif
 

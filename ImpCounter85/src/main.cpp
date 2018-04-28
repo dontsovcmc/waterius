@@ -55,7 +55,9 @@ void setup()
 	adc_disable(); //выключаем ADC
 
 	//Проверим, что входы считают или 2 мин задержка.
+	DEBUG_FLUSH();
 	gotoDeepSleep(1, &counter, &counter2);
+	DEBUG_CONNECT(9600);
 	LOG_DEBUG(F("Counters ok"));
 	LOG_DEBUG(counter.i); 
 	LOG_DEBUG(counter2.i);
@@ -70,7 +72,9 @@ void loop()
 		case SLEEP:
 			LOG_DEBUG(F("LOOP (SLEEP)"));
 			slaveI2C.end();			// выключаем i2c slave. 
+			DEBUG_FLUSH();
 			gotoDeepSleep( MEASUREMENT_EVERY_MIN, &counter, &counter2);	// Глубокий сон X минут
+			DEBUG_CONNECT(9600);
 			minSleeping += MEASUREMENT_EVERY_MIN;
 			state = MEASURING;
 
