@@ -25,18 +25,20 @@ void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2)
 	resetWatchdog();      // get watchdog ready
 
 	//30 = 2c сон
-	//60 * 4 = 240 раз - 250мс сон (лучше 239, т.к. 1.2мс * 240 = 288мс будем считать)
-	//62.5 * 60 раз = 3750 - 16мс
-	//31.25 * 60 раз = 1875 - 32мс
-	for (unsigned int i = 0; i < 240; ++i)  
+	//250ms: 60 * 4 = 240 раз (лучше 239, т.к. 1.2мс * 240 = 288мс будем считать)
+	//16ms: 62.5 * 60 раз = 3750 
+	//32ms: 31.25 * 60 раз = 1875 
+	for (unsigned int i = 0; i < 375; ++i)  
 	{
 		wdt_count = minutes; 
 		while ( wdt_count > 0 ) 
 		{
+			noInterrupts();
 			counter->check();
 			#ifdef BUTTON2_PIN
 				counter2->check();
 			#endif
+			interrupts();
 
 			//digitalWrite( ESP_RESET_PIN, LOW ); //для отладки по осциллографу
 			sleep_mode();
@@ -46,9 +48,7 @@ void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2)
 		
 	wdt_disable();        // disable watchdog
 	MCUSR = 0;
-	//noInterrupts();       // timed sequence coming up
 	power_all_enable();   // power everything back on
-
 }
 
 /* Prepare watchdog */
@@ -59,8 +59,8 @@ void resetWatchdog()
 	WDTCR = bit( WDCE ) | bit( WDE ); // allow changes, disable reset, clear existing interrupt
 	// set interrupt mode and an interval (WDE must be changed from 1 to 0 here)
 	//WDTCR = bit( WDIE );    // set WDIE, and 16 ms
-	//WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
-	WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
+	WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
+	//WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // set WDIE, and 0.5 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // set WDIE, and 1 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );    // set WDIE, and 2 seconds delay

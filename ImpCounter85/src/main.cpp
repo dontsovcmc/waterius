@@ -46,9 +46,8 @@ SlaveI2C slaveI2C;
 void setup() 
 {
 	counter.pin = BUTTON_PIN;
-#ifdef BUTTON2_PIN
 	counter2.pin = BUTTON2_PIN;
-#endif
+	
 	DEBUG_CONNECT(9600);
   	LOG_DEBUG(F("==== START ===="));
 

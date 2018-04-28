@@ -20,8 +20,8 @@ const uint8_t DEVICE_ID = 1;                // Модель устройства
 
 const uint8_t GIVEUP_ON_MASTER_AFTER = 4;	// Сколько секунд ждем передачи данных в ESP
 
-const unsigned short WAKE_MASTER_EVERY_MIN = 60*24; // Период передачи данных на сервер, мин
-const unsigned short MEASUREMENT_EVERY_MIN = 60;	// Период измерений данных. Кратно минутам строго!
+const unsigned short WAKE_MASTER_EVERY_MIN = 10; // Период передачи данных на сервер, мин
+const unsigned short MEASUREMENT_EVERY_MIN = 1;	// Период измерений данных. Кратно минутам строго!
 
 #define STORAGE_SIZE 120  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
