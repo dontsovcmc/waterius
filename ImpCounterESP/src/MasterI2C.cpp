@@ -91,6 +91,7 @@ SlaveStats MasterI2C::getSlaveStats() {
 	slaveStats.masterWakeEvery = getUint();
 	slaveStats.measurementEvery = getUint();
 	slaveStats.vcc = getUint();
+	slaveStats.service = getByte();
 
 	return slaveStats;
 }

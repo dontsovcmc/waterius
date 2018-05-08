@@ -29,7 +29,7 @@ class Data(object):
 class CounterParser(object):
     def __init__(self, bot):
         self.bot = bot
-        self.data = Data()
+        self.data = None
 
     def handle_data(self, data):
         try:
@@ -39,12 +39,22 @@ class CounterParser(object):
             else:
                 log.info("handle_data (%d): %s" % (len(data), data2log(data)))
 
-            d = Data()
-            d.bytes, d.version, d.message_type, d.wake, d.period, d.voltage, d.service, d.dummy = struct.unpack('HBBHHHBB', data[0:10])
-            d.device_id, d.device_pwd = struct.unpack('HH', data[10:14])
+            bytes, version = struct.unpack('HB', data[0:3])
 
+            if version == 1:
 
-            if d.version == 1:
+                d = Data()
+                d.bytes, \
+                d.version, \
+                d.message_type, \
+                d.wake, \
+                d.period, \
+                d.voltage, \
+                d.service, \
+                d.dummy, \
+                d.device_id, \
+                d.device_pwd = struct.unpack('HBBHHHBBHH', data[0:16])
+
                 log.info("device_id = %d, MCUSR = %02x, V=%.2f" % (d.device_id, d.service, d.voltage))
 
                 if db.check_pwd(d.device_id, d.device_pwd):
@@ -52,7 +62,8 @@ class CounterParser(object):
                 else:
                     log.error("Incorrect password")
 
-            self.data = d
+                self.data = d
+
         except Exception, err:
             log.error("Handle error: %s, data=%s" % (str(err), data2log(data)))
 
@@ -60,7 +71,7 @@ class CounterParser(object):
 def parse_type_1(data, d, bot):
 
     try:
-        for k in xrange(14, len(data), 4):
+        for k in xrange(16, len(data), 4):
             value1, value2 = struct.unpack('HH', data[k:k+4])
             if value1 < 65535 and value2 < 65535:  #проблемы с i2c возможно изза частоты 3%
                 d.values.append((value1, value2))

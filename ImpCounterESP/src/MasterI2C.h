@@ -16,6 +16,8 @@ struct SlaveStats {
 	uint16_t masterWakeEvery;
 	uint16_t measurementEvery;
 	uint16_t vcc;
+	uint8_t  service;
+	uint8_t  reserved;
 	uint16_t deviceID;
 	uint16_t devicePWD;
 }; //should be *16bit https://github.com/esp8266/Arduino/issues/1825

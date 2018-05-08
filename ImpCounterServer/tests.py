@@ -83,8 +83,7 @@ class TestPacket(unittest.TestCase):
         af 1e pwd
         00 00 00 00 data
         '''
-        d = log2data('04 00 01 3f 02 00 01 00 66 0b 33 8b af 1e 01 00 02 00')
-
+        d = log2data('04 00 01 3f 02 00 01 00 66 0b 00 00 33 8b af 1e 01 00 02 00')
         db.add_id_to_db(35635, 7855)  # код счетчика с паролем из сообщения
 
         p = CounterParser(None)
@@ -100,7 +99,7 @@ class TestPacket(unittest.TestCase):
         self.assertEqual(p.data.values[0], (1, 2))
 
     def test_3(self):
-        d = log2data('6000013fa0053c00660b338baf1e0000010000000200080012ffffffffff')
+        d = log2data('6000013fa0053c00660b0000338baf1e0000010000000200080012ffffffffff')
 
         db.add_id_to_db(35635, 7855)  # код счетчика с паролем из сообщения
 
@@ -116,7 +115,7 @@ class TestPacket(unittest.TestCase):
         self.assertEqual(len(p.data.values), 3)
 
     def test_4(self):
-        d = log2data('60 00 01 3f a0 05 3c 00 75 0b 33 8b af 1e 52 00 64 00 52 00 64 00 52 00 64 00 52 00 64 00 52 00 32 00 54 00 66 00 55 00 69 00 55 00 69 00 55 00 69 00 55 00 69 00 55 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff')
+        d = log2data('60 00 01 3f a0 05 3c 00 75 0b 00 00 33 8b af 1e 52 00 64 00 52 00 64 00 52 00 64 00 52 00 64 00 52 00 32 00 54 00 66 00 55 00 69 00 55 00 69 00 55 00 69 00 55 00 69 00 55 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff')
         db.add_id_to_db(35635, 7855)  # код счетчика с паролем из сообщения
         p = CounterParser(None)
         p.handle_data(d)
@@ -129,6 +128,8 @@ class TestPacket(unittest.TestCase):
         self.assertEqual(p.data.device_pwd, 7855)
         self.assertEqual(len(p.data.values), 10)
 
-#0c 00 02 00 03 00 06 01 03 00 00 dd 0c 00 00 00 00 dd 0c 00 00
-#ERROR integer division or modulo by zero
+    def test_5(self):
+        #04 00 01 01 3c 00 05 00 16 0c 03 3f eb 2c 43 0a 01 00 01 00
+
+        pass
 
