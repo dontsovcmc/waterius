@@ -28,7 +28,6 @@ struct SensorData {
 	unsigned short counter2;     
 };
 
-
 //Заголовок данных для ESP.
 //размер кратен 2байтам (https://github.com/esp8266/Arduino/issues/1825)
 struct SlaveStats info = {
@@ -37,7 +36,7 @@ struct SlaveStats info = {
 	WAKE_MASTER_EVERY_MIN, //период передачи данных на сервер, мин  (требуется ручная калибровка внутреннего генератора)
 	MEASUREMENT_EVERY_MIN, //период измерения данных в буфер, мин
 	0, //напряжение питания, мВ (требуется ручная калибровка)
-	0 // пустой байт для кратности 2
+	0 //причина перезагрузки
 };
 
 Storage storage( sizeof( SensorData ) );
@@ -45,6 +44,8 @@ SlaveI2C slaveI2C;
 
 void setup() 
 {
+	info.service = MCUSR; //причина перезагрузки
+
 	counter.pin = BUTTON_PIN;
 	counter2.pin = BUTTON2_PIN;
 	
