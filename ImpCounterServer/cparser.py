@@ -23,6 +23,7 @@ class Data(object):
         self.device_id = 0
         self.sensors = 0
         self.values = []
+        self.service = 0
 
 
 class CounterParser(object):
@@ -39,12 +40,13 @@ class CounterParser(object):
                 log.info("handle_data (%d): %s" % (len(data), data2log(data)))
 
             d = Data()
-            d.bytes, d.version, d.dymmy, d.wake, d.period, d.voltage = struct.unpack('HBBHHH', data[0:10])
+            d.bytes, d.version, d.message_type, d.wake, d.period, d.voltage, d.service, d.dummy = struct.unpack('HBBHHHBB', data[0:10])
             d.device_id, d.device_pwd = struct.unpack('HH', data[10:14])
 
-            log.info("device_id = %d" % d.device_id)
 
             if d.version == 1:
+                log.info("device_id = %d, MCUSR = %02x, V=%.2f" % (d.device_id, d.service, d.voltage))
+
                 if db.check_pwd(d.device_id, d.device_pwd):
                     parse_type_1(data, d, self.bot)
                 else:
