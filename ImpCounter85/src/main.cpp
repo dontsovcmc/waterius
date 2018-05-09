@@ -99,6 +99,7 @@ void loop()
 		case MASTER_WAKE:
 			LOG_DEBUG(F("LOOP (MASTER_WAKE)"));
 			info.vcc = readVcc();   // заранее запишем текущее напряжение
+			info.service = MCUSR;
 			slaveI2C.begin();		// Включаем i2c slave
 			wakeESP();              // импульс на reset ESP
 			masterWokenUpAt = millis();  //запомнили время пробуждения
