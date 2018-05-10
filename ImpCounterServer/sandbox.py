@@ -24,8 +24,8 @@ if __name__ == '__main__':
     d = log2data('ff ff ff 02 ff ff ff ff ff ff ff 3f eb 2c 43 0a')
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    host = "192.168.1.42"
-    port = 5001
+    host = "46.101.164.167" #"192.168.1.42"
+    port = 5002
     s.connect((host, port))
     s.send(d)
 

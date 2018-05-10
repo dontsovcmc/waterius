@@ -12,7 +12,7 @@ from logger import log
 from emoji import emojize
 from storage import COLD_HOT, HOT_COLD
 
-STATE_START, STATE_MENU, STATE_ADD_ID, STATE_ADD_PWD, STATE_DEVICE, STATE_INPUT_VALUE = range(6)
+STATE_START, STATE_MENU, STATE_ADD_ID, STATE_ADD_PWD, STATE_DEVICE, STATE_INPUT_VALUE, STATE_MESSAGE_DAY = range(7)
 
 BLUE = emojize(':large_blue_circle:', use_aliases=True)  # https://www.webpagefx.com/tools/emoji-cheat-sheet/
 RED = emojize(':red_circle:', use_aliases=True)
@@ -112,14 +112,20 @@ def device_menu(bot, update, id):
     else:
         order_button = InlineKeyboardButton(ARROWS + u' ' + RED + u'ГВС ' + BLUE + u'ХВС', callback_data=u'ХВС  ГВС')
 
+    query = update.callback_query
+    if query:
+        day = db.get_send_day(query.message.chat_id)
+    else:
+        day = db.get_send_day(update.message.chat_id)
+    day_button = InlineKeyboardButton(u'Число: ' + unicode(day), callback_data=u'Число')
+
     keyboard = [
         [InlineKeyboardButton(u'%dимп/л' % factor, callback_data=u'Множитель'),
          InlineKeyboardButton(RED + u'{0:.3f} '.format(v1) + BLUE + u'{0:.3f}'.format(v2), callback_data=u'Значение')],
-        [InlineKeyboardButton(u'Текст СМС', callback_data=u'Текст СМС'), order_button],
+        [InlineKeyboardButton(u'Текст СМС', callback_data=u'Текст СМС'), order_button, day_button],
         [InlineKeyboardButton(u'Удалить', callback_data=u'Удалить'), InlineKeyboardButton(u'Выход', callback_data=u'Выход')]
     ]
 
-    query = update.callback_query
     if query:
         bot.editMessageText(
                 message_id=query.message.message_id,
@@ -150,6 +156,23 @@ def add_id_handler(bot, update):
     except Exception, err:
         log.error("add_id_handler error: " % str(err))
     return STATE_START
+
+
+def message_day_handler(bot, update):
+    chat_id = update.message.chat_id
+    id = db.selected_id(chat_id)
+    try:
+        day = int(update.message.text)
+        if 0 <= day <= 31:
+            db.set_send_day(chat_id, day)
+            return device_menu(bot, update, id)
+        else:
+            raise Exception('Некорректное число месяца (корректно: 0..31)')
+
+    except Exception, err:
+        text = u'Ошибка {}'.format(err)
+        bot.sendMessage(chat_id, text=text)
+        return device_menu(bot, update, id)
 
 
 def add_pwd_handler(bot, update):
@@ -246,6 +269,15 @@ def device_handler(bot, update):
     elif query.data == u'ГВС  ХВС':
         db.set_order(id, HOT_COLD)
 
+    elif query.data == u'Число':
+        bot.editMessageText(
+            message_id=query.message.message_id,
+            chat_id=query.message.chat.id,
+            text=u'Какого числа месяца присылать показания:',
+            inline_message_id=query.message.message_id,
+            reply_markup=InlineKeyboardMarkup([keyboard]))
+        return STATE_MESSAGE_DAY
+
     elif query.data == u'да':
         db.remove_device(id, chat_id)
         return start_handler(bot, update)
@@ -305,6 +337,9 @@ conv_handler = ConversationHandler(
                      MessageHandler(Filters.all, start_handler)],  #menu
 
         STATE_ADD_ID: [MessageHandler(Filters.all, add_id_handler),
+                       CallbackQueryHandler(start_handler)],  #menu
+
+        STATE_MESSAGE_DAY: [MessageHandler(Filters.all, message_day_handler),
                        CallbackQueryHandler(start_handler)],  #menu
 
         STATE_ADD_PWD: [MessageHandler(Filters.all, add_pwd_handler),

@@ -4,7 +4,6 @@ __author__ = 'dontsov'
 from storage import db
 from logger import log
 import struct
-from bot import RED, BLUE
 from datetime import datetime, timedelta
 
 def data2log(data):
@@ -97,8 +96,11 @@ def parse_type_1(data, d, bot):
                     db.set_start_value2(d.device_id, v2)
                     log.warning(u"Переполнение ХВС: было %d имп., стало %d. Перезаписана точка старта." % (prev_imp2, imp2))
 
-                # Пришле пользователю сообщение с показаниями
                 db.set_impulses(d.device_id, imp1, imp2)
+                db.set_voltage(d.device_id, d.voltage)
+
+                '''
+                # Сообщение с показаниями пользователю
                 v1, v2 = db.get_current_value(d.device_id)
                 text = u'Счетчик №{0}, V={1:.2f}\nСлед.связь: {2}\n'.format(d.device_id, d.voltage/1000.0, next_connect_str)
                 text += RED + u'{0:.3f} '.format(v1) + BLUE + u'{0:.3f}'.format(v2)
@@ -108,12 +110,14 @@ def parse_type_1(data, d, bot):
                 if bot:
                     bot.send_message(chat_id=chat_id, text=db.sms_text(d.device_id))
 
-                if not chat_list:
-                    log.warn('Нет получателя для устройства #' + str(d.device_id))
+                '''
             else:
                 if bot:
                     bot.send_message(chat_id=chat_id, text="bad message: %s" % data2log(data))
                 log.error("no values")
+
+        if not chat_list:
+            log.warn('Нет получателя для устройства #' + str(d.device_id))
 
     except Exception, err:
         log.error("parser1 error: %s, data=%s" % (str(err), data2log(data)))

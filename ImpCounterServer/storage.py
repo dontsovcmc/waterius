@@ -70,6 +70,18 @@ class Shelve(object):
     def get_factor(self, device_id):
         return self.get(device_id, 'factor', 1)
 
+    def get_send_day(self, chat_id):
+        return self.get(chat_id, 'send_day', 21)
+
+    def set_send_day(self, chat_id, day):
+        self.set(chat_id, 'send_day', day)
+
+    def get_voltage(self, device_id):
+        return self.get(device_id, 'voltage', 0.0)
+
+    def set_voltage(self, device_id, voltage):
+        self.set(device_id, 'voltage', voltage)
+
     def sms_text(self, device_id):
         v1, v2 = self.get_current_value(device_id)
         order = self.get_order(device_id, COLD_HOT)
@@ -102,12 +114,15 @@ class Shelve(object):
         self.add_id_to_db(id, pwd)
         return id, pwd
 
+    def all_devices(self):
+        return self.get('', 'ids', [])
+
     def id_exist(self, id):
-        all = self.get('', 'ids', [])
+        all = self.all_devices()
         return id in all
 
     def add_id_to_db(self, id, pwd):
-        all = self.get('', 'ids', [])
+        all = self.all_devices()
         if len(all) == 65534:
             raise Exception('DB full')
         all.append(id)
