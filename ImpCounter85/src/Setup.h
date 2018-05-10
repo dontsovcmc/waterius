@@ -2,7 +2,7 @@
 #define _SETUP_h
 
 #include <Arduino.h>
-#include <TinyDebugSerial.h>
+#include "TinyDebugSerial.h"
 
 // Включение логгирования с TinySerial: 3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
 // При логгировании не работает счетчик на 3-м пине.
@@ -51,10 +51,10 @@ struct Header {
 #define LOG_ERROR(x) 
 #define DEBUG_CONNECT(x)  
 
-class TinyDebugSerial;
 
 #if defined (LOG_LEVEL_DEBUG) || defined (LOG_LEVEL_INFO) || defined (LOG_LEVEL_ERROR)
 	#define DEBUG
+	class TinyDebugSerial;
   	extern TinyDebugSerial mySerial;
     #define DEBUG_CONNECT(x)  mySerial.begin(x)
     #define PRINT_NOW(x) mySerial.print(millis()); mySerial.print(x);
