@@ -36,7 +36,7 @@ void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2, ESPPowerBut
 			noInterrupts();
 
 			counter->check();
-			#ifdef BUTTON2_PIN
+			#ifndef DEBUG
 				counter2->check();
 			#endif
 			esp->check();

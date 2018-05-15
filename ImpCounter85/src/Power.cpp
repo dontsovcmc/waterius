@@ -6,19 +6,30 @@
 #include <avr/wdt.h>
 #include "Setup.h"
 
-ESPPowerButton::ESPPowerButton(const uint8_t p)
-	: pin(p)
+ESPPowerButton::ESPPowerButton(const uint8_t p, const uint8_t setup)
+	: power_pin(p)
+	, setup_pin(setup)
 	, pressed(false)
 	, power_on(false)
 {
-	pinMode(pin, INPUT);
+	pinMode(power_pin, INPUT);
+	pinMode(setup_pin, INPUT);
 }
 
 void ESPPowerButton::check()
 {
 	if (power_on)
 		return;
-	pressed = (digitalRead(pin) == HIGH);
+
+	if (digitalRead(setup_pin) == LOW)
+	{
+		delayMicroseconds(20000);  //нельзя delay, т.к. power_off
+		pressed = digitalRead(setup_pin) == LOW;
+	}
+	else
+	{
+		pressed = false;
+	}
 }
 
 void ESPPowerButton::power(const bool on)
@@ -27,14 +38,15 @@ void ESPPowerButton::power(const bool on)
 	pressed = false;
 	if (on)
 	{
-		pinMode(pin, OUTPUT);
-		digitalWrite(pin, HIGH);
-		power_timestamp = millis();
+		pinMode(power_pin, OUTPUT);
+		digitalWrite(power_pin, HIGH);
+		wake_up_timestamp = millis();
 	}
 	else
 	{
-		digitalWrite(pin, LOW);
-		pinMode(pin, INPUT);
+		digitalWrite(power_pin, LOW);
+		pinMode(power_pin, INPUT);
+		wake_up_timestamp = 0;
 	}
 }
 
@@ -70,10 +82,4 @@ uint16_t readVcc()
 	adc_disable();
 
 	return result; //милиВольт
-}
-
-int freeRam() {
-  extern int __heap_start, *__brkval; 
-  int v; 
-  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }

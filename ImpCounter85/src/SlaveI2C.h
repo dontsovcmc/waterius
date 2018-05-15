@@ -9,12 +9,13 @@
 #define SETUP_MODE 1
 #define TRANSMIT_MODE 2
 
+
 class SlaveI2C
 {
  protected:
 	 static byte txBuffer[TX_BUFFER_SIZE];
 	 static uint8_t txBufferPos;
-	 static bool setup_mode;
+	 static uint8_t setup_mode;
 
 	 static char lastCommand;
 	 static bool masterSentSleep;
@@ -26,7 +27,7 @@ class SlaveI2C
 	 static void receiveEvent( int howMany );
 
  public:
-	 void begin(const bool);
+	 void begin(const uint8_t);
 	 static void end();
 	 bool masterGoingToSleep();
 	 bool masterGotOurData();

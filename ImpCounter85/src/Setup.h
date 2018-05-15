@@ -12,11 +12,14 @@
 #define LOG_LEVEL_INFO
 #define LOG_LEVEL_DEBUG
 */
-//#define LOG_LEVEL_DEBUG
+#define LOG_LEVEL_DEBUG
 
-#define ESP_EN_PIN 1			 // Номер пина, которым будим ESP8266. Если менять на 3/4, то нужно поменять пины в прерываниях.
-#define WAIT_ESP_MSEC   4000UL // Сколько секунд ждем передачи данных в ESP
+#define ESP_POWER_PIN 1			 // Номер пина, которым будим ESP8266. Если менять на 3/4, то нужно поменять пины в прерываниях.
+#define SETUP_BUTTON_PIN 2       // SCL pin
+
+#define WAIT_ESP_MSEC   4000UL   // Сколько секунд ждем передачи данных в ESP
 #define SETUP_TIME_MSEC 120000UL      // Сколько пользователь настраивает ESP
+
 // не понятно как точно тики считать для диагностики связи с сервером.
 #define WAKE_MASTER_EVERY_TICKS 100UL 
 #define MEASUREMENT_EVERY_MIN 1U	  // Период измерений данных. Кратно минутам строго!
@@ -33,12 +36,10 @@ enum State {
 	SENDING //ждем от ESP8266 команды, i2c
 };
 
-// attiny не поддерживает 4байт, используем 2байт
-struct SlaveStats {
+struct Header {
 	uint16_t bytesReady; 
 	uint8_t  deviceID;
 	uint16_t masterWakeEvery;
-	uint16_t measurementEvery;
 	uint16_t vcc;
 	uint8_t  service;
 	uint16_t reserved;
@@ -49,7 +50,6 @@ struct SlaveStats {
 #define LOG_INFO(x)  
 #define LOG_ERROR(x) 
 #define DEBUG_CONNECT(x)  
-#define DEBUG_FLUSH()   //not implemented
 
 class TinyDebugSerial;
 
@@ -57,7 +57,6 @@ class TinyDebugSerial;
 	#define DEBUG
   	extern TinyDebugSerial mySerial;
     #define DEBUG_CONNECT(x)  mySerial.begin(x)
-	#define DEBUG_FLUSH() mySerial.flush()
     #define PRINT_NOW(x) mySerial.print(millis()); mySerial.print(x);
 #endif
 

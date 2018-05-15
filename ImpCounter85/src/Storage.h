@@ -5,6 +5,13 @@
 
 #include "Setup.h"
 
+//одно измерение
+struct Data {
+	unsigned short counter;	     
+	unsigned short counter2;    
+	unsigned short ticks; 
+};
+
 class Storage
 {
  protected:

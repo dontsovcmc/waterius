@@ -6,7 +6,7 @@
 #include <TinyDebugSerial.h>
 
 extern Storage storage;
-extern struct SlaveStats info;
+extern struct Header info;
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -15,12 +15,12 @@ bool SlaveI2C::masterSentSleep = false;
 bool SlaveI2C::masterAckOurData = false;
 bool SlaveI2C::masterCheckMode = false;
 char SlaveI2C::lastCommand;
-bool SlaveI2C::setup_mode = false;
+uint8_t SlaveI2C::setup_mode = TRANSMIT_MODE;
 
 
 /* Set up I2C slave handle ISR's */
-void SlaveI2C::begin(const bool setup) {
-	setup_mode = setup;
+void SlaveI2C::begin(const uint8_t mode) {
+	setup_mode = mode;
 	Wire.begin( I2C_SLAVE_ADDRESS );
 	Wire.onReceive( receiveEvent );
 	Wire.onRequest( requestEvent );
@@ -73,7 +73,7 @@ void SlaveI2C::receiveEvent( int howMany ) {
 		case 'Z': // Our master is going to sleep.
 			masterSentSleep = true;
 			break;
-		case 'S':  // Разбудили ESP для настройки Wi-Fi
+		case 'M':  // Разбудили ESP для настройки Wi-Fi
 			if (setup_mode)
 				txBuffer[0] = SETUP_MODE;
 			else 
