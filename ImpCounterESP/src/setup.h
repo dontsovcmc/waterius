@@ -10,6 +10,9 @@
 #define DEVICE_PWD 1234
 #define AP_NAME "Impuls_Counter_12345"
 
+#define SETUP_MODE 1
+#define TRANSMIT_MODE 2
+
 //#define WEMOS
 #define ESP_01
 //#define NODEMCU

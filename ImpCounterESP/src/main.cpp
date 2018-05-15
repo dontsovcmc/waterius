@@ -22,6 +22,16 @@ MasterI2C masterI2C;
 MyWifi myWifi;
 byte buffer[512];
 
+void wait_high(const uint8_t pin, const unsigned long timeout)
+{
+	pinMode(pin, INPUT);
+	unsigned long t = millis();
+	while (digitalRead(pin) == LOW && millis() - t < timeout)
+	{
+		delay(10);
+	}
+}
+
 
 void setup()
 {
@@ -30,51 +40,57 @@ void setup()
 #endif
 
 	ESP.wdtDisable();
-	pinMode(SETUP_PIN, OUTPUT);
-	digitalWrite(SETUP_PIN, LOW);
-	pinMode(SETUP_PIN, INPUT);
-	
+
 	LOG_NOTICE( "ESP", "Booted" );
+	//ждем, пока пользователь отпустит кнопку
+	wait_high(SCL_PIN, 10000UL);
+	
+	LOG_NOTICE( "ESP", "Ready" );
+	masterI2C.begin();
+	if (masterI2C.mode == SETUP_MODE)
+		LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
+	else
+		LOG_NOTICE( "ESP", "I2C-begined: mode TRANSMIT" );
+
 	BLINK(200);
 }
 
 
 void loop()
 {
-	if (!myWifi.begin())
+	if (!myWifi.begin(masterI2C.mode))
 	{
 		LOG_ERROR( "ESP", "Wifi connected false, go sleep" );
+		masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep
 		ESP.deepSleep( 0, RF_DEFAULT );			// Sleep until I2C slave wakes us up again.
 		return;
 	}
 	LOG_NOTICE( "ESP", "Wifi-begined" );
 
-	masterI2C.begin();
-	LOG_NOTICE( "ESP", "I2C-begined" );
 
 	// Get slave statistic like wakeuptime, measurement frequency and store them in the beginning of the transmissionbuffer
-	SlaveStats slaveStats = masterI2C.getSlaveStats(); 
-	slaveStats.deviceID = myWifi.deviceID;
-	slaveStats.devicePWD = myWifi.devicePWD;
+	Header header = masterI2C.getHeader(); 
+	header.deviceID = myWifi.deviceID;
+	header.devicePWD = myWifi.devicePWD;
 
-	memcpy( buffer, &slaveStats, sizeof( slaveStats ) );
+	memcpy( buffer, &header, sizeof( header ) );
 
-	LOG_NOTICE( "Stat: bytesReady", slaveStats.bytesReady);
-	LOG_NOTICE( "Stat: voltage", slaveStats.vcc);
+	LOG_NOTICE( "Stat: bytesReady", header.bytesReady);
+	LOG_NOTICE( "Stat: voltage", header.vcc);
 
 	// Read all stored measurements from slave and place after statistics in buffer after statistics
-	uint16_t bytesRead = masterI2C.getSlaveStorage( buffer + sizeof(slaveStats), sizeof(buffer), slaveStats.bytesReady );
-	SlaveStats *ss = (SlaveStats*)(&buffer);
+	uint16_t bytesRead = masterI2C.getSlaveStorage( buffer + sizeof(header), sizeof(buffer), header.bytesReady );
+	Header *ss = (Header*)(&buffer);
 	if ( bytesRead > 0 ) 
 	{
 		ss->message_type = ATTINY_OK;
-		if (myWifi.send( buffer, bytesRead + sizeof(slaveStats)))  // Try to send them to the server.
+		if (myWifi.send( buffer, bytesRead + sizeof(header)))  // Try to send them to the server.
 			masterI2C.sendCmd( 'A' ); // Tell slave that we succesfully passed the data on to the server. He can delete it.
 	}
 	else
 	{
 		ss->message_type = ATTINY_FAIL;
-		myWifi.send( buffer, sizeof(slaveStats)); // Try to send error
+		myWifi.send( buffer, sizeof(header)); // Try to send error
 		BLINK(50); delay(100); BLINK(50);
 	}
 	masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep

@@ -22,7 +22,7 @@ class MyWifi
  public:
 	 uint16_t  deviceID;
 	 uint16_t  devicePWD;
-	 bool begin();
+	 bool begin(const uint8_t mode);
 	 bool send( const void * data, uint16_t length );
 };
 

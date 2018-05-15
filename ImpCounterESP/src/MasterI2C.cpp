@@ -11,6 +11,10 @@ void MasterI2C::begin() {
 	Wire.begin( SDA_PIN, SCL_PIN );
 	Wire.setClock( 100000L );
 	Wire.setClockStretchLimit(1500L);
+
+	mode = TRANSMIT_MODE;
+	sendCmd('M');
+	mode = getByte();
 }
 
 
@@ -82,18 +86,18 @@ uint16_t MasterI2C::getSlaveStorage( byte* storage, const uint16_t maxStorageSiz
 
 
 /* Returns the statistics from the slave */
-SlaveStats MasterI2C::getSlaveStats() {
+Header MasterI2C::getHeader() {
 	sendCmd( 'B' );
-	SlaveStats slaveStats;
+	Header header;
 
-	slaveStats.bytesReady = getUint();
-	slaveStats.version = getByte();
-	slaveStats.masterWakeEvery = getUint();
-	slaveStats.measurementEvery = getUint();
-	slaveStats.vcc = getUint();
-	slaveStats.service = getByte();
+	header.bytesReady = getUint();
+	header.version = getByte();
+	header.masterWakeEvery = getUint();
+	header.measurementEvery = getUint();
+	header.vcc = getUint();
+	header.service = getByte();
 
-	return slaveStats;
+	return header;
 }
 
 

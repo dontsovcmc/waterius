@@ -9,7 +9,7 @@
 d.bytes, d.version, d.dymmy, d.wake, d.period, d.voltage = struct.unpack('HBBHHH', data[0:10])
 d.device_id, d.device_pwd = struct.unpack('HH', data[10:14])
 */
-struct SlaveStats {
+struct Header {
 	uint16_t bytesReady;
 	uint8_t  version;
 	uint8_t  message_type;
@@ -21,6 +21,7 @@ struct SlaveStats {
 	uint16_t deviceID;
 	uint16_t devicePWD;
 }; //should be *16bit https://github.com/esp8266/Arduino/issues/1825
+
 
 
 enum msg_type {
@@ -37,11 +38,12 @@ class MasterI2C
 	 uint8_t getByte();
 
  public:
+	 uint8_t mode;
 	 void begin();
 	 void end();
 	 void sendCmd( const char cmd );
 	 uint16_t getSlaveStorage( byte* storage, const uint16_t maxStorageSize, const uint16_t bytesToFetch );
-	 SlaveStats getSlaveStats();
+	 Header getHeader();
 };
 
 
