@@ -14,19 +14,20 @@
 */
 //#define LOG_LEVEL_DEBUG
 
-#define ESP_RESET_PIN 1			// Номер пина, которым будим ESP8266. Если менять на 3/4, то нужно поменять пины в прерываниях.
+#define ESP_EN_PIN 1			 // Номер пина, которым будим ESP8266. Если менять на 3/4, то нужно поменять пины в прерываниях.
+#define WAIT_ESP_MSEC   4000UL // Сколько секунд ждем передачи данных в ESP
+#define SETUP_TIME_MSEC 120000UL      // Сколько пользователь настраивает ESP
+// не понятно как точно тики считать для диагностики связи с сервером.
+#define WAKE_MASTER_EVERY_TICKS 100UL 
+#define MEASUREMENT_EVERY_MIN 1U	  // Период измерений данных. Кратно минутам строго!
 
-const uint8_t DEVICE_ID = 1;                // Модель устройства
-
-const uint8_t GIVEUP_ON_MASTER_AFTER = 4;	// Сколько секунд ждем передачи данных в ESP
-
-const unsigned short WAKE_MASTER_EVERY_MIN = 60; // Период передачи данных на сервер, мин
-const unsigned short MEASUREMENT_EVERY_MIN = 5;	// Период измерений данных. Кратно минутам строго!
+#define DEVICE_ID 2                   // Модель устройства
 
 #define STORAGE_SIZE 120  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
 enum State { 
 	SLEEP, //глубокий сон
+	SETUP,
 	MEASURING, //сохраняем измерение
 	MASTER_WAKE, //пробуждаем ESP8266, i2c
 	SENDING //ждем от ESP8266 команды, i2c

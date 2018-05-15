@@ -6,14 +6,36 @@
 #include <avr/wdt.h>
 #include "Setup.h"
 
-// Перезагружаем ESP8266 для передачи данных
-void wakeESP() 
+ESPPowerButton::ESPPowerButton(const uint8_t p)
+	: pin(p)
+	, pressed(false)
+	, power_on(false)
 {
-	pinMode( ESP_RESET_PIN, OUTPUT );
-	digitalWrite( ESP_RESET_PIN, LOW );
-	delay( 10 );
-	digitalWrite( ESP_RESET_PIN, HIGH );
-	pinMode( ESP_RESET_PIN, INPUT_PULLUP );
+	pinMode(pin, INPUT);
+}
+
+void ESPPowerButton::check()
+{
+	if (power_on)
+		return;
+	pressed = (digitalRead(pin) == HIGH);
+}
+
+void ESPPowerButton::power(const bool on)
+{
+	power_on = on;
+	pressed = false;
+	if (on)
+	{
+		pinMode(pin, OUTPUT);
+		digitalWrite(pin, HIGH);
+		power_timestamp = millis();
+	}
+	else
+	{
+		digitalWrite(pin, LOW);
+		pinMode(pin, INPUT);
+	}
 }
 
 // Меряем напряжение питания Attiny85. 

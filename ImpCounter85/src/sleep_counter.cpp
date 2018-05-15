@@ -15,31 +15,38 @@ ISR( WDT_vect ) {
 
 /* Makes a deep sleep for X second using as little power as possible */
 // 32767 minutes ~ 22 days
-void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2) 
+void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2, ESPPowerButton *esp) 
 {
 	//pinMode( ESP_RESET_PIN, OUTPUT );  //for test
 	power_all_disable();  // power off ADC, Timer 0 and 1, serial interface
 
 	set_sleep_mode( SLEEP_MODE_PWR_DOWN );
 
-	resetWatchdog();      // get watchdog ready
+	resetWatchdog(); 
 
 	//30 = 2c сон
 	//250ms: 60 * 4 = 240 раз (лучше 239, т.к. 1.2мс * 240 = 288мс будем считать)
 	//16ms: 62.5 * 60 раз = 3750 
 	//32ms: 31.25 * 60 раз = 1875 
-	for (unsigned int i = 0; i < 240; ++i)  
+	for (unsigned int i = 0; i < 10 && !esp->pressed; ++i)  
 	{
 		wdt_count = minutes; 
 		while ( wdt_count > 0 ) 
 		{
 			noInterrupts();
+
 			counter->check();
 			#ifdef BUTTON2_PIN
 				counter2->check();
 			#endif
-			interrupts();
+			esp->check();
+			if (esp->pressed) //Пользователь нажал кнопку
+			{
+				interrupts();
+				break;
+			}
 
+			interrupts();
 			//digitalWrite( ESP_RESET_PIN, LOW ); //для отладки по осциллографу
 			sleep_mode();
 			//digitalWrite( ESP_RESET_PIN, HIGH );
@@ -70,9 +77,10 @@ void resetWatchdog()
 } 
 
 
-Counter::Counter()
+Counter::Counter(const uint8_t p)
 	: i(0)
 	, state(OPENED)
+	, pin(p)
 { }
 
 void Counter::check()

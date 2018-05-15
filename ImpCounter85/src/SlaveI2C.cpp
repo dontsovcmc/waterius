@@ -13,11 +13,14 @@ uint8_t SlaveI2C::txBufferPos = 0;
 byte SlaveI2C::txBuffer[TX_BUFFER_SIZE];
 bool SlaveI2C::masterSentSleep = false;
 bool SlaveI2C::masterAckOurData = false;
+bool SlaveI2C::masterCheckMode = false;
 char SlaveI2C::lastCommand;
+bool SlaveI2C::setup_mode = false;
 
 
 /* Set up I2C slave handle ISR's */
-void SlaveI2C::begin() {
+void SlaveI2C::begin(const bool setup) {
+	setup_mode = setup;
 	Wire.begin( I2C_SLAVE_ADDRESS );
 	Wire.onReceive( receiveEvent );
 	Wire.onRequest( requestEvent );
@@ -70,6 +73,13 @@ void SlaveI2C::receiveEvent( int howMany ) {
 		case 'Z': // Our master is going to sleep.
 			masterSentSleep = true;
 			break;
+		case 'S':  // Разбудили ESP для настройки Wi-Fi
+			if (setup_mode)
+				txBuffer[0] = SETUP_MODE;
+			else 
+				txBuffer[0] = TRANSMIT_MODE;
+			masterCheckMode = true;
+			break;
 	}
 	lastCommand = command;
 }
@@ -82,4 +92,8 @@ bool SlaveI2C::masterGoingToSleep() {
 /* Returns true if master has acknowledged all data sent to him */
 bool SlaveI2C::masterGotOurData() {
 	return masterAckOurData;
+}
+
+bool SlaveI2C::masterModeChecked() {
+	return masterCheckMode;
 }

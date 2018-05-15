@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "Setup.h"
+#include "Power.h"
 
 #define BUTTON_PIN    4 
 #ifndef DEBUG
@@ -21,12 +22,13 @@ struct Counter {
   
   uint8_t pin;
 
-	Counter();
+	Counter(const uint8_t);
 	void check();
 };
 
+
 void blink(uint16_t msec);
-void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2);
+void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2, ESPPowerButton *esp);
 void resetWatchdog();
 
 #endif
