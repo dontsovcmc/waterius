@@ -31,6 +31,9 @@ SlaveI2C slaveI2C;
 void setup() 
 {
 	info.service = MCUSR; //причина перезагрузки
+	noInterrupts();
+	ACSR |= bit( ACD ); //выключаем компаратор
+	interrupts();
 	resetWatchdog(); 
 	adc_disable(); //выключаем ADC
 
@@ -90,12 +93,11 @@ void loop()
 			DEBUG_CONNECT(9600);
 			LOG_DEBUG(F("ESP turn on"));
 
-			now = millis();
-			while (millis() - now > SETUP_TIME_MSEC)
+			while (!slaveI2C.masterGoingToSleep() && millis() - esp.wake_up_timestamp < SETUP_TIME_MSEC) 
 			{
-				delay(100);
-				//gotoDeepSleep( 1, &counter, &counter2, &esp);	// Глубокий сон X минут
+				delayMicroseconds(65000);
 			}
+
 			esp.power(false);
 			LOG_DEBUG(F("ESP turn off"));
 
