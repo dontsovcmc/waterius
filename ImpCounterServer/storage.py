@@ -174,12 +174,12 @@ class Shelve(object):
     def get_connect_time(self, id):
         return self.get(id, "connect_time", None)
 
-    def get_next_connect_str(self, id):
+    def get_next_connect(self, id):
         prev = db.get_connect_time(id)
         if prev:
             next_connect = datetime.now() + timedelta(seconds=(datetime.now() - prev).total_seconds())
-            return str(next_connect)
-        return "см.настройки счетчика"
+            return next_connect
+        return ''
 
     def get_current_value(self, id):
         '''

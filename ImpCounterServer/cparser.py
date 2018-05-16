@@ -78,7 +78,7 @@ def parse_type_1(data, d, bot):
         chat_list = db.get_chats(d.device_id)
         factor = db.get_factor(d.device_id)
 
-        next_connect_str = db.get_next_connect_str(d.device_id)
+        #next_connect = db.get_next_connect(d.device_id)
         db.set_connect_time(d.device_id, datetime.utcnow())
 
         for chat_id in chat_list:
