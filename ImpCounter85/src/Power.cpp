@@ -16,20 +16,22 @@ ESPPowerButton::ESPPowerButton(const uint8_t p, const uint8_t setup)
 	pinMode(setup_pin, INPUT);
 }
 
+bool ESPPowerButton::is_pressed()
+{
+	if (digitalRead(setup_pin) == LOW)
+	{
+		delayMicroseconds(20000);  //нельзя delay, т.к. power_off
+		return digitalRead(setup_pin) == LOW;
+	}
+	return false;
+}
+
 void ESPPowerButton::check()
 {
 	if (power_on)
 		return;
 
-	if (digitalRead(setup_pin) == LOW)
-	{
-		delayMicroseconds(20000);  //нельзя delay, т.к. power_off
-		pressed = digitalRead(setup_pin) == LOW;
-	}
-	else
-	{
-		pressed = false;
-	}
+	pressed = is_pressed();
 }
 
 void ESPPowerButton::power(const bool on)

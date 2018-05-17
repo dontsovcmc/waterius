@@ -93,9 +93,9 @@ Header MasterI2C::getHeader() {
 	header.bytesReady = getUint();
 	header.version = getByte();
 	header.masterWakeEvery = getUint();
-	header.measurementEvery = getUint();
 	header.vcc = getUint();
 	header.service = getByte();
+	header.reserved = getUint();
 
 	return header;
 }

@@ -25,6 +25,7 @@ void SlaveI2C::begin(const uint8_t mode) {
 	Wire.onRequest( requestEvent );
 	masterSentSleep = false;
 	masterAckOurData = false;
+	masterCheckMode = false;
 	newCommand();
 }
 
@@ -73,10 +74,7 @@ void SlaveI2C::receiveEvent( int howMany ) {
 			masterSentSleep = true;
 			break;
 		case 'M':  // Разбудили ESP для настройки Wi-Fi
-			if (setup_mode)
-				txBuffer[0] = SETUP_MODE;
-			else 
-				txBuffer[0] = TRANSMIT_MODE;
+			txBuffer[0] = setup_mode;
 			masterCheckMode = true;
 			break;
 	}

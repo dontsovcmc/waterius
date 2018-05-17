@@ -22,16 +22,6 @@ MasterI2C masterI2C;
 MyWifi myWifi;
 byte buffer[512];
 
-void wait_high(const uint8_t pin, const unsigned long timeout)
-{
-	pinMode(pin, INPUT);
-	unsigned long t = millis();
-	while (digitalRead(pin) == LOW && millis() - t < timeout)
-	{
-		delay(10);
-	}
-}
-
 
 void setup()
 {
@@ -42,10 +32,7 @@ void setup()
 	ESP.wdtDisable();
 
 	LOG_NOTICE( "ESP", "Booted" );
-	//ждем, пока пользователь отпустит кнопку
-	wait_high(SCL_PIN, 10000UL);
 	
-	LOG_NOTICE( "ESP", "Ready" );
 	masterI2C.begin();
 	if (masterI2C.mode == SETUP_MODE)
 		LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );

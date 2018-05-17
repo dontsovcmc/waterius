@@ -32,7 +32,7 @@ def send_message_job(bot, job):
                     except Exception, err:
                         log.error('sending id={0}, chat={1}: {2}'.format(device_id, chat_id, err))
 
-                elif prev and datetime.now() > prev + datetime.timedelta(days=7):
+                if prev and datetime.now() > prev + datetime.timedelta(days=7):
                     try:
                         if bot:
                             bot.send_message(chat_id=chat_id, text=u'Счетчик №{0}: нет связи более 7 дней'.format(device_id),

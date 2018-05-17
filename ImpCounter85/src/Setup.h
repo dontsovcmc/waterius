@@ -18,15 +18,15 @@
 #define SETUP_BUTTON_PIN 2       // SCL pin
 
 #define WAIT_ESP_MSEC   10000UL   // Сколько секунд ждем передачи данных в ESP
-#define SETUP_TIME_MSEC 120000UL      // Сколько пользователь настраивает ESP
+#define SETUP_TIME_MSEC 180000UL      // Сколько пользователь настраивает ESP
 
-// не понятно как точно тики считать для диагностики связи с сервером.
-#define WAKE_MASTER_EVERY_TICKS 100UL 
-#define MEASUREMENT_EVERY_MIN 1U	  // Период измерений данных. Кратно минутам строго!
+#define MEASUREMENT_EVERY_MIN 1   //15U	  // Период измерений данных. Кратно минутам строго!
+#define WAKE_MASTER_EVERY_MIN 10  //24UL * 4UL * MEASUREMENT_EVERY_MIN 
 
+#define RETRY_SEND_MILLIS  3600UL * 24UL
 #define DEVICE_ID 2                   // Модель устройства
 
-#define STORAGE_SIZE 120  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
+#define STORAGE_SIZE 25  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
 enum State { 
 	SLEEP, //глубокий сон
@@ -61,15 +61,15 @@ struct Header {
 #endif
 
 #ifdef LOG_LEVEL_DEBUG
-	#define LOG_DEBUG(x) PRINT_NOW(F(" [D]: ")); mySerial.println(x)
+	#define LOG_DEBUG(x) { PRINT_NOW(F(" [D]: ")); mySerial.println(x); }
 	#define LOG_LEVEL_INFO
 #endif
 #ifdef LOG_LEVEL_INFO
-	#define LOG_INFO(x) PRINT_NOW(F(" [I]: ")); mySerial.println(x)
+	#define LOG_INFO(x) { PRINT_NOW(F(" [I]: ")); mySerial.println(x); }
 	#define LOG_LEVEL_ERROR
 #endif
 #ifdef LOG_LEVEL_ERROR
-	#define LOG_ERROR(x) PRINT_NOW(F(" [E]: ")); mySerial.println(x)
+	#define LOG_ERROR(x) { PRINT_NOW(F(" [E]: ")); mySerial.println(x); }
 #endif
 
 #endif

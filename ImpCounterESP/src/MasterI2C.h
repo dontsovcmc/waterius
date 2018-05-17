@@ -14,7 +14,6 @@ struct Header {
 	uint8_t  version;
 	uint8_t  message_type;
 	uint16_t masterWakeEvery;
-	uint16_t measurementEvery;
 	uint16_t vcc;
 	uint8_t  service;
 	uint8_t  reserved;

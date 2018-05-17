@@ -20,6 +20,7 @@ struct ESPPowerButton
 	unsigned long wake_up_timestamp; //время включения Wi-Fi
 
 	void check();
+	bool is_pressed();
 	void power(const bool);
 };
 

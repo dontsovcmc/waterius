@@ -82,7 +82,7 @@ bool MyWifi::begin(const uint8_t mode)
 		while ( WiFi.status() != WL_CONNECTED && millis() - now < 10000)
 		{
 			LOG_NOTICE( "WIF", "Wifi status: " << WiFi.status());
-			delay(50);
+			delay(100);
 		}
 
 		if (millis() - now > 10000)
