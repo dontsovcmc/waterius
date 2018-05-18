@@ -15,7 +15,6 @@
 #endif
 
 static enum State state = SLEEP;
-static unsigned long send_failed_timestamp = 0;
 
 //глобальный счетчик до 65535
 static Counter counter(BUTTON_PIN);
@@ -126,11 +125,7 @@ void loop()
 			state = SLEEP;			// Сохранили текущие значения
 			if (storage.is_full() || data.timestamp >= WAKE_MASTER_EVERY_MIN ) 
 			{
-				if (send_failed_timestamp == 0
-				    || millis() - send_failed_timestamp > RETRY_SEND_MILLIS)
-				{
-					state = MASTER_WAKE; // пришло время будить ESP
-				}
+				state = MASTER_WAKE; // пришло время будить ESP
 			}
 			break;
 
@@ -154,12 +149,12 @@ void loop()
 					LOG_DEBUG(F("ESP ok"));
 					storage.clear();
 					data.timestamp = 0;
-					send_failed_timestamp = 0;
 				}
 				else
 				{
 					LOG_ERROR(F("ESP send fail"));
-					send_failed_timestamp = millis();
+
+					storage.clear(); // чтобы не включаться каждый measure из-за full
 				}
 				state = SLEEP;
 				esp.power(false);
@@ -171,10 +166,10 @@ void loop()
 				if (slaveI2C.masterModeChecked())
 					LOG_INFO(F("mode was checked"));
 				LOG_ERROR(F("ESP wake up fail"));
-				send_failed_timestamp = millis();
 				state = SLEEP;
 				esp.power(false);
 				slaveI2C.end();			// выключаем i2c slave.
+				storage.clear(); // чтобы не включаться каждый measure из-за full
 			}
 			
 			break;
