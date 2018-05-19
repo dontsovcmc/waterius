@@ -19,3 +19,10 @@ temp/
 */logs
 *.db
 ImpCounterServer/run.sh
+*.a
+*.o
+*.d
+*.xml
+.vs/*
+Debug
+Release

@@ -12,6 +12,8 @@ from storage import db
 from logger import log
 from bot import conv_handler, error_handler, outside_handler, newid_handler
 from telegram.ext import CommandHandler
+from datetime import datetime, timedelta
+from job import send_message_job
 
 CERT = 'server.crt'
 CERT_KEY = 'server.key'
@@ -41,6 +43,14 @@ if __name__ == '__main__':
     updater.dispatcher.add_handler(conv_handler)
     updater.dispatcher.add_handler(MessageHandler([Filters.text], outside_handler))
     updater.dispatcher.add_error_handler(error_handler)
+
+    tomorrow = datetime.now() + timedelta(1)
+    afternoon = datetime(year=tomorrow.year, month=tomorrow.month,
+                         day=tomorrow.day, hour=12, minute=0, second=0)
+    next_job = (afternoon - datetime.now()).seconds
+    log.info('send message job: after {} sec'.format(next_job))
+
+    updater.job_queue.run_repeating(send_message_job, 3600*24, first=next_job)
 
     if args.host:
         updater.start_webhook(listen=args.host,

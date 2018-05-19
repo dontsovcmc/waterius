@@ -6,14 +6,50 @@
 #include <avr/wdt.h>
 #include "Setup.h"
 
-// Перезагружаем ESP8266 для передачи данных
-void wakeESP() 
+ESPPowerButton::ESPPowerButton(const uint8_t p, const uint8_t setup)
+	: power_pin(p)
+	, setup_pin(setup)
+	, pressed(false)
+	, power_on(false)
 {
-	pinMode( ESP_RESET_PIN, OUTPUT );
-	digitalWrite( ESP_RESET_PIN, LOW );
-	delay( 10 );
-	digitalWrite( ESP_RESET_PIN, HIGH );
-	pinMode( ESP_RESET_PIN, INPUT_PULLUP );
+	pinMode(power_pin, INPUT);
+	pinMode(setup_pin, INPUT);
+}
+
+bool ESPPowerButton::is_pressed()
+{
+	if (digitalRead(setup_pin) == LOW)
+	{
+		delayMicroseconds(20000);  //нельзя delay, т.к. power_off
+		return digitalRead(setup_pin) == LOW;
+	}
+	return false;
+}
+
+void ESPPowerButton::check()
+{
+	if (power_on)
+		return;
+
+	pressed = is_pressed();
+}
+
+void ESPPowerButton::power(const bool on)
+{
+	power_on = on;
+	pressed = false;
+	if (on)
+	{
+		pinMode(power_pin, OUTPUT);
+		digitalWrite(power_pin, HIGH);
+		wake_up_timestamp = millis();
+	}
+	else
+	{
+		digitalWrite(power_pin, LOW);
+		pinMode(power_pin, INPUT);
+		wake_up_timestamp = 0;
+	}
 }
 
 // Меряем напряжение питания Attiny85. 
@@ -48,10 +84,4 @@ uint16_t readVcc()
 	adc_disable();
 
 	return result; //милиВольт
-}
-
-int freeRam() {
-  extern int __heap_start, *__brkval; 
-  int v; 
-  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }

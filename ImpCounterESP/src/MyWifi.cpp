@@ -15,12 +15,10 @@ WiFiClient client;
 
 /* Handles wifi connection. If user boots wit setup-pin low, we start a configuration portal AP.
    Otherwise just connect the wifi so that it is ready for data transfer */
-bool MyWifi::begin() 
+bool MyWifi::begin(const uint8_t mode) 
 {
-	pinMode( SETUP_PIN, INPUT_PULLUP );
-
 	// If the Wifi setup-pin is held low while booting, then we start up the wifimanager portal.
-	if (digitalRead( SETUP_PIN ) == LOW) 
+	if (mode == SETUP_MODE) 
 	{
 		loadConfig();
 		ip.toString().c_str();
@@ -81,13 +79,13 @@ bool MyWifi::begin()
 		WiFi.begin();
 
 		uint32_t now = millis();
-		while ( WiFi.status() != WL_CONNECTED && millis() - now < 5000)
+		while ( WiFi.status() != WL_CONNECTED && millis() - now < 10000)
 		{
 			LOG_NOTICE( "WIF", "Wifi status: " << WiFi.status());
-			delay(50);
+			delay(100);
 		}
 
-		if (millis() - now > 5000)
+		if (millis() - now > 10000)
 		{
 			LOG_ERROR( "WIF", "Wifi connect error");
 			return false;

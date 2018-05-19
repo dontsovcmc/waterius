@@ -5,23 +5,32 @@
 
 #include "Setup.h"
 
+//одно измерение
+struct Data {
+	unsigned short counter;	     
+	unsigned short counter2;    
+	unsigned short timestamp; 
+};
+
 class Storage
 {
- protected:
+// protected:
 	 byte ramStorage[STORAGE_SIZE];
 	 uint16_t currentByte;
-	 uint16_t addrPtr = 0;
+	 uint16_t addrPtr;
 	 uint8_t elementSize;
-
+	 bool full;
+	 
  public:
 	 Storage( const uint8_t elementSize );
 	 void addElement( const void * element );
-	 	 void clear();
+	 void clear();
 
 	 void gotoFirstByte();
 	 byte getNextByte();
 	 uint16_t getStoredByteCount();
 	 uint8_t getElementSize();
+	 bool is_full();
 };
 
 

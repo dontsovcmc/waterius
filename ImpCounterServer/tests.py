@@ -34,9 +34,10 @@ class TestDB(unittest.TestCase):
             assert factor == 1
 
             v1, v2 = db.get_current_value(id)
-            assert v1 == 5*factor and v2 == 6*factor
+            assert v1 == 5*factor/1000.0 and v2 == 6*factor/1000.0
 
-            db.set_start_value(id, 100, 200)
+            db.set_start_value1(id, 100)
+            db.set_start_value2(id, 200)
 
             v1, v2 = db.get_current_value(id)
             assert v1 == 100 and v2 == 200
@@ -44,8 +45,8 @@ class TestDB(unittest.TestCase):
             db.set_impulses(id, 10, 11)
 
             v1, v2 = db.get_current_value(id)
-            assert v1 == (10-5)*factor + 100
-            assert v2 == (11-6)*factor + 200
+            assert v1 == (10-5)*factor/1000.0 + 100
+            assert v2 == (11-6)*factor/1000.0 + 200
         finally:
             db.set_impulses(id, 0, 0)
             db.set_start_value1(id, 0)
@@ -71,8 +72,24 @@ class TestServer(unittest.TestCase):
 
 class TestPacket(unittest.TestCase):
 
+    def test_1_parse_id2(self):
+        d = log2data('0c 00 02 01 01 00 b3 0b 00 00 31 0f f3 1a 03 00 00 00 01 00 03 00 00 00 0a 00')
+        db.add_id_to_db(3889, 6899)  # код счетчика с паролем из сообщения
 
-    def test_2(self):
+        p = CounterParser(None)
+        p.handle_data(d)
+        self.assertEqual(p.header.bytes, 0x0C)
+        self.assertEqual(p.header.version, 2)
+        self.assertEqual(p.header.wake, 1)
+        self.assertEqual(p.header.voltage, 2995)
+        self.assertEqual(p.header.device_id, 3889)
+        self.assertEqual(p.header.device_pwd, 6899)
+        self.assertEqual(len(p.header.values), 2)
+        self.assertEqual(len(p.header.timestamps), 2)
+        self.assertEqual(p.header.values[0], (3, 0))
+        self.assertEqual(p.header.values[0], (3, 0))
+
+    def test_2_parse_id1(self):
         '''
         04 00 bytes
         01 3f version
@@ -83,52 +100,53 @@ class TestPacket(unittest.TestCase):
         af 1e pwd
         00 00 00 00 data
         '''
-        d = log2data('04 00 01 3f 02 00 01 00 66 0b 33 8b af 1e 01 00 02 00')
+        d = log2data('04 00 01 3f 02 00 01 00 66 0b 00 00 33 8b af 1e 01 00 02 00')
+        db.add_id_to_db(35635, 7855)  # код счетчика с паролем из сообщения
+
+        p = CounterParser(None)
+        p.handle_data(d)
+        self.assertEqual(p.header.bytes, 4)
+        self.assertEqual(p.header.version, 1)
+        self.assertEqual(p.header.wake, 2)
+        self.assertEqual(p.header.period, 1)
+        self.assertEqual(p.header.voltage, 2918)
+        self.assertEqual(p.header.device_id, 35635)
+        self.assertEqual(p.header.device_pwd, 7855)
+        self.assertEqual(len(p.header.values), 1)
+        self.assertEqual(p.header.values[0], (1, 2))
+
+    def test_3_parse_id1(self):
+        d = log2data('6000013fa0053c00660b0000338baf1e0000010000000200080012ffffffffff')
 
         db.add_id_to_db(35635, 7855)  # код счетчика с паролем из сообщения
 
         p = CounterParser(None)
         p.handle_data(d)
-        self.assertEqual(p.data.bytes, 4)
-        self.assertEqual(p.data.version, 1)
-        self.assertEqual(p.data.wake, 2)
-        self.assertEqual(p.data.period, 1)
-        self.assertEqual(p.data.voltage, 2918)
-        self.assertEqual(p.data.device_id, 35635)
-        self.assertEqual(p.data.device_pwd, 7855)
-        self.assertEqual(len(p.data.values), 1)
-        self.assertEqual(p.data.values[0], (1, 2))
+        self.assertEqual(p.header.bytes, 96)
+        self.assertEqual(p.header.version, 1)
+        self.assertEqual(p.header.wake, 1440)
+        self.assertEqual(p.header.period, 60)
+        self.assertEqual(p.header.voltage, 2918)
+        self.assertEqual(p.header.device_id, 35635)
+        self.assertEqual(p.header.device_pwd, 7855)
+        self.assertEqual(len(p.header.values), 4)
 
-    def test_3(self):
-        d = log2data('6000013fa0053c00660b338baf1e0000010000000200080012ffffffffff')
-
-        db.add_id_to_db(35635, 7855)  # код счетчика с паролем из сообщения
-
-        p = CounterParser(None)
-        p.handle_data(d)
-        self.assertEqual(p.data.bytes, 96)
-        self.assertEqual(p.data.version, 1)
-        self.assertEqual(p.data.wake, 1440)
-        self.assertEqual(p.data.period, 60)
-        self.assertEqual(p.data.voltage, 2918)
-        self.assertEqual(p.data.device_id, 35635)
-        self.assertEqual(p.data.device_pwd, 7855)
-        self.assertEqual(len(p.data.values), 3)
-
-    def test_4(self):
-        d = log2data('60 00 01 3f a0 05 3c 00 75 0b 33 8b af 1e 52 00 64 00 52 00 64 00 52 00 64 00 52 00 64 00 52 00 32 00 54 00 66 00 55 00 69 00 55 00 69 00 55 00 69 00 55 00 69 00 55 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff')
+    def test_4_parse_id1(self):
+        d = log2data('60 00 01 3f a0 05 3c 00 75 0b 00 00 33 8b af 1e 52 00 64 00 52 00 64 00 52 00 64 00 52 00 64 00 52 00 32 00 54 00 66 00 55 00 69 00 55 00 69 00 55 00 69 00 55 00 69 00 55 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff')
         db.add_id_to_db(35635, 7855)  # код счетчика с паролем из сообщения
         p = CounterParser(None)
         p.handle_data(d)
-        self.assertEqual(p.data.bytes, 96)
-        self.assertEqual(p.data.version, 1)
-        self.assertEqual(p.data.wake, 1440)
-        self.assertEqual(p.data.period, 60)
-        self.assertEqual(p.data.voltage, 2933)
-        self.assertEqual(p.data.device_id, 35635)
-        self.assertEqual(p.data.device_pwd, 7855)
-        self.assertEqual(len(p.data.values), 10)
+        self.assertEqual(p.header.bytes, 96)
+        self.assertEqual(p.header.version, 1)
+        self.assertEqual(p.header.wake, 1440)
+        self.assertEqual(p.header.period, 60)
+        self.assertEqual(p.header.voltage, 2933)
+        self.assertEqual(p.header.device_id, 35635)
+        self.assertEqual(p.header.device_pwd, 7855)
+        self.assertEqual(len(p.header.values), 24) #убрал проверку на FF
 
-#0c 00 02 00 03 00 06 01 03 00 00 dd 0c 00 00 00 00 dd 0c 00 00
-#ERROR integer division or modulo by zero
+    def test_5(self):
+        #04 00 01 01 3c 00 05 00 16 0c 03 3f eb 2c 43 0a 01 00 01 00
+
+        pass
 
