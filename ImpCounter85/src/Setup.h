@@ -12,21 +12,20 @@
 #define LOG_LEVEL_INFO
 #define LOG_LEVEL_DEBUG
 */
-#define LOG_LEVEL_DEBUG
+//#define LOG_LEVEL_DEBUG
 
-#define ESP_POWER_PIN 1			 // Номер пина, которым будим ESP8266. Если менять на 3/4, то нужно поменять пины в прерываниях.
+#define ESP_POWER_PIN    1		 // Номер пина, которым будим ESP8266. Если менять на 3/4, то нужно поменять пины в прерываниях.
 #define SETUP_BUTTON_PIN 2       // SCL pin
 
 #define WAIT_ESP_MSEC   10000UL   // Сколько секунд ждем передачи данных в ESP
-#define SETUP_TIME_MSEC 180000UL      // Сколько пользователь настраивает ESP
+#define SETUP_TIME_MSEC 300000UL      // Сколько пользователь настраивает ESP
 
-#define MEASUREMENT_EVERY_MIN 1   //15U	  // Период измерений данных. Кратно минутам строго!
-#define WAKE_MASTER_EVERY_MIN 10  //24UL * 4UL * MEASUREMENT_EVERY_MIN 
+#define MEASUREMENT_EVERY_MIN 15U   //15U  // Период измерений данных. Кратно минутам строго!
+#define WAKE_MASTER_EVERY_MIN 24U * 4U * MEASUREMENT_EVERY_MIN 
 
-#define RETRY_SEND_MILLIS  3600UL * 24UL
 #define DEVICE_ID 2                   // Модель устройства
 
-#define STORAGE_SIZE 25  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
+#define STORAGE_SIZE 120  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
 enum State { 
 	SLEEP, //глубокий сон

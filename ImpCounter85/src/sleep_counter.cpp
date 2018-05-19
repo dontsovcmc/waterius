@@ -28,7 +28,7 @@ void gotoDeepSleep(int minutes, Counter *counter, Counter *counter2, ESPPowerBut
 	//250ms: 60 * 4 = 240 раз (лучше 239, т.к. 1.2мс * 240 = 288мс будем считать)
 	//16ms: 62.5 * 60 раз = 3750 
 	//32ms: 31.25 * 60 раз = 1875 
-	for (unsigned int i = 0; i < 10 && !esp->pressed; ++i)  
+	for (unsigned int i = 0; i < 240 && !esp->pressed; ++i)  
 	{
 		wdt_count = minutes; 
 		while ( wdt_count > 0 ) 
