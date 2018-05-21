@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
     tomorrow = datetime.now() + timedelta(1)
     afternoon = datetime(year=tomorrow.year, month=tomorrow.month,
-                         day=tomorrow.day, hour=12, minute=0, second=0)
+                         day=tomorrow.day, hour=9, minute=0, second=0)
     next_job = (afternoon - datetime.now()).seconds
     log.info('send message job: after {} sec'.format(next_job))
 

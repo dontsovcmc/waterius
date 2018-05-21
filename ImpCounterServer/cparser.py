@@ -68,6 +68,9 @@ def apply_new_data(d, bot):
         db.set_impulses(d.device_id, imp1, imp2)
         db.set_voltage(d.device_id, d.voltage)
 
+        if not chat_list:
+            log.error("нет чатов для устройства #" + str(d.device_id))
+
         for chat_id in chat_list:
             # Проверим, что счетчик не перезапустился
             if imp1 < prev_imp1: #либо ресет, либо 65535
