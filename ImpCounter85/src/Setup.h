@@ -21,11 +21,11 @@
 #define SETUP_TIME_MSEC 300000UL      // Сколько пользователь настраивает ESP
 
 #define MEASUREMENT_EVERY_MIN 15U   //15U  // Период измерений данных. Кратно минутам строго!
-#define WAKE_MASTER_EVERY_MIN 24U * 4U * MEASUREMENT_EVERY_MIN 
+#define WAKE_MASTER_EVERY_MIN 6U * 4U * MEASUREMENT_EVERY_MIN 
 
 #define DEVICE_ID 2                   // Модель устройства
 
-#define STORAGE_SIZE 120  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
+#define STORAGE_SIZE 24  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
 enum State { 
 	SLEEP, //глубокий сон

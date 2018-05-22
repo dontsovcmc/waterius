@@ -42,13 +42,24 @@ void setup()
 	BLINK(200);
 }
 
+void prepare_sleep()
+{
+	pinMode(0, INPUT);
+	pinMode(2, INPUT);
+	pinMode(1, INPUT);
+	pinMode(3, INPUT);
+}
 
 void loop()
 {
+#ifdef LOGLEVEL
+	Serial.begin( 115200 ,SERIAL_8N1, SERIAL_TX_ONLY);
+#endif
 	if (!myWifi.begin(masterI2C.mode))
 	{
 		LOG_ERROR( "ESP", "Wifi connected false, go sleep" );
 		masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep
+		prepare_sleep();
 		ESP.deepSleep( 0, RF_DEFAULT );			// Sleep until I2C slave wakes us up again.
 		return;
 	}
@@ -80,9 +91,11 @@ void loop()
 		myWifi.send( buffer, sizeof(header)); // Try to send error
 		BLINK(50); delay(100); BLINK(50);
 	}
-	masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep
 
-	//WiFi.disconnect( true );
 	LOG_NOTICE( "ESP", "Going to sleep" );
+
+	masterI2C.sendCmd( 'Z' );	// Tell slave we are going to sleep
+	prepare_sleep();
+	//WiFi.disconnect( true );
 	ESP.deepSleep( 0, RF_DEFAULT );			// Sleep until I2C slave wakes us up again.
 }

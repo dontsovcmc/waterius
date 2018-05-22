@@ -46,6 +46,7 @@ void ESPPowerButton::power(const bool on)
 	}
 	else
 	{
+		delayMicroseconds(5000); //чтобы заснул
 		digitalWrite(power_pin, LOW);
 		pinMode(power_pin, INPUT);
 		wake_up_timestamp = 0;
