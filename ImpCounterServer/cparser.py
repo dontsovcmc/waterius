@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from device1_parser import parse_header_1
 from device2_parser import parse_header_2
 
+from job import send_message
 
 def data2log(data):
     data = [format(ord(i), '02x') for i in data]
@@ -81,6 +82,9 @@ def apply_new_data(d, bot):
                 bot.send_message(chat_id=chat_id, text=u"Переполнение счетчика ХВС. Проверьте тек.значение.")
                 db.set_start_value2(d.device_id, v2)
                 log.warning(u"Переполнение ХВС: было %d имп., стало %d. Перезаписана точка старта." % (prev_imp2, imp2))
+
+            if 0 == db.get_send_day(chat_id):
+                send_message(bot, d.device_id, chat_id, d.voltage)
 
             '''
             # Сообщение с показаниями пользователю
