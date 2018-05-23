@@ -70,11 +70,11 @@ class Shelve(object):
     def get_factor(self, device_id):
         return self.get(device_id, 'factor', 1)
 
-    def get_send_day(self, chat_id):
-        return self.get(chat_id, 'send_day', 21)
+    def get_send_day(self, chat_id, device_id):
+        return self.get(chat_id, 'send_day' + str(device_id), 21)
 
-    def set_send_day(self, chat_id, day):
-        self.set(chat_id, 'send_day', day)
+    def set_send_day(self, chat_id, device_id, day):
+        self.set(chat_id, 'send_day' + str(device_id), day)
 
     def get_voltage(self, device_id):
         return self.get(device_id, 'voltage', 0.0)

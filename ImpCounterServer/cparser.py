@@ -83,7 +83,7 @@ def apply_new_data(d, bot):
                 db.set_start_value2(d.device_id, v2)
                 log.warning(u"Переполнение ХВС: было %d имп., стало %d. Перезаписана точка старта." % (prev_imp2, imp2))
 
-            if 0 == db.get_send_day(chat_id):
+            if 0 == db.get_send_day(chat_id, d.device_id):
                 send_message(bot, d.device_id, chat_id, d.voltage)
 
             '''

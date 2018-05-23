@@ -32,7 +32,7 @@ def send_message_job(bot, job):
 
             for chat_id in db.get_chats(device_id):
 
-                send_day = db.get_send_day(chat_id)
+                send_day = db.get_send_day(chat_id, device_id)
                 if day == send_day:
                     send_message(bot, device_id, chat_id, voltage)
 

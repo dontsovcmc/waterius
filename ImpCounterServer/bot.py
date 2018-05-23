@@ -114,9 +114,9 @@ def device_menu(bot, update, id):
 
     query = update.callback_query
     if query:
-        day = db.get_send_day(query.message.chat_id)
+        day = db.get_send_day(query.message.chat_id, id)
     else:
-        day = db.get_send_day(update.message.chat_id)
+        day = db.get_send_day(update.message.chat_id, id)
     day_button = InlineKeyboardButton(u'Число: ' + unicode(day), callback_data=u'Число')
 
     keyboard = [
@@ -164,7 +164,7 @@ def message_day_handler(bot, update):
     try:
         day = int(update.message.text)
         if 0 <= day <= 31:
-            db.set_send_day(chat_id, day)
+            db.set_send_day(chat_id, id, day)
             return device_menu(bot, update, id)
         else:
             raise Exception('Некорректное число месяца (корректно: 0..31)')
