@@ -21,7 +21,7 @@ def parse_header_2(data):
 
     for k in xrange(14, len(data), 6):
         value1, value2, timestamp = struct.unpack('HHH', data[k:k+6])
-        d.values.append((value1, value2))
+        d.values.append((value1, value2, timestamp))
         d.timestamps.append(timestamp)
 
     return d

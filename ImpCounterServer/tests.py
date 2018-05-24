@@ -2,8 +2,9 @@
 
 __author__ = 'dontsov'
 import unittest
-from cparser import CounterParser
+from cparser import CounterParser, get_id2_dump
 from storage import db
+from datetime import datetime
 import socket
 
 
@@ -72,6 +73,16 @@ class TestServer(unittest.TestCase):
 
 class TestPacket(unittest.TestCase):
 
+    def test_dump_id2(self):
+        d = log2data('0c 00 02 01 01 00 b3 0b 00 00 31 0f f3 1a 03 00 00 00 01 00 03 00 00 00 0a 00')
+        db.add_id_to_db(3889, 6899)  # код счетчика с паролем из сообщения
+
+        p = CounterParser(None)
+        p.handle_data(d)
+
+        now = datetime.strptime("18:05:20 12:00", "%y:%m:%d %H:%M")
+        self.assertEqual(get_id2_dump(p.header, now, 3600), u'2018-05-20 11:06:00: 0.003, 0.000\n2018-05-20 12:00:00: 0.003, 0.000\n')
+
     def test_1_parse_id2(self):
         d = log2data('0c 00 02 01 01 00 b3 0b 00 00 31 0f f3 1a 03 00 00 00 01 00 03 00 00 00 0a 00')
         db.add_id_to_db(3889, 6899)  # код счетчика с паролем из сообщения
@@ -86,8 +97,8 @@ class TestPacket(unittest.TestCase):
         self.assertEqual(p.header.device_pwd, 6899)
         self.assertEqual(len(p.header.values), 2)
         self.assertEqual(len(p.header.timestamps), 2)
-        self.assertEqual(p.header.values[0], (3, 0))
-        self.assertEqual(p.header.values[0], (3, 0))
+        self.assertEqual(p.header.values[0], (3, 0, 1))
+        self.assertEqual(p.header.values[1], (3, 0, 10))
 
     def test_2_parse_id1(self):
         '''
@@ -113,7 +124,7 @@ class TestPacket(unittest.TestCase):
         self.assertEqual(p.header.device_id, 35635)
         self.assertEqual(p.header.device_pwd, 7855)
         self.assertEqual(len(p.header.values), 1)
-        self.assertEqual(p.header.values[0], (1, 2))
+        self.assertEqual(p.header.values[0], (1, 2, None))
 
     def test_3_parse_id1(self):
         d = log2data('6000013fa0053c00660b0000338baf1e0000010000000200080012ffffffffff')

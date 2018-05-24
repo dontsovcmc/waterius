@@ -22,6 +22,6 @@ def parse_header_1(data):
 
     for k in xrange(16, len(data), 4):
         value1, value2 = struct.unpack('HH', data[k:k+4])
-        d.values.append((value1, value2))
+        d.values.append((value1, value2, None))
 
     return d

@@ -181,13 +181,21 @@ class Shelve(object):
             return next_connect
         return ''
 
+    def set_sleep_time_sec(self, id, sec):
+        self.set(id, 'sleep_time', sec)
+
+    def get_sleep_time_sec(self, id):
+        return self.get(id, 'sleep_time', 0)
+
     def get_current_value(self, id):
         '''
         :param id: номер устройства
         :return: кубометров, кубометров
         '''
         imp1, imp2 = self.get_impulses(id)
+        return self.imp2value(id, imp1, imp2)
 
+    def imp2value(self, id, imp1, imp2):
         imp1_0 = self.get(id, 'start_imp1', 0)
         imp2_0 = self.get(id, 'start_imp2', 0)
 

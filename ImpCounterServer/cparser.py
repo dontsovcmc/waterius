@@ -10,6 +10,7 @@ from device2_parser import parse_header_2
 
 from job import send_message
 
+
 def data2log(data):
     data = [format(ord(i), '02x') for i in data]
     return ' '.join(data)
@@ -52,16 +53,30 @@ class CounterParser(object):
             log.error("Handle error: %s, data=%s" % (str(err), data2log(data)))
 
 
+def get_id2_dump(d, now, sleep_sec):
+    text = u''
+    measure_shift = sleep_sec / d.values[-1][2]
+    for imp in d.values:
+        v1, v2 = db.imp2value(d.device_id, imp[0], imp[1])
+        measure_time = now - timedelta(seconds=sleep_sec) + timedelta(seconds=measure_shift*imp[2])
+        text += u"{0}: {1:.3f}, {2:.3f}\n".format(str(measure_time), v1, v2)
+    return text
+
+
 def apply_new_data(d, bot):
 
     chat_list = db.get_chats(d.device_id)
     #factor = db.get_factor(d.device_id)
 
     #next_connect = db.get_next_connect(d.device_id)
-    db.set_connect_time(d.device_id, datetime.utcnow())
+    now = datetime.utcnow()
+    prev = db.get_connect_time(d.device_id)
+    db.set_connect_time(d.device_id, now)
+    sleep_sec = (now - prev).total_seconds()
+    db.set_sleep_time_sec(d.device_id, sleep_sec)
 
     if d.values:
-        imp1, imp2 = d.values[-1]
+        imp1, imp2, timestamp = d.values[-1]
 
         prev_imp1, prev_imp2 = db.get_impulses(d.device_id)
         v1, v2 = db.get_current_value(d.device_id)
@@ -85,6 +100,11 @@ def apply_new_data(d, bot):
 
             if 0 == db.get_send_day(chat_id, d.device_id):
                 send_message(bot, d.device_id, chat_id, d.voltage)
+
+                if d.version == 2:
+                    text = get_id2_dump(d, now, sleep_sec)
+                    bot.send_message(chat_id=chat_id, text=text)
+
 
             '''
             # Сообщение с показаниями пользователю
