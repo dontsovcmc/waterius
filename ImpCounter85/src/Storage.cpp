@@ -25,8 +25,6 @@ void Storage::addElement(const void * element)
 		ramStorage[addrPtr] = toWrite;
 		addrPtr++;
 	}
-
-	full = addrPtr + elementSize >= STORAGE_SIZE;
 }
 
 /* Resets the storage address pointer, so we can start writing in the beginning of the eeprom (or ram)
@@ -34,7 +32,6 @@ There is no need to zero it out because that wears out the EEPROM unnesecaryly*/
 void Storage::clear() 
 {
 	addrPtr = 0;
-	full = false;
 }
 
 /* Set the read pointer to the first byte of storage area */
@@ -65,9 +62,4 @@ uint16_t Storage::getStoredByteCount()
 uint8_t Storage::getElementSize() 
 {
 	return elementSize;
-}
-
-bool Storage::is_full() 
-{
-	return full;
 }

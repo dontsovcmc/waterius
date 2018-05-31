@@ -19,7 +19,6 @@ class Storage
 	 uint16_t currentByte;
 	 uint16_t addrPtr;
 	 uint8_t elementSize;
-	 bool full;
 	 
  public:
 	 Storage( const uint8_t elementSize );
@@ -30,7 +29,6 @@ class Storage
 	 byte getNextByte();
 	 uint16_t getStoredByteCount();
 	 uint8_t getElementSize();
-	 bool is_full();
 };
 
 

@@ -7,14 +7,29 @@
 #include "Power.h"
 #include "SlaveI2C.h"
 #include "Storage.h"
-#include "sleep_counter.h"
+#include "counter.h"
 #include <avr/wdt.h>
+#include <avr/sleep.h>
+#include <avr/power.h>  
+
 
 #ifdef DEBUG
 	TinyDebugSerial mySerial;
 #endif
 
-static enum State state = SLEEP;
+#define BUTTON_PIN  4
+#define BUTTON2_PIN 3
+
+#define WAIT_ESP_MSEC   10000UL       // Сколько секунд ждем передачи данных в ESP
+#define SETUP_TIME_MSEC 300000UL      // Сколько пользователь настраивает ESP
+
+#define WAKE_EVERY_MIN                 24U * 60U
+
+#define DEVICE_ID 3                   // Модель устройства
+
+#define ESP_POWER_PIN    1		 // Номер пина, которым будим ESP8266. 
+#define SETUP_BUTTON_PIN 2       // SCL Пин с кнопкой SETUP
+
 
 //глобальный счетчик до 65535
 static Counter counter(BUTTON_PIN);
@@ -22,12 +37,38 @@ static Counter counter2(BUTTON2_PIN);
 
 static ESPPowerButton esp(ESP_POWER_PIN, SETUP_BUTTON_PIN);
 
-struct Header info = {0, DEVICE_ID, MEASUREMENT_EVERY_MIN, 0, 0, 0};
+struct Header info = {0, DEVICE_ID, WAKE_EVERY_MIN, 0, 0, 0};
 
 static Data data;
 
 Storage storage(sizeof(Data));
 SlaveI2C slaveI2C;
+
+volatile int wdt_count; //not unsigned, cause timer can lost 0 
+
+/* Watchdog interrupt vector */
+ISR( WDT_vect ) { 
+	wdt_count--;
+}  
+
+/* Prepare watchdog */
+void resetWatchdog() 
+{
+	MCUSR = 0; // clear various "reset" flags 
+
+	WDTCR = bit( WDCE ) | bit( WDE ); // allow changes, disable reset, clear existing interrupt
+	// set interrupt mode and an interval (WDE must be changed from 1 to 0 here)
+	//WDTCR = bit( WDIE );    // set WDIE, and 16 ms
+	//WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
+	WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
+	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // set WDIE, and 0.5 seconds delay
+	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // set WDIE, and 1 seconds delay
+	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );    // set WDIE, and 2 seconds delay
+	//WDTCR = bit( WDIE ) | bit( WDP3 ) | bit( WDP0 );    // set WDIE, and 8 seconds delay
+														
+	wdt_reset(); // pat the dog
+} 
+
 
 void setup() 
 {
@@ -38,140 +79,108 @@ void setup()
 	resetWatchdog(); 
 	adc_disable(); //выключаем ADC
 
-	DEBUG_CONNECT(9600);
-  	LOG_DEBUG(F("==== START ===="));
+	data.timestamp = WAKE_EVERY_MIN;
 
-	data.timestamp = WAKE_MASTER_EVERY_MIN;
-  	LOG_DEBUG(data.timestamp);
-	//Проверим, что входы считают или 2 мин задержка.
-	gotoDeepSleep(1, &counter, &counter2, &esp);
-	if (esp.pressed)
-	{
-		state = SETUP;
-	}
-	else
-	{
-		state = MEASURING;
-	}
-	DEBUG_CONNECT(9600);
-	LOG_DEBUG(F("Counters ok"));
-	LOG_DEBUG(counter.i); 
-	LOG_DEBUG(counter2.i);
+	DEBUG_CONNECT(9600); LOG_DEBUG(F("==== START ===="));
 }
+
 
 void loop() 
 {
-	switch ( state ) {
-		case SLEEP:
-			LOG_DEBUG(F("LOOP (SLEEP)"));
-			data.counter = counter.i;
-			data.counter2 = counter2.i;
-  			LOG_DEBUG(data.timestamp);
+	power_all_disable();  // power off ADC, Timer 0 and 1, serial interface
 
-			gotoDeepSleep( MEASUREMENT_EVERY_MIN, &counter, &counter2, &esp);	// Глубокий сон X минут
-			
-			DEBUG_CONNECT(9600);
+	set_sleep_mode( SLEEP_MODE_PWR_DOWN );
 
-			data.timestamp += MEASUREMENT_EVERY_MIN;
-			LOG_DEBUG(data.timestamp);
+	resetWatchdog(); 
 
-			if (esp.pressed)
+	for (unsigned int i = 0; i < 240 && !esp.pressed; ++i)   //~1 min: watchdog 250ms: 60 * 4 = 240 раз
+	{
+		wdt_count = WAKE_EVERY_MIN; 
+		while ( wdt_count > 0 ) 
+		{
+			noInterrupts();
+
+			if (counter.check_close())
+			     ; //eeprom safe
+			#ifndef DEBUG
+				if (counter2.check_close())
+			        ; //eeprom safe
+			#endif
+
+			if (esp.sleep_and_pressed()) //Пользователь нажал кнопку
 			{
-				state = SETUP;
+				interrupts();
+				break;
 			}
-			else if (data.counter != counter.i || data.counter2 != counter2.i)
+			else
 			{
-				state = MEASURING;
+				interrupts();
+				sleep_mode();
 			}
-			else if ( data.timestamp >= WAKE_MASTER_EVERY_MIN ) 
-			{
-				state = MEASURING; // пришло время будить ESP
-			}
-			break;
-
-		case SETUP:
-			
-			while(esp.is_pressed())
-				;  //ждем когда пользователь отпустит кнопку
-
-			slaveI2C.begin(SETUP_MODE);		// Включаем i2c slave
-			esp.power(true);
-
-			DEBUG_CONNECT(9600);
-			LOG_DEBUG(F("ESP turn on"));
-			
-			//&!&! TODO
-			while (!slaveI2C.masterGoingToSleep() && millis() - esp.wake_up_timestamp < SETUP_TIME_MSEC) 
-			{
-				delayMicroseconds(65000);
-			}
-
-			esp.power(false);
-			LOG_DEBUG(F("ESP turn off"));
-
-			data.timestamp = WAKE_MASTER_EVERY_MIN;
-			state = MEASURING;
-			break;
-
-		case MEASURING:
-			DEBUG_CONNECT(9600);
-			LOG_DEBUG(F("LOOP (MEASURING)"));
-			data.counter = counter.i;
-			data.counter2 = counter2.i;
-
-			storage.addElement( &data );
-
-			//если память полная, нужно передавать
-			state = SLEEP;			// Сохранили текущие значения
-			if (storage.is_full() || data.timestamp >= WAKE_MASTER_EVERY_MIN ) 
-			{
-				state = MASTER_WAKE; // пришло время будить ESP
-			}
-			break;
-
-		case MASTER_WAKE:
-			LOG_DEBUG(F("LOOP (MASTER_WAKE)"));
-			if (storage.is_full())
-				LOG_DEBUG(F("full"));
-			info.vcc = readVcc();   // заранее запишем текущее напряжение
-			info.service = MCUSR;
-			slaveI2C.begin(TRANSMIT_MODE);		// Включаем i2c slave
-			esp.power(true);
-			state = SENDING;
-			LOG_DEBUG(F("SENDING"));
-			break;
-
-		case SENDING:
-			if (slaveI2C.masterGoingToSleep()) 
-			{	
-				if (slaveI2C.masterGotOurData()) 
-				{
-					LOG_DEBUG(F("ESP ok"));
-					storage.clear();
-					data.timestamp = 0;
-				}
-				else
-				{
-					LOG_ERROR(F("ESP send fail"));
-
-					storage.clear(); // чтобы не включаться каждый measure из-за full
-				}
-				state = SLEEP;
-				esp.power(false);
-				slaveI2C.end();			// выключаем i2c slave.
-			}
-
-			if (millis() - esp.wake_up_timestamp > WAIT_ESP_MSEC) 
-			{
-				if (slaveI2C.masterModeChecked())
-					LOG_INFO(F("mode was checked"));
-				LOG_ERROR(F("ESP wake up fail"));
-				state = SLEEP;
-				esp.power(false);
-				slaveI2C.end();			// выключаем i2c slave.
-				storage.clear(); // чтобы не включаться каждый measure из-за full
-			}
-			
-			break;
+		}
 	}
+		
+	wdt_disable();        // disable watchdog
+	MCUSR = 0;
+	power_all_enable();   // power everything back on
+
+	//
+	data.counter = counter.i;
+	data.counter2 = counter2.i;
+	storage.addElement( &data );
+
+	info.vcc = readVcc();   // заранее запишем текущее напряжение
+	info.service = MCUSR;
+
+	DEBUG_CONNECT(9600);
+
+	// Пользователь нажал кнопку SETUP
+	if (esp.pressed)
+	{
+		while(esp.is_pressed())
+				;  //ждем когда пользователь отпустит кнопку т.к. иначе ESP запустится в режиме программирования
+
+		slaveI2C.begin(SETUP_MODE);	
+
+		esp.power(true);
+		LOG_DEBUG(F("ESP turn on"));
+		
+		while (!slaveI2C.masterGoingToSleep() && millis() - esp.wake_up_timestamp < SETUP_TIME_MSEC) {
+			delayMicroseconds(65000);
+	        //НЕ надо тут импульсы считать, чтобы тут же прислать
+			//надо сначала подключить
+			//пролить 10 л
+			//нажимать SETUP
+		}
+
+		esp.power(false);
+		LOG_DEBUG(F("ESP turn off"));
+
+		delayMicroseconds(65000);
+	}
+	
+	// Передаем показания
+	slaveI2C.begin(TRANSMIT_MODE);
+	esp.power(true);
+
+	while (!slaveI2C.masterGoingToSleep() && millis() - esp.wake_up_timestamp > WAIT_ESP_MSEC) {
+		; //передаем данные в ESP
+	}
+
+	esp.power(false);
+	slaveI2C.end();			// выключаем i2c slave.
+
+#ifdef DEBUG
+	if (slaveI2C.masterGotOurData()) {
+		LOG_DEBUG(F("ESP ok"));
+	}
+	else {
+		LOG_ERROR(F("ESP send fail"));
+	}
+
+	if (!slaveI2C.masterGoingToSleep()) {
+		LOG_ERROR(F("ESP wake up fail"));
+	}
+#endif
+
 }

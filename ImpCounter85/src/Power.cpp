@@ -26,12 +26,13 @@ bool ESPPowerButton::is_pressed()
 	return false;
 }
 
-void ESPPowerButton::check()
+bool ESPPowerButton::sleep_and_pressed()
 {
 	if (power_on)
-		return;
+		return false;
 
 	pressed = is_pressed();
+	return pressed;
 }
 
 void ESPPowerButton::power(const bool on)

@@ -5,35 +5,13 @@
 #include "TinyDebugSerial.h"
 
 // Включение логгирования с TinySerial: 3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
-// При логгировании не работает счетчик на 3-м пине.
+// При логгировании не работает счетчик2 на 3-м пине.
 
-/*
-#define LOG_LEVEL_ERROR
-#define LOG_LEVEL_INFO
-#define LOG_LEVEL_DEBUG
-*/
-//#define LOG_LEVEL_DEBUG
-
-#define ESP_POWER_PIN    1		 // Номер пина, которым будим ESP8266. Если менять на 3/4, то нужно поменять пины в прерываниях.
-#define SETUP_BUTTON_PIN 2       // SCL pin
-
-#define WAIT_ESP_MSEC   10000UL   // Сколько секунд ждем передачи данных в ESP
-#define SETUP_TIME_MSEC 300000UL      // Сколько пользователь настраивает ESP
-
-#define MEASUREMENT_EVERY_MIN 15U   //15U  // Период измерений данных. Кратно минутам строго!
-#define WAKE_MASTER_EVERY_MIN 6U * 4U * MEASUREMENT_EVERY_MIN 
-
-#define DEVICE_ID 2                   // Модель устройства
+// #define LOG_LEVEL_ERROR
+// #define LOG_LEVEL_INFO
+// #define LOG_LEVEL_DEBUG
 
 #define STORAGE_SIZE 24  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
-
-enum State { 
-	SLEEP, //глубокий сон
-	SETUP,
-	MEASURING, //сохраняем измерение
-	MASTER_WAKE, //пробуждаем ESP8266, i2c
-	SENDING //ждем от ESP8266 команды, i2c
-};
 
 struct Header {
 	uint16_t bytesReady; 
