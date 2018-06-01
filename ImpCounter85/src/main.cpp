@@ -12,6 +12,7 @@
 #include <avr/sleep.h>
 #include <avr/power.h>  
 
+//для логгирования раскомментируйте LOG_LEVEL_DEBUG в Setup.h
 
 #ifdef DEBUG
 	TinyDebugSerial mySerial;
@@ -23,7 +24,7 @@
 #define WAIT_ESP_MSEC   10000UL       // Сколько секунд ждем передачи данных в ESP
 #define SETUP_TIME_MSEC 300000UL      // Сколько пользователь настраивает ESP
 
-#define WAKE_EVERY_MIN                 24U * 60U
+#define WAKE_EVERY_MIN                1U // 24U * 60U
 
 #define DEVICE_ID 3                   // Модель устройства
 
@@ -39,28 +40,34 @@ static ESPPowerButton esp(ESP_POWER_PIN, SETUP_BUTTON_PIN);
 
 struct Header info = {0, DEVICE_ID, WAKE_EVERY_MIN, 0, 0, 0};
 
-static Data data;
+//одно измерение
+static struct Data {
+	unsigned short counter;	     
+	unsigned short counter2;  
+} data; 
 
+//EEPROMStorage estorage(sizeof(Data), 5);
 Storage storage(sizeof(Data));
 SlaveI2C slaveI2C;
 
-volatile int wdt_count; //not unsigned, cause timer can lost 0 
+volatile int wdt_count; // таймер может быть < 0 ?
 
-/* Watchdog interrupt vector */
+/* Вектор прерываний сторожевого таймера watchdog */
 ISR( WDT_vect ) { 
 	wdt_count--;
 }  
 
-/* Prepare watchdog */
+/* Подготовка сторожевого таймера watchdog */
 void resetWatchdog() 
 {
-	MCUSR = 0; // clear various "reset" flags 
+	MCUSR = 0; // очищаем все флаги прерываний
 
 	WDTCR = bit( WDCE ) | bit( WDE ); // allow changes, disable reset, clear existing interrupt
-	// set interrupt mode and an interval (WDE must be changed from 1 to 0 here)
+
+	// настраиваем период
 	//WDTCR = bit( WDIE );    // set WDIE, and 16 ms
-	//WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
-	WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
+	WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
+	//WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // set WDIE, and 0.5 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // set WDIE, and 1 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );    // set WDIE, and 2 seconds delay
@@ -78,8 +85,6 @@ void setup()
 	interrupts();
 	resetWatchdog(); 
 	adc_disable(); //выключаем ADC
-
-	data.timestamp = WAKE_EVERY_MIN;
 
 	DEBUG_CONNECT(9600); LOG_DEBUG(F("==== START ===="));
 }
@@ -100,11 +105,15 @@ void loop()
 		{
 			noInterrupts();
 
-			if (counter.check_close())
-			     ; //eeprom safe
+			if (counter.check_close()) { //eeprom safe
+				data.counter = counter.i;
+			    storage.addElement( &data );
+			}
 			#ifndef DEBUG
-				if (counter2.check_close())
-			        ; //eeprom safe
+				if (counter2.check_close()) { //eeprom safe
+					data.counter2 = counter2.i;
+					storage.addElement( &data ); 
+				}
 			#endif
 
 			if (esp.sleep_and_pressed()) //Пользователь нажал кнопку
@@ -124,10 +133,6 @@ void loop()
 	MCUSR = 0;
 	power_all_enable();   // power everything back on
 
-	//
-	data.counter = counter.i;
-	data.counter2 = counter2.i;
-	storage.addElement( &data );
 
 	info.vcc = readVcc();   // заранее запишем текущее напряжение
 	info.service = MCUSR;
@@ -163,12 +168,13 @@ void loop()
 	slaveI2C.begin(TRANSMIT_MODE);
 	esp.power(true);
 
-	while (!slaveI2C.masterGoingToSleep() && millis() - esp.wake_up_timestamp > WAIT_ESP_MSEC) {
-		; //передаем данные в ESP
+	while (!slaveI2C.masterGoingToSleep() && (millis() - esp.wake_up_timestamp > WAIT_ESP_MSEC)) {
+		delay(1); //передаем данные в ESP
 	}
 
 	esp.power(false);
 	slaveI2C.end();			// выключаем i2c slave.
+	storage.clear();
 
 #ifdef DEBUG
 	if (slaveI2C.masterGotOurData()) {

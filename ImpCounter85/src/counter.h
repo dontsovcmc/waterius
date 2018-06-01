@@ -35,6 +35,8 @@ struct Counter
             {
                 i++;
                 state = CLOSED;
+                pinMode(pin, INPUT);
+                return true;
             }
         }
         else
@@ -43,6 +45,7 @@ struct Counter
         }
 
         pinMode(pin, INPUT);
+        return false;
     }
 };
 

@@ -11,7 +11,7 @@
 // #define LOG_LEVEL_INFO
 // #define LOG_LEVEL_DEBUG
 
-#define STORAGE_SIZE 24  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
+#define STORAGE_SIZE 30  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
 struct Header {
 	uint16_t bytesReady; 
