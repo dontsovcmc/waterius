@@ -54,6 +54,12 @@ void ESPPowerButton::power(const bool on)
 	}
 }
 
+bool ESPPowerButton::elapsed(const unsigned long msec)
+{
+	return millis() - wake_up_timestamp > msec;
+}
+
+
 // Меряем напряжение питания Attiny85. 
 // Для каждой attiny будет своя константа.
 uint16_t readVcc() 

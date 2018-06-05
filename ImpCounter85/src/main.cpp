@@ -12,6 +12,13 @@
 #include <avr/sleep.h>
 #include <avr/power.h>  
 
+//ИНСТАЛЛЯЦИЯ: 
+//1. Добавляем в боте счетчик по id и паролю
+//2. подключаем к счетчикам: Вход №1 - ГВС, Вход №2 - ХВС
+//3. Проливаем 10 л каждой воды
+//4. Нажимаем SETUP и настраиваем подключение
+//5. После настройки должно прийти сообщение с ненулевыми показаниями
+
 //для логгирования раскомментируйте LOG_LEVEL_DEBUG в Setup.h
 
 #ifdef DEBUG
@@ -24,7 +31,7 @@
 #define WAIT_ESP_MSEC   10000UL       // Сколько секунд ждем передачи данных в ESP
 #define SETUP_TIME_MSEC 300000UL      // Сколько пользователь настраивает ESP
 
-#define WAKE_EVERY_MIN                1U // 24U * 60U
+#define WAKE_EVERY_MIN                10U // 24U * 60U
 
 #define DEVICE_ID 3                   // Модель устройства
 
@@ -87,9 +94,6 @@ void setup()
 	adc_disable(); //выключаем ADC
 
 	DEBUG_CONNECT(9600); LOG_DEBUG(F("==== START ===="));
-
-	for (int i=0; i < STORAGE_SIZE; i++)
-		storage.ramStorage[i] = i % 4;
 }
 
 
@@ -153,12 +157,8 @@ void loop()
 		esp.power(true);
 		LOG_DEBUG(F("ESP turn on"));
 		
-		while (!slaveI2C.masterGoingToSleep() && millis() - esp.wake_up_timestamp < SETUP_TIME_MSEC) {
+		while (!slaveI2C.masterGoingToSleep() && esp.elapsed(SETUP_TIME_MSEC)) {
 			delayMicroseconds(65000);
-	        //НЕ надо тут импульсы считать, чтобы тут же прислать
-			//надо сначала подключить
-			//пролить 10 л
-			//нажимать SETUP
 		}
 
 		esp.power(false);
@@ -172,7 +172,7 @@ void loop()
 	esp.power(true);
 
 	while (!slaveI2C.masterGoingToSleep() 
-		&& (millis() - esp.wake_up_timestamp > WAIT_ESP_MSEC)) {
+		&& !esp.elapsed(WAIT_ESP_MSEC)) { 
 		; //передаем данные в ESP
 	}
 

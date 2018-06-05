@@ -22,6 +22,7 @@ struct ESPPowerButton
 	bool sleep_and_pressed();
 	bool is_pressed();
 	void power(const bool);
+	bool elapsed(const unsigned long msec);
 };
 
 #endif

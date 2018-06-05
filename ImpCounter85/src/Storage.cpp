@@ -6,6 +6,7 @@ Storage::Storage(const uint8_t elementSize)
 {
 	this->elementSize = elementSize;
 	clear();
+	currentByte = 0;
 }
 
 /* Adds a provided data element to storage. 
@@ -36,7 +37,7 @@ void Storage::clear()
 
 /* Set the read pointer to the first byte of storage area */
 void Storage::gotoFirstByte()
- {
+{
 	currentByte = 0;
 }
 
