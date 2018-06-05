@@ -56,12 +56,12 @@ private:
 class Storage
 {
 // protected:
-	 byte ramStorage[STORAGE_SIZE];
 	 uint16_t currentByte;
 	 uint16_t addrPtr;
 	 uint8_t elementSize;
 	 
  public:
+	 byte ramStorage[STORAGE_SIZE];
 	 Storage( const uint8_t elementSize );
 	 void addElement( const void * element );
 	 void clear();

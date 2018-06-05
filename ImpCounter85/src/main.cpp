@@ -87,6 +87,9 @@ void setup()
 	adc_disable(); //выключаем ADC
 
 	DEBUG_CONNECT(9600); LOG_DEBUG(F("==== START ===="));
+
+	for (int i=0; i < STORAGE_SIZE; i++)
+		storage.ramStorage[i] = i % 4;
 }
 
 
@@ -168,8 +171,9 @@ void loop()
 	slaveI2C.begin(TRANSMIT_MODE);
 	esp.power(true);
 
-	while (!slaveI2C.masterGoingToSleep() && (millis() - esp.wake_up_timestamp > WAIT_ESP_MSEC)) {
-		delay(1); //передаем данные в ESP
+	while (!slaveI2C.masterGoingToSleep() 
+		&& (millis() - esp.wake_up_timestamp > WAIT_ESP_MSEC)) {
+		; //передаем данные в ESP
 	}
 
 	esp.power(false);
