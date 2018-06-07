@@ -9,173 +9,99 @@
 
 #include <EEPROM.h>
 
+#define AP_NAME "ImpulsCounter_0.3"
+
 WiFiClient client;
 
-
-
-/* Handles wifi connection. If user boots wit setup-pin low, we start a configuration portal AP.
-   Otherwise just connect the wifi so that it is ready for data transfer */
-bool MyWifi::begin(const uint8_t mode) 
+void MyWifi::setup(Settings &sett) 
 {
-	// If the Wifi setup-pin is held low while booting, then we start up the wifimanager portal.
-	if (mode == SETUP_MODE) 
-	{
-		loadConfig();
-		ip.toString().c_str();
-		
-		LOG_NOTICE( "WIF", "User requested captive portal" );
-		WiFi.disconnect( true );
-		WiFiManager wifiManager;
-
-		// Setup wifimanager with extra input fields. All the fields we want to save en EEPROM.
-		// Values here are default values that will show up on the configuration web page
-		WiFiManagerParameter parm_ip( "IP", "Static IP", ip.toString().c_str(), 20 );
-		wifiManager.addParameter( &parm_ip );
-		WiFiManagerParameter parm_subnet( "Subnet", "Subnet",  subnet.toString().c_str(), 20 );
-		wifiManager.addParameter( &parm_subnet );
-		WiFiManagerParameter parm_gw( "GW", "Gateway",  gw.toString().c_str(), 20 );
-		wifiManager.addParameter( &parm_gw );
-		WiFiManagerParameter parm_remoteIP( "RemoteIP", "Remote IP",  remoteIP.toString().c_str(), 20 );
-		wifiManager.addParameter( &parm_remoteIP );
-
-		char rp[16];
-		itoa(remotePort, rp, 10);
-		WiFiManagerParameter parm_remotePort( "Port", "Remote Port", rp, 6 );
-		wifiManager.addParameter( &parm_remotePort );
-
-		itoa(deviceID, rp, 10);
-		WiFiManagerParameter parm_deviceID( "deviceID", "Device ID",  rp, 7);
-		wifiManager.addParameter( &parm_deviceID );
-		
-		itoa(devicePWD, rp, 10);
-		WiFiManagerParameter parm_devicePWD( "devicePWD", "Device password", rp, 7);
-		wifiManager.addParameter( &parm_devicePWD );
-		
-
-		// Start the portal with the SSID ENV_SENSOR
-		wifiManager.startConfigPortal( AP_NAME );
-		LOG_NOTICE( "WIF", "Connected to wifi" );
-
-		// Get all the values that user entered in the portal and save it in EEPROM
-		ip.fromString( parm_ip.getValue() );
-		subnet.fromString( parm_subnet.getValue() );
-		gw.fromString( parm_gw.getValue() );
-		remoteIP.fromString( parm_remoteIP.getValue() );
-		remotePort = atoi( parm_remotePort.getValue() );
-		deviceID = atoi( parm_deviceID.getValue() );
-		devicePWD = atoi( parm_devicePWD.getValue() );
-		
-		storeConfig();
-		
-		//TODO: do some led flashing
-	} 
-	else 
-	{
-		// Under normal boot we load config from EEPROM and start the wifi normally
-		if (!loadConfig())
-			return false;
-		LOG_NOTICE( "WIF", "Starting Wifi" );
-		WiFi.config( ip, gw, subnet );
-		WiFi.begin();
-
-		uint32_t now = millis();
-		while ( WiFi.status() != WL_CONNECTED && millis() - now < 10000)
-		{
-			LOG_NOTICE( "WIF", "Wifi status: " << WiFi.status());
-			delay(100);
-		}
-
-		if (millis() - now > 10000)
-		{
-			LOG_ERROR( "WIF", "Wifi connect error");
-			return false;
-		}
-		else
-		{
-			LOG_NOTICE( "WIF", "Wifi connected, got IP address: " << WiFi.localIP().toString() );
-			client.setTimeout( WIFI_TIMEOUT ); // If things doesn't happen within XX milliseconds, we are loosing battery!
-		}
-	}
+	// Пользователь нажал кнопку - запускаем веб сервер
+	LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
+	LOG_NOTICE( "WIF", "User requested captive portal" );
+	WiFi.disconnect( true );
+	WiFiManager wifiManager;
 	
+	WiFiManagerParameter param_ip( "IP", "Static IP", IPAddress(sett.ip).toString().c_str(), 20 );
+	wifiManager.addParameter( &param_ip );
+	WiFiManagerParameter param_subnet( "Subnet", "Subnet",  IPAddress(sett.subnet).toString().c_str(), 20 );
+	wifiManager.addParameter( &param_subnet );
+	WiFiManagerParameter param_gw( "GW", "Gateway",  IPAddress(sett.gw).toString().c_str(), 20 );
+	wifiManager.addParameter( &param_gw );
+
+	WiFiManagerParameter param_key( "Key", "Key",  sett.key, KEY_LEN );
+	wifiManager.addParameter( &param_key );
+	WiFiManagerParameter param_hostname( "Host", "Host",  sett.hostname, HOSTNAME_LEN );
+	wifiManager.addParameter( &param_hostname );
+
+	WiFiManagerParameter param_litres0_start( "Litres0", "Litres0",  String(sett.litres0_start).c_str(), 7 );
+	wifiManager.addParameter( &param_litres0_start );
+	WiFiManagerParameter param_litres1_start( "Litres1", "Litres1",  String(sett.litres1_start).c_str(), 7 );
+	wifiManager.addParameter( &param_litres1_start );
+
+	WiFiManagerParameter param_litres_per_imp( "Litres", "Litres_impuls",  String(sett.liters_per_impuls).c_str(), 5 );
+	wifiManager.addParameter( &param_litres_per_imp );
+
+	// Start the portal with the SSID 
+	wifiManager.startConfigPortal( AP_NAME );
+	LOG_NOTICE( "WIF", "Connected to wifi" );
+
+	// Get all the values that user entered in the portal and save it in EEPROM
+	IPAddress ip;
+	ip.fromString( param_ip.getValue() );
+	sett.ip = ip;
+	ip.fromString( param_subnet.getValue() );
+	sett.subnet = ip;
+	ip.fromString( param_gw.getValue() );
+	sett.gw = ip;
+	
+	strncpy(sett.key, param_key.getValue(), KEY_LEN);
+	strncpy(sett.hostname, param_hostname.getValue(), HOSTNAME_LEN);
+
+	sett.litres0_start = String(param_litres0_start.getValue()).toFloat();
+	sett.litres1_start = String(param_litres1_start.getValue()).toFloat();
+	sett.liters_per_impuls = String(param_litres_per_imp.getValue()).toInt();
+
+	sett.crc = 1234;
+	storeConfig(sett);
+}
+
+bool MyWifi::connect(const Settings &sett)
+{
+	LOG_NOTICE( "ESP", "I2C-begined: mode TRANSMIT" );
+	LOG_NOTICE( "WIF", "Starting Wifi" );
+	IPAddress ip(sett.ip);
+	IPAddress gw(sett.gw);
+	IPAddress subnet(sett.subnet);
+	WiFi.config( ip, gw, subnet );
+	WiFi.begin();
+
+	uint32_t now = millis();
+	while ( WiFi.status() != WL_CONNECTED && millis() - now < ESP_CONNECT_TIMEOUT)
+	{
+		LOG_NOTICE( "WIF", "Wifi status: " << WiFi.status());
+		delay(100);
+	}
+
+	if (millis() - now > ESP_CONNECT_TIMEOUT)
+	{
+		LOG_ERROR( "WIF", "Wifi connect error");
+		return false;
+	}
+	else
+	{
+		LOG_NOTICE( "WIF", "Wifi connected, got IP address: " << WiFi.localIP().toString() );
+	}
 	return true;
 }
 
-/* Takes all the IP information we got from Wifimanger and saves it in EEPROM */
-void MyWifi::storeConfig() 
-{
-	EEPROM.begin( 512 );
-	for ( int i = 0; i < 4; i++ ) EEPROM.write( i + 0 , ip[i] );
-	for ( int i = 0; i < 4; i++ ) EEPROM.write( i + 4 , subnet[i] );
-	for ( int i = 0; i < 4; i++ ) EEPROM.write( i + 8 , gw[i] );
-	for ( int i = 0; i < 4; i++ ) EEPROM.write( i + 12, remoteIP[i] );
-	byte* portPtr = (byte*)&remotePort;
-	for ( int i = 0; i < 2; i++ ) EEPROM.write( i + 16, portPtr[i] );
-	portPtr = (byte*)&deviceID;
-	for ( int i = 0; i < 2; i++ ) EEPROM.write( i + 18, portPtr[i] );
-	portPtr = (byte*)&devicePWD;
-	for ( int i = 0; i < 2; i++ ) EEPROM.write( i + 20, portPtr[i] );
-
-	uint32_t crc = 1234;
-	portPtr = (byte*)&crc;
-	for ( int i = 0; i < 4; i++ ) EEPROM.write( i + 22, portPtr[i] );
-	
-	bool ret = EEPROM.commit();
-	if (!ret)
-		LOG_ERROR("WIF", "Config stored FAILED");
-	else
-	{
-		LOG_NOTICE( "WIF", "Config stored: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
-		LOG_NOTICE( "WIF", "Device Id=" << deviceID << ", password=" << devicePWD );
-	}
-		
-}
-
-
-
-/* At every boot the IP information is loaded from EEPROM */
-bool MyWifi::loadConfig() {
-	EEPROM.begin( 512 );
-	uint32_t crc;
-	byte* portPtr = (byte*) &crc;
-	for ( int i = 0; i < 4; i++ ) portPtr[i] = EEPROM.read( i + 22 );
-
-	if (crc == 1234) 
-	{
-		for ( int i = 0; i < 4; i++ ) ip[i] = EEPROM.read( i + 0 );
-		for ( int i = 0; i < 4; i++ ) subnet[i] = EEPROM.read( i + 4 );
-		for ( int i = 0; i < 4; i++ ) gw[i] = EEPROM.read( i + 8 );
-		for ( int i = 0; i < 4; i++ ) remoteIP[i] = EEPROM.read( i + 12 );
-		portPtr = (byte*) &remotePort;
-		for ( int i = 0; i < 2; i++ ) portPtr[i] = EEPROM.read( i + 16 );
-		portPtr = (byte*) &deviceID;
-		for ( int i = 0; i < 2; i++ ) portPtr[i] = EEPROM.read( i + 18 );
-		portPtr = (byte*) &devicePWD;
-		for ( int i = 0; i < 2; i++ ) portPtr[i] = EEPROM.read( i + 20 );
-		LOG_NOTICE( "WIF", "Config loaded: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
-		LOG_NOTICE( "WIF", "Device Id=" << deviceID << ", password=" << devicePWD );
-		return true;
-	}
-	else 
-	{
-		LOG_NOTICE( "WIF", "crc failed=" << crc );
-		ip.fromString( "192.168.1.73" );
-		subnet.fromString( "255.255.255.0" );
-		gw.fromString( "192.168.1.1" );
-		remoteIP.fromString( "192.168.1.42" ); //46.101.164.167
-		remotePort = atoi( "5001" );
-		deviceID = DEVICE_ID;
-		devicePWD = DEVICE_PWD;
-		LOG_NOTICE( "WIF", "Init config: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", Remote IP=" << remoteIP.toString() << ", Remote Port=" << remotePort );
-		LOG_NOTICE( "WIF", "Device Id=" << deviceID << ", password=" << devicePWD );
-		return false;
-	}
-}
 
 /* Sends provided data to server */
-bool MyWifi::send( const void * data, uint16_t length ) {
-	LOG_NOTICE( "WIF", "Making TCP connection to " << remoteIP.toString() << ", Port " << remotePort );
+bool MyWifi::send(const Settings &sett, const void * data, uint16_t length )
+{
+	LOG_NOTICE( "WIF", "Making TCP connection to " << sett.hostname );
 
-	if ( !client.connect( remoteIP, remotePort ) ) {
+	client.setTimeout( SERVER_TIMEOUT ); 
+	if ( !client.connect( IPAddress(sett.server), 4001 ) ) {
 		LOG_ERROR( "WIF", "Connection to server failed" );
 		return false;
 	}
@@ -189,6 +115,68 @@ bool MyWifi::send( const void * data, uint16_t length ) {
 		return true;
 	} else {
 		LOG_ERROR( "WIF", "Could not send data" );
+		return false;
+	}
+}
+
+
+/* Takes all the IP information we got from Wifimanger and saves it in EEPROM */
+void storeConfig(const Settings &sett) 
+{
+	EEPROM.begin( 512 );
+
+	EEPROM.put(0, sett);
+	
+	if (!EEPROM.commit())
+		LOG_ERROR("WIF", "Config stored FAILED");
+	else
+	{
+		IPAddress ip(sett.ip);
+		IPAddress subnet(sett.subnet);
+		IPAddress gw(sett.gw);
+		LOG_NOTICE( "WIF", "Config stored: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", hostname=" << sett.hostname );
+	}
+}
+
+
+/* At every boot the IP information is loaded from EEPROM */
+bool loadConfig(struct Settings &sett) 
+{
+	EEPROM.begin( 512 );
+
+	EEPROM.get(0, sett);
+
+	if (sett.crc == 1234) 
+	{
+		IPAddress ip(sett.ip);
+		IPAddress subnet(sett.subnet);
+		IPAddress gw(sett.gw);
+		LOG_NOTICE( "WIF", "Config loaded: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString()  << ", hostname=" << sett.hostname);
+		LOG_NOTICE( "WIF", "SSID=" << WiFi.SSID().c_str() << "psk=" << WiFi.psk().c_str()) << "key=" << sett.key);
+		return true;
+	}
+	else 
+	{
+		LOG_NOTICE( "WIF", "crc failed=" << sett.crc );
+		IPAddress ip(192, 168, 1, 73);
+		IPAddress subnet(255, 255, 255, 0);
+		IPAddress gw(192, 168, 1, 1);
+		IPAddress server(0,0,0,0);
+		String hostname = "blynk-cloud.com";
+		String key = "";
+
+
+		sett.litres0_start = 0.0;
+		sett.litres1_start = 0.0;
+		sett.liters_per_impuls = 10;
+
+		sett.ip = ip;
+		sett.subnet = subnet;
+		sett.gw = gw;
+		sett.server = server;
+		strncpy(sett.key, key.c_str(), KEY_LEN);
+		strncpy(sett.hostname, hostname.c_str(), HOSTNAME_LEN);
+		LOG_NOTICE( "WIF", "Init config: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", hostname=" << hostname);
 		return false;
 	}
 }

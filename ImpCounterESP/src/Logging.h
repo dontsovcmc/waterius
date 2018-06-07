@@ -39,6 +39,7 @@ template<class T> inline Print &operator <<( Print &obj, T arg ) {
 #endif // LOG_TIME_FORMAT
 
 // Default do no logging...
+#define LOG_BEGIN(baud) do {} while (0)
 #define LOG_EMERGENCY(svc, content) do {} while (0)
 #define LOG_ALERT(svc, content)     do {} while (0)
 #define LOG_CRITICAL(svc, content)  do {} while (0)
@@ -50,6 +51,7 @@ template<class T> inline Print &operator <<( Print &obj, T arg ) {
 
 // Depending on log level, add code for logging
 #if LOGLEVEL >= 0
+	#define LOG_BEGIN(baud) do { Serial.begin( baud ,SERIAL_8N1, SERIAL_TX_ONLY); } while(0)
 	#define LOG_EMERGENCY(svc, content)	do { LOG_FORMAT_TIME; Serial << "  EMERGENCY (" << svc << ") : " << content << endl; } while(0)
 	#if LOGLEVEL >=1 
 		#define LOG_ALERT(svc, content)	do { LOG_FORMAT_TIME; Serial << "  ALERT     (" << svc << ") : " << content << endl; } while(0)

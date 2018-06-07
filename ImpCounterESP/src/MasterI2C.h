@@ -3,46 +3,42 @@
 
 #include <Arduino.h>
 
+
+#define SETUP_PIN 3  //RX pin of ESP-01
+
+#define SDA_PIN SDA //0
+#define SCL_PIN SCL //2
+
+#define LED_PIN 4  //TX pin
+
+
 #define I2C_SLAVE_ADDR 10
 
-/*
-d.bytes, d.version, d.dymmy, d.wake, d.period, d.voltage = struct.unpack('HBBHHH', data[0:10])
-d.device_id, d.device_pwd = struct.unpack('HH', data[10:14])
-*/
-struct Header {
-	uint16_t bytesReady;
+
+struct SlaveData {
 	uint8_t  version;
-	uint8_t  message_type;
-	uint16_t masterWakeEvery;
-	uint16_t vcc;
 	uint8_t  service;
-	uint8_t  reserved;
-	uint16_t deviceID;
-	uint16_t devicePWD;
+	uint16_t voltage;
+	uint16_t value1;
+	uint16_t value2;
+	uint8_t  diagnostic;  //1 - good, 0 - fail connect with attiny
+	uint8_t  reserved2;
 }; //should be *16bit https://github.com/esp8266/Arduino/issues/1825
 
 
-
-enum msg_type {
-	ATTINY_OK = 1,
-	ATTINY_FAIL = 2
-};
-
 class MasterI2C
 {
- protected:
-	 void gotoFirstByte();
-	 byte getNextByte();
-	 uint16_t getUint();
-	 uint8_t getByte();
+protected:
+	bool getUint(uint16_t &value);
+	bool getByte(uint8_t &value);
+	uint8_t mode;
 
- public:
-	 uint8_t mode;
-	 void begin();
-	 void end();
-	 void sendCmd( const char cmd );
-	 uint16_t getSlaveStorage( byte* storage, const uint16_t maxStorageSize, const uint16_t bytesToFetch );
-	 Header getHeader();
+public:
+	void begin();
+	void end();
+	bool sendCmd( const char cmd );
+	bool getSlaveData(SlaveData &data);
+	bool setup_mode();
 };
 
 
