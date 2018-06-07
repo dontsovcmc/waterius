@@ -23,6 +23,14 @@ void setup() {
 	masterI2C.begin();
 }
 
+void Calculate_litres(Settings &sett, SlaveData &data) {
+
+	sett.value0 = sett.litres0_start + (data.value0 - sett.impules0_start)*sett.liters_per_impuls/1000.0;
+	sett.value1 = sett.litres1_start + (data.value1 - sett.impules1_start)*sett.liters_per_impuls/1000.0;
+	LOG_NOTICE( "ESP", "values=" << sett.value0 << " " << sett.value1);
+	storeConfig(sett);
+}
+
 void loop() {
 
 	if (masterI2C.setup_mode()) {
@@ -32,6 +40,8 @@ void loop() {
 	else {
 		if (loadConfig(sett)) {
 			
+			data.diagnostic = masterI2C.getSlaveData(data);
+			Calculate_litres(sett, data);
 
 			Blynk.begin(sett.key, WiFi.SSID().c_str(), WiFi.psk().c_str());
 			LOG_NOTICE( "ESP", "Blynk beginned");
@@ -39,8 +49,8 @@ void loop() {
 			Blynk.run();
 			LOG_NOTICE( "ESP", "Blynk run");
 
-			Blynk.virtualWrite(V0, data.value1);
-			Blynk.virtualWrite(V1, data.value2);
+			Blynk.virtualWrite(V0, sett.value0);
+			Blynk.virtualWrite(V1, sett.value1);
 			Blynk.virtualWrite(V2, data.voltage);
 
 			LOG_NOTICE("ESP", "send ok");

@@ -63,8 +63,8 @@ bool MasterI2C::getSlaveData(SlaveData &data)
 	bool good = getByte(data.version);
 	good &= getByte(data.service);
 	good &= getUint(data.voltage);
+	good &= getUint(data.value0);
 	good &= getUint(data.value1);
-	good &= getUint(data.value2);
 	data.diagnostic = good;
 	
 	return good;

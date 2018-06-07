@@ -26,7 +26,11 @@ struct Settings
 	float    litres0_start;
 	float    litres1_start;
 	uint16_t liters_per_impuls;
-	uint32_t value0;
+
+	//store values
+	uint32_t impules0_start;
+	uint32_t impules1_start;
+	uint32_t value0; 
 	uint32_t value1;
 
 	uint16_t crc;

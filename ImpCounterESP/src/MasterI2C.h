@@ -19,8 +19,8 @@ struct SlaveData {
 	uint8_t  version;
 	uint8_t  service;
 	uint16_t voltage;
+	uint16_t value0;
 	uint16_t value1;
-	uint16_t value2;
 	uint8_t  diagnostic;  //1 - good, 0 - fail connect with attiny
 	uint8_t  reserved2;
 }; //should be *16bit https://github.com/esp8266/Arduino/issues/1825

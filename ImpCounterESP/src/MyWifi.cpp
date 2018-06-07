@@ -152,7 +152,7 @@ bool loadConfig(struct Settings &sett)
 		IPAddress subnet(sett.subnet);
 		IPAddress gw(sett.gw);
 		LOG_NOTICE( "WIF", "Config loaded: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString()  << ", hostname=" << sett.hostname);
-		LOG_NOTICE( "WIF", "SSID=" << WiFi.SSID().c_str() << "psk=" << WiFi.psk().c_str()) << "key=" << sett.key);
+		LOG_NOTICE( "WIF", "SSID=" << WiFi.SSID().c_str() << "psk=" << WiFi.psk().c_str() << "key=" << sett.key);
 		return true;
 	}
 	else 
