@@ -9,19 +9,15 @@
 
 struct Counter 
 {
-	uint16_t i;
-
 	uint8_t state;  
-  
     uint8_t pin;
 
     Counter(const uint8_t p)
-        : i(0)
-        , state(OPENED)
+        : state(OPENED)
         , pin(p)
     { }
 
-    bool check_close()
+    bool check_close(uint32_t *i)
     {
         pinMode(pin, INPUT_PULLUP);
 
@@ -33,7 +29,7 @@ struct Counter
             }
             else if (state == FIRST_CHECK)
             {
-                i++;
+                (*i)++;
                 state = CLOSED;
                 pinMode(pin, INPUT);
                 return true;

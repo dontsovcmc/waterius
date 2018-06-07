@@ -29,7 +29,6 @@ class SlaveI2C
 	 void begin(const uint8_t);
 	 static void end();
 	 bool masterGoingToSleep();
-	 bool masterGotOurData();
 };
 
 

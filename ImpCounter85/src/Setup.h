@@ -13,12 +13,16 @@
 
 #define STORAGE_SIZE 30  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
+struct Data {
+	uint32_t value0;
+	uint32_t value1;
+};
+
 struct Header {
 	uint8_t  version;
 	uint8_t  service;
 	uint16_t voltage;
-	uint16_t value1;
-	uint16_t value2;
+	Data     data;
 };
 
 

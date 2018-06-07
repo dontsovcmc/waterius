@@ -45,9 +45,11 @@ static Counter counter2(BUTTON2_PIN);
 
 static ESPPowerButton esp(ESP_POWER_PIN, SETUP_BUTTON_PIN);
 
+
 struct Header info = {DEVICE_ID, 0, 0, 0};
 
-//EEPROMStorage estorage(sizeof(Data), 5);
+EEPROMStorage<Data> storage(15);
+
 SlaveI2C slaveI2C;
 
 volatile int wdt_count; // таймер может быть < 0 ?
@@ -105,9 +107,13 @@ void loop()
 		{
 			noInterrupts();
 
-			counter.check_close();
+			if (counter.check_close(info.data.value0)) {
+				storage.add(info.data);
+			}
 			#ifndef DEBUG
-				counter2.check_close();
+				if (counter2.check_close(info.data.value1)) {
+					storage.add(info.data);
+				}
 			#endif
 
 			if (esp.sleep_and_pressed()) //Пользователь нажал кнопку
@@ -128,9 +134,8 @@ void loop()
 	power_all_enable();   // power everything back on
 
 	info.voltage = readVcc();   // заранее запишем текущее напряжение
-	info.value1 = counter.i;
-	info.value2 = counter2.i;
-
+	storage.get(info.data);
+	
 	DEBUG_CONNECT(9600);
 
 	// Пользователь нажал кнопку SETUP
