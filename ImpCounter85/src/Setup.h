@@ -14,12 +14,11 @@
 #define STORAGE_SIZE 30  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
 struct Header {
-	uint16_t bytesReady; 
-	uint8_t  deviceID;
-	uint16_t masterWakeEvery;
-	uint16_t vcc;
+	uint8_t  version;
 	uint8_t  service;
-	uint16_t reserved;
+	uint16_t voltage;
+	uint16_t value1;
+	uint16_t value2;
 };
 
 

@@ -45,16 +45,9 @@ static Counter counter2(BUTTON2_PIN);
 
 static ESPPowerButton esp(ESP_POWER_PIN, SETUP_BUTTON_PIN);
 
-struct Header info = {0, DEVICE_ID, WAKE_EVERY_MIN, 0, 0, 0};
-
-//одно измерение
-static struct Data {
-	unsigned short counter;	     
-	unsigned short counter2;  
-} data; 
+struct Header info = {DEVICE_ID, 0, 0, 0};
 
 //EEPROMStorage estorage(sizeof(Data), 5);
-Storage storage(sizeof(Data));
 SlaveI2C slaveI2C;
 
 volatile int wdt_count; // таймер может быть < 0 ?
@@ -105,22 +98,16 @@ void loop()
 
 	resetWatchdog(); 
 
-	for (unsigned int i = 0; i < 240 && !esp.pressed; ++i)   //~1 min: watchdog 250ms: 60 * 4 = 240 раз
+	for (unsigned int i = 0; i < 10 && !esp.pressed; ++i)   //~1 min: watchdog 250ms: 60 * 4 = 240 раз
 	{
 		wdt_count = WAKE_EVERY_MIN; 
 		while ( wdt_count > 0 ) 
 		{
 			noInterrupts();
 
-			if (counter.check_close()) { //eeprom safe
-				data.counter = counter.i;
-			    storage.addElement( &data );
-			}
+			counter.check_close();
 			#ifndef DEBUG
-				if (counter2.check_close()) { //eeprom safe
-					data.counter2 = counter2.i;
-					storage.addElement( &data ); 
-				}
+				counter2.check_close();
 			#endif
 
 			if (esp.sleep_and_pressed()) //Пользователь нажал кнопку
@@ -140,9 +127,9 @@ void loop()
 	MCUSR = 0;
 	power_all_enable();   // power everything back on
 
-
-	info.vcc = readVcc();   // заранее запишем текущее напряжение
-	info.service = MCUSR;
+	info.voltage = readVcc();   // заранее запишем текущее напряжение
+	info.value1 = counter.i;
+	info.value2 = counter2.i;
 
 	DEBUG_CONNECT(9600);
 
@@ -178,7 +165,8 @@ void loop()
 
 	esp.power(false);
 	slaveI2C.end();			// выключаем i2c slave.
-	storage.clear();
+	
+	info.service = MCUSR;   // чтобы первое включение передалось
 
 #ifdef DEBUG
 	if (slaveI2C.masterGotOurData()) {

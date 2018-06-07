@@ -20,7 +20,6 @@ class SlaveI2C
 	 static char lastCommand;
 	 static bool masterSentSleep;
 	 static bool masterAckOurData;
-	 static bool masterCheckMode;
 
 	 static void requestEvent();
 	 static void newCommand();
@@ -31,7 +30,6 @@ class SlaveI2C
 	 static void end();
 	 bool masterGoingToSleep();
 	 bool masterGotOurData();
-	 bool masterModeChecked();
 };
 
 

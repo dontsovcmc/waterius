@@ -29,8 +29,12 @@ public:
 			if (t > 0)
 				activeBlock = i;
 		}
-		if (t > MARK * 2 || t == 0)  //мусор в EEPROM, *2 вдруг ресет во время записи?
+		if (t > MARK * 2 || t == 0)  //мусор в EEPROM, (х2 вдруг ресет во время записи?)
+		{
 			activeBlock = 0;
+			for (int i = 0; i < flag_shift+blocks; i++)
+				EEPROM.write(i, 0);
+		}
 	}
 
 	template< typename T >
@@ -40,7 +44,16 @@ public:
 		activeBlock = (activeBlock < blocks) ? activeBlock+1 : 0; 
 		
 		EEPROM.put(activeBlock * elementSize, element);
-		
+		EEPROM.write(flag_shift + activeBlock, MARK);
+		EEPROM.write(flag_shift + prev, 0);
+
+		clear(prev);
+	}
+
+	void clear(uint8_t block_index)
+	{
+		for (int i=0; i < elementSize; i++)
+			EEPROM.write(block_index * elementSize + i, 0);
 	}
 
 private:
@@ -50,26 +63,6 @@ private:
 	uint8_t elementSize;
 
 	uint16_t flag_shift;
-};
-
-
-class Storage
-{
- protected:
-	 byte ramStorage[STORAGE_SIZE];
-	 uint16_t currentByte;
-	 uint16_t addrPtr;
-	 uint8_t elementSize;
-	 
- public:
-	 Storage( const uint8_t elementSize );
-	 void addElement( const void * element );
-	 void clear();
-
-	 void gotoFirstByte();
-	 byte getNextByte();
-	 uint16_t getStoredByteCount();
-	 uint8_t getElementSize();
 };
 
 
