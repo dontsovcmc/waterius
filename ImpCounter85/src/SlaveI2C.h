@@ -13,11 +13,11 @@
 class SlaveI2C
 {
  protected:
-	 static byte txBuffer[TX_BUFFER_SIZE];
+	 static uint8_t txBuffer[TX_BUFFER_SIZE];
 	 static uint8_t txBufferPos;
 	 static uint8_t setup_mode;
 
-	 static char lastCommand;
+	 static uint8_t lastCommand;
 	 static bool masterSentSleep;
 	 static bool masterAckOurData;
 

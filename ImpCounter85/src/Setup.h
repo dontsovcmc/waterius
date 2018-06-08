@@ -4,13 +4,6 @@
 #include <Arduino.h>
 #include "TinyDebugSerial.h"
 
-// Включение логгирования с TinySerial: 3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
-// При логгировании не работает счетчик2 на 3-м пине.
-
-// #define LOG_LEVEL_ERROR
-// #define LOG_LEVEL_INFO
-// #define LOG_LEVEL_DEBUG
-
 #define STORAGE_SIZE 30  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
 
 struct Data {
@@ -21,7 +14,7 @@ struct Data {
 struct Header {
 	uint8_t  version;
 	uint8_t  service;
-	uint16_t voltage;
+	uint32_t voltage;
 	Data     data;
 };
 

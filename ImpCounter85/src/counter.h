@@ -17,7 +17,7 @@ struct Counter
         , pin(p)
     { }
 
-    bool check_close(uint32_t *i)
+    bool check_close(uint32_t &i)
     {
         pinMode(pin, INPUT_PULLUP);
 
@@ -29,7 +29,7 @@ struct Counter
             }
             else if (state == FIRST_CHECK)
             {
-                (*i)++;
+                i++;
                 state = CLOSED;
                 pinMode(pin, INPUT);
                 return true;

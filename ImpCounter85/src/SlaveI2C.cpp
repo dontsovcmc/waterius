@@ -8,9 +8,9 @@ extern struct Header info;
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
-byte SlaveI2C::txBuffer[TX_BUFFER_SIZE];
+uint8_t SlaveI2C::txBuffer[TX_BUFFER_SIZE];
 bool SlaveI2C::masterSentSleep = false;
-char SlaveI2C::lastCommand;
+uint8_t SlaveI2C::lastCommand;
 uint8_t SlaveI2C::setup_mode = TRANSMIT_MODE;
 
 
@@ -40,7 +40,7 @@ void SlaveI2C::newCommand() {
 
 /* Depending on the received command from master, set up the content of the txbuffer so he can get his data */
 void SlaveI2C::receiveEvent( int howMany ) {
-	byte command = Wire.read(); // Get instructions from master
+	uint8_t command = Wire.read(); // Get instructions from master
 
 	newCommand();
 	switch ( command ) {
