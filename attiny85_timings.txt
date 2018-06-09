@@ -1,7 +1,0 @@
-
-Attiny85 1Mhz internal:
-
-time for some functions:
-() + pinMode(pin, INPUT_PULLUP) + pinMode(pin, INPUT) = 180 mkS
-
-digitalRead() ~ 67 mkS
