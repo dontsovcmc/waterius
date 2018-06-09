@@ -1,8 +1,8 @@
 # Wi-Fi модуль для счётчиков воды
 ## (проект в стадии разработки)
 Автономное устройство, передающее показания воды по Wi-fi:
-- на сервер [Blynk.cc|http://Blynk.cc] (есть бесплатное приложение под [Android|https://play.google.com/store/apps/details?id=cc.blynk], [iOS|https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8])
-<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" width="250" href="http://Blynk.cc"/> 
+- на сервер [Blynk.cc](http://Blynk.cc) (есть бесплатное приложение под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8)
+<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" width="250"/> 
 
 - ваш TCP сервер с запущенным Телеграм ботом (см. версию ниже 0.3) 
 
