@@ -4,7 +4,7 @@
 
 // #define LOG_LEVEL_ERROR
 // #define LOG_LEVEL_INFO
-// #define LOG_LEVEL_DEBUG
+//#define LOG_LEVEL_DEBUG
 
 #include "Setup.h"
 
@@ -37,10 +37,11 @@
 #define BUTTON_PIN  4
 #define BUTTON2_PIN 3
 
-#define WAIT_ESP_MSEC   10000UL       // Сколько секунд ждем передачи данных в ESP
-#define SETUP_TIME_MSEC 300000UL      // Сколько пользователь настраивает ESP
+#define WAIT_ESP_MSEC    10000UL       // Сколько секунд ждем передачи данных в ESP
+#define SETUP_TIME_MSEC  300000UL      // Сколько пользователь может настраивать ESP
 
-#define WAKE_EVERY_MIN                10U // 24U * 60U
+#define WAKE_EVERY_MIN                24U * 60U
+#define WAKE_AFTER_SETUP_MIN          2U
 
 #define DEVICE_ID 3                   // Модель устройства
 
@@ -91,8 +92,8 @@ void resetWatchdog()
 
 void setup() 
 {
-	info.data.value0 = 1000000;
-	info.data.value1 = 1000000;
+	info.data.value0 = 0;
+	info.data.value1 = 0;
 	info.service = MCUSR; //причина перезагрузки
 	noInterrupts();
 	ACSR |= bit( ACD ); //выключаем компаратор
@@ -150,11 +151,10 @@ void loop()
 	
 	DEBUG_CONNECT(9600);
 
-	wake_every = WAKE_EVERY_MIN;
 	// Пользователь нажал кнопку SETUP
 	if (esp.pressed)
 	{
-		wake_every = 1;
+		wake_every = WAKE_AFTER_SETUP_MIN;
 
 		while(esp.is_pressed())
 				;  //ждем когда пользователь отпустит кнопку т.к. иначе ESP запустится в режиме программирования
@@ -164,12 +164,14 @@ void loop()
 		esp.power(true);
 		LOG_DEBUG(F("ESP turn on"));
 		
-		while (!slaveI2C.masterGoingToSleep() && esp.elapsed(SETUP_TIME_MSEC)) {
+		while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(SETUP_TIME_MSEC)) {
 			delayMicroseconds(65000);
 		}
 
 	}
 	else {
+		wake_every = WAKE_EVERY_MIN;
+
 		// Передаем показания
 		slaveI2C.begin(TRANSMIT_MODE);
 		esp.power(true);
@@ -178,7 +180,6 @@ void loop()
 			&& !esp.elapsed(WAIT_ESP_MSEC)) { 
 			; //передаем данные в ESP
 		}
-
 	}
 
 	esp.power(false);
@@ -187,10 +188,10 @@ void loop()
 	
 	info.service = MCUSR;   // чтобы первое включение передалось
 
-#ifdef DEBUG
+	LOG_DEBUG(F("ESP wake up after (min):"));
+	LOG_DEBUG(wake_every);
+
 	if (!slaveI2C.masterGoingToSleep()) {
 		LOG_ERROR(F("ESP wake up fail"));
 	}
-#endif
-
 }

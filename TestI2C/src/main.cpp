@@ -63,7 +63,7 @@ void loop()
     else
     {
         unsigned long now = millis();
-        if (now - st > 250)
+        if (now - st > 1000)
         {
             st = now;
             Serial.print('.');

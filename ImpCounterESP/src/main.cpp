@@ -21,8 +21,6 @@ void setup() {
 	memset(&data, 0, sizeof(data));
 
 	LOG_BEGIN(115200);
-	while (!Serial) 
-		;
 
 	LOG_NOTICE( "ESP", "Booted" );
 
@@ -31,13 +29,14 @@ void setup() {
 	masterI2C.begin();
 }
 
-void CalculateLitres(Settings &sett, SlaveData &data) {
+void calculate_values(Settings &sett, float *value0, float *value1) {
 
-	LOG_NOTICE( "ESP", "new impulses=" << data.value0 << " " << data.value1);
-	sett.value0 = sett.litres0_start + (data.value0 - sett.impules0_start)*sett.liters_per_impuls/1000.0;
-	sett.value1 = sett.litres1_start + (data.value1 - sett.impules1_start)*sett.liters_per_impuls/1000.0;
-	LOG_NOTICE( "ESP", "new values=" << sett.value0 << " " << sett.value1);
-	storeConfig(sett);
+	LOG_NOTICE( "ESP", "new impulses=" << sett.impules0 << " " << sett.impules1);
+
+	*value0 = sett.value0_start + (sett.impules0 - sett.impules0_start)/1000.0*sett.liters_per_impuls;
+	*value1 = sett.value1_start + (sett.impules1 - sett.impules1_start)/1000.0*sett.liters_per_impuls;
+
+	LOG_NOTICE( "ESP", "new values=" << *value0 << " " << *value1);
 }
 
 void loop() {
@@ -51,13 +50,18 @@ void loop() {
 	else {
 		if (loadConfig(sett)) {
 			
-			CalculateLitres(sett, data);
+			sett.impules0 = data.impulses0;
+			sett.impules1 = data.impulses1; 
+			storeConfig(sett);
 
-			if (SenderBlynk::send(sett, data)) {
+			float value0, value1;
+			calculate_values(sett, &value0, &value1);
+
+			if (send_blynk(sett, value0, value1, data.voltage / 1000.0)) {
             	LOG_NOTICE("BLK", "send ok");
 			}
 
-			//if (SenderTCP::send(sett, data)) {
+			//if (send_tcp(sett, data)) {
             //	LOG_NOTICE("TCP", "send ok");
 			//}
 			else {

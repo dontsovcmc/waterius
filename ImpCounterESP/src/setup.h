@@ -25,15 +25,15 @@ struct Settings
 	char     key[KEY_LEN];
 	char     hostname[HOSTNAME_LEN];
 
-	float    litres0_start;
-	float    litres1_start;
+	float    value0_start;
+	float    value1_start;
 	uint16_t liters_per_impuls;
 
 	//store values
 	uint32_t impules0_start;
 	uint32_t impules1_start;
-	uint32_t value0; 
-	uint32_t value1;
+	uint32_t impules0; 
+	uint32_t impules1;
 
 	uint16_t crc;
 };

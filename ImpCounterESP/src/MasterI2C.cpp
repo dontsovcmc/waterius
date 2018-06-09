@@ -18,6 +18,9 @@ void MasterI2C::begin() {
 	if (!sendCmd('M') || !getByte(mode)) {
 		LOG_ERROR("I2C", "get mode failed. Check i2c line.");
 	}
+	else {
+		LOG_NOTICE("I2C", "mode=" << mode);
+	}
 }
 
 
@@ -40,7 +43,7 @@ bool MasterI2C::sendCmd(const char cmd ) {
 bool MasterI2C::setup_mode() {
 	//pinMode(D6, INPUT_PULLUP);
 	//return digitalRead(D6) == LOW; //
-	mode == SETUP_MODE;
+	return mode == SETUP_MODE;
 }
 
 bool MasterI2C::getByte(uint8_t &value) {
@@ -82,10 +85,15 @@ bool MasterI2C::getSlaveData(SlaveData &data)
 	bool good = getByte(data.version);
 	good &= getByte(data.service);
 	good &= getUint(data.voltage);
-	good &= getUint(data.value0);
-	good &= getUint(data.value1);
+	good &= getUint(data.impulses0);
+	good &= getUint(data.impulses1);
 	data.diagnostic = good;
 	
+	if (good) {
+		LOG_NOTICE("I2C", "data received");
+	} else {
+		LOG_ERROR("I2C", "data failed");
+	}
 	return good;
 }
 

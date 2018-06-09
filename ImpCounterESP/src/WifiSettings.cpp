@@ -19,7 +19,10 @@ void storeConfig(const Settings &sett)
 		IPAddress ip(sett.ip);
 		IPAddress subnet(sett.subnet);
 		IPAddress gw(sett.gw);
-		LOG_NOTICE( "WIF", "Config stored: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", hostname=" << sett.hostname );
+		LOG_NOTICE( "WIF", "Config stored: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", hostname=" << sett.hostname );		
+		LOG_NOTICE( "WIF", "key=" << sett.key);
+		LOG_NOTICE( "WIF", "value0_start=" << sett.value0_start << ", impules0_start=" << sett.impules0_start << ", impules1=" << sett.impules1 << ", factor=" << sett.liters_per_impuls );
+		LOG_NOTICE( "WIF", "value1_start=" << sett.value1_start << ", impules1_start=" << sett.impules1_start << ", impules1=" << sett.impules1);
 	}
 }
 
@@ -31,13 +34,16 @@ bool loadConfig(struct Settings &sett)
 
 	EEPROM.get(0, sett);
 
-	if (sett.crc == 1234) 
+	if (sett.crc == 1239) 
 	{
 		IPAddress ip(sett.ip);
 		IPAddress subnet(sett.subnet);
 		IPAddress gw(sett.gw);
 		LOG_NOTICE( "WIF", "Config loaded: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString()  << ", hostname=" << sett.hostname);
 		LOG_NOTICE( "WIF", "key=" << sett.key);
+		LOG_NOTICE( "WIF", "value0_start=" << sett.value0_start << ", impules0_start=" << sett.impules0_start << ", impules1=" << sett.impules1 << ", factor=" << sett.liters_per_impuls );
+		LOG_NOTICE( "WIF", "value1_start=" << sett.value1_start << ", impules1_start=" << sett.impules1_start << ", impules1=" << sett.impules1);
+		
 		return true;
 	}
 	else 
@@ -49,9 +55,10 @@ bool loadConfig(struct Settings &sett)
 		String hostname = "blynk-cloud.com";
 		String key = "";
 
-
-		sett.litres0_start = 0.0;
-		sett.litres1_start = 0.0;
+		sett.value0_start = 0.0;
+		sett.value1_start = 0.0;
+		sett.impules0 = 0; 
+		sett.impules1 = 0;
 		sett.liters_per_impuls = 10;
 
 		sett.ip = ip;

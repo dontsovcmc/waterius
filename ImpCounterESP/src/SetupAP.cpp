@@ -1,12 +1,10 @@
-#include "WifiSettings.h"
+
+#include "SetupAP.h"
 #include "Logging.h"
 #include <ESP8266WiFi.h>
-
 #include <DNSServer.h>            // Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     // Local WebServer used to serve the configuration portal
-#include <WiFiManager.h>		  // Configuration portal.
-#include "MasterI2C.h"
-
+#include <WiFiClient.h>
 #include <EEPROM.h>
 
 #define AP_NAME "ImpulsCounter_0.3"
@@ -20,24 +18,24 @@ void setup_ap(Settings &sett, const SlaveData &data)
 	WiFi.disconnect( true );
 	WiFiManager wifiManager;
 	
-	WiFiManagerParameter param_ip( "IP", "Static IP", IPAddress(sett.ip).toString().c_str(), 20 );
+	IPAddressParameter param_ip("ip", "static IP", IPAddress(sett.ip));
 	wifiManager.addParameter( &param_ip );
-	WiFiManagerParameter param_subnet( "Subnet", "Subnet",  IPAddress(sett.subnet).toString().c_str(), 20 );
+	IPAddressParameter param_subnet( "subnet", "subnet",  IPAddress(sett.subnet));
 	wifiManager.addParameter( &param_subnet );
-	WiFiManagerParameter param_gw( "GW", "Gateway",  IPAddress(sett.gw).toString().c_str(), 20 );
+	IPAddressParameter param_gw( "gw", "gateway",  IPAddress(sett.gw));
 	wifiManager.addParameter( &param_gw );
 
-	WiFiManagerParameter param_key( "Key", "Key",  sett.key, KEY_LEN );
+	WiFiManagerParameter param_key( "key", "key",  sett.key, KEY_LEN );
 	wifiManager.addParameter( &param_key );
-	WiFiManagerParameter param_hostname( "Host", "Host",  sett.hostname, HOSTNAME_LEN );
+	WiFiManagerParameter param_hostname( "host", "host",  sett.hostname, HOSTNAME_LEN );
 	wifiManager.addParameter( &param_hostname );
 
-	WiFiManagerParameter param_litres0_start( "Litres0", "Litres0",  String(sett.litres0_start).c_str(), 7 );
-	wifiManager.addParameter( &param_litres0_start );
-	WiFiManagerParameter param_litres1_start( "Litres1", "Litres1",  String(sett.litres1_start).c_str(), 7 );
-	wifiManager.addParameter( &param_litres1_start );
+	FloatParameter param_value0_start( "value0", "value0",  sett.value0_start);
+	wifiManager.addParameter( &param_value0_start );
+	FloatParameter param_value1_start( "value1", "value1",  sett.value1_start);
+	wifiManager.addParameter( &param_value1_start );
 
-	WiFiManagerParameter param_litres_per_imp( "Litres", "Litres_impuls",  String(sett.liters_per_impuls).c_str(), 5 );
+	LongParameter param_litres_per_imp( "factor", "factor",  sett.liters_per_impuls);
 	wifiManager.addParameter( &param_litres_per_imp );
 
 	// Start the portal with the SSID 
@@ -45,28 +43,25 @@ void setup_ap(Settings &sett, const SlaveData &data)
 	LOG_NOTICE( "WIF", "Connected to wifi" );
 
 	// Get all the values that user entered in the portal and save it in EEPROM
-	IPAddress ip;
-	ip.fromString( param_ip.getValue() );
-	sett.ip = ip;
-	ip.fromString( param_subnet.getValue() );
-	sett.subnet = ip;
-	ip.fromString( param_gw.getValue() );
-	sett.gw = ip;
+
+	sett.ip = param_ip.getValue();
+	sett.subnet = param_subnet.getValue();
+	sett.gw = param_gw.getValue();
 	
 	strncpy(sett.key, param_key.getValue(), KEY_LEN);
 	strncpy(sett.hostname, param_hostname.getValue(), HOSTNAME_LEN);
 
-	sett.litres0_start = String(param_litres0_start.getValue()).toFloat();
-	sett.litres1_start = String(param_litres1_start.getValue()).toFloat();
-	sett.liters_per_impuls = String(param_litres_per_imp.getValue()).toInt();
+	sett.value0_start = param_value0_start.getValue();
+	sett.value1_start = param_value1_start.getValue();
+	sett.liters_per_impuls = param_litres_per_imp.getValue();
 
-	sett.impules0_start = data.value0;
-	sett.impules1_start = data.value1;
+	sett.impules0_start = data.impulses0;
+	sett.impules1_start = data.impulses1;
 
-	LOG_NOTICE( "DAT", "impulses0_start=data.value0=" << sett.impules0_start );
-	LOG_NOTICE( "DAT", "impulses1_start=data.value1=" << sett.impules1_start );
+	LOG_NOTICE( "DAT", "impulses0_start=data.impulses0=" << sett.impules0_start );
+	LOG_NOTICE( "DAT", "impulses1_start=data.impulses1=" << sett.impules1_start );
 
-	sett.crc = 1234;
+	sett.crc = 1239;
 	storeConfig(sett);
 }
 
