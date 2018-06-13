@@ -67,8 +67,8 @@ void resetWatchdog() {
 
 	// настраиваем период
 	//WDTCR = bit( WDIE );    // set WDIE, and 16 ms
-	WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
-	//WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
+	//WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
+	WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // set WDIE, and 0.5 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // set WDIE, and 1 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );    // set WDIE, and 2 seconds delay
@@ -127,7 +127,7 @@ void loop() {
 	/*
 		Если сон 250мс, то 1 минута через 240 раз
 	*/
-	for (unsigned int i = 0; i < 10 && !esp.pressed; ++i)  {
+	for (unsigned int i = 0; i < 240 && !esp.pressed; ++i)  {
 
 		wdt_count = wake_every; 
 		while ( wdt_count > 0 ) {
@@ -169,7 +169,6 @@ void loop() {
 				;  //ждем когда пользователь отпустит кнопку т.к. иначе ESP запустится в режиме программирования
 
 		slaveI2C.begin(SETUP_MODE);	
-
 		esp.power(true);
 		LOG_DEBUG(F("ESP turn on for SETUP"));
 		
