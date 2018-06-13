@@ -1,11 +1,4 @@
 
-// Включение логгирования с TinySerial: 3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
-// При логгировании не работает счетчик2 на 3-м пине.
-
-// #define LOG_LEVEL_ERROR
-// #define LOG_LEVEL_INFO
-//#define LOG_LEVEL_DEBUG
-
 #include "Setup.h"
 
 #include <avr/pgmspace.h>
@@ -28,7 +21,7 @@
 
 // Можно если нажали СЕТАП менять задержку на несколько минут. А после возвращать.
 
-//для логирования раскомментируйте LOG_LEVEL_DEBUG в Setup.h
+// Для логирования раскомментируйте LOG_LEVEL_DEBUG в Setup.h
 
 #ifdef DEBUG
 	TinyDebugSerial mySerial;
@@ -36,12 +29,6 @@
 
 #define BUTTON_PIN  4
 #define BUTTON2_PIN 3
-
-#define WAIT_ESP_MSEC    10000UL       // Сколько секунд ждем передачи данных в ESP
-#define SETUP_TIME_MSEC  300000UL      // Сколько пользователь может настраивать ESP
-
-#define WAKE_EVERY_MIN                24U * 60U
-#define WAKE_AFTER_SETUP_MIN          2U
 
 #define DEVICE_ID 3                   // Модель устройства
 
@@ -79,8 +66,8 @@ void resetWatchdog()
 
 	// настраиваем период
 	//WDTCR = bit( WDIE );    // set WDIE, and 16 ms
-	//WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
-	WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
+	WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
+	//WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // set WDIE, and 0.5 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // set WDIE, and 1 seconds delay
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );    // set WDIE, and 2 seconds delay
@@ -89,6 +76,16 @@ void resetWatchdog()
 	wdt_reset(); // pat the dog
 } 
 
+inline void counting() {
+	if (counter.check_close(info.data.value0)) {
+		;//storage.add(info.data);
+	}
+	#ifndef DEBUG
+		if (counter2.check_close(info.data.value1)) {
+			;//storage.add(info.data);
+		}
+	#endif
+}
 
 void setup() 
 {
@@ -104,38 +101,31 @@ void setup()
 	DEBUG_CONNECT(9600); LOG_DEBUG(F("==== START ===="));
 }
 
-
-void loop() 
-{
+void loop() {
 	power_all_disable();  // power off ADC, Timer 0 and 1, serial interface
 
 	set_sleep_mode( SLEEP_MODE_PWR_DOWN );
 
 	resetWatchdog(); 
 
-	for (unsigned int i = 0; i < 240 && !esp.pressed; ++i)   //~1 min: watchdog 250ms: 60 * 4 = 240 раз
-	{
+	/*
+		Если сон 250мс, то 1 минута через 240 раз
+	*/
+	for (unsigned int i = 0; i < 10 && !esp.pressed; ++i)  {
+
 		wdt_count = wake_every; 
-		while ( wdt_count > 0 ) 
-		{
+		while ( wdt_count > 0 ) {
+
 			noInterrupts();
+			
+			counting();
 
-			if (counter.check_close(info.data.value0)) {
-				;//storage.add(info.data);
-			}
-			#ifndef DEBUG
-				if (counter2.check_close(info.data.value1)) {
-					;//storage.add(info.data);
-				}
-			#endif
-
-			if (esp.sleep_and_pressed()) //Пользователь нажал кнопку
-			{
+			if (esp.sleep_and_pressed()) { //Пользователь нажал кнопку
+			
 				interrupts();
 				break;
-			}
-			else
-			{
+			} else 	{
+
 				interrupts();
 				sleep_mode();
 			}
@@ -152,8 +142,7 @@ void loop()
 	DEBUG_CONNECT(9600);
 
 	// Пользователь нажал кнопку SETUP
-	if (esp.pressed)
-	{
+	if (esp.pressed) {
 		wake_every = WAKE_AFTER_SETUP_MIN;
 
 		while(esp.is_pressed())
@@ -176,15 +165,18 @@ void loop()
 		slaveI2C.begin(TRANSMIT_MODE);
 		esp.power(true);
 
+		//передаем данные в ESP
 		while (!slaveI2C.masterGoingToSleep() 
 			&& !esp.elapsed(WAIT_ESP_MSEC)) { 
-			; //передаем данные в ESP
+			
+			counting();
+			delay(250);
 		}
 	}
 
 	esp.power(false);
-	LOG_DEBUG(F("ESP turn off"));
 	slaveI2C.end();			// выключаем i2c slave.
+	LOG_DEBUG(F("ESP turn off"));
 	
 	info.service = MCUSR;   // чтобы первое включение передалось
 

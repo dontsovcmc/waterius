@@ -43,6 +43,7 @@ struct Counter
         pinMode(pin, INPUT);
         return false;
     }
+
 };
 
 

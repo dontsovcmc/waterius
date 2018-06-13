@@ -4,7 +4,40 @@
 #include <Arduino.h>
 #include "TinyDebugSerial.h"
 
-#define STORAGE_SIZE 30  //байт. Размер кольцевого буфера для измерений (измерение=4 байта)
+/* 
+	Включение логирования с TinySerial: 
+	3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
+	При логировании не работает счетчик2 на 3-м пине (value1).
+
+	Для логирования раскомментируйте LOG_LEVEL_DEBUG
+*/
+// #define LOG_LEVEL_ERROR
+// #define LOG_LEVEL_INFO
+// #define LOG_LEVEL_DEBUG
+
+
+/*
+	Период отправки данных на сервер, мин
+*/
+#define WAKE_EVERY_MIN                24U * 60U
+
+/*
+	Через сколько минут после настройки 
+	счетчик отправит данные на сервер
+*/
+#define WAKE_AFTER_SETUP_MIN          2U
+
+/*
+	Сколько милисекунд ждем передачи данных в ESP
+*/
+#define WAIT_ESP_MSEC    10000UL      
+
+/*
+	Сколько милисекунд пользователь может 
+	настраивать ESP. Если не закончил, питание ESP выключится.
+*/
+#define SETUP_TIME_MSEC  300000UL 
+
 
 struct Data {
 	uint32_t value0;
@@ -18,7 +51,9 @@ struct Header {
 	Data     data;
 };
 
-
+/*
+	define для логирования. Не менять.
+*/
 #define LOG_DEBUG(x)
 #define LOG_INFO(x)  
 #define LOG_ERROR(x) 

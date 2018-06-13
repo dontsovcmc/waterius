@@ -9,6 +9,11 @@
 
 uint16_t readVcc();
 
+/*
+	Включение питания ESP подачей HIGH на ESP_POWER_PIN пин.
+	Класс нужен для измерения времени подачи питания.
+	Из-за нехватки pin на Attiny85 мы сажаем кнопку на линию i2c.
+*/
 struct ESPPowerButton 
 {
 	ESPPowerButton(const uint8_t, const uint8_t);
