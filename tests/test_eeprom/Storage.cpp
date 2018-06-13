@@ -1,5 +1,8 @@
 #include "Storage.h"
 
+#include "virtual_eeprom.h"
+
+
 //https://github.com/lammertb/libcrc/blob/600316a01924fd5bb9d47d535db5b8f3987db178/src/crc8.c
 
 #define		CRC_START_8		0x00
@@ -27,8 +30,8 @@ static uint8_t sht75_crc_table[] = {
 template<class T>
 EEPROMStorage<T>::EEPROMStorage(const uint8_t _blocks, const uint8_t _start_addr)
 	: start_addr(_start_addr)
-	, activeBlock(0)
 	, blocks(_blocks)
+	, activeBlock(0)
 {
 	elementSize = sizeof(T);
 	flag_shift = start_addr + elementSize * blocks;
@@ -66,6 +69,8 @@ void EEPROMStorage<T>::add(const T &element)
 		mark++;
 	EEPROM.write(flag_shift + activeBlock, mark);
 	EEPROM.write(flag_shift + prev, 0);
+
+	//clear(prev);
 }
 
 template<class T>
@@ -106,5 +111,6 @@ uint8_t EEPROMStorage<T>::crc_8(const unsigned char *input_str, size_t num_bytes
 
 	return crc;
 }
+
 
 template class EEPROMStorage<Data>;

@@ -13,13 +13,13 @@
 */
 // #define LOG_LEVEL_ERROR
 // #define LOG_LEVEL_INFO
-// #define LOG_LEVEL_DEBUG
+#define LOG_LEVEL_DEBUG
 
 
 /*
 	Период отправки данных на сервер, мин
 */
-#define WAKE_EVERY_MIN                24U * 60U
+#define WAKE_EVERY_MIN                10U // 24U * 60U
 
 /*
 	Через сколько минут после настройки 

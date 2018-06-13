@@ -46,7 +46,8 @@ static ESPPowerButton esp(ESP_POWER_PIN, SETUP_BUTTON_PIN);
 // данные
 struct Header info = {DEVICE_ID, 0, 0, {0, 0} };
 
-//EEPROMStorage<Data> storage(15);
+//100к * 20 = 2 млн * 10 л / 2 = 10 000 000 л или 10 000 м3
+static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
 
 SlaveI2C slaveI2C;
 
@@ -58,8 +59,8 @@ ISR( WDT_vect ) {
 }  
 
 /* Подготовка сторожевого таймера watchdog */
-void resetWatchdog() 
-{
+void resetWatchdog() {
+	
 	MCUSR = 0; // очищаем все флаги прерываний
 
 	WDTCR = bit( WDCE ) | bit( WDE ); // allow changes, disable reset, clear existing interrupt
@@ -77,31 +78,46 @@ void resetWatchdog()
 } 
 
 inline void counting() {
+
 	if (counter.check_close(info.data.value0)) {
-		;//storage.add(info.data);
+		storage.add(info.data);
 	}
 	#ifndef DEBUG
 		if (counter2.check_close(info.data.value1)) {
-			;//storage.add(info.data);
+			storage.add(info.data);
 		}
 	#endif
 }
 
-void setup() 
-{
-	info.data.value0 = 0;
-	info.data.value1 = 0;
+void setup() {
 	info.service = MCUSR; //причина перезагрузки
+	storage.get(info.data);
+
 	noInterrupts();
 	ACSR |= bit( ACD ); //выключаем компаратор
 	interrupts();
 	resetWatchdog(); 
 	adc_disable(); //выключаем ADC
 
-	DEBUG_CONNECT(9600); LOG_DEBUG(F("==== START ===="));
+#ifdef DEBUG
+	DEBUG_CONNECT(9600); 
+	LOG_DEBUG(F("==== START ===="));
+	LOG_DEBUG(F("MCUSR"));
+	LOG_DEBUG(info.service);
+
+	LOG_DEBUG(F("EEPROM:"));
+	for (size_t i = 0 ; i < 40; i++)
+	{
+		LOG_DEBUG((unsigned int)EEPROM.read(i));
+	}
+	LOG_INFO(F("Data:"));
+	LOG_INFO(info.data.value0);
+	LOG_INFO(info.data.value1);
+#endif
 }
 
 void loop() {
+	
 	power_all_disable();  // power off ADC, Timer 0 and 1, serial interface
 
 	set_sleep_mode( SLEEP_MODE_PWR_DOWN );
@@ -137,12 +153,16 @@ void loop() {
 	power_all_enable();   // power everything back on
 
 	info.voltage = readVcc();   // заранее запишем текущее напряжение
-	//storage.get(info.data);
+	storage.get(info.data);
 	
 	DEBUG_CONNECT(9600);
+	LOG_INFO(F("Data:"));
+	LOG_INFO(info.data.value0);
+	LOG_INFO(info.data.value1);
 
 	// Пользователь нажал кнопку SETUP
 	if (esp.pressed) {
+
 		wake_every = WAKE_AFTER_SETUP_MIN;
 
 		while(esp.is_pressed())
@@ -151,7 +171,7 @@ void loop() {
 		slaveI2C.begin(SETUP_MODE);	
 
 		esp.power(true);
-		LOG_DEBUG(F("ESP turn on"));
+		LOG_DEBUG(F("ESP turn on for SETUP"));
 		
 		while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(SETUP_TIME_MSEC)) {
 			delayMicroseconds(65000);
@@ -159,31 +179,33 @@ void loop() {
 
 	}
 	else {
+
 		wake_every = WAKE_EVERY_MIN;
 
 		// Передаем показания
 		slaveI2C.begin(TRANSMIT_MODE);
 		esp.power(true);
+		LOG_DEBUG(F("ESP turn on for TRANSMITTING"));
 
 		//передаем данные в ESP
 		while (!slaveI2C.masterGoingToSleep() 
 			&& !esp.elapsed(WAIT_ESP_MSEC)) { 
 			
 			counting();
-			delay(250);
+			delayMicroseconds(65000);
 		}
 	}
 
 	esp.power(false);
 	slaveI2C.end();			// выключаем i2c slave.
-	LOG_DEBUG(F("ESP turn off"));
-	
-	info.service = MCUSR;   // чтобы первое включение передалось
 
-	LOG_DEBUG(F("ESP wake up after (min):"));
+	LOG_DEBUG(F("ESP turn off. Wake up (min): "));
 	LOG_DEBUG(wake_every);
 
+	info.service = MCUSR;
+
 	if (!slaveI2C.masterGoingToSleep()) {
+
 		LOG_ERROR(F("ESP wake up fail"));
 	}
 }
