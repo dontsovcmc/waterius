@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.0.0">
+<eagle version="8.7.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
 <setting keepoldvectorfont="yes"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.01" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
+<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="no" active="no"/>
 <layer number="2" name="Route2" color="1" fill="3" visible="no" active="no"/>
@@ -21423,7 +21423,7 @@ ID: MCP1700T-3302E/TT</description>
 <part name="C9" library="rcl" library_urn="urn:adsk.eagle:library:334" deviceset="C-EU" device="025-030X050" package3d_urn="urn:adsk.eagle:package:23631/1" value="10mkF"/>
 <part name="GND3" library="supply1" deviceset="GND" device=""/>
 <part name="GND4" library="supply1" deviceset="GND" device=""/>
-<part name="R10" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-EU_" device="M0805" package3d_urn="urn:adsk.eagle:package:26079/1" value="3k3"/>
+<part name="R10" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-EU_" device="M0805" package3d_urn="urn:adsk.eagle:package:26079/1" value="0"/>
 <part name="GND6" library="supply1" deviceset="GND" device=""/>
 <part name="R11" library="rcl" deviceset="R-EU_" device="R0805" value="200">
 <attribute name="OM" value="3k6"/>
@@ -21431,6 +21431,10 @@ ID: MCP1700T-3302E/TT</description>
 <part name="S2" library="switch-omron" library_urn="urn:adsk.eagle:library:377" deviceset="31-XX" device="" package3d_urn="urn:adsk.eagle:package:27487/1"/>
 <part name="X3" library="con-wago255" library_urn="urn:adsk.eagle:library:198" deviceset="233-104" device="" package3d_urn="urn:adsk.eagle:package:10915/1"/>
 <part name="U$2" library="MCP1700T-3302E_TT" deviceset="MCP1700T-3302E/TT" device=""/>
+<part name="R9" library="rcl" deviceset="R-EU_" device="R0805" value="3k3">
+<attribute name="OM" value="3k6"/>
+</part>
+<part name="GND2" library="supply1" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -21463,17 +21467,17 @@ ID: MCP1700T-3302E/TT</description>
 <attribute name="VALUE" x="36.322" y="74.168" size="1.778" layer="96" rot="R180"/>
 </instance>
 <instance part="R8" gate="G$1" x="120.904" y="56.896" rot="R270"/>
-<instance part="R1" gate="G$1" x="131.826" y="82.804" smashed="yes">
-<attribute name="NAME" x="130.556" y="84.3026" size="1.778" layer="95"/>
-<attribute name="VALUE" x="130.556" y="79.502" size="1.778" layer="96"/>
+<instance part="R1" gate="G$1" x="131.826" y="92.964" smashed="yes">
+<attribute name="NAME" x="130.556" y="94.4626" size="1.778" layer="95"/>
+<attribute name="VALUE" x="130.556" y="89.662" size="1.778" layer="96"/>
 </instance>
 <instance part="R6" gate="G$1" x="131.826" y="115.824" smashed="yes">
 <attribute name="NAME" x="130.556" y="117.3226" size="1.778" layer="95"/>
 <attribute name="VALUE" x="130.556" y="112.522" size="1.778" layer="96"/>
 </instance>
-<instance part="C5" gate="G$1" x="136.906" y="92.964" smashed="yes">
-<attribute name="NAME" x="139.954" y="90.551" size="1.778" layer="95"/>
-<attribute name="VALUE" x="129.54" y="90.297" size="1.778" layer="96"/>
+<instance part="C5" gate="G$1" x="136.906" y="101.092" smashed="yes">
+<attribute name="NAME" x="139.954" y="98.679" size="1.778" layer="95"/>
+<attribute name="VALUE" x="129.54" y="98.425" size="1.778" layer="96"/>
 </instance>
 <instance part="C6" gate="G$1" x="136.906" y="108.204" smashed="yes" rot="R180">
 <attribute name="NAME" x="142.748" y="110.109" size="1.778" layer="95" rot="R180"/>
@@ -21528,8 +21532,13 @@ ID: MCP1700T-3302E/TT</description>
 <attribute name="VALUE" x="81.534" y="29.21" size="1.778" layer="96"/>
 </instance>
 <instance part="S2" gate="1" x="87.376" y="38.354"/>
-<instance part="X3" gate="G$1" x="99.314" y="106.68" rot="R180"/>
+<instance part="X3" gate="G$1" x="105.918" y="105.664" rot="R180"/>
 <instance part="U$2" gate="G$1" x="46.736" y="115.316" rot="R180"/>
+<instance part="R9" gate="G$1" x="42.164" y="26.162" smashed="yes" rot="R270">
+<attribute name="NAME" x="36.8046" y="24.384" size="1.778" layer="95"/>
+<attribute name="VALUE" x="36.576" y="27.178" size="1.778" layer="96"/>
+</instance>
+<instance part="GND2" gate="1" x="42.164" y="15.494"/>
 </instances>
 <busses>
 </busses>
@@ -21598,6 +21607,11 @@ ID: MCP1700T-3302E/TT</description>
 <wire x1="149.352" y1="105.664" x2="150.876" y2="105.664" width="0.1524" layer="91"/>
 <pinref part="GND6" gate="1" pin="GND"/>
 <wire x1="150.876" y1="105.664" x2="150.876" y2="103.124" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="R9" gate="G$1" pin="2"/>
+<wire x1="42.164" y1="21.082" x2="42.164" y2="18.034" width="0.1524" layer="91"/>
+<pinref part="GND2" gate="1" pin="GND"/>
 </segment>
 </net>
 <net name="+3V3" class="0">
@@ -21671,12 +21685,12 @@ ID: MCP1700T-3302E/TT</description>
 <label x="112.014" y="39.37" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="R6" gate="G$1" pin="2"/>
-<pinref part="C6" gate="G$1" pin="2"/>
-<wire x1="136.906" y1="113.284" x2="136.906" y2="115.824" width="0.1524" layer="91"/>
-<wire x1="136.906" y1="115.824" x2="144.526" y2="115.824" width="0.1524" layer="91"/>
-<junction x="136.906" y="115.824"/>
-<label x="144.526" y="115.824" size="1.778" layer="95"/>
+<pinref part="R1" gate="G$1" pin="2"/>
+<pinref part="C5" gate="G$1" pin="2"/>
+<wire x1="136.906" y1="96.012" x2="136.906" y2="92.964" width="0.1524" layer="91"/>
+<wire x1="136.906" y1="92.964" x2="146.05" y2="92.964" width="0.1524" layer="91"/>
+<junction x="136.906" y="92.964"/>
+<label x="146.812" y="92.71" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="IN1" class="0">
@@ -21686,12 +21700,12 @@ ID: MCP1700T-3302E/TT</description>
 <label x="112.014" y="41.91" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="R1" gate="G$1" pin="2"/>
-<pinref part="C5" gate="G$1" pin="2"/>
-<wire x1="136.906" y1="87.884" x2="136.906" y2="82.804" width="0.1524" layer="91"/>
-<wire x1="136.906" y1="82.804" x2="144.526" y2="82.804" width="0.1524" layer="91"/>
-<junction x="136.906" y="82.804"/>
-<label x="144.526" y="82.804" size="1.778" layer="95"/>
+<pinref part="R6" gate="G$1" pin="2"/>
+<pinref part="C6" gate="G$1" pin="2"/>
+<wire x1="136.906" y1="113.284" x2="136.906" y2="115.824" width="0.1524" layer="91"/>
+<wire x1="136.906" y1="115.824" x2="144.526" y2="115.824" width="0.1524" layer="91"/>
+<junction x="136.906" y="115.824"/>
+<label x="145.288" y="116.332" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="RX" class="0">
@@ -21721,21 +21735,19 @@ ID: MCP1700T-3302E/TT</description>
 <net name="GND1" class="0">
 <segment>
 <pinref part="C5" gate="G$1" pin="1"/>
-<wire x1="123.19" y1="95.504" x2="136.906" y2="95.504" width="0.1524" layer="91"/>
 <pinref part="C6" gate="G$1" pin="1"/>
 <wire x1="124.206" y1="105.664" x2="136.906" y2="105.664" width="0.1524" layer="91"/>
 <wire x1="139.192" y1="105.664" x2="136.906" y2="105.664" width="0.1524" layer="91"/>
 <junction x="136.906" y="105.664"/>
-<wire x1="136.906" y1="105.664" x2="136.906" y2="95.504" width="0.1524" layer="91"/>
-<junction x="136.906" y="95.504"/>
-<label x="137.668" y="99.06" size="1.778" layer="95"/>
+<wire x1="136.906" y1="105.664" x2="136.906" y2="103.632" width="0.1524" layer="91"/>
+<label x="120.904" y="103.124" size="1.778" layer="95"/>
 <pinref part="R10" gate="G$1" pin="1"/>
-<pinref part="X3" gate="G$1" pin="-2"/>
-<wire x1="123.19" y1="95.504" x2="123.19" y2="106.68" width="0.1524" layer="91"/>
-<wire x1="123.19" y1="106.68" x2="106.934" y2="106.68" width="0.1524" layer="91"/>
-<wire x1="124.206" y1="105.664" x2="124.206" y2="111.76" width="0.1524" layer="91"/>
-<wire x1="124.206" y1="111.76" x2="106.934" y2="111.76" width="0.1524" layer="91"/>
+<wire x1="124.206" y1="105.664" x2="124.206" y2="110.744" width="0.1524" layer="91"/>
+<wire x1="124.206" y1="110.744" x2="113.538" y2="110.744" width="0.1524" layer="91"/>
 <pinref part="X3" gate="G$1" pin="-4"/>
+<pinref part="X3" gate="G$1" pin="-2"/>
+<wire x1="124.206" y1="105.664" x2="113.538" y2="105.664" width="0.1524" layer="91"/>
+<junction x="124.206" y="105.664"/>
 </segment>
 <segment>
 <pinref part="R11" gate="G$1" pin="2"/>
@@ -21751,8 +21763,12 @@ ID: MCP1700T-3302E/TT</description>
 </segment>
 <segment>
 <pinref part="U$1" gate="G$1" pin="CH_PD"/>
-<wire x1="18.034" y1="46.736" x2="43.942" y2="46.736" width="0.1524" layer="91"/>
+<wire x1="18.034" y1="46.736" x2="42.164" y2="46.736" width="0.1524" layer="91"/>
 <label x="18.034" y="47.498" size="1.778" layer="95"/>
+<pinref part="R9" gate="G$1" pin="1"/>
+<wire x1="42.164" y1="46.736" x2="43.942" y2="46.736" width="0.1524" layer="91"/>
+<wire x1="42.164" y1="31.242" x2="42.164" y2="46.736" width="0.1524" layer="91"/>
+<junction x="42.164" y="46.736"/>
 </segment>
 </net>
 <net name="AA*3" class="0">
@@ -21775,9 +21791,9 @@ ID: MCP1700T-3302E/TT</description>
 <segment>
 <pinref part="R6" gate="G$1" pin="1"/>
 <wire x1="126.746" y1="115.824" x2="116.84" y2="115.824" width="0.1524" layer="91"/>
-<pinref part="X3" gate="G$1" pin="-1"/>
-<wire x1="106.934" y1="104.14" x2="116.84" y2="104.14" width="0.1524" layer="91"/>
-<wire x1="116.84" y1="104.14" x2="116.84" y2="115.824" width="0.1524" layer="91"/>
+<pinref part="X3" gate="G$1" pin="-3"/>
+<wire x1="113.538" y1="108.204" x2="116.84" y2="108.204" width="0.1524" layer="91"/>
+<wire x1="116.84" y1="108.204" x2="116.84" y2="115.824" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$1" class="0">
@@ -21806,22 +21822,21 @@ ID: MCP1700T-3302E/TT</description>
 <wire x1="32.004" y1="49.276" x2="43.942" y2="49.276" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="N$4" class="0">
-<segment>
-<wire x1="126.746" y1="91.44" x2="126.746" y2="82.804" width="0.1524" layer="91"/>
-<pinref part="R1" gate="G$1" pin="1"/>
-<pinref part="X3" gate="G$1" pin="-3"/>
-<wire x1="106.934" y1="109.22" x2="120.396" y2="109.22" width="0.1524" layer="91"/>
-<wire x1="120.396" y1="109.22" x2="120.396" y2="91.44" width="0.1524" layer="91"/>
-<wire x1="120.396" y1="91.44" x2="126.746" y2="91.44" width="0.1524" layer="91"/>
-</segment>
-</net>
 <net name="N$2" class="0">
 <segment>
 <pinref part="S2" gate="1" pin="P"/>
 <pinref part="R11" gate="G$1" pin="1"/>
 <wire x1="87.376" y1="33.274" x2="87.376" y2="31.75" width="0.1524" layer="91"/>
 <wire x1="87.376" y1="31.75" x2="87.376" y2="31.496" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$4" class="0">
+<segment>
+<pinref part="X3" gate="G$1" pin="-1"/>
+<wire x1="113.538" y1="103.124" x2="116.84" y2="103.124" width="0.1524" layer="91"/>
+<wire x1="116.84" y1="103.124" x2="116.84" y2="92.964" width="0.1524" layer="91"/>
+<pinref part="R1" gate="G$1" pin="1"/>
+<wire x1="116.84" y1="92.964" x2="126.746" y2="92.964" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
