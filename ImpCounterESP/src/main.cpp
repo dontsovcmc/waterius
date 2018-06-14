@@ -1,16 +1,14 @@
-#include "WifiSettings.h"
-#include "MasterI2C.h"
+
 #include "Logging.h"
 #include <user_interface.h>
 #include <ESP8266WiFi.h>
-#include "SetupAP.h"
-#include "SenderBlynk.h"
-#include "SenderTCP.h"
 
-/*
-TODO: crc настроек
+#include "wifi_settings.h"
+#include "master_i2c.h"
+#include "setup_ap.h"
+#include "sender_blynk.h"
+#include "sender_tcp.h"
 
-*/
 
 MasterI2C masterI2C;
 
@@ -18,6 +16,7 @@ SlaveData data;
 Settings sett;
 
 void setup() {
+
 	memset(&data, 0, sizeof(data));
 
 	LOG_BEGIN(115200);
@@ -44,6 +43,7 @@ void loop() {
 	data.diagnostic = masterI2C.getSlaveData(data); //нужны и в настройке
 
 	if (masterI2C.setup_mode()) {
+
 		loadConfig(sett);
 		setup_ap(sett, data);
 	}
@@ -57,17 +57,17 @@ void loop() {
 			float value0, value1;
 			calculate_values(sett, &value0, &value1);
 
+#ifdef SEND_BLYNK
 			if (send_blynk(sett, value0, value1, data.voltage / 1000.0)) {
             	LOG_NOTICE("BLK", "send ok");
 			}
-
-			//if (send_tcp(sett, data)) {
-            //	LOG_NOTICE("TCP", "send ok");
-			//}
-			else {
-				LOG_ERROR("ESP", "error sending data");
+#endif
+#ifdef SEND_TCP
+			if (send_tcp(sett, value0, value1, data.voltage / 1000.0)) {
+            	LOG_NOTICE("TCP", "send ok");
 			}
-			
+#endif
+
 		} else {
 			LOG_ERROR("ESP", "error loading config");
 		}

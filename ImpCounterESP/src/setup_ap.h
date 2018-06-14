@@ -1,9 +1,8 @@
 #ifndef _SETUPAP_h
 #define _SETUPAP_h
 
-#include "Setup.h"
-
-#include "MasterI2C.h"
+#include "setup.h"
+#include "master_i2c.h"
 #include <Arduino.h>
 #include <WiFiManager.h>	
 

@@ -5,7 +5,7 @@
 
 #include <Arduino.h>
 #include <WiFiClient.h>
-#include "MasterI2C.h"
+#include "master_i2c.h"
 
 
 void storeConfig(const Settings &sett);

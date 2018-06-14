@@ -1,5 +1,5 @@
 
-#include "WifiSettings.h"
+#include "wifi_settings.h"
 #include "Logging.h"
 
 #include <IPAddress.h>

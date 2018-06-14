@@ -12,7 +12,7 @@
 #include <avr/sleep.h>
 #include <avr/power.h>  
 
-//ИНСТАЛЛЯЦИЯ: 
+//ИНСТАЛЯЦИЯ: 
 //1. Добавляем в боте счетчик по id и паролю
 //2. подключаем к счетчикам: Вход №1 - ГВС, Вход №2 - ХВС
 //3. Проливаем 10 л каждой воды
@@ -90,6 +90,7 @@ inline void counting() {
 }
 
 void setup() {
+
 	info.service = MCUSR; //причина перезагрузки
 	storage.get(info.data);
 
@@ -104,12 +105,6 @@ void setup() {
 	LOG_DEBUG(F("==== START ===="));
 	LOG_DEBUG(F("MCUSR"));
 	LOG_DEBUG(info.service);
-
-	LOG_DEBUG(F("EEPROM:"));
-	for (size_t i = 0 ; i < 40; i++)
-	{
-		LOG_DEBUG((unsigned int)EEPROM.read(i));
-	}
 	LOG_INFO(F("Data:"));
 	LOG_INFO(info.data.value0);
 	LOG_INFO(info.data.value1);

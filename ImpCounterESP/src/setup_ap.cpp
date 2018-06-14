@@ -1,5 +1,5 @@
 
-#include "SetupAP.h"
+#include "setup_ap.h"
 #include "Logging.h"
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>            // Local DNS Server used for redirecting all requests to the configuration portal

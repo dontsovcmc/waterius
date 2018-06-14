@@ -4,14 +4,13 @@
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
 
-//#include "WifiSettings.h"
-#include "MasterI2C.h"
+#include "master_i2c.h"
 #include "Logging.h"
 
 bool send_blynk(const Settings &sett, const float &value0, const float &value1, const float &voltage)
 {
     Blynk.begin(sett.key, WiFi.SSID().c_str(), WiFi.psk().c_str());
-    LOG_NOTICE( "ESP", "Blynk beginned");
+    LOG_NOTICE( "BLK", "Blynk beginned");
 
     if (Blynk.run())
     {
@@ -22,7 +21,8 @@ bool send_blynk(const Settings &sett, const float &value0, const float &value1, 
         Blynk.virtualWrite(V2, voltage);
 
         return true;
-    }
+    } 
+    LOG_ERROR("BLK", "Blynk connect error");
     return false;
 }		
 

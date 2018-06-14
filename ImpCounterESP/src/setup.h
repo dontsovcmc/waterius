@@ -3,9 +3,12 @@
 
 #include <Arduino.h>
 
+//#define SEND_TCP   
+#define SEND_BLYNK
+
 #define LOGLEVEL 6
 
-#define SERVER_TIMEOUT 3000UL // ms
+#define SERVER_TIMEOUT 7000UL // ms
 #define ESP_CONNECT_TIMEOUT 10000UL
 #define I2C_SLAVE_ADDR 10
 
@@ -23,7 +26,7 @@ struct Settings
 	uint32_t subnet;
 	uint32_t gw;
 	char     key[KEY_LEN];
-	char     hostname[HOSTNAME_LEN];
+	char     hostname[HOSTNAME_LEN];  // Blynk.cc: server; TCP: hostname or ip address
 
 	float    value0_start;
 	float    value1_start;

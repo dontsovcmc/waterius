@@ -19,9 +19,9 @@ struct Counter
 
     bool check_close(uint32_t &i)
     {
-        pinMode(pin, INPUT_PULLUP);
+        pinMode(pin, INPUT_PULLUP); //DDRB &= ~_BV(pin);  PORTB |= _BV(pin); //http://microsin.net/programming/avr/accessing-avr-ports-with-winavr-gcc.html
 
-        if (digitalRead(pin) == LOW)
+        if (digitalRead(pin) == LOW)  //bit_is_clear(PINB, pin) 
         {
             if (state == OPENED)
             {
@@ -31,7 +31,7 @@ struct Counter
             {
                 i++;
                 state = CLOSED;
-                pinMode(pin, INPUT);
+                pinMode(pin, INPUT);  //DDRB &= ~_BV(pin);  PORTB &= ~_BV(pin);
                 return true;
             }
         }
@@ -40,7 +40,7 @@ struct Counter
             state = OPENED;
         }
 
-        pinMode(pin, INPUT);
+        pinMode(pin, INPUT);  //DDRB &= ~_BV(pin);  PORTB &= ~_BV(pin);
         return false;
     }
 

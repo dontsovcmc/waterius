@@ -3,6 +3,12 @@
 
 #define LOGLEVEL 6
 
+/*
+Проект для тестирования счетчика импульсов на attiny85. 
+Подает импульсы на вход, при подаче HIGH на DETECT_PIN включает i2c Master
+и принимает данные от attiny85.
+*/
+
 #define I2C_SLAVE_ADDR 10
 
 #define DETECT_PIN 9  //включение мастера. вместо пина EN (pin 1 attiny85)
@@ -10,7 +16,7 @@
 #define OUTPUT_1 A0   //к входу счетчика value0 
 #define OUTPUT_2 A1   //к входу счетчика value1
 
-#define RESET_PIN A3
+#define RESET_PIN A3  //на ресет attiny85
 
 MasterI2C masterI2C;
 
@@ -35,11 +41,13 @@ void loop() {
     static unsigned long i=0;
     static unsigned long sec=0;
     static unsigned long step=0;
-    static unsigned long reset=0;
+    static unsigned long reset=millis();
 
     //attiny подало питание на ESP
     if (digitalRead(DETECT_PIN) == HIGH) {
 
+        Serial.print('.');
+        Serial.print(sec);
         unsigned long start_power = millis();
 		Serial << "\n";
         LOG_NOTICE( "ESP", "powe on I2C-begined" );
@@ -71,17 +79,14 @@ void loop() {
             ; //wait turn off
 
         LOG_NOTICE( "ESP", "Power OFF" );
-
     } else {
 
         unsigned long now = millis();
-        if (now - step > 333) {
-
+        if (now - step > 1000) {
+            sec++;
             step = now;
-            Serial.print('.');
-            Serial.print(sec++);
 
-            if (sec % 3 > 0) {
+            if (sec % 2 > 0) {
 
                 digitalWrite(OUTPUT_1, HIGH);
                 digitalWrite(OUTPUT_2, HIGH);
@@ -92,7 +97,7 @@ void loop() {
             }
         }
 
-        if (now - reset > 15000) {
+        if ((now - reset) / 1000 > 25 * 60) {
             reset = now;
             LOG_NOTICE( "ESP", "Reset!" );
             digitalWrite(RESET_PIN, LOW);

@@ -1,4 +1,4 @@
-#include "MasterI2C.h"
+#include "master_i2c.h"
 #include "Logging.h"
 #include <Wire.h>
 #include <Arduino.h>
