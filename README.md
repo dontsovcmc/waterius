@@ -1,25 +1,26 @@
-# Wi-Fi модуль для счётчиков воды
-## (проект в стадии разработки)
-Автономное устройство, передающее показания воды по Wi-fi:
-- на сервер [Blynk.cc](http://Blynk.cc) (есть бесплатное приложение под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8)
-<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" width="250"/> 
+### Wi-Fi модуль для счётчиков воды
+# Вотериус
+Версия 0.3
 
-- ваш TCP сервер с запущенным Телеграм ботом (см. версию ниже 0.3) 
+Простое в изготовлении автономное устройство для передачи показаний воды по Wi-Fi.
+
+Данные смотрим в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8) )
+<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" width="64"/> 
+
+Также можно отсылать показания на ваш TCP сервер.
 
 <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" width="400"/> <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" width="400"/>
 
+Питание: 3*AAA алкалиновые или литиевые батарейки. 
+Батареек должно хватить на несколько лет при ежедневной отправки показаний.
 
-Потребление
+Потребление:
 * в режиме сна: 20 мкА
 * в режиме передачи данных: 75мА (~5 секунд)
 
-Питание 3*AAA алкалиновые или литиевые батарейки.
-
-## Принцип работы
-Счётчик импульсов состоит из 2-х микросхем. Attiny85 считает импульсы в режиме сна. Раз в Х минут  просыпается и сохраняет текущее значение в буфер. Раз в Y минут при очередном просыпании она будит ESP8266 и слушает i2c линию. Проснувшись, ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого все микросхемы засыпают.
-
 ## Установка счётчика
-- [установите приложение Blynk на телефон|https://www.blynk.cc/getting-started]
+- [установите приложение Blynk на телефон](https://www.blynk.cc/getting-started).
+- создайте проект, добавьте устройство ESP8266, добавьте виртуальные пины V0 и V1
 - получите уникальный ключ на эл. почту
 - подключите счётчики воды к разъемам Wi-fi счётчика
 - включите питание
@@ -27,19 +28,28 @@
 - найдите телефоном Wi-Fi точку доступа ImpulsCounter_0.3
 - откройте http://192.168.4.1
 - введите: имя и пароль от Wi-Fi, свободный ip адрес для счётчика (обычно 192.168.1.x, где x > 20), текущие показания счетчиков воды в кубометрах (разделитель дробного числа - точка), кол-во литров на 1 импульс (по умолчанию 10).
+- при желании получать эл. письма введите свой эл. адрес
 - нажмите ОК
 - откройте воду, чтобы вылилось больше 10л воды
 - через 2 минуты счетчик выйдет на связь и передаст показания в приложение Blynk
 - далее он будет слать показания раз в сутки
 
 
+## Принцип работы
+Счётчик импульсов состоит из 2-х микросхем. Attiny85 считает импульсы в режиме сна. Раз в Х минут  просыпается и сохраняет текущее значение в буфер. Раз в Y минут при очередном просыпании она будит ESP8266 и слушает i2c линию. Проснувшись, ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого все микросхемы засыпают.
+
 ## Изготовление
 - [создание платы](https://github.com/dontsovcmc/ImpCounter/blob/master/Making.md)
 - [прошивка Attiny85 и ESP](https://github.com/dontsovcmc/ImpCounter/blob/master/Firmware.md) 
 
 # Благодарности
-Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1). именно он был взят за основу и добавлены прерывания
+Ивану Коваленко и Иван Ганжа за консультации по электротехнике
 
+Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1). он был взят за основу. Правда потом переписано все, кроме работы по i2c.
+
+Форумам: https://esp8266.ru, http://easyelectronics.ru
+
+ 
 
 
 
