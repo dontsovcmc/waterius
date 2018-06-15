@@ -9,7 +9,9 @@
 
 Также можно отсылать показания на ваш TCP сервер.
 
-<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" width="400"/> <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" width="400"/>
+<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" width="360"/> 
+<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/blynk_main.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/blynk_main.jpg" width="360"/>
+
 
 Питание: 3*AAA алкалиновые или литиевые батарейки. 
 Батареек должно хватить на несколько лет при ежедневной отправки показаний.
@@ -26,8 +28,8 @@
 - включите питание
 - нажмите кнопку на корпусе - включится Веб сервер для настройки
 - найдите телефоном Wi-Fi точку доступа ImpulsCounter_0.3
-- откройте http://192.168.4.1
-- введите: имя и пароль от Wi-Fi, свободный ip адрес для счётчика (обычно 192.168.1.x, где x > 20), текущие показания счетчиков воды в кубометрах (разделитель дробного числа - точка), кол-во литров на 1 импульс (по умолчанию 10).
+- откройте [http://192.168.4.1](http://192.168.4.1)
+- введите: имя и пароль от Wi-Fi, свободный ip адрес для счётчика (обычно 192.168.1.x, где x > 20), текущие показания счетчиков воды в кубометрах (разделитель дробного числа - точка), кол-во литров на 1 импульс (по умолчанию 10). ([пример](https://github.com/dontsovcmc/ImpCounter/blob/master/files/wifi_setup.jpg))
 - при желании получать эл. письма введите свой эл. адрес
 - нажмите ОК
 - откройте воду, чтобы вылилось больше 10л воды
@@ -38,7 +40,11 @@
 ## Принцип работы
 Счётчик импульсов состоит из 2-х микросхем. Attiny85 считает импульсы в режиме сна. Раз в Х минут  просыпается и сохраняет текущее значение в буфер. Раз в Y минут при очередном просыпании она будит ESP8266 и слушает i2c линию. Проснувшись, ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого все микросхемы засыпают.
 
+
 ## Изготовление
+Принципиальная схема:
+<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" width="400"/>
+
 - [создание платы](https://github.com/dontsovcmc/ImpCounter/blob/master/Making.md)
 - [прошивка Attiny85 и ESP](https://github.com/dontsovcmc/ImpCounter/blob/master/Firmware.md) 
 
