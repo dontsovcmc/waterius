@@ -50,21 +50,27 @@ bool loadConfig(struct Settings &sett)
 	else 
 	{
 		LOG_NOTICE( "WIF", "crc failed=" << sett.crc );
-		IPAddress ip(192, 168, 1, 116);
-		IPAddress subnet(255, 255, 255, 0);
-		IPAddress gw(192, 168, 1, 1);
-		String hostname = BLYNK_DEFAULT_DOMAIN;
-		String key = "";
 
+		sett.version = CURRENT_VERSION;  //для совместимости в будущем
 		sett.value0_start = 0.0;
 		sett.value1_start = 0.0;
 		sett.liters_per_impuls = 10;
 
+		IPAddress ip(192, 168, 1, 116);
 		sett.ip = ip;
+		
+		IPAddress subnet(255, 255, 255, 0);
 		sett.subnet = subnet;
+
+		IPAddress gw(192, 168, 1, 1);
 		sett.gw = gw;
+		
+		String key = "";
 		strncpy(sett.key, key.c_str(), KEY_LEN);
+
+		String hostname = BLYNK_DEFAULT_DOMAIN;
 		strncpy(sett.hostname, hostname.c_str(), HOSTNAME_LEN);
+
 		LOG_NOTICE( "WIF", "Init config: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", hostname=" << hostname);
 		return false;
 	}

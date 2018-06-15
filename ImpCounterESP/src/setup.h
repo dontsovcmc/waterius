@@ -3,22 +3,40 @@
 
 #include <Arduino.h>
 
+/*
+	Включить отправку данных на свой TCP сервер. см. sender_tcp.h
+*/
 //#define SEND_TCP   
+
+/*
+	Включить отправку данных в приложение Blynk.cc
+*/
 #define SEND_BLYNK
 
+
+/*
+	Уровень логирования
+*/
 #define LOGLEVEL 6
 
+/*
+	Время ответа сервера
+*/
 #define SERVER_TIMEOUT 7000UL // ms
 
+/*
+	Время подключения к точке доступа
+*/
 #define ESP_CONNECT_TIMEOUT 10000UL
 
 #define I2C_SLAVE_ADDR 10
 
-#define KEY_LEN 34
-#define HOSTNAME_LEN 32
-
 #define VER_1 1
 #define CURRENT_VERSION VER_1
+
+
+#define KEY_LEN 34
+#define HOSTNAME_LEN 32
 
 struct Settings
 {
