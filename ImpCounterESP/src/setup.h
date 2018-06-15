@@ -37,6 +37,7 @@
 
 #define KEY_LEN 34
 #define HOSTNAME_LEN 32
+#define EMAIL_LEN 32
 
 struct Settings
 {
@@ -57,6 +58,12 @@ struct Settings
 	SEND_TCP: ip адрес или имя хоста куда слать данные
 	*/
 	char     hostname[HOSTNAME_LEN];
+
+	/*
+	SEND_BLYNK: Если email не пустой, то отсылается e-mail
+	SEND_TCP: не используется	
+	*/
+	char     email[EMAIL_LEN];
 
 	float    value0_start;
 	float    value1_start;

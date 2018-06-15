@@ -3,8 +3,15 @@
 
 #include <Arduino.h>
 
+/*
+	В зависимости от модификации ESP8266 может быть разным
+*/
 #define SDA_PIN 0
 #define SCL_PIN 2
+
+//attiny85
+#define SETUP_MODE 1
+#define TRANSMIT_MODE 2
 
 #define I2C_SLAVE_ADDR 10
 

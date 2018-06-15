@@ -4,10 +4,6 @@
 #include <Arduino.h>
 #include "setup.h"
 
-//attiny85
-#define SETUP_MODE 1
-#define TRANSMIT_MODE 2
-
 
 void MasterI2C::begin() {
 	Wire.begin( SDA_PIN, SCL_PIN );

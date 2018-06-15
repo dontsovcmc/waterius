@@ -41,7 +41,7 @@ bool loadConfig(struct Settings &sett)
 		IPAddress subnet(sett.subnet);
 		IPAddress gw(sett.gw);
 		LOG_NOTICE( "WIF", "Config loaded: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString()  << ", hostname=" << sett.hostname);
-		LOG_NOTICE( "WIF", "key=" << sett.key);
+		LOG_NOTICE( "WIF", "key=" << sett.key << " email=" << sett.email);
 		LOG_NOTICE( "WIF", "value0_start=" << sett.value0_start << ", impules0_start=" << sett.impules0_start << ", factor=" << sett.liters_per_impuls );
 		LOG_NOTICE( "WIF", "value1_start=" << sett.value1_start << ", impules1_start=" << sett.impules1_start);
 		
@@ -70,6 +70,9 @@ bool loadConfig(struct Settings &sett)
 
 		String hostname = BLYNK_DEFAULT_DOMAIN;
 		strncpy(sett.hostname, hostname.c_str(), HOSTNAME_LEN);
+
+		String email = "";
+		strncpy(sett.email, email.c_str(), EMAIL_LEN);
 
 		LOG_NOTICE( "WIF", "Init config: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", hostname=" << hostname);
 		return false;

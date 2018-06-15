@@ -7,7 +7,7 @@
 #include <WiFiClient.h>
 #include "master_i2c.h"
 
-#define FAKE_CRC 1235
+#define FAKE_CRC 1236
 
 void storeConfig(const Settings &sett);
 bool loadConfig(Settings &sett);

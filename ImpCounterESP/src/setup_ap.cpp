@@ -33,6 +33,9 @@ void setup_ap(Settings &sett, const SlaveData &data)
 	WiFiManagerParameter param_hostname( "host", "host",  sett.hostname, HOSTNAME_LEN );
 	wifiManager.addParameter( &param_hostname );
 
+	WiFiManagerParameter param_email( "email", "email",  sett.email, EMAIL_LEN );
+	wifiManager.addParameter( &param_email );
+
 	FloatParameter param_value0_start( "value0", "value0",  sett.value0_start);
 	wifiManager.addParameter( &param_value0_start );
 	FloatParameter param_value1_start( "value1", "value1",  sett.value1_start);
@@ -53,6 +56,7 @@ void setup_ap(Settings &sett, const SlaveData &data)
 	
 	strncpy(sett.key, param_key.getValue(), KEY_LEN);
 	strncpy(sett.hostname, param_hostname.getValue(), HOSTNAME_LEN);
+	strncpy(sett.email, param_email.getValue(), EMAIL_LEN);
 
 	sett.value0_start = param_value0_start.getValue();
 	sett.value1_start = param_value1_start.getValue();

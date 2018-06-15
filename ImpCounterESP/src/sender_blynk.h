@@ -39,6 +39,30 @@ bool send_blynk(const Settings &sett, const float &value0, const float &value1, 
             Blynk.virtualWrite(V1, value1);
             Blynk.virtualWrite(V2, voltage);
 
+            if (sett.email) {
+                LOG_NOTICE( "BLK", "send email");
+                String msg;
+                String v0(value0, 2);
+                String v1(value1, 2);
+                String v2(voltage, 3);
+                msg = "{DEVICE_NAME}:\nВход 1: ";
+                msg += v0;
+                msg += "\nВход 2: ";
+                msg += v1;
+                msg += "\nНапряжение: ";
+                msg += v2;
+                msg += " В\nСМС для отправки:\nвода добавить: ";
+                msg += v0;
+                msg += " ";
+                msg += v1;
+
+                Blynk.email(sett.email, 
+                    "{DEVICE_NAME} : Новые показания", 
+                    msg);
+                
+                LOG_NOTICE( "BLK", "email was send");
+            }
+
             ret = true;
         } else {
 
