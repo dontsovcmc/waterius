@@ -3,13 +3,15 @@
 
 #include <Arduino.h>
 
-#define SEND_TCP   
-//#define SEND_BLYNK
+//#define SEND_TCP   
+#define SEND_BLYNK
 
 #define LOGLEVEL 6
 
 #define SERVER_TIMEOUT 7000UL // ms
+
 #define ESP_CONNECT_TIMEOUT 10000UL
+
 #define I2C_SLAVE_ADDR 10
 
 #define KEY_LEN 34
@@ -25,8 +27,18 @@ struct Settings
 	uint32_t ip;
 	uint32_t subnet;
 	uint32_t gw;
+	
+	/*
+	SEND_BLYNK: уникальный ключ устройства blynk
+	SEND_TCP: не используется
+	*/
 	char     key[KEY_LEN];
-	char     hostname[HOSTNAME_LEN];  // Blynk.cc: server; TCP: hostname or ip address
+
+	/*
+	SEND_BLYNK: сервер blynk.com или свой blynk сервер
+	SEND_TCP: ip адрес или имя хоста куда слать данные
+	*/
+	char     hostname[HOSTNAME_LEN];
 
 	float    value0_start;
 	float    value1_start;
