@@ -18,13 +18,13 @@
 /*
 	Период отправки данных на сервер, мин
 */
-#define WAKE_EVERY_MIN                10U
+#define WAKE_EVERY_MIN                24 * 60U
 
 /*
 	Через сколько минут после настройки 
 	счетчик отправит данные на сервер
 */
-#define WAKE_AFTER_SETUP_MIN          1U
+#define WAKE_AFTER_SETUP_MIN          2U
 
 /*
 	Сколько милисекунд ждем передачи данных в ESP
