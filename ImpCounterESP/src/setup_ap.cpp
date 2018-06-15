@@ -1,11 +1,14 @@
 
 #include "setup_ap.h"
 #include "Logging.h"
+#include "wifi_settings.h"
+
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>            // Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     // Local WebServer used to serve the configuration portal
 #include <WiFiClient.h>
 #include <EEPROM.h>
+
 
 #define AP_NAME "ImpulsCounter_0.3"
 
@@ -61,7 +64,7 @@ void setup_ap(Settings &sett, const SlaveData &data)
 	LOG_NOTICE( "DAT", "impulses0_start=data.impulses0=" << sett.impules0_start );
 	LOG_NOTICE( "DAT", "impulses1_start=data.impulses1=" << sett.impules1_start );
 
-	sett.crc = 1239;
+	sett.crc = FAKE_CRC;
 	storeConfig(sett);
 }
 

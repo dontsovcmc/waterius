@@ -3,8 +3,8 @@
 
 #include <Arduino.h>
 
-//#define SEND_TCP   
-#define SEND_BLYNK
+#define SEND_TCP   
+//#define SEND_BLYNK
 
 #define LOGLEVEL 6
 
@@ -32,11 +32,9 @@ struct Settings
 	float    value1_start;
 	uint16_t liters_per_impuls;
 
-	//store values
+	//Стартовые значения введенные пользователем
 	uint32_t impules0_start;
 	uint32_t impules1_start;
-	uint32_t impules0; 
-	uint32_t impules1;
 
 	uint16_t crc;
 };

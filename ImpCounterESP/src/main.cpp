@@ -30,7 +30,7 @@ void setup() {
 
 void calculate_values(Settings &sett, SlaveData &data, float *value0, float *value1) {
 
-	LOG_NOTICE( "ESP", "new impulses=" << sett.impules0 << " " << sett.impules1);
+	LOG_NOTICE( "ESP", "new impulses=" << data.impulses0 << " " << data.impulses1);
 
 	*value0 = sett.value0_start + (data.impulses0 - sett.impules0_start)/1000.0*sett.liters_per_impuls;
 	*value1 = sett.value1_start + (data.impulses1 - sett.impules1_start)/1000.0*sett.liters_per_impuls;

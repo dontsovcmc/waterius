@@ -9,21 +9,51 @@
 
 bool send_blynk(const Settings &sett, const float &value0, const float &value1, const float &voltage)
 {
-    Blynk.begin(sett.key, WiFi.SSID().c_str(), WiFi.psk().c_str());
-    LOG_NOTICE( "BLK", "Blynk beginned");
+    bool ret = false;
+    
+    LOG_NOTICE( "WIF", "Starting Wifi" );
+    IPAddress ip(sett.ip);
+    IPAddress gw(sett.gw);
+    IPAddress subnet(sett.subnet);
+    WiFi.mode(WIFI_STA);
+    WiFi.config( ip, gw, subnet );
+    WiFi.begin();   //WifiManager уже записал ssid & pass в Wifi
 
-    if (Blynk.run())
-    {
-        LOG_NOTICE( "ESP", "Blynk run");
+    uint32_t now = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - now < ESP_CONNECT_TIMEOUT)  {
 
-        Blynk.virtualWrite(V0, value0);
-        Blynk.virtualWrite(V1, value1);
-        Blynk.virtualWrite(V2, voltage);
+        LOG_NOTICE("WIF", "Wifi status: " << WiFi.status());
+        delay(200);
+    }
 
-        return true;
-    } 
-    LOG_ERROR("BLK", "Blynk connect error");
-    return false;
+    if (WiFi.status() == WL_CONNECTED) {
+
+        LOG_NOTICE( "WIF", "connected");
+
+        Blynk.config(sett.key, sett.hostname, BLYNK_DEFAULT_PORT);
+        if (Blynk.connect(SERVER_TIMEOUT)) {
+            
+            LOG_NOTICE( "BLK", "run");
+
+            Blynk.virtualWrite(V0, value0);
+            Blynk.virtualWrite(V1, value1);
+            Blynk.virtualWrite(V2, voltage);
+
+            ret = true;
+        } else {
+
+            LOG_ERROR("BLK", "connect error");
+        } 
+    }
+
+    Blynk.disconnect();
+    LOG_NOTICE("BLK", "disconnected");
+    return ret;
+
+    /*
+    IPAddress myip = WiFi.localIP();
+    BLYNK_LOG_IP("IP: ", myip);
+    */
 }		
 
 #endif

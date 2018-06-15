@@ -8,6 +8,8 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 
+#define TCP_SERVER_PORT 4001
+
 WiFiClient client;
 
 struct SendData {
@@ -40,12 +42,15 @@ bool send_tcp(const Settings &sett, const float &value0, const float &value1, co
 
         IPAddress ip;
         bool connect = false;
+
         if (ip.fromString(sett.hostname)) {
-            LOG_NOTICE("WIF", "Making TCP connection to " << ip.toString());
+
+            LOG_NOTICE("WIF", "Making TCP connection to ip " << ip.toString() << " port " << TCP_SERVER_PORT);
             connect = client.connect(ip, 4001); 
         } else {
-            LOG_NOTICE("WIF", "Making TCP connection to " << sett.hostname);
-            connect = client.connect(sett.hostname, 4001);
+
+            LOG_NOTICE("WIF", "Making TCP connection to host " << sett.hostname << " port " << TCP_SERVER_PORT);
+            connect = client.connect(sett.hostname, TCP_SERVER_PORT);
         }
 
         if (connect) {
