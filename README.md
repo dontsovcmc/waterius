@@ -7,7 +7,7 @@
 Данные смотрим в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8) )
 <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" width="64"/> 
 
-Также можно отсылать показания на ваш TCP сервер.
+Также можно отсылать показания на ваш TCP сервер и на электронную почту.
 
 <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" width="360"/> 
 <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/blynk_main.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/blynk_main.jpg" width="360"/>
@@ -17,8 +17,8 @@
 Батареек должно хватить на несколько лет при ежедневной отправке показаний.
 
 Потребление:
-* в режиме сна: 20 мкА
-* в режиме передачи данных: 75мА (~5 секунд)
+* в режиме сна: 15-20 мкА
+* в режиме передачи данных: 80мА (~5 секунд)
 
 ## Установка счётчика
 - [установите приложение Blynk на телефон](https://www.blynk.cc/getting-started).
@@ -51,9 +51,12 @@
 # Благодарности
 Ивану Коваленко и Иван Ганжа за консультации по электротехнике
 
-Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1). он был взят за основу. Правда потом переписано все, кроме работы по i2c.
+Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1). он был взят за основу.
 
-Форумам: https://esp8266.ru, http://easyelectronics.ru
+Форумам: 
+https://electronix.ru
+https://esp8266.ru
+http://easyelectronics.ru
 
  
 
