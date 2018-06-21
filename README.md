@@ -12,13 +12,13 @@
 <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" width="360"/> 
 <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/blynk_main.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/blynk_main.jpg" width="360"/>
 
-
+Подключение двух счётчиков.
 Питание: 3*AAA алкалиновые или литиевые батарейки. 
 Батареек должно хватить на несколько лет при ежедневной отправке показаний.
 
-Потребление:
-* в режиме сна: 15-20 мкА
-* в режиме передачи данных: 80мА (~5 секунд)
+## Совместимость
+
+Поддерживаются счётчики воды с выходом типа "сухой контакт". Выход "намур" не поддерживается.
 
 ## Установка счётчика
 - [установите приложение Blynk на телефон](https://www.blynk.cc/getting-started).
@@ -44,6 +44,10 @@
 ## Изготовление
 Принципиальная схема:
 <img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" width="400"/>
+
+Потребление:
+* в режиме сна: 20 мкА
+* в режиме передачи данных: 75мА (~5 секунд)
 
 - [создание платы](https://github.com/dontsovcmc/ImpCounter/blob/master/Making.md)
 - [прошивка Attiny85 и ESP](https://github.com/dontsovcmc/ImpCounter/blob/master/Firmware.md) 
