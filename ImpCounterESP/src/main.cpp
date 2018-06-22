@@ -45,7 +45,9 @@ void loop() {
 	if (masterI2C.setup_mode()) {
 
 		loadConfig(sett);
-		setup_ap(sett, data);
+		float value0, value1;
+		calculate_values(sett, data, &value0, &value1);
+		setup_ap(sett, data, value0, value1);
 	}
 	else {
 		if (loadConfig(sett)) {

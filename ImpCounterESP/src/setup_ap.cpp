@@ -13,7 +13,7 @@
 #define AP_NAME "ImpulsCounter_0.3"
 
 
-void setup_ap(Settings &sett, const SlaveData &data) 
+void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const float &value1) 
 {
 	// Пользователь нажал кнопку - запускаем веб сервер
 	LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
@@ -36,9 +36,9 @@ void setup_ap(Settings &sett, const SlaveData &data)
 	WiFiManagerParameter param_email( "email", "email",  sett.email, EMAIL_LEN );
 	wifiManager.addParameter( &param_email );
 
-	FloatParameter param_value0_start( "value0", "value0",  sett.value0_start);
+	FloatParameter param_value0_start( "value0", "value0",  value0);
 	wifiManager.addParameter( &param_value0_start );
-	FloatParameter param_value1_start( "value1", "value1",  sett.value1_start);
+	FloatParameter param_value1_start( "value1", "value1",  value1);
 	wifiManager.addParameter( &param_value1_start );
 
 	LongParameter param_litres_per_imp( "factor", "factor",  sett.liters_per_impuls);

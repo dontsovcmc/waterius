@@ -66,13 +66,13 @@ void resetWatchdog() {
 	WDTCR = bit( WDCE ) | bit( WDE ); // allow changes, disable reset, clear existing interrupt
 
 	// настраиваем период
-	//WDTCR = bit( WDIE );    // set WDIE, and 16 ms
-	//WDTCR = bit( WDIE ) | bit( WDP0 );    // set WDIE, and 32 ms
-	WDTCR = bit( WDIE ) | bit( WDP2 );    // set WDIE, and 0.25 seconds delay
-	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // set WDIE, and 0.5 seconds delay
-	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // set WDIE, and 1 seconds delay
-	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );    // set WDIE, and 2 seconds delay
-	//WDTCR = bit( WDIE ) | bit( WDP3 ) | bit( WDP0 );    // set WDIE, and 8 seconds delay
+	//WDTCR = bit( WDIE );                  // 16 ms
+	//WDTCR = bit( WDIE ) | bit( WDP0 );    // 32 ms
+	WDTCR = bit( WDIE ) | bit( WDP2 );      // 250 ms
+	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // 500 ms
+	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // 1s
+	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );  // 2s 
+	//WDTCR = bit( WDIE ) | bit( WDP3 ) | bit( WDP0 );    // 8s
 														
 	wdt_reset(); // pat the dog
 } 

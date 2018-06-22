@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #include <WiFiManager.h>	
 
-void setup_ap(Settings &sett, const SlaveData &data);
+void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const float &value1);
 void storeConfig(const Settings &sett);
 bool loadConfig(Settings &sett);
 
