@@ -21402,10 +21402,6 @@ ID: MCP1700T-3302E/TT</description>
 <attribute name="SPICEPREFIX" value="R"/>
 </part>
 <part name="R6" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-EU_" device="M0805" package3d_urn="urn:adsk.eagle:package:26079/1" value="3k3"/>
-<part name="C5" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-EU" device="C0805" package3d_urn="urn:adsk.eagle:package:26137/1" value="0.47">
-<attribute name="SPICEPREFIX" value="C"/>
-</part>
-<part name="C6" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-EU" device="C0805" package3d_urn="urn:adsk.eagle:package:26137/1" value="0.47"/>
 <part name="C1" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-EU" device="C0805" package3d_urn="urn:adsk.eagle:package:26137/1" value="1mkF"/>
 <part name="C2" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="C-EU" device="C0805" package3d_urn="urn:adsk.eagle:package:26137/1" value="1mkF"/>
 <part name="GND5" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="GND" device=""/>
@@ -21420,7 +21416,6 @@ ID: MCP1700T-3302E/TT</description>
 <part name="R5" library="rcl" deviceset="R-EU_" device="R0805" value="3k3">
 <attribute name="OM" value="3k6"/>
 </part>
-<part name="C9" library="rcl" library_urn="urn:adsk.eagle:library:334" deviceset="C-EU" device="025-030X050" package3d_urn="urn:adsk.eagle:package:23631/1" value="10mkF"/>
 <part name="GND3" library="supply1" deviceset="GND" device=""/>
 <part name="GND4" library="supply1" deviceset="GND" device=""/>
 <part name="R10" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-EU_" device="M0805" package3d_urn="urn:adsk.eagle:package:26079/1" value="0"/>
@@ -21475,14 +21470,6 @@ ID: MCP1700T-3302E/TT</description>
 <attribute name="NAME" x="130.556" y="117.3226" size="1.778" layer="95"/>
 <attribute name="VALUE" x="130.556" y="112.522" size="1.778" layer="96"/>
 </instance>
-<instance part="C5" gate="G$1" x="136.906" y="101.092" smashed="yes">
-<attribute name="NAME" x="139.954" y="98.679" size="1.778" layer="95"/>
-<attribute name="VALUE" x="129.54" y="98.425" size="1.778" layer="96"/>
-</instance>
-<instance part="C6" gate="G$1" x="136.906" y="108.204" smashed="yes" rot="R180">
-<attribute name="NAME" x="142.748" y="110.109" size="1.778" layer="95" rot="R180"/>
-<attribute name="VALUE" x="133.604" y="109.855" size="1.778" layer="96" rot="R180"/>
-</instance>
 <instance part="C1" gate="G$1" x="27.686" y="102.616" smashed="yes">
 <attribute name="NAME" x="24.13" y="97.917" size="1.778" layer="95"/>
 <attribute name="VALUE" x="25.146" y="110.363" size="1.778" layer="96"/>
@@ -21494,7 +21481,7 @@ ID: MCP1700T-3302E/TT</description>
 <instance part="GND5" gate="1" x="44.196" y="92.456" smashed="yes">
 <attribute name="VALUE" x="41.656" y="89.916" size="1.778" layer="96"/>
 </instance>
-<instance part="JP1" gate="A" x="11.176" y="105.156" rot="R90"/>
+<instance part="JP1" gate="A" x="18.796" y="105.156" rot="R90"/>
 <instance part="+3V2" gate="G$1" x="59.436" y="120.396" smashed="yes">
 <attribute name="VALUE" x="56.896" y="117.856" size="1.778" layer="96" rot="R180"/>
 </instance>
@@ -21516,17 +21503,13 @@ ID: MCP1700T-3302E/TT</description>
 <attribute name="NAME" x="26.6446" y="59.944" size="1.778" layer="95"/>
 <attribute name="VALUE" x="26.416" y="62.738" size="1.778" layer="96"/>
 </instance>
-<instance part="C9" gate="G$1" x="19.558" y="102.616" smashed="yes">
-<attribute name="NAME" x="16.002" y="97.917" size="1.778" layer="95"/>
-<attribute name="VALUE" x="16.51" y="110.109" size="1.778" layer="96"/>
-</instance>
 <instance part="GND3" gate="1" x="12.446" y="14.732"/>
 <instance part="GND4" gate="1" x="120.904" y="22.606"/>
-<instance part="R10" gate="G$1" x="144.272" y="105.664" smashed="yes">
-<attribute name="NAME" x="145.542" y="107.6706" size="1.778" layer="95"/>
-<attribute name="VALUE" x="145.542" y="102.362" size="1.778" layer="96"/>
+<instance part="R10" gate="G$1" x="131.572" y="105.664" smashed="yes">
+<attribute name="NAME" x="132.842" y="107.6706" size="1.778" layer="95"/>
+<attribute name="VALUE" x="132.842" y="102.362" size="1.778" layer="96"/>
 </instance>
-<instance part="GND6" gate="1" x="150.876" y="100.584"/>
+<instance part="GND6" gate="1" x="143.256" y="103.124"/>
 <instance part="R11" gate="G$1" x="87.376" y="26.67" smashed="yes" rot="R270">
 <attribute name="NAME" x="81.2546" y="26.67" size="1.778" layer="95"/>
 <attribute name="VALUE" x="81.534" y="29.21" size="1.778" layer="96"/>
@@ -21570,11 +21553,8 @@ ID: MCP1700T-3302E/TT</description>
 <pinref part="C1" gate="G$1" pin="2"/>
 <wire x1="44.196" y1="97.536" x2="27.686" y2="97.536" width="0.1524" layer="91"/>
 <pinref part="JP1" gate="A" pin="1"/>
-<wire x1="13.716" y1="105.156" x2="13.716" y2="97.536" width="0.1524" layer="91"/>
-<wire x1="27.686" y1="97.536" x2="19.558" y2="97.536" width="0.1524" layer="91"/>
-<pinref part="C9" gate="G$1" pin="2"/>
-<wire x1="19.558" y1="97.536" x2="13.716" y2="97.536" width="0.1524" layer="91"/>
-<junction x="19.558" y="97.536"/>
+<wire x1="21.336" y1="105.156" x2="21.336" y2="97.536" width="0.1524" layer="91"/>
+<wire x1="27.686" y1="97.536" x2="21.336" y2="97.536" width="0.1524" layer="91"/>
 <junction x="27.686" y="97.536"/>
 <pinref part="C4" gate="G$1" pin="2"/>
 <wire x1="59.436" y1="97.536" x2="76.708" y2="97.536" width="0.1524" layer="91"/>
@@ -21604,9 +21584,8 @@ ID: MCP1700T-3302E/TT</description>
 </segment>
 <segment>
 <pinref part="R10" gate="G$1" pin="2"/>
-<wire x1="149.352" y1="105.664" x2="150.876" y2="105.664" width="0.1524" layer="91"/>
+<wire x1="136.652" y1="105.664" x2="143.256" y2="105.664" width="0.1524" layer="91"/>
 <pinref part="GND6" gate="1" pin="GND"/>
-<wire x1="150.876" y1="105.664" x2="150.876" y2="103.124" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="R9" gate="G$1" pin="2"/>
@@ -21686,10 +21665,7 @@ ID: MCP1700T-3302E/TT</description>
 </segment>
 <segment>
 <pinref part="R1" gate="G$1" pin="2"/>
-<pinref part="C5" gate="G$1" pin="2"/>
-<wire x1="136.906" y1="96.012" x2="136.906" y2="92.964" width="0.1524" layer="91"/>
 <wire x1="136.906" y1="92.964" x2="146.05" y2="92.964" width="0.1524" layer="91"/>
-<junction x="136.906" y="92.964"/>
 <label x="146.812" y="92.71" size="1.778" layer="95"/>
 </segment>
 </net>
@@ -21701,10 +21677,7 @@ ID: MCP1700T-3302E/TT</description>
 </segment>
 <segment>
 <pinref part="R6" gate="G$1" pin="2"/>
-<pinref part="C6" gate="G$1" pin="2"/>
-<wire x1="136.906" y1="113.284" x2="136.906" y2="115.824" width="0.1524" layer="91"/>
 <wire x1="136.906" y1="115.824" x2="144.526" y2="115.824" width="0.1524" layer="91"/>
-<junction x="136.906" y="115.824"/>
 <label x="145.288" y="116.332" size="1.778" layer="95"/>
 </segment>
 </net>
@@ -21734,12 +21707,7 @@ ID: MCP1700T-3302E/TT</description>
 </net>
 <net name="GND1" class="0">
 <segment>
-<pinref part="C5" gate="G$1" pin="1"/>
-<pinref part="C6" gate="G$1" pin="1"/>
-<wire x1="124.206" y1="105.664" x2="136.906" y2="105.664" width="0.1524" layer="91"/>
-<wire x1="139.192" y1="105.664" x2="136.906" y2="105.664" width="0.1524" layer="91"/>
-<junction x="136.906" y="105.664"/>
-<wire x1="136.906" y1="105.664" x2="136.906" y2="103.632" width="0.1524" layer="91"/>
+<wire x1="124.206" y1="105.664" x2="126.492" y2="105.664" width="0.1524" layer="91"/>
 <label x="120.904" y="103.124" size="1.778" layer="95"/>
 <pinref part="R10" gate="G$1" pin="1"/>
 <wire x1="124.206" y1="105.664" x2="124.206" y2="110.744" width="0.1524" layer="91"/>
@@ -21774,16 +21742,12 @@ ID: MCP1700T-3302E/TT</description>
 <net name="AA*3" class="0">
 <segment>
 <pinref part="JP1" gate="A" pin="2"/>
-<wire x1="13.716" y1="107.696" x2="19.558" y2="107.696" width="0.1524" layer="91"/>
 <label x="10.414" y="110.49" size="1.778" layer="95" rot="R180"/>
 <pinref part="C1" gate="G$1" pin="1"/>
-<wire x1="19.558" y1="107.696" x2="27.686" y2="107.696" width="0.1524" layer="91"/>
+<wire x1="21.336" y1="107.696" x2="27.686" y2="107.696" width="0.1524" layer="91"/>
 <wire x1="27.686" y1="107.696" x2="28.956" y2="107.696" width="0.1524" layer="91"/>
 <wire x1="27.686" y1="105.156" x2="27.686" y2="107.696" width="0.1524" layer="91"/>
 <junction x="27.686" y="107.696"/>
-<pinref part="C9" gate="G$1" pin="1"/>
-<wire x1="19.558" y1="105.156" x2="19.558" y2="107.696" width="0.1524" layer="91"/>
-<junction x="19.558" y="107.696"/>
 <pinref part="U$2" gate="G$1" pin="3"/>
 </segment>
 </net>
