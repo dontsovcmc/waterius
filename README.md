@@ -10,7 +10,7 @@
 Также можно отсылать показания на ваш TCP сервер и на электронную почту.
 
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" width="360"/> 
-<img src="https://github.com/dontsovcmc/waterius/blob/master/files/blynk_main.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/blynk_main.jpg" width="360"/>
+<img src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" width="360"/>
 
 Подключение двух счётчиков.
 Питание: 3*AAA алкалиновые или литиевые батарейки. 
