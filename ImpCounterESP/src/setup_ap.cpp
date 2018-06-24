@@ -10,7 +10,7 @@
 #include <EEPROM.h>
 
 
-#define AP_NAME "ImpulsCounter_0.3"
+#define AP_NAME "ImpulsCounter_0.4"
 
 
 void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const float &value1) 

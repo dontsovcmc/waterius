@@ -5,12 +5,12 @@
 Простое в изготовлении автономное устройство для передачи показаний воды по Wi-Fi.
 
 Данные смотрим в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8) )
-<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/11541426.png" width="64"/> 
+<img src="https://github.com/dontsovcmc/waterius/blob/master/files/11541426.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/11541426.png" width="64"/> 
 
 Также можно отсылать показания на ваш TCP сервер и на электронную почту.
 
-<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/photo-ESP-01.jpg" width="360"/> 
-<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/blynk_main.jpg" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/files/blynk_main.jpg" width="360"/>
+<img src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" width="360"/> 
+<img src="https://github.com/dontsovcmc/waterius/blob/master/files/blynk_main.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/blynk_main.jpg" width="360"/>
 
 Подключение двух счётчиков.
 Питание: 3*AAA алкалиновые или литиевые батарейки. 
@@ -20,21 +20,8 @@
 
 Поддерживаются счётчики воды с выходом типа "сухой контакт". Выход "намур" не поддерживается.
 
-## Установка счётчика
-- [установите приложение Blynk на телефон](https://www.blynk.cc/getting-started).
-- создайте проект, добавьте устройство ESP8266, добавьте виртуальные пины V0 и V1
-- получите уникальный ключ на эл. почту
-- подключите счётчики воды к разъемам Wi-fi счётчика
-- включите питание
-- нажмите кнопку на корпусе - включится Веб сервер для настройки
-- найдите телефоном Wi-Fi точку доступа ImpulsCounter_0.3
-- откройте [http://192.168.4.1](http://192.168.4.1)
-- введите: имя и пароль от Wi-Fi, свободный ip адрес для счётчика (обычно 192.168.1.x, где x > 20), текущие показания счетчиков воды в кубометрах (разделитель дробного числа - точка), кол-во литров на 1 импульс (по умолчанию 10). ([пример](https://github.com/dontsovcmc/ImpCounter/blob/master/files/wifi_setup.jpg))
-- при желании получать эл. письма с показаниями введите свой эл. адрес
-- нажмите ОК
-- откройте воду, чтобы вылилось больше 10л воды
-- через 2 минуты счетчик выйдет на связь и передаст показания в приложение Blynk
-- далее он будет слать показания раз в сутки
+## Установка
+[Установка и настройка](https://github.com/dontsovcmc/waterius/blob/master/Setup.md)
 
 
 ## Принцип работы
@@ -43,14 +30,14 @@
 
 ## Изготовление
 Принципиальная схема:
-<img src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" data-canonical-src="https://github.com/dontsovcmc/ImpCounter/blob/master/Board/scheme-ESP-01.png" width="400"/>
+<img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="400"/>
 
 Потребление:
-* в режиме сна: 20 мкА
+* в режиме сна: 15-23 мкА
 * в режиме передачи данных: 75мА (~5 секунд)
 
-- [создание платы](https://github.com/dontsovcmc/ImpCounter/blob/master/Making.md)
-- [прошивка Attiny85 и ESP](https://github.com/dontsovcmc/ImpCounter/blob/master/Firmware.md) 
+- [создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
+- [прошивка Attiny85 и ESP](https://github.com/dontsovcmc/waterius/blob/master/Firmware.md) 
 
 # Благодарности
 Ивану Коваленко и Иван Ганжа за консультации по электротехнике
