@@ -13,7 +13,7 @@
 */
 // #define LOG_LEVEL_ERROR
 // #define LOG_LEVEL_INFO
-//#define LOG_LEVEL_DEBUG
+// #define LOG_LEVEL_DEBUG
 
 /*
 	Период отправки данных на сервер, мин
