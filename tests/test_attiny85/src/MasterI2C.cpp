@@ -1,14 +1,33 @@
 #include "MasterI2C.h"
 #include "Logging.h"
-#include <Wire.h>
 #include <Arduino.h>
 
 #include "setup.h"
 
+#define SOFT_I2C
+
+#ifdef SOFT_I2C
+	#define SDA_PORT PORTB
+	#define SDA_PIN 5
+	#define SCL_PORT PORTB
+	#define SCL_PIN 3
+
+	#include <SoftI2CMaster.h>
+#else
+	#include <Wire.h>
+#endif
+
 
 void MasterI2C::begin() {
+
+#ifndef SOFT_I2C
 	Wire.begin();
 	Wire.setClock( 100000L );
+#else
+	if (!i2c_init())
+		LOG_ERROR("I2C", "I2C init failed");
+#endif 
+
 	//Wire.setClockStretchLimit(1500L); //нет в atmega
 
 	mode = TRANSMIT_MODE;
@@ -18,6 +37,8 @@ void MasterI2C::begin() {
 }
 
 bool MasterI2C::sendCmd(const char cmd ) {
+
+#ifndef SOFT_I2C
 	Wire.beginTransmission( I2C_SLAVE_ADDR );
 	if (Wire.write(cmd) != 1){
 		LOG_ERROR("I2C", "write cmd failed");
@@ -27,7 +48,11 @@ bool MasterI2C::sendCmd(const char cmd ) {
 	if (err != 0) {
 		LOG_ERROR("I2C end", err);
 		return false;
-	}	
+	}
+#else
+	i2c_rep_start((I2C_SLAVE_ADDR<<1)|I2C_WRITE);
+	i2c_write(cmd);
+#endif
 	
 	delay(1); // Because attiny is running slow cpu clock speed. Give him a little time to process the command.
 	return true;
@@ -38,11 +63,17 @@ bool MasterI2C::setup_mode() {
 }
 
 bool MasterI2C::getByte(uint8_t &value) {
+#ifndef SOFT_I2C
 	if (Wire.requestFrom( I2C_SLAVE_ADDR, 1 ) != 1)	{
 		LOG_ERROR("I2C", "requestFrom failed");
 		return false;
 	}
 	value = Wire.read();
+#else
+	i2c_rep_start((I2C_SLAVE_ADDR<<1)|I2C_READ);
+	value = i2c_read(true);
+	i2c_stop();
+#endif
 	Serial.print(value, HEX);
 	Serial << " ";
 	return true;

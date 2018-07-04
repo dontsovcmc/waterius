@@ -1,4 +1,3 @@
-
 #include "Setup.h"
 
 #include <avr/pgmspace.h>
@@ -27,13 +26,14 @@
 	TinyDebugSerial mySerial;
 #endif
 
-#define BUTTON_PIN  4
-#define BUTTON2_PIN 3
 
-#define DEVICE_ID 3                   // Модель устройства
+#define BUTTON_PIN  4          //Вход 1, Blynk: V0
+#define BUTTON2_PIN 3          //Вход 2, Blynk: V1
 
-#define ESP_POWER_PIN    1		 // Номер пина, которым будим ESP8266. 
-#define SETUP_BUTTON_PIN 2       // SCL Пин с кнопкой SETUP
+#define DEVICE_ID 3   	       // Модель устройства
+
+#define ESP_POWER_PIN    1     // Номер пина, которым будим ESP8266. 
+#define SETUP_BUTTON_PIN 2     // SCL Пин с кнопкой SETUP
 
 static unsigned long wake_every = WAKE_EVERY_MIN;
 
@@ -43,7 +43,7 @@ static Counter counter2(BUTTON2_PIN);
 
 static ESPPowerButton esp(ESP_POWER_PIN, SETUP_BUTTON_PIN);
 
-// данные
+// Данные
 struct Header info = {DEVICE_ID, 0, 0, {0, 0} };
 
 //100к * 20 = 2 млн * 10 л / 2 = 10 000 000 л или 10 000 м3
@@ -67,8 +67,14 @@ void resetWatchdog() {
 
 	// настраиваем период
 	//WDTCR = bit( WDIE );                  // 16 ms
-	//WDTCR = bit( WDIE ) | bit( WDP0 );    // 32 ms
+
+#ifndef TEST_WATERIUS
 	WDTCR = bit( WDIE ) | bit( WDP2 );      // 250 ms
+	#define ONE_MINUTE 240
+#else
+	WDTCR = bit( WDIE ) | bit( WDP0 );      // 32 ms
+	#define ONE_MINUTE 20                   // ускоримся для теста
+#endif
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // 500 ms
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // 1s
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );  // 2s 
@@ -122,7 +128,7 @@ void loop() {
 	/*
 		Если сон 250мс, то 1 минута через 240 раз
 	*/
-	for (unsigned int i = 0; i < 240 && !esp.pressed; ++i)  {
+	for (unsigned int i = 0; i < ONE_MINUTE && !esp.pressed; ++i)  {
 
 		wdt_count = wake_every; 
 		while ( wdt_count > 0 ) {
@@ -158,6 +164,7 @@ void loop() {
 	// Пользователь нажал кнопку SETUP
 	if (esp.pressed) {
 
+		LOG_DEBUG(F("SETUP pressed"));
 		wake_every = WAKE_AFTER_SETUP_MIN;
 
 		while(esp.is_pressed())
@@ -173,7 +180,7 @@ void loop() {
 
 	}
 	else {
-
+		LOG_DEBUG(F("wake up for transmitting"));
 		wake_every = WAKE_EVERY_MIN;
 
 		// Передаем показания
