@@ -13,19 +13,19 @@
 */
 // #define LOG_LEVEL_ERROR
 // #define LOG_LEVEL_INFO
-#define LOG_LEVEL_DEBUG
+// #define LOG_LEVEL_DEBUG
 
 
-#define TEST_WATERIUS   // Тестирование счетчика при помощи Arduino
+//#define TEST_WATERIUS   // Тестирование счетчика при помощи Arduino
 
 
 /*
 	Период отправки данных на сервер, мин
 */
-#ifndef TEST_WATERIUS
-#define WAKE_EVERY_MIN                24 * 60U  // 1U 
-#else
+#ifdef TEST_WATERIUS
 #define WAKE_EVERY_MIN 10
+#else
+#define WAKE_EVERY_MIN                24 * 60U  // 1U 
 #endif
 
 /*

@@ -4,7 +4,8 @@
 
 #include "setup.h"
 
-#define SOFT_I2C
+//#define SOFT_I2C
+//doesn't work now
 
 #ifdef SOFT_I2C
 	#define SDA_PORT PORTB

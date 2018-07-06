@@ -18,8 +18,6 @@
 //4. Нажимаем SETUP и настраиваем подключение
 //5. После настройки должно прийти сообщение с ненулевыми показаниями
 
-// Можно если нажали СЕТАП менять задержку на несколько минут. А после возвращать.
-
 // Для логирования раскомментируйте LOG_LEVEL_DEBUG в Setup.h
 
 #ifdef DEBUG
@@ -68,13 +66,14 @@ void resetWatchdog() {
 	// настраиваем период
 	//WDTCR = bit( WDIE );                  // 16 ms
 
-#ifndef TEST_WATERIUS
-	WDTCR = bit( WDIE ) | bit( WDP2 );      // 250 ms
-	#define ONE_MINUTE 240
-#else
+#ifdef TEST_WATERIUS
 	WDTCR = bit( WDIE ) | bit( WDP0 );      // 32 ms
 	#define ONE_MINUTE 20                   // ускоримся для теста
+#else
+	WDTCR = bit( WDIE ) | bit( WDP2 );      // 250 ms
+	#define ONE_MINUTE 240
 #endif
+
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // 500 ms
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // 1s
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );  // 2s 
