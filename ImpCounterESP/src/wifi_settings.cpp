@@ -55,14 +55,16 @@ bool loadConfig(struct Settings &sett)
 		sett.value0_start = 0.0;
 		sett.value1_start = 0.0;
 		sett.liters_per_impuls = 10;
+		sett.prev_value0 = 0.0;
+		sett.prev_value1 = 0.0;
 
-		IPAddress ip(192, 168, 1, 116);
+		IPAddress ip(192, 168, 0, 116);
 		sett.ip = ip;
 		
 		IPAddress subnet(255, 255, 255, 0);
 		sett.subnet = subnet;
 
-		IPAddress gw(192, 168, 1, 1);
+		IPAddress gw(192, 168, 0, 1);
 		sett.gw = gw;
 		
 		String key = "";
@@ -73,6 +75,12 @@ bool loadConfig(struct Settings &sett)
 
 		String email = "";
 		strncpy(sett.email, email.c_str(), EMAIL_LEN);
+
+		String email_title = "Новые показания {DEVICE_NAME}";
+		strncpy(sett.email_title, email_title.c_str(), EMAIL_TITLE_LEN);
+
+		String email_template = "ГВС: {V0} м3, ХВС: {V1} м3\\r\\nдельта:\\r\\nгвс: +{V3}, хвс: +{V4}\\r\\nпитание:{V2} В\\r\\nCMC:\\r\\nвода добавить: {V0} {V1}";
+		strncpy(sett.email_template, email_template.c_str(), EMAIL_TEMPLATE_LEN);
 
 		LOG_NOTICE( "WIF", "Init config: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString() << ", hostname=" << hostname);
 		return false;

@@ -15,7 +15,6 @@
 // #define LOG_LEVEL_INFO
 // #define LOG_LEVEL_DEBUG
 
-
 //#define TEST_WATERIUS   // Тестирование счетчика при помощи Arduino
 
 

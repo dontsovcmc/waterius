@@ -10,7 +10,7 @@
 #include <EEPROM.h>
 
 
-#define AP_NAME "Waterius_0.4"
+#define AP_NAME "Waterius_0.4.1"
 
 
 void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const float &value1) 
@@ -35,6 +35,12 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 
 	WiFiManagerParameter param_email( "email", "email",  sett.email, EMAIL_LEN );
 	wifiManager.addParameter( &param_email );
+	
+	WiFiManagerParameter param_email_title( "title", "title",  sett.email_title, EMAIL_TITLE_LEN );
+	wifiManager.addParameter( &param_email_title );
+	
+	WiFiManagerParameter param_email_template( "template", "template",  sett.email_template, EMAIL_TEMPLATE_LEN );
+	wifiManager.addParameter( &param_email_template );
 
 	FloatParameter param_value0_start( "value0", "value0",  value0);
 	wifiManager.addParameter( &param_value0_start );
@@ -44,8 +50,14 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 	LongParameter param_litres_per_imp( "factor", "factor",  sett.liters_per_impuls);
 	wifiManager.addParameter( &param_litres_per_imp );
 
+	wifiManager.setConfigPortalTimeout(300);
+	wifiManager.setConnectTimeout(10);
+	
 	// Start the portal with the SSID 
 	wifiManager.startConfigPortal( AP_NAME );
+
+	//
+
 	LOG_NOTICE( "WIF", "Connected to wifi" );
 
 	// Get all the values that user entered in the portal and save it in EEPROM
@@ -60,6 +72,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 
 	sett.value0_start = param_value0_start.getValue();
 	sett.value1_start = param_value1_start.getValue();
+	
+	sett.prev_value0 = sett.value0_start;
+	sett.prev_value1 = sett.value1_start;
+
 	sett.liters_per_impuls = param_litres_per_imp.getValue();
 
 	sett.impules0_start = data.impulses0;
