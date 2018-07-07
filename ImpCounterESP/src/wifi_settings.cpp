@@ -58,13 +58,13 @@ bool loadConfig(struct Settings &sett)
 		sett.prev_value0 = 0.0;
 		sett.prev_value1 = 0.0;
 
-		IPAddress ip(192, 168, 0, 116);
+		IPAddress ip(192, 168, 1, 178);
 		sett.ip = ip;
 		
 		IPAddress subnet(255, 255, 255, 0);
 		sett.subnet = subnet;
 
-		IPAddress gw(192, 168, 0, 1);
+		IPAddress gw(192, 168, 1, 1);
 		sett.gw = gw;
 		
 		String key = "";
