@@ -21,12 +21,12 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 	WiFi.disconnect( true );
 	WiFiManager wifiManager;
 	
-	IPAddressParameter param_ip("ip", "static IP", IPAddress(sett.ip));
+	/*IPAddressParameter param_ip("ip", "static IP", IPAddress(sett.ip));
 	wifiManager.addParameter( &param_ip );
 	IPAddressParameter param_subnet( "subnet", "subnet",  IPAddress(sett.subnet));
 	wifiManager.addParameter( &param_subnet );
 	IPAddressParameter param_gw( "gw", "gateway",  IPAddress(sett.gw));
-	wifiManager.addParameter( &param_gw );
+	wifiManager.addParameter( &param_gw );*/
 
 	WiFiManagerParameter param_key( "key", "key",  sett.key, KEY_LEN );
 	wifiManager.addParameter( &param_key );
@@ -62,9 +62,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 
 	// Get all the values that user entered in the portal and save it in EEPROM
 
-	sett.ip = param_ip.getValue();
+	/*sett.ip = param_ip.getValue();
 	sett.subnet = param_subnet.getValue();
-	sett.gw = param_gw.getValue();
+	sett.gw = param_gw.getValue();*/
 	
 	strncpy(sett.key, param_key.getValue(), KEY_LEN);
 	strncpy(sett.hostname, param_hostname.getValue(), HOSTNAME_LEN);
@@ -87,4 +87,3 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 	sett.crc = FAKE_CRC;
 	storeConfig(sett);
 }
-

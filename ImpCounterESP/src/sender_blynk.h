@@ -7,16 +7,17 @@
 #include "master_i2c.h"
 #include "Logging.h"
 
+#ifdef SEND_BLYNK
 bool send_blynk(const Settings &sett, const float &value0, const float &value1, const float &voltage)
 {
     bool ret = false;
     
     LOG_NOTICE( "WIF", "Starting Wifi" );
-    IPAddress ip(sett.ip);
+    /*IPAddress ip(sett.ip);
     IPAddress gw(sett.gw);
-    IPAddress subnet(sett.subnet);
+    IPAddress subnet(sett.subnet); */
     WiFi.mode(WIFI_STA);
-    WiFi.config( ip, gw, subnet );
+    //WiFi.config( ip, gw, subnet );
     WiFi.begin();   //WifiManager уже записал ssid & pass в Wifi
 
     uint32_t now = millis();
@@ -28,7 +29,7 @@ bool send_blynk(const Settings &sett, const float &value0, const float &value1, 
 
     if (WiFi.status() == WL_CONNECTED) {
 
-        LOG_NOTICE( "WIF", "connected");
+        LOG_NOTICE("WIF", "Connected, got IP address: " << WiFi.localIP().toString());
 
         Blynk.config(sett.key, sett.hostname, BLYNK_DEFAULT_PORT);
         if (Blynk.connect(SERVER_TIMEOUT)) {
@@ -96,5 +97,7 @@ bool send_blynk(const Settings &sett, const float &value0, const float &value1, 
     BLYNK_LOG_IP("IP: ", myip);
     */
 }		
+
+#endif //#ifdef SEND_BLYNK
 
 #endif

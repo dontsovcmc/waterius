@@ -47,9 +47,10 @@ struct Settings
 {
 	uint8_t  version;
 	uint8_t  reserved;  //x16 bit
-	uint32_t ip;
+	
+	/*uint32_t ip;
 	uint32_t subnet;
-	uint32_t gw;
+	uint32_t gw;*/
 	
 	/*
 	SEND_BLYNK: уникальный ключ устройства blynk
