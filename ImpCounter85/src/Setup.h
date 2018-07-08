@@ -15,7 +15,6 @@
 // #define LOG_LEVEL_INFO
 // #define LOG_LEVEL_DEBUG
 
-
 //#define TEST_WATERIUS   // Тестирование счетчика при помощи Arduino
 
 
@@ -37,7 +36,7 @@
 /*
 	Сколько милисекунд ждем передачи данных в ESP
 */
-#define WAIT_ESP_MSEC    10000UL      
+#define WAIT_ESP_MSEC    15000UL      
 
 /*
 	Сколько милисекунд пользователь может 

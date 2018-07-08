@@ -28,7 +28,7 @@
 #define BUTTON_PIN  4          //Вход 1, Blynk: V0
 #define BUTTON2_PIN 3          //Вход 2, Blynk: V1
 
-#define DEVICE_ID 3   	       // Модель устройства
+#define DEVICE_ID   4   	   // Модель устройства
 
 #define ESP_POWER_PIN    1     // Номер пина, которым будим ESP8266. 
 #define SETUP_BUTTON_PIN 2     // SCL Пин с кнопкой SETUP
@@ -63,21 +63,24 @@ void resetWatchdog() {
 
 	WDTCR = bit( WDCE ) | bit( WDE ); // allow changes, disable reset, clear existing interrupt
 
-	// настраиваем период
-	//WDTCR = bit( WDIE );                  // 16 ms
-
 #ifdef TEST_WATERIUS
 	WDTCR = bit( WDIE ) | bit( WDP0 );      // 32 ms
 	#define ONE_MINUTE 20                   // ускоримся для теста
 #else
-	WDTCR = bit( WDIE ) | bit( WDP2 );      // 250 ms
+
+	// настраиваем период
+	//WDTCR = bit( WDIE );                  // 16 ms
+
+	//WDTCR = bit( WDIE ) | bit( WDP0 ) | bit( WDP1 );     // 128 ms
+	//#define ONE_MINUTE 480
+
+	WDTCR = bit( WDIE ) | bit( WDP2 );                 // 250 ms
 	#define ONE_MINUTE 240
-#endif
 
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // 500 ms
-	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 );    // 1s
-	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP1 ) | bit( WDP0 );  // 2s 
-	//WDTCR = bit( WDIE ) | bit( WDP3 ) | bit( WDP0 );    // 8s
+	//#define ONE_MINUTE 120
+#endif
+
 														
 	wdt_reset(); // pat the dog
 } 

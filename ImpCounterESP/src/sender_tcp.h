@@ -8,6 +8,8 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 
+#ifdef SEND_TCP
+
 #define TCP_SERVER_PORT 4001
 
 WiFiClient client;
@@ -21,10 +23,10 @@ struct SendData {
 bool send_tcp(const Settings &sett, const float &value0, const float &value1, const float &voltage)
 {
     LOG_NOTICE( "WIF", "Starting Wifi" );
-    IPAddress ip(sett.ip);
+    /*IPAddress ip(sett.ip);
     IPAddress gw(sett.gw);
     IPAddress subnet(sett.subnet);
-    WiFi.config( ip, gw, subnet );
+    WiFi.config( ip, gw, subnet );*/
     WiFi.begin();
 
     uint32_t now = millis();
@@ -77,5 +79,7 @@ bool send_tcp(const Settings &sett, const float &value0, const float &value1, co
     }
     return false;
 }
+
+#endif //#ifdef SEND_TCP
 
 #endif

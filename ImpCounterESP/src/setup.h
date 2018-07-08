@@ -32,20 +32,25 @@
 #define I2C_SLAVE_ADDR 10
 
 #define VER_1 1
-#define CURRENT_VERSION VER_1
+#define VER_2 2
+#define CURRENT_VERSION VER_2
 
 
 #define KEY_LEN 34
 #define HOSTNAME_LEN 32
+
 #define EMAIL_LEN 32
+#define EMAIL_TITLE_LEN 64
+#define EMAIL_TEMPLATE_LEN 200
 
 struct Settings
 {
 	uint8_t  version;
 	uint8_t  reserved;  //x16 bit
-	uint32_t ip;
+	
+	/*uint32_t ip;
 	uint32_t subnet;
-	uint32_t gw;
+	uint32_t gw;*/
 	
 	/*
 	SEND_BLYNK: уникальный ключ устройства blynk
@@ -64,6 +69,18 @@ struct Settings
 	SEND_TCP: не используется	
 	*/
 	char     email[EMAIL_LEN];
+	
+	/*
+	SEND_BLYNK: Заголовок письма. {V0}-{V4} заменяются на данные 
+	SEND_TCP: не используется	
+	*/
+	char     email_title[EMAIL_TITLE_LEN];
+
+	/*
+	SEND_BLYNK: Шаблон эл. письма. {V0}-{V4} заменяются на данные 
+	SEND_TCP: не используется	
+	*/
+	char     email_template[EMAIL_TEMPLATE_LEN];
 
 	float    value0_start;
 	float    value1_start;
@@ -72,6 +89,11 @@ struct Settings
 	//Стартовые значения введенные пользователем
 	uint32_t impules0_start;
 	uint32_t impules1_start;
+
+	//Не понятно, как получить от Blynk прирост показаний, 
+	//поэтому сохраним их в памяти каждое включение
+	float    prev_value0;
+	float    prev_value1;
 
 	uint16_t crc;
 };

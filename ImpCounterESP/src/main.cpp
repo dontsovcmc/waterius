@@ -58,6 +58,10 @@ void loop() {
 #ifdef SEND_BLYNK
 			if (send_blynk(sett, value0, value1, data.voltage / 1000.0)) {
             	LOG_NOTICE("BLK", "send ok");
+
+				sett.prev_value0 = value0;
+				sett.prev_value1 = value1;
+				storeConfig(sett);
 			}
 #endif
 #ifdef SEND_TCP
