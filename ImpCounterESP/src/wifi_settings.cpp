@@ -80,7 +80,7 @@ bool loadConfig(struct Settings &sett)
 		String email_title = "Новые показания {DEVICE_NAME}";
 		strncpy(sett.email_title, email_title.c_str(), EMAIL_TITLE_LEN);
 
-		String email_template = "ГВС: {V0} м3, ХВС: {V1} м3\\r\\nдельта:\\r\\nгвс: +{V3}, хвс: +{V4}\\r\\nпитание:{V2} В\\r\\nCMC:\\r\\nвода добавить: {V0} {V1}";
+		String email_template = "ГВС: {V0} м3, ХВС: {V1} м3<br>дельта:<br>гвс: +{V3}, хвс: +{V4}<br>питание:{V2} В<br>CMC:<br>вода добавить: {V0} {V1}";
 		strncpy(sett.email_template, email_template.c_str(), EMAIL_TEMPLATE_LEN);
 
 		//LOG_NOTICE("WIF", "Init config. Network: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString());

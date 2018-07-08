@@ -58,16 +58,12 @@ bool send_blynk(const Settings &sett, const float &value0, const float &value1, 
                 String v3(delta0, 2);
                 String v4(delta1, 2);
                 
-                msg.replace("\\n", "\n");
-                msg.replace("\\r", "\r");
                 msg.replace("{V0}", v0);
                 msg.replace("{V1}", v1);
                 msg.replace("{V2}", v2);
                 msg.replace("{V3}", v3);
                 msg.replace("{V4}", v4);
                 
-                title.replace("\\n", "\n");
-                title.replace("\\r", "\r");
                 title.replace("{V0}", v0);
                 title.replace("{V1}", v1);
                 title.replace("{V2}", v2);
