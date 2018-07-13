@@ -86,7 +86,12 @@ bool MasterI2C::getSlaveData(SlaveData &data)
 	data.diagnostic = good;
 	
 	if (good) {
-		LOG_NOTICE("I2C", "data received");
+		LOG_NOTICE("I2C", "version: " << data.version);
+		LOG_NOTICE("I2C", "service: " << data.service);
+		LOG_NOTICE("I2C", "voltage: " << data.voltage);
+		LOG_NOTICE("I2C", "impulses0: " << data.impulses0);
+		LOG_NOTICE("I2C", "impulses1: " << data.impulses1);
+
 	} else {
 		LOG_ERROR("I2C", "data failed");
 	}
