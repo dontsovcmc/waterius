@@ -22,8 +22,8 @@ bool send_blynk(const Settings &sett, const float &value0, const float &value1, 
         
         LOG_NOTICE( "BLK", "run");
 
-        float delta0 = value0 - sett.prev_value0;
-        float delta1 = value1 - sett.prev_value1;
+        unsigned int delta0 = (value0 - sett.prev_value0)*1000;  // litres
+        unsigned int delta1 = (value1 - sett.prev_value1)*1000;
 
         Blynk.virtualWrite(V0, value0);
         Blynk.virtualWrite(V1, value1);

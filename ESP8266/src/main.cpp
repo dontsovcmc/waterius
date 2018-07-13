@@ -62,7 +62,7 @@ void loop() {
 			/*IPAddress ip(sett.ip);
 			IPAddress gw(sett.gw);
 			IPAddress subnet(sett.subnet); */
-			WiFi.mode(WIFI_STA);
+			//WiFi.mode(WIFI_STA);
 			//WiFi.config( ip, gw, subnet );
 			WiFi.begin();   //WifiManager уже записал ssid & pass в Wifi
 

@@ -10,7 +10,7 @@
 #include <EEPROM.h>
 
 
-#define AP_NAME "Waterius_0.4.1"
+#define AP_NAME "Waterius_0.4.2"
 
 
 void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const float &value1) 
@@ -21,7 +21,11 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 	WiFi.disconnect( true );
 	WiFiManager wifiManager;
 	
-	/*IPAddressParameter param_ip("ip", "static IP", IPAddress(sett.ip));
+	/*
+	Решил убрать, т.к не сильно ускоряет подключение
+	ESP8266 просыпается после EN несколько секунд, в отличие от обычного deepsleep
+	
+	IPAddressParameter param_ip("ip", "static IP", IPAddress(sett.ip));
 	wifiManager.addParameter( &param_ip );
 	IPAddressParameter param_subnet( "subnet", "subnet",  IPAddress(sett.subnet));
 	wifiManager.addParameter( &param_subnet );
