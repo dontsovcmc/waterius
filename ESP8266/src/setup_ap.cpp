@@ -55,7 +55,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 	wifiManager.addParameter( &param_litres_per_imp );
 
 	wifiManager.setConfigPortalTimeout(300);
-	wifiManager.setConnectTimeout(10);
+	wifiManager.setConnectTimeout(15);
 	
 	// Start the portal with the SSID 
 	wifiManager.startConfigPortal( AP_NAME );
