@@ -1,7 +1,6 @@
 ### Wi-Fi модуль для счётчиков воды
-# Вотериус
-Версия 0.4.2
-
+# Вотериус 0.4.2
+([English](https://github.com/dontsovcmc/waterius/blob/master/English.md))
 Простое в изготовлении автономное устройство для передачи показаний воды по Wi-Fi.
 Данные смотрим в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8) )
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/11541426.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/11541426.png" width="32"/> 
@@ -11,7 +10,8 @@
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" width="360"/> <img src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" width="180"/>
 
 Подключение двух счётчиков.
-Питание: 3\*AA алкалиновые или литиевые батарейки. 
+
+Питание: 3\*AA алкалиновые или 2\*AA литиевые батарейки. 
 Батареек должно хватить на несколько лет при ежедневной отправке показаний.
 
 ## Требования
