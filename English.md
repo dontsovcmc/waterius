@@ -15,8 +15,13 @@ Values saved in ATtiny EEPROM cycle buffer (~2 millions cycles). "Software ESD p
 
 ### How It Works
 *Two chips*: ATtiny85 in deep sleep mode. It counts impulses and wakes up ESP-01 to transfer data to Blynk every day. Chips talks by i2c line.
+
 *Power*: 3*AA batteries (or 2*AA lithium batteries without voltage regulator)
+
 *Current*: 15-24 uA in deep sleep, 75 mA when transmitting for ~5 sec
+
 *Lifetime*: estimated 4 year battery life
+
 *Limits*: 2 impulses per second (increased by constant in code)
+
 *Inputs*: 2 water meters
