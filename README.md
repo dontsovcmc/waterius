@@ -51,6 +51,11 @@ https://electronix.ru
 https://esp8266.ru
 https://easyelectronics.ru
 
+
+# Контакты
+
+Связаться со мной: [Telegram](https://t.me/Dontsovcmc), [Facebook](https://facebook.com/dontsovev), [Hackster.io](https://www.hackster.io/dontsovcmc)
+
  
 
 

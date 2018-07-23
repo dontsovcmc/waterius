@@ -44,7 +44,7 @@ static ESPPowerButton esp(ESP_POWER_PIN, SETUP_BUTTON_PIN);
 // Данные
 struct Header info = {DEVICE_ID, 0, 0, {0, 0} };
 
-//100к * 20 = 2 млн * 10 л / 2 = 10 000 000 л или 10 000 м3
+//100к * 20 = 2 млн * 10 л / 2 счетчика = 10 000 000 л или 10 000 м3
 static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
 
 SlaveI2C slaveI2C;
