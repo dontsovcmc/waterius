@@ -7,10 +7,15 @@
 <img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="64"/> 
 
 ## Компоненты ESP-01
-* однослойная плата 61 х  14 мм ([плата](https://github.com/dontsovcmc/ImpCounter/raw/master/Board/waterius-homemade-board.png)
+* однослойная плата 61 х  14 мм ([плата для ЛУТ](https://github.com/dontsovcmc/ImpCounter/raw/master/Board/waterius-homemade-board.png)
 * ESP-01
 + USB-TTL 3.3в для прошивки ESP8266
-+ плата размером 
+
+Вот так выглядит заводская плата с напаенными элеметами:
+
+<img src="https://github.com/dontsovcmc/waterius/blob/master/Board/waterius-factory-board.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/waterius-factory-board.png" width="400"/>
+
+Напишите мне, у меня много плат
 
 ### Исполнение без стабилизатора
 

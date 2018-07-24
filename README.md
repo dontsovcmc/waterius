@@ -29,11 +29,17 @@
 Самый простой способ их передавать: при помощи приложения или [СМС](Send.md).
 
 ## Изготовление
-Принципиальная схема:
-<img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="400"/>
 
 - [создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
 - [прошивка Attiny85 и ESP](https://github.com/dontsovcmc/waterius/blob/master/Firmware.md) 
+
+Принципиальная схема:
+
+<img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="400"/>
+
+Если хотите сделать Вотериус, напишите мне - у меня много заводских плат.
+
+<img src="https://github.com/dontsovcmc/waterius/blob/master/Board/waterius-factory-board.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/waterius-factory-board.png" width="400"/>
 
 # Ответственность
 
