@@ -39,7 +39,7 @@
 
 Если хотите сделать Вотериус, напишите мне - у меня много заводских плат.
 
-<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.png" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.png" width="400"/>
+<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.jpg" width="400"/>
 
 # Ответственность
 
