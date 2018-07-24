@@ -13,7 +13,7 @@
 
 Вот так выглядит заводская плата с напаенными элеметами:
 
-<img src="https://github.com/dontsovcmc/waterius/blob/master/Board/waterius-factory-board.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/waterius-factory-board.png" width="400"/>
+<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.jpg" width="400"/>
 
 Напишите мне, у меня много плат
 
