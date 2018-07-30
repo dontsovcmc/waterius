@@ -5,7 +5,7 @@
 ## Настройка приложения Blynk
 - [Установите приложение Blynk на телефон](https://www.blynk.cc/getting-started).
 - Авторизируйтесь в нём
-- Нажмите на значем QR кода вверху, чтобы скопировать проект waterius (Андроид)
+- Нажмите на значок QR кода вверху, чтобы скопировать проект waterius (Андроид)
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/step01.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step01.png" width="200"/> 
 - Наводим камеру телефона на QR код:
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/qr.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/qr.png" width="200"/> 
