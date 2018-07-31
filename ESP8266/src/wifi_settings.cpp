@@ -77,10 +77,10 @@ bool loadConfig(struct Settings &sett)
 		String email = "";
 		strncpy(sett.email, email.c_str(), EMAIL_LEN);
 
-		String email_title = "Новые показания {DEVICE_NAME}";
+		String email_title = "New values {DEVICE_NAME}";
 		strncpy(sett.email_title, email_title.c_str(), EMAIL_TITLE_LEN);
 
-		String email_template = "ГВС: {V0} м3, ХВС: {V1} м3<br>дельта:<br>гвс: +{V3}, хвс: +{V4}<br>питание:{V2} В<br>CMC:<br>вода добавить: {V0} {V1}";
+		String email_template = "Hot: {V0} m3, Cold: {V1} m3<br>day:<br>hot: +{V3}, cold: +{V4}<br>power:{V2}";
 		strncpy(sett.email_template, email_template.c_str(), EMAIL_TEMPLATE_LEN);
 
 		//LOG_NOTICE("WIF", "Init config. Network: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString());

@@ -35,6 +35,7 @@ bool send_blynk(const Settings &sett, const float &value0, const float &value1, 
 
         if (sett.email) {
             LOG_NOTICE( "BLK", "send email");
+            LOG_NOTICE( "BLK", "email: " << sett.email);
 
             String msg = sett.email_template;
             String title = sett.email_title;

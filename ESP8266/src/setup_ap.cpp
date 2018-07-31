@@ -10,7 +10,7 @@
 #include <EEPROM.h>
 
 
-#define AP_NAME "Waterius_0.4.2"
+#define AP_NAME "Waterius_0.4.3"
 
 
 void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const float &value1) 
