@@ -17,9 +17,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 {
 	// Пользователь нажал кнопку - запускаем веб сервер
 	LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
-	LOG_NOTICE( "WIF", "User requested captive portal" );
 	WiFi.disconnect( true );
 	WiFiManager wifiManager;
+	LOG_NOTICE( "WIF", "User requested captive portal" );
 	
 	/*
 	Решил убрать, т.к не сильно ускоряет подключение
@@ -57,6 +57,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 	wifiManager.setConfigPortalTimeout(300);
 	wifiManager.setConnectTimeout(15);
 	
+	LOG_NOTICE( "WIF", "start config portal" );
+
 	// Start the portal with the SSID 
 	wifiManager.startConfigPortal( AP_NAME );
 

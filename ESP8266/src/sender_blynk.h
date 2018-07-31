@@ -33,7 +33,7 @@ bool send_blynk(const Settings &sett, const float &value0, const float &value1, 
 
         LOG_NOTICE( "BLK", "virtualWrite OK");
 
-        if (sett.email) {
+        if (strlen(sett.email) > 4) {
             LOG_NOTICE( "BLK", "send email");
             LOG_NOTICE( "BLK", "email: " << sett.email);
 
