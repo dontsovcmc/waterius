@@ -33,6 +33,8 @@
 #define ESP_POWER_PIN    1     // Номер пина, которым будим ESP8266. 
 #define SETUP_BUTTON_PIN 2     // SCL Пин с кнопкой SETUP
 
+#define LONG_PRESS 3000        // Долгое нажатие включает настройку
+
 static unsigned long wake_every = WAKE_EVERY_MIN;
 
 // Счетчики импульсов
@@ -140,11 +142,9 @@ void loop() {
 			counting();
 
 			if (esp.sleep_and_pressed()) { //Пользователь нажал кнопку
-			
 				interrupts();
 				break;
 			} else 	{
-
 				interrupts();
 				sleep_mode();
 			}
@@ -164,13 +164,12 @@ void loop() {
 	LOG_INFO(info.data.value1);
 
 	// Пользователь нажал кнопку SETUP
-	if (esp.pressed) {
-
+	// ждем когда пользователь отпустит кнопку 
+	// т.к. иначе ESP запустится в режиме программирования
+	if (esp.wait_button_release() > LONG_PRESS)
+	{
 		LOG_DEBUG(F("SETUP pressed"));
 		wake_every = WAKE_AFTER_SETUP_MIN;
-
-		while(esp.is_pressed())
-				;  //ждем когда пользователь отпустит кнопку т.к. иначе ESP запустится в режиме программирования
 
 		slaveI2C.begin(SETUP_MODE);	
 		esp.power(true);
@@ -178,6 +177,10 @@ void loop() {
 		
 		while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(SETUP_TIME_MSEC)) {
 			delayMicroseconds(65000);
+
+			if (esp.wait_button_release() > LONG_PRESS) {
+				break; // принудительно выключаем
+			}
 		}
 
 	}

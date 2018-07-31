@@ -9,8 +9,8 @@
 ESPPowerButton::ESPPowerButton(const uint8_t p, const uint8_t setup)
 	: power_pin(p)
 	, setup_pin(setup)
-	, pressed(false)
 	, power_on(false)
+	, pressed(false)
 {
 	pinMode(power_pin, INPUT);
 	pinMode(setup_pin, INPUT);
@@ -30,15 +30,23 @@ bool ESPPowerButton::sleep_and_pressed()
 {
 	if (power_on)
 		return false;
-
 	pressed = is_pressed();
 	return pressed;
+}
+
+unsigned long ESPPowerButton::wait_button_release()
+{
+	unsigned long press_time = millis();
+	while(is_pressed())
+		;  
+	return millis() - press_time;
 }
 
 void ESPPowerButton::power(const bool on)
 {
 	power_on = on;
 	pressed = false;
+	
 	if (on)
 	{
 		pinMode(power_pin, OUTPUT);
