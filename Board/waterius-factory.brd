@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="8.6.0">
+<eagle version="9.0.1">
 <drawing>
 <settings>
-<setting alwaysvectorfont="yes"/>
+<setting alwaysvectorfont="no"/>
 <setting keepoldvectorfont="yes"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.254" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="0.1" altunitdist="mm" altunit="mm"/>
+<grid distance="0.0254" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="0.1" altunitdist="mm" altunit="mm"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="2" name="Route2" color="1" fill="3" visible="no" active="no"/>
@@ -27,13 +27,13 @@
 <layer number="16" name="Bottom" color="1" fill="1" visible="yes" active="yes"/>
 <layer number="17" name="Pads" color="2" fill="1" visible="yes" active="yes"/>
 <layer number="18" name="Vias" color="2" fill="1" visible="yes" active="yes"/>
-<layer number="19" name="Unrouted" color="6" fill="1" visible="yes" active="yes"/>
-<layer number="20" name="Dimension" color="24" fill="1" visible="yes" active="yes"/>
+<layer number="19" name="Unrouted" color="6" fill="1" visible="no" active="yes"/>
+<layer number="20" name="Dimension" color="24" fill="1" visible="no" active="yes"/>
 <layer number="21" name="tPlace" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="22" name="bPlace" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="23" name="tOrigins" color="15" fill="1" visible="yes" active="yes"/>
-<layer number="24" name="bOrigins" color="15" fill="1" visible="yes" active="yes"/>
-<layer number="25" name="tNames" color="7" fill="1" visible="no" active="yes"/>
+<layer number="22" name="bPlace" color="7" fill="1" visible="no" active="yes"/>
+<layer number="23" name="tOrigins" color="15" fill="1" visible="no" active="yes"/>
+<layer number="24" name="bOrigins" color="15" fill="1" visible="no" active="yes"/>
+<layer number="25" name="tNames" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="26" name="bNames" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="27" name="tValues" color="7" fill="1" visible="no" active="yes"/>
 <layer number="28" name="bValues" color="7" fill="1" visible="no" active="yes"/>
@@ -86,10 +86,10 @@
 <text x="7.62" y="21.082" size="0.5" layer="25">GPIO2</text>
 <text x="5.08" y="21.082" size="0.5" layer="25">GPIO0</text>
 <text x="2.794" y="21.082" size="0.7" layer="25">RX</text>
-<text x="2.794" y="16.002" size="0.7" layer="25">Vcc</text>
+<text x="2.7432" y="16.002" size="0.7" layer="25">Vcc</text>
 <text x="5.08" y="16.002" size="0.7" layer="25">RST</text>
 <text x="7.366" y="16.256" size="0.5" layer="25">CH_PD</text>
-<text x="11.938" y="17.526" size="0.7" layer="25">TX</text>
+<text x="10.6426" y="16.0782" size="0.7" layer="25">TX</text>
 <text x="12.192" y="21.082" size="0.7" layer="26" rot="MR0">GND</text>
 <text x="9.906" y="21.082" size="0.6096" layer="26" rot="MR0">GPIO2</text>
 <text x="7.112" y="21.082" size="0.6096" layer="26" rot="MR0">GPIO0</text>
@@ -2824,16 +2824,16 @@ design rules under a new name.</description>
 </autorouter>
 <elements>
 <element name="JP1" library="jumper" package="JP1" value="+ -" x="10.5" y="4.43" smashed="yes" rot="R180">
-<attribute name="NAME" x="5.276" y="0.881" size="1.27" layer="25" ratio="10"/>
+<attribute name="NAME" x="8.9844" y="0.8302" size="1.27" layer="25" ratio="10"/>
 <attribute name="VALUE" x="7.579" y="6.97" size="1.27" layer="27" ratio="10" rot="R270"/>
 </element>
 <element name="C1" library="rcl" package="C0805" value="1uF" x="7" y="6.72" smashed="yes" rot="R90">
-<attribute name="NAME" x="6.54" y="4.67" size="1" layer="25" rot="R180"/>
+<attribute name="NAME" x="7.7592" y="4.5176" size="1" layer="25" rot="R180"/>
 <attribute name="SPICEPREFIX" value="C" x="7" y="6.72" size="1.778" layer="27" rot="R90" display="off"/>
 <attribute name="VALUE" x="9.54" y="5.45" size="1.27" layer="27" rot="R90"/>
 </element>
 <element name="C2" library="rcl" package="C0805" value="1uF" x="2.6" y="10.98" smashed="yes">
-<attribute name="NAME" x="1.9" y="14.672" size="1" layer="25"/>
+<attribute name="NAME" x="1.773" y="8.9062" size="1" layer="25"/>
 <attribute name="SPICEPREFIX" value="C" x="2.6" y="10.98" size="1.778" layer="27" display="off"/>
 <attribute name="VALUE" x="1.33" y="8.44" size="1.27" layer="27"/>
 </element>
@@ -2845,7 +2845,7 @@ design rules under a new name.</description>
 <element name="X1" library="con-wago255" package="233-104" value="" x="7.908" y="54.9" smashed="yes" rot="MR180">
 <attribute name="MF" value="" x="7.908" y="54.9" size="1.778" layer="28" rot="MR180" display="off"/>
 <attribute name="MPN" value="233-104" x="7.908" y="54.9" size="1.778" layer="28" rot="MR180" display="off"/>
-<attribute name="NAME" x="6.858" y="49.76" size="1" layer="26" rot="MR180"/>
+<attribute name="NAME" x="7.7978" y="49.8616" size="1" layer="26" rot="MR180"/>
 <attribute name="OC_FARNELL" value="unknown" x="7.908" y="54.9" size="1.778" layer="28" rot="MR180" display="off"/>
 <attribute name="OC_NEWARK" value="28K9046" x="7.908" y="54.9" size="1.778" layer="28" rot="MR180" display="off"/>
 <attribute name="VALUE" x="9.558" y="49.65" size="1.27" layer="28" rot="MR180"/>
@@ -2855,7 +2855,7 @@ design rules under a new name.</description>
 <attribute name="VALUE" x="9.045" y="45.14" size="1.27" layer="27"/>
 </element>
 <element name="LOG" library="pinhead" package="1X01" value="" x="11" y="13.98" smashed="yes">
-<attribute name="NAME" x="12.6762" y="16.5012" size="1" layer="25" ratio="10" rot="R180"/>
+<attribute name="NAME" x="12.4984" y="15.8662" size="1" layer="25" ratio="10" rot="R180"/>
 <attribute name="VALUE" x="9.73" y="10.805" size="1.27" layer="27"/>
 </element>
 <element name="R2" library="resistor" package="R0805" value="300" x="9.59" y="33.39" smashed="yes" rot="R180">
@@ -2867,7 +2867,7 @@ design rules under a new name.</description>
 <attribute name="VALUE" x="5.065" y="41.74" size="1.27" layer="27"/>
 </element>
 <element name="R4" library="resistor" package="R0805" value="3k3" x="2.6" y="13.48" smashed="yes" rot="R180">
-<attribute name="NAME" x="3.271" y="9.93" size="1" layer="25" rot="R180"/>
+<attribute name="NAME" x="3.5758" y="15.6704" size="1" layer="25" rot="R180"/>
 <attribute name="VALUE" x="3.235" y="16.02" size="1.27" layer="27" rot="R180"/>
 </element>
 <element name="R5" library="resistor" package="R0805" value="3k3" x="3.31" y="23.27" smashed="yes" rot="R180">
@@ -2887,7 +2887,7 @@ design rules under a new name.</description>
 <attribute name="VALUE" x="12.28" y="13.82" size="1" layer="28" rot="MR0"/>
 </element>
 <element name="LED1" library="led" package="LED3MM" value="RED" x="11" y="9.98" smashed="yes" rot="R270">
-<attribute name="NAME" x="8.235" y="7.141" size="0.9" layer="25" ratio="10"/>
+<attribute name="NAME" x="9.6828" y="6.8616" size="0.9" layer="25" ratio="10"/>
 <attribute name="VALUE" x="9.349" y="8.075" size="1.27" layer="27" ratio="10" rot="R270"/>
 </element>
 <element name="R8" library="resistor" package="R0805" value="300" x="7.3" y="10.98" smashed="yes">
@@ -2895,7 +2895,7 @@ design rules under a new name.</description>
 <attribute name="VALUE" x="6.665" y="8.44" size="1.27" layer="27"/>
 </element>
 <element name="R9" library="resistor" package="R0805" value="3k3" x="7.34" y="13.47" smashed="yes" rot="R180">
-<attribute name="NAME" x="8.969" y="15.64" size="1" layer="25" rot="R180"/>
+<attribute name="NAME" x="8.2832" y="15.64" size="1" layer="25" rot="R180"/>
 <attribute name="VALUE" x="7.975" y="16.01" size="1.27" layer="27" rot="R180"/>
 </element>
 <element name="S1" library="switch-omron" package="B3F-31XX" value="" x="4.03" y="44.45" smashed="yes" rot="R270">
@@ -2907,7 +2907,7 @@ design rules under a new name.</description>
 <attribute name="VALUE" x="-1.939" y="48.133" size="1.27" layer="27" ratio="10" rot="R270"/>
 </element>
 <element name="RST" library="pinhead" package="1X01" value="RST" x="10.26" y="39.63" smashed="yes">
-<attribute name="NAME" x="6.1238" y="39.1488" size="1" layer="25" ratio="10"/>
+<attribute name="NAME" x="9.0448" y="39.1488" size="1" layer="26" ratio="10" rot="MR0"/>
 <attribute name="VALUE" x="8.99" y="36.455" size="1.27" layer="27"/>
 </element>
 <element name="IC1" library="atmel" package="8S2" value="TINY13-20SU" x="4" y="33.35" smashed="yes" rot="R180">
