@@ -44,9 +44,9 @@
 
 ## Сообщество
 
-Можно делиться опытом сборки, установки по хэштегу `#waterius`
-[Instagram](https://www.instagram.com/explore/tags/waterius/) (вдруг он у вас зачем-то есть)
-[Facebook](https://www.facebook.com/search/top/?q=waterius) 
+Можно делиться опытом сборки, установки по хэштегу `#waterius`.
+- [Instagram](https://www.instagram.com/explore/tags/waterius/) (вдруг он у вас зачем-то есть)
+- [Facebook](https://www.facebook.com/search/top/?q=waterius) 
 
 Найденные ошибки, идеи пишите здесь в [issuu](https://github.com/dontsovcmc/waterius/issues)
 
