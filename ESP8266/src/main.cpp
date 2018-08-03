@@ -59,11 +59,7 @@ void loop() {
 			calculate_values(sett, data, &value0, &value1);
 
 			LOG_NOTICE( "WIF", "Starting Wifi" );
-			/*IPAddress ip(sett.ip);
-			IPAddress gw(sett.gw);
-			IPAddress subnet(sett.subnet); */
 			//WiFi.mode(WIFI_STA);
-			//WiFi.config( ip, gw, subnet );
 			WiFi.begin();   //WifiManager уже записал ssid & pass в Wifi
 
 			uint32_t start = millis();

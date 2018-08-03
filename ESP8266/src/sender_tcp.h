@@ -24,7 +24,7 @@ bool send_tcp(const Settings &sett, const float &value0, const float &value1, co
 {
     bool ret = false;
     if (WiFi.status() != WL_CONNECTED) {
-        LOG_ERROR("TCP", "Wi-Fi is not connected")
+        LOG_ERROR("TCP", "Wi-Fi is not connected");
         return ret;
     }
     
