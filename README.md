@@ -1,10 +1,9 @@
 ### Wi-Fi модуль для счётчиков воды
-# Вотериус 0.4.2
-([English](https://github.com/dontsovcmc/waterius/blob/master/English.md))
+# Вотериус 0.4.3
+[English description](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
-Простое в изготовлении автономное устройство для передачи показаний воды по Wi-Fi.
-Данные смотрим в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8) )
-<img src="https://github.com/dontsovcmc/waterius/blob/master/files/11541426.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/11541426.png" width="32"/> 
+Aвтономное устройство для передачи показаний воды по Wi-Fi.
+Данные смотрим в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8)) или в другом подобном сервисе. 
 
 Также можно отсылать показания на ваш TCP сервер и на электронную почту.
 
@@ -12,8 +11,7 @@
 
 Подключение двух счётчиков.
 
-Питание: 3\*AA алкалиновые или 2\*AA литиевые батарейки. 
-Батареек должно хватить на несколько лет при ежедневной отправке показаний.
+Питание: 3\*AA алкалиновые или 2\*AA литиевые батарейки. Батареек должно хватить на несколько лет при ежедневной отправке показаний.
 
 ## Требования
 - Wi-Fi рядом с Вотериусом
@@ -38,11 +36,13 @@
 
 <img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="400"/>
 
-Если хотите сделать Вотериус, напишите мне - у меня много заводских плат.
+Если хотите сделать Вотериус, напишите мне - у меня есть заводские платы и стабилизаторы.
 
 <img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.jpg" width="400"/>
 
 ## Сообщество
+
+ЧАТ ДЛЯ ОБЩЕНИЯ: [Gitter.im/waterius](https://gitter.im/waterius)
 
 Можно делиться опытом сборки, установки по хэштегу `#waterius`.
 - [Instagram](https://www.instagram.com/explore/tags/waterius/) (вдруг он у вас зачем-то есть)
