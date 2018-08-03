@@ -59,13 +59,13 @@ bool loadConfig(struct Settings &sett)
 		sett.liters_per_impuls = 10;
 		
 		String hostname = BLYNK_DEFAULT_DOMAIN;
-		strncpy0(sett.hostname, hostname.c_str(), HOSTNAME_LEN-1);
+		strncpy0(sett.hostname, hostname.c_str(), HOSTNAME_LEN);
 
 		String email_title = "New values {DEVICE_NAME}";
-		strncpy0(sett.email_title, email_title.c_str(), EMAIL_TITLE_LEN-1);
+		strncpy0(sett.email_title, email_title.c_str(), EMAIL_TITLE_LEN);
 
 		String email_template = "Hot: {V0} m3, Cold: {V1} m3<br>day:<br>hot: +{V3}, cold: +{V4}<br>power:{V2}";
-		strncpy0(sett.email_template, email_template.c_str(), EMAIL_TEMPLATE_LEN-1);
+		strncpy0(sett.email_template, email_template.c_str(), EMAIL_TEMPLATE_LEN);
 
 		LOG_NOTICE("WIF", "version=" << sett.version << ", hostname=" << hostname);
 		return false;
