@@ -1,6 +1,7 @@
 ### Wi-Fi модуль для счётчиков воды
 # Вотериус 0.4.2
 ([English](https://github.com/dontsovcmc/waterius/blob/master/English.md))
+
 Простое в изготовлении автономное устройство для передачи показаний воды по Wi-Fi.
 Данные смотрим в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8) )
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/11541426.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/11541426.png" width="32"/> 
@@ -25,7 +26,7 @@
 Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в Х минут она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер Blynk.cc/TCP. После этого все микросхемы засыпают.
 
 ## Передача показаний (вручную)
-Автоматическая передача не реализована из-за закрытого API Правительства Москвы. 
+Автоматическая передача не реализована. 
 Самый простой способ их передавать: при помощи приложения или [СМС](Send.md).
 
 ## Изготовление
@@ -41,6 +42,14 @@
 
 <img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.jpg" width="400"/>
 
+## Сообщество
+
+Можно делиться опытом сборки, установки по хэштегу `#waterius`.
+- [Instagram](https://www.instagram.com/explore/tags/waterius/) (вдруг он у вас зачем-то есть)
+- [Facebook](https://www.facebook.com/search/top/?q=waterius) 
+
+Найденные ошибки, идеи пишите здесь в [issuu](https://github.com/dontsovcmc/waterius/issues)
+
 # Ответственность
 
 Прошивка Ватериуса сделана на основе открытых библиотек, работоспособность которых никто не гарантирует. Я также не могу обещать, что устройство будет работать с вашем оборудованием и вы не получите ущерба как во время изготовления, так и во время эксплуатации устройства =). Пожалуйста, сообщите о любом опыте изготовления и использования [тут](https://github.com/dontsovcmc/waterius/issues). Вы поможете развитию проекта! 
@@ -50,7 +59,7 @@
 # Благодарности
 Ивану Коваленко и Иван Ганжа за консультации по электротехнике
 
-Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1). он был взят за основу.
+Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1), он был взят за основу.
 
 Форумам: 
 https://electronix.ru

@@ -82,8 +82,8 @@ struct Settings
 	*/
 	char     email_template[EMAIL_TEMPLATE_LEN];
 
-	float    value0_start;
-	float    value1_start;
+	float    channel0_start;
+	float    channel1_start;
 	uint16_t liters_per_impuls;
 
 	//Стартовые значения введенные пользователем
@@ -92,8 +92,8 @@ struct Settings
 
 	//Не понятно, как получить от Blynk прирост показаний, 
 	//поэтому сохраним их в памяти каждое включение
-	float    prev_value0;
-	float    prev_value1;
+	float    prev_channel0;
+	float    prev_channel1;
 
 	uint16_t crc;
 };

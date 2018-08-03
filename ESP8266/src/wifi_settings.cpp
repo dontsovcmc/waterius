@@ -5,6 +5,7 @@
 #include "Blynk/BlynkConfig.h"
 #include <IPAddress.h>
 #include <EEPROM.h>
+#include "utils.h"
 
 /* Takes all the IP information we got from Wifimanger and saves it in EEPROM */
 void storeConfig(const Settings &sett) 
@@ -14,17 +15,12 @@ void storeConfig(const Settings &sett)
 	EEPROM.put(0, sett);
 	
 	if (!EEPROM.commit())
+	{
 		LOG_ERROR("WIF", "Config stored FAILED");
+	}
 	else
 	{
-		/*IPAddress ip(sett.ip);
-		IPAddress subnet(sett.subnet);
-		IPAddress gw(sett.gw);
-		LOG_NOTICE( "WIF", "Config stored. Network: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString());		
-		*/
-		LOG_NOTICE( "WIF", "Blynk: key=" << sett.key << ", hostname=" << sett.hostname);
-		LOG_NOTICE( "WIF", "value0_start=" << sett.value0_start << ", impules0_start=" << sett.impules0_start << ", factor=" << sett.liters_per_impuls );
-		LOG_NOTICE( "WIF", "value1_start=" << sett.value1_start << ", impules1_start=" << sett.impules1_start);
+		LOG_NOTICE("WIF", "Config stored OK");
 	}
 }
 
@@ -38,13 +34,18 @@ bool loadConfig(struct Settings &sett)
 
 	if (sett.crc == FAKE_CRC) 
 	{
-		/*IPAddress ip(sett.ip);
-		IPAddress subnet(sett.subnet);
-		IPAddress gw(sett.gw);
-		LOG_NOTICE( "WIF", "Config loaded: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString());*/
-		LOG_NOTICE( "WIF", "key=" << sett.key << " email=" << sett.email  << ", hostname=" << sett.hostname);
-		LOG_NOTICE( "WIF", "value0_start=" << sett.value0_start << ", impules0_start=" << sett.impules0_start << ", factor=" << sett.liters_per_impuls );
-		LOG_NOTICE( "WIF", "value1_start=" << sett.value1_start << ", impules1_start=" << sett.impules1_start);
+		//для безопасной работы с буферами, т.к. нигде в библиотеках нет проверок
+		sett.key[KEY_LEN-1] = '\0';
+		sett.hostname[HOSTNAME_LEN-1] = '\0';
+		sett.email[EMAIL_LEN-1] = '\0';
+		sett.email_title[EMAIL_TITLE_LEN-1] = '\0';
+		sett.email_template[EMAIL_TEMPLATE_LEN-1] = '\0'; 
+		
+		LOG_NOTICE( "WIF", " email=" << sett.email  << ", hostname=" << sett.hostname);
+
+
+		LOG_NOTICE( "WIF", "channel0_start=" << sett.channel0_start << ", impules0_start=" << sett.impules0_start << ", factor=" << sett.liters_per_impuls );
+		LOG_NOTICE( "WIF", "channel1_start=" << sett.channel1_start << ", impules1_start=" << sett.impules1_start);
 		
 		return true;
 	}
@@ -52,39 +53,22 @@ bool loadConfig(struct Settings &sett)
 	{
 		LOG_NOTICE( "WIF", "crc failed=" << sett.crc );
 
+		memset(&sett, 0, sizeof(sett));
+
 		sett.version = CURRENT_VERSION;  //для совместимости в будущем
-		sett.value0_start = 0.0;
-		sett.value1_start = 0.0;
 		sett.liters_per_impuls = 10;
-		sett.prev_value0 = 0.0;
-		sett.prev_value1 = 0.0;
-
-		/*IPAddress ip(192, 168, 1, 178);
-		sett.ip = ip;
 		
-		IPAddress subnet(255, 255, 255, 0);
-		sett.subnet = subnet;
-
-		IPAddress gw(192, 168, 1, 1);
-		sett.gw = gw;*/
-		
-		String key = "";
-		strncpy(sett.key, key.c_str(), KEY_LEN);
-
 		String hostname = BLYNK_DEFAULT_DOMAIN;
-		strncpy(sett.hostname, hostname.c_str(), HOSTNAME_LEN);
-
-		String email = "";
-		strncpy(sett.email, email.c_str(), EMAIL_LEN);
+		strncpy0(sett.hostname, hostname.c_str(), HOSTNAME_LEN-1);
 
 		String email_title = "New values {DEVICE_NAME}";
-		strncpy(sett.email_title, email_title.c_str(), EMAIL_TITLE_LEN);
+		strncpy0(sett.email_title, email_title.c_str(), EMAIL_TITLE_LEN-1);
 
 		String email_template = "Hot: {V0} m3, Cold: {V1} m3<br>day:<br>hot: +{V3}, cold: +{V4}<br>power:{V2}";
-		strncpy(sett.email_template, email_template.c_str(), EMAIL_TEMPLATE_LEN);
+		strncpy0(sett.email_template, email_template.c_str(), EMAIL_TEMPLATE_LEN-1);
 
-		//LOG_NOTICE("WIF", "Init config. Network: IP=" << ip.toString() << ", Subnet=" << subnet.toString() << ", Gw=" << gw.toString());
-		LOG_NOTICE("WIF", "key=" << key << " email=" << email  << ", hostname=" << hostname);
+		LOG_NOTICE("WIF", "version=" << sett.version << ", hostname=" << hostname);
 		return false;
 	}
 }
+		 

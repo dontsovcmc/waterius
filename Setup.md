@@ -31,7 +31,7 @@
 - текущие показания счетчиков воды в кубометрах (разделитель дробного числа - точка) до 2 знака. Пример: 100.12
 - кол-во литров на 1 импульс (по умолчанию 10). 
 
-<img src="https://github.com/dontsovcmc/waterius/blob/master/files/wifi_setup.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/wifi_setup.png" width="280"/> 
+<img src="https://github.com/dontsovcmc/waterius/blob/master/files/wifi_setup.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/wifi_setup.jpg"/> 
 
 - при желании получать эл. письма с показаниями введите свой эл. адрес (письма будут приходить ежедневно)
 - нажмите ОК

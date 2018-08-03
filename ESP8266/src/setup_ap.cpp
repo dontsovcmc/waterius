@@ -8,12 +8,12 @@
 #include <ESP8266WebServer.h>     // Local WebServer used to serve the configuration portal
 #include <WiFiClient.h>
 #include <EEPROM.h>
-
+#include "utils.h"
 
 #define AP_NAME "Waterius_0.4.3"
 
 
-void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const float &value1) 
+void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, const float &channel1) 
 {
 	// Пользователь нажал кнопку - запускаем веб сервер
 	LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
@@ -21,35 +21,26 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 	WiFiManager wifiManager;
 	LOG_NOTICE( "WIF", "User requested captive portal" );
 	
-	/*
-	Решил убрать, т.к не сильно ускоряет подключение
-	ESP8266 просыпается после EN несколько секунд, в отличие от обычного deepsleep
-	
-	IPAddressParameter param_ip("ip", "static IP", IPAddress(sett.ip));
-	wifiManager.addParameter( &param_ip );
-	IPAddressParameter param_subnet( "subnet", "subnet",  IPAddress(sett.subnet));
-	wifiManager.addParameter( &param_subnet );
-	IPAddressParameter param_gw( "gw", "gateway",  IPAddress(sett.gw));
-	wifiManager.addParameter( &param_gw );*/
-
-	WiFiManagerParameter param_key( "key", "key",  sett.key, KEY_LEN );
+	WiFiManagerParameter param_key( "key", "key",  sett.key, KEY_LEN-1);
 	wifiManager.addParameter( &param_key );
-	WiFiManagerParameter param_hostname( "host", "host",  sett.hostname, HOSTNAME_LEN );
+
+	WiFiManagerParameter param_hostname( "host", "host",  sett.hostname, HOSTNAME_LEN-1);
 	wifiManager.addParameter( &param_hostname );
 
-	WiFiManagerParameter param_email( "email", "email",  sett.email, EMAIL_LEN );
+	WiFiManagerParameter param_email( "email", "email",  sett.email, EMAIL_LEN-1);
 	wifiManager.addParameter( &param_email );
 	
-	WiFiManagerParameter param_email_title( "title", "title",  sett.email_title, EMAIL_TITLE_LEN );
+	WiFiManagerParameter param_email_title( "title", "title",  sett.email_title, EMAIL_TITLE_LEN-1);
 	wifiManager.addParameter( &param_email_title );
 	
-	WiFiManagerParameter param_email_template( "template", "template",  sett.email_template, EMAIL_TEMPLATE_LEN );
+	WiFiManagerParameter param_email_template( "template", "template",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
 	wifiManager.addParameter( &param_email_template );
 
-	FloatParameter param_value0_start( "value0", "value0",  value0);
-	wifiManager.addParameter( &param_value0_start );
-	FloatParameter param_value1_start( "value1", "value1",  value1);
-	wifiManager.addParameter( &param_value1_start );
+	FloatParameter param_channel0_start( "channel0", "channel0",  channel0);
+	wifiManager.addParameter( &param_channel0_start );
+	
+	FloatParameter param_channel1_start( "channel1", "channel1",  channel1);
+	wifiManager.addParameter( &param_channel1_start );
 
 	LongParameter param_litres_per_imp( "factor", "factor",  sett.liters_per_impuls);
 	wifiManager.addParameter( &param_litres_per_imp );
@@ -62,25 +53,21 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 	// Start the portal with the SSID 
 	wifiManager.startConfigPortal( AP_NAME );
 
-	//
-
 	LOG_NOTICE( "WIF", "Connected to wifi" );
 
 	// Get all the values that user entered in the portal and save it in EEPROM
 
-	/*sett.ip = param_ip.getValue();
-	sett.subnet = param_subnet.getValue();
-	sett.gw = param_gw.getValue();*/
-	
-	strncpy(sett.key, param_key.getValue(), KEY_LEN);
-	strncpy(sett.hostname, param_hostname.getValue(), HOSTNAME_LEN);
-	strncpy(sett.email, param_email.getValue(), EMAIL_LEN);
+	strncpy0(sett.key, param_key.getValue(), KEY_LEN);
+	strncpy0(sett.hostname, param_hostname.getValue(), HOSTNAME_LEN);
+	strncpy0(sett.email, param_email.getValue(), EMAIL_LEN);
+	strncpy0(sett.email_title, param_email_title.getValue(), EMAIL_TITLE_LEN);
+	strncpy0(sett.email_template, param_email_template.getValue(), EMAIL_TEMPLATE_LEN);
 
-	sett.value0_start = param_value0_start.getValue();
-	sett.value1_start = param_value1_start.getValue();
+	sett.channel0_start = param_channel0_start.getValue();
+	sett.channel1_start = param_channel1_start.getValue();
 	
-	sett.prev_value0 = sett.value0_start;
-	sett.prev_value1 = sett.value1_start;
+	sett.prev_channel0 = sett.channel0_start;
+	sett.prev_channel1 = sett.channel1_start;
 
 	sett.liters_per_impuls = param_litres_per_imp.getValue();
 
