@@ -4,32 +4,35 @@
 #include <Arduino.h>
 
 /*
-	Включить отправку данных на свой TCP сервер. см. sender_tcp.h
+    Включить отправку данных на свой TCP сервер. см. sender_tcp.h
 */
 //#define SEND_TCP   
 
 /*
-	Включить отправку данных в приложение Blynk.cc
+    Включить отправку данных в приложение Blynk.cc
 */
 #define SEND_BLYNK
 
 
 /*
-	Уровень логирования
+    Уровень логирования
 */
 #define LOGLEVEL 6
 
 /*
-	Время ответа сервера
+    Время ответа сервера
 */
 #define SERVER_TIMEOUT 7000UL // ms
 
 /*
-	Время подключения к точке доступа
+    Время подключения к точке доступа
 */
 #define ESP_CONNECT_TIMEOUT 10000UL
 
-#define I2C_SLAVE_ADDR 10
+
+#define LITRES_PER_IMPULS_DEFAULT 10  // При первом включении заполним 10 литров на импульс
+
+#define I2C_SLAVE_ADDR 10  // i2c адрес Attiny85
 
 #define VER_1 1
 #define VER_2 2
@@ -43,59 +46,74 @@
 #define EMAIL_TITLE_LEN 64
 #define EMAIL_TEMPLATE_LEN 200
 
+/*
+Настройки хранящиеся EEPROM
+*/
 struct Settings
 {
-	uint8_t  version;
-	uint8_t  reserved;  //x16 bit
-	
-	/*uint32_t ip;
-	uint32_t subnet;
-	uint32_t gw;*/
-	
-	/*
-	SEND_BLYNK: уникальный ключ устройства blynk
-	SEND_TCP: не используется
-	*/
-	char     key[KEY_LEN];
+    uint8_t  version;   //Версия конфигурации
+    uint8_t  reserved;  //Для кратности x16 bit
+    
+    /*
+    SEND_BLYNK: уникальный ключ устройства blynk
+    SEND_TCP: не используется
+    */
+    char     key[KEY_LEN];
 
-	/*
-	SEND_BLYNK: сервер blynk.com или свой blynk сервер
-	SEND_TCP: ip адрес или имя хоста куда слать данные
-	*/
-	char     hostname[HOSTNAME_LEN];
+    /*
+    SEND_BLYNK: сервер blynk.com или свой blynk сервер
+    SEND_TCP: ip адрес или имя хоста куда слать данные
+    */
+    char     hostname[HOSTNAME_LEN];
 
-	/*
-	SEND_BLYNK: Если email не пустой, то отсылается e-mail
-	SEND_TCP: не используется	
-	*/
-	char     email[EMAIL_LEN];
-	
-	/*
-	SEND_BLYNK: Заголовок письма. {V0}-{V4} заменяются на данные 
-	SEND_TCP: не используется	
-	*/
-	char     email_title[EMAIL_TITLE_LEN];
+    /*
+    SEND_BLYNK: Если email не пустой, то отсылается e-mail
+    SEND_TCP: не используется    
+    */
+    char     email[EMAIL_LEN];
+    
+    /*
+    SEND_BLYNK: Заголовок письма. {V0}-{V4} заменяются на данные 
+    SEND_TCP: не используется    
+    */
+    char     email_title[EMAIL_TITLE_LEN];
 
-	/*
-	SEND_BLYNK: Шаблон эл. письма. {V0}-{V4} заменяются на данные 
-	SEND_TCP: не используется	
-	*/
-	char     email_template[EMAIL_TEMPLATE_LEN];
+    /*
+    SEND_BLYNK: Шаблон эл. письма. {V0}-{V4} заменяются на данные 
+    SEND_TCP: не используется    
+    */
+    char     email_template[EMAIL_TEMPLATE_LEN];
 
-	float    channel0_start;
-	float    channel1_start;
-	uint16_t liters_per_impuls;
+    /*
+    Показания счетчиках в кубометрах, 
+    введенные пользователем при настройке
+    */
+    float    channel0_start;
+    float    channel1_start;
 
-	//Стартовые значения введенные пользователем
-	uint32_t impules0_start;
-	uint32_t impules1_start;
+    /*
+    Кол-во литров на 1 импульс
+    */
+    uint16_t liters_per_impuls;
 
-	//Не понятно, как получить от Blynk прирост показаний, 
-	//поэтому сохраним их в памяти каждое включение
-	float    prev_channel0;
-	float    prev_channel1;
+    /*
+    Кол-во импульсов Attiny85 соответствующие показаниям счетчиков, 
+    введенных пользователем при настройке
+    */
+    uint32_t impules0_start;
+    uint32_t impules1_start;
 
-	uint16_t crc;
+    /*
+    Не понятно, как получить от Blynk прирост показаний, 
+    поэтому сохраним их в памяти каждое включение
+    */
+    float    channel0_previous;
+    float    channel1_previous;
+
+    /*
+    Контрольная сумма, чтобы гарантировать корректность чтения настроек
+    */
+    uint16_t crc;
 };
 
 #endif

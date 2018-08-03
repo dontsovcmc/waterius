@@ -15,8 +15,8 @@ bool send_blynk(const Settings &sett, const float &channel0, const float &channe
         
         LOG_NOTICE( "BLK", "run");
 
-        unsigned int delta0 = (channel0 - sett.prev_channel0)*1000;  // litres
-        unsigned int delta1 = (channel1 - sett.prev_channel1)*1000;
+        unsigned int delta0 = (channel0 - sett.channel0_previous)*1000;  // litres
+        unsigned int delta1 = (channel1 - sett.channel1_previous)*1000;
 
         Blynk.virtualWrite(V0, channel0);
         Blynk.virtualWrite(V1, channel1);
@@ -66,7 +66,7 @@ bool send_blynk(const Settings &sett, const float &channel0, const float &channe
     } 
 
     return false;
-}		
+}        
 
 #endif //#ifdef SEND_BLYNK
 

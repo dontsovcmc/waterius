@@ -9,9 +9,15 @@
 
 #define FAKE_CRC 0411
 
+/*
+Сохраняем конфигурацию в EEPROM
+*/
 void storeConfig(const Settings &sett);
-bool loadConfig(Settings &sett);
 
+/*
+Читаем конфигурацию из EEPROM
+*/
+bool loadConfig(Settings &sett);
 
 #endif
 

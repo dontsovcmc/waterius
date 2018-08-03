@@ -4,12 +4,16 @@
 #include "setup.h"
 #include "master_i2c.h"
 #include <Arduino.h>
-#include <WiFiManager.h>	
+#include <WiFiManager.h>    
 
+/*
+Запускаем вебсервер для настройки подключения к Интернету и ввода текущих показаний
+*/
 void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, const float &channel1);
-void storeConfig(const Settings &sett);
-bool loadConfig(Settings &sett);
 
+/*
+Дополнение к WifiManager: классы упрощающие работу
+*/
 class IPAddressParameter : public WiFiManagerParameter {
 public:
 
