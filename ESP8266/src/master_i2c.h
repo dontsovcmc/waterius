@@ -17,12 +17,12 @@
 
 
 struct SlaveData {
-	uint8_t  version;
-	uint8_t  service;
-	uint32_t voltage;
-	uint32_t impulses0;
-	uint32_t impulses1;
-	uint8_t  diagnostic;  //1 - good, 0 - fail connect with attiny
+	uint8_t  version;     //Версия ПО Attiny
+	uint8_t  service;     //Причина загрузки Attiny
+	uint32_t voltage;     //Напряжение питания в мВ
+	uint32_t impulses0;   //Импульсов, канал 0
+	uint32_t impulses1;   //Импульсов, канал 1
+	uint8_t  diagnostic;  //1 - ок, 0 - нет связи с Attiny
 	uint8_t  reserved2;
 }; //should be *16bit https://github.com/esp8266/Arduino/issues/1825
 

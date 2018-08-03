@@ -8,40 +8,33 @@
 #include "Logging.h"
 
 #ifdef SEND_BLYNK
-bool send_blynk(const Settings &sett, const float &value0, const float &value1, const float &voltage)
+bool send_blynk(const Settings &sett, const float &channel0, const float &channel1, const uint32_t &voltage)
 {
-    bool ret = false;
-
-    if (WiFi.status() != WL_CONNECTED) {
-        LOG_NOTICE("BLK", "Wi-Fi not connected");
-        return ret;
-    }
-
     Blynk.config(sett.key, sett.hostname, BLYNK_DEFAULT_PORT);
     if (Blynk.connect(SERVER_TIMEOUT)) {
         
         LOG_NOTICE( "BLK", "run");
 
-        unsigned int delta0 = (value0 - sett.prev_value0)*1000;  // litres
-        unsigned int delta1 = (value1 - sett.prev_value1)*1000;
+        unsigned int delta0 = (channel0 - sett.prev_channel0)*1000;  // litres
+        unsigned int delta1 = (channel1 - sett.prev_channel1)*1000;
 
-        Blynk.virtualWrite(V0, value0);
-        Blynk.virtualWrite(V1, value1);
-        Blynk.virtualWrite(V2, voltage);
+        Blynk.virtualWrite(V0, channel0);
+        Blynk.virtualWrite(V1, channel1);
+        Blynk.virtualWrite(V2, (float)(voltage / 1000.0));
         Blynk.virtualWrite(V3, delta0);
         Blynk.virtualWrite(V4, delta1);
 
         LOG_NOTICE( "BLK", "virtualWrite OK");
-
+        
+        // Если заполнен параметр email отправим эл. письмо
         if (strlen(sett.email) > 4) {
-            LOG_NOTICE( "BLK", "send email");
-            LOG_NOTICE( "BLK", "email: " << sett.email);
+            LOG_NOTICE( "BLK", "send email: " << sett.email);
 
             String msg = sett.email_template;
             String title = sett.email_title;
-            String v0(value0, 1);   //для образца СМС сообщения
-            String v1(value1, 1);   //для образца СМС сообщения
-            String v2(voltage, 3);
+            String v0(channel0, 1);   //.1 для образца СМС сообщения
+            String v1(channel1, 1);   //.1 для образца СМС сообщения
+            String v2((float)(voltage / 1000.0), 3);
             String v3(delta0, 2);
             String v4(delta1, 2);
             
@@ -64,20 +57,15 @@ bool send_blynk(const Settings &sett, const float &value0, const float &value1, 
             LOG_NOTICE("BLK", msg);
         }
 
-        ret = true;
-    } else {
+        Blynk.disconnect();
+        LOG_NOTICE("BLK", "disconnected");
 
+        return true;
+    } else {
         LOG_ERROR("BLK", "connect error");
     } 
-    Blynk.disconnect();
-    LOG_NOTICE("BLK", "disconnected");
 
-    return ret;
-
-    /*
-    IPAddress myip = WiFi.localIP();
-    BLYNK_LOG_IP("IP: ", myip);
-    */
+    return false;
 }		
 
 #endif //#ifdef SEND_BLYNK

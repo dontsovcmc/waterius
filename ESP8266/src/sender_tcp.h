@@ -15,19 +15,13 @@
 WiFiClient client;
 
 struct SendData {
-    float value0;
-    float value1;
+    float channel0;
+    float channel1;
     float voltage;
 };
 
-bool send_tcp(const Settings &sett, const float &value0, const float &value1, const float &voltage)
+bool send_tcp(const Settings &sett, const float &channel0, const float &channel1, const float &voltage)
 {
-    bool ret = false;
-    if (WiFi.status() != WL_CONNECTED) {
-        LOG_ERROR("TCP", "Wi-Fi is not connected");
-        return ret;
-    }
-    
     client.setTimeout(SERVER_TIMEOUT); 
 
     IPAddress ip;
@@ -45,8 +39,8 @@ bool send_tcp(const Settings &sett, const float &value0, const float &value1, co
 
     if (connect) {
         SendData data;
-        data.value0 = value0;
-        data.value1 = value1;
+        data.channel0 = channel0;
+        data.channel1 = channel1;
         data.voltage = voltage;
 
         uint16_t bytesSent = client.write((char*)&data, sizeof(data));

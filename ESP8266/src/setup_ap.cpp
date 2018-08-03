@@ -8,12 +8,12 @@
 #include <ESP8266WebServer.h>     // Local WebServer used to serve the configuration portal
 #include <WiFiClient.h>
 #include <EEPROM.h>
-
+#include "utils.h"
 
 #define AP_NAME "Waterius_0.4.3"
 
 
-void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const float &value1) 
+void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, const float &channel1) 
 {
 	// Пользователь нажал кнопку - запускаем веб сервер
 	LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
@@ -36,11 +36,11 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 	WiFiManagerParameter param_email_template( "template", "template",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
 	wifiManager.addParameter( &param_email_template );
 
-	FloatParameter param_value0_start( "value0", "value0",  value0);
-	wifiManager.addParameter( &param_value0_start );
+	FloatParameter param_channel0_start( "channel0", "channel0",  channel0);
+	wifiManager.addParameter( &param_channel0_start );
 	
-	FloatParameter param_value1_start( "value1", "value1",  value1);
-	wifiManager.addParameter( &param_value1_start );
+	FloatParameter param_channel1_start( "channel1", "channel1",  channel1);
+	wifiManager.addParameter( &param_channel1_start );
 
 	LongParameter param_litres_per_imp( "factor", "factor",  sett.liters_per_impuls);
 	wifiManager.addParameter( &param_litres_per_imp );
@@ -57,17 +57,17 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &value0, const 
 
 	// Get all the values that user entered in the portal and save it in EEPROM
 
-	strncpy(sett.key, param_key.getValue(), KEY_LEN-1);
-	strncpy(sett.hostname, param_hostname.getValue(), HOSTNAME_LEN-1);
-	strncpy(sett.email, param_email.getValue(), EMAIL_LEN-1);
-	strncpy(sett.email_title, param_email_title.getValue(), EMAIL_TITLE_LEN-1);
-	strncpy(sett.email_template, param_email_template.getValue(), EMAIL_TEMPLATE_LEN-1);
+	strncpy0(sett.key, param_key.getValue(), KEY_LEN);
+	strncpy0(sett.hostname, param_hostname.getValue(), HOSTNAME_LEN);
+	strncpy0(sett.email, param_email.getValue(), EMAIL_LEN);
+	strncpy0(sett.email_title, param_email_title.getValue(), EMAIL_TITLE_LEN);
+	strncpy0(sett.email_template, param_email_template.getValue(), EMAIL_TEMPLATE_LEN);
 
-	sett.value0_start = param_value0_start.getValue();
-	sett.value1_start = param_value1_start.getValue();
+	sett.channel0_start = param_channel0_start.getValue();
+	sett.channel1_start = param_channel1_start.getValue();
 	
-	sett.prev_value0 = sett.value0_start;
-	sett.prev_value1 = sett.value1_start;
+	sett.prev_channel0 = sett.channel0_start;
+	sett.prev_channel1 = sett.channel1_start;
 
 	sett.liters_per_impuls = param_litres_per_imp.getValue();
 
