@@ -15,44 +15,46 @@
 void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, const float &channel1) 
 {
     LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
-    WiFi.disconnect( true );
-    WiFiManager wifiManager;
-    LOG_NOTICE( "WIF", "User requested captive portal" );
+    
+    //WiFi.mode(WIFI_AP);
+    
+    WiFiManager wm;
+    LOG_NOTICE( "AP", "User requested captive portal" );
     
     WiFiManagerParameter param_key( "key", "key",  sett.key, KEY_LEN-1);
-    wifiManager.addParameter( &param_key );
+    wm.addParameter( &param_key );
 
     WiFiManagerParameter param_hostname( "host", "host",  sett.hostname, HOSTNAME_LEN-1);
-    wifiManager.addParameter( &param_hostname );
+    wm.addParameter( &param_hostname );
 
     WiFiManagerParameter param_email( "email", "email",  sett.email, EMAIL_LEN-1);
-    wifiManager.addParameter( &param_email );
+    wm.addParameter( &param_email );
     
     WiFiManagerParameter param_email_title( "title", "title",  sett.email_title, EMAIL_TITLE_LEN-1);
-    wifiManager.addParameter( &param_email_title );
+    wm.addParameter( &param_email_title );
     
     WiFiManagerParameter param_email_template( "template", "template",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
-    wifiManager.addParameter( &param_email_template );
+    wm.addParameter( &param_email_template );
 
     FloatParameter param_channel0_start( "channel0", "channel0",  channel0);
-    wifiManager.addParameter( &param_channel0_start );
+    wm.addParameter( &param_channel0_start );
     
     FloatParameter param_channel1_start( "channel1", "channel1",  channel1);
-    wifiManager.addParameter( &param_channel1_start );
+    wm.addParameter( &param_channel1_start );
 
     LongParameter param_litres_per_imp( "factor", "factor",  sett.liters_per_impuls);
-    wifiManager.addParameter( &param_litres_per_imp );
+    wm.addParameter( &param_litres_per_imp );
 
-    wifiManager.setConfigPortalTimeout(300);
-    wifiManager.setConnectTimeout(15);
+    wm.setConfigPortalTimeout(300);
+    wm.setConnectTimeout(15);
     
-    LOG_NOTICE( "WIF", "start config portal" );
+    LOG_NOTICE( "AP", "start config portal" );
 
     // Запуск веб сервера на 192.168.4.1
-    wifiManager.startConfigPortal( AP_NAME );
+    wm.startConfigPortal( AP_NAME );
 
     // Успешно подключились к Wi-Fi, можно засыпать
-    LOG_NOTICE( "WIF", "Connected to wifi. Save settings, go to sleep" );
+    LOG_NOTICE( "AP", "Connected to wifi. Save settings, go to sleep" );
 
     // Переписываем введенные пользователем значения в Конфигурацию
     strncpy0(sett.key, param_key.getValue(), KEY_LEN);
@@ -75,8 +77,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     sett.impules0_start = data.impulses0;
     sett.impules1_start = data.impulses1;
 
-    LOG_NOTICE( "DAT", "impulses0=" << sett.impules0_start );
-    LOG_NOTICE( "DAT", "impulses1=" << sett.impules1_start );
+    LOG_NOTICE( "AP", "impulses0=" << sett.impules0_start );
+    LOG_NOTICE( "AP", "impulses1=" << sett.impules1_start );
 
     sett.crc = FAKE_CRC; // todo: сделать нормальный crc16
     storeConfig(sett);

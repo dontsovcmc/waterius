@@ -26,6 +26,10 @@ void setup()
     masterI2C.begin();    //Включаем i2c master + спрашиваем у Attiny85 повод пробуждения
 }
 
+/*
+Берем начальные показания и кол-во импульсов, 
+вычисляем текущие показания по новому кол-ву импульсов
+*/
 void calculate_values(Settings &sett, SlaveData &data, float *channel0, float *channel1)
 {
 
@@ -100,6 +104,12 @@ void loop()
                     if (send_tcp(sett, channel0, channel1, data.voltage / 1000.0))
                     {
                         LOG_NOTICE("TCP", "send ok");
+
+                        //Сохраним текущие значения в памяти. Для расхода за сутки.
+                        //Оставьте только в 1 месте, если используете и Blynk, и TCP
+                        sett.channel0_previous = channel0;
+                        sett.channel1_previous = channel1;
+                        storeConfig(sett);
                     }
     #endif
                 }

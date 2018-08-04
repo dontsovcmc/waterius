@@ -25,8 +25,8 @@ struct SlaveData {
     uint32_t impulses0;   //Импульсов, канал 0
     uint32_t impulses1;   //Импульсов, канал 1
     uint8_t  diagnostic;  //1 - ок, 0 - нет связи с Attiny
-    uint8_t  reserved2;
-}; //Кратно *16bit https://github.com/esp8266/Arduino/issues/1825
+    uint8_t  reserved2;   //Кратно 16bit https://github.com/esp8266/Arduino/issues/1825
+}; 
 
 
 class MasterI2C

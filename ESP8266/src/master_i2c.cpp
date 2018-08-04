@@ -6,13 +6,15 @@
 
 
 void MasterI2C::begin() {
-    Wire.begin( SDA_PIN, SCL_PIN );
-    Wire.setClock( 100000L );
-    Wire.setClockStretchLimit(1500L);
+
+    Wire.begin(SDA_PIN, SCL_PIN);
+    Wire.setClock(100000L);
+    Wire.setClockStretchLimit(1500L);  // Иначе связь с Attiny не надежная FF FF в хвосте посылки будут
 }
 
 
 bool MasterI2C::sendCmd(const char cmd ) {
+
     Wire.beginTransmission( I2C_SLAVE_ADDR );
     if (Wire.write(cmd) != 1){
         LOG_ERROR("I2C", "write cmd failed");
@@ -20,16 +22,17 @@ bool MasterI2C::sendCmd(const char cmd ) {
     }
     int err = Wire.endTransmission(true);
     if (err != 0) {
-        LOG_ERROR("I2C end", err);
+        LOG_ERROR("I2C", "end error:" << err);
         return false;
     }    
     
-    delay(1); // Because attiny is running slow cpu clock speed. Give him a little time to process the command.
+    delay(1); // Дадим Attiny время подумать 
     return true;
 }
 
 bool MasterI2C::getByte(uint8_t &value) {
-    if (Wire.requestFrom( I2C_SLAVE_ADDR, 1 ) != 1)    {
+
+    if (Wire.requestFrom( I2C_SLAVE_ADDR, 1 ) != 1) {
         LOG_ERROR("I2C", "requestFrom failed");
         return false;
     }
@@ -43,8 +46,8 @@ bool MasterI2C::getByte(uint8_t &value) {
     return true;
 }
 
-bool MasterI2C::getUint(uint32_t &value) 
-{
+bool MasterI2C::getUint(uint32_t &value) {
+
     uint8_t i1, i2, i3, i4;
     if (getByte(i1) && getByte(i2) && getByte(i3) && getByte(i4)) {
         value = i4;
@@ -61,8 +64,8 @@ bool MasterI2C::getUint(uint32_t &value)
     return false;
 }
 
-bool MasterI2C::getMode(uint8_t &mode)
-{
+bool MasterI2C::getMode(uint8_t &mode) {
+
     mode = TRANSMIT_MODE;
     if (!sendCmd('M') || !getByte(mode)) {
         LOG_ERROR("I2C", "get mode failed. Check i2c line.");
@@ -72,8 +75,8 @@ bool MasterI2C::getMode(uint8_t &mode)
     return true;
 }
 
-bool MasterI2C::getSlaveData(SlaveData &data)
-{
+bool MasterI2C::getSlaveData(SlaveData &data) {
+
     sendCmd('B');
     bool good = getByte(data.version);
     good &= getByte(data.service);

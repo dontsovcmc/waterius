@@ -14,12 +14,20 @@
 
 WiFiClient client;
 
+/*
+Структура данных, которую хотим отправить на TCP сервер.
+*/
 struct SendData {
     float channel0;
     float channel1;
     float voltage;
 };
 
+/*
+Функция отправляющая данные на TCP сервер.
+Ip адрес или имя сайта: sett.hostname
+Порт: TCP_SERVER_PORT 4001
+*/
 bool send_tcp(const Settings &sett, const float &channel0, const float &channel1, const float &voltage)
 {
     client.setTimeout(SERVER_TIMEOUT); 
@@ -29,11 +37,11 @@ bool send_tcp(const Settings &sett, const float &channel0, const float &channel1
 
     if (ip.fromString(sett.hostname)) {
 
-        LOG_NOTICE("WIF", "Making TCP connection to ip " << ip.toString() << " port " << TCP_SERVER_PORT);
-        connect = client.connect(ip, 4001); 
+        LOG_NOTICE("TCP", "Making TCP connection to ip " << ip.toString() << " port " << TCP_SERVER_PORT);
+        connect = client.connect(ip, TCP_SERVER_PORT); 
     } else {
 
-        LOG_NOTICE("WIF", "Making TCP connection to host " << sett.hostname << " port " << TCP_SERVER_PORT);
+        LOG_NOTICE("TCP", "Making TCP connection to host " << sett.hostname << " port " << TCP_SERVER_PORT);
         connect = client.connect(sett.hostname, TCP_SERVER_PORT);
     }
 
@@ -47,13 +55,13 @@ bool send_tcp(const Settings &sett, const float &channel0, const float &channel1
 
         client.stop();
         if (bytesSent == sizeof(data)) {
-            LOG_NOTICE("WIF", "Data sent successfully");
+            LOG_NOTICE("TCP", "Data sent successfully");
             return true;
         }
-        LOG_ERROR("WIF", "Could not send data");
+        LOG_ERROR("TCP", "Could not send data");
         
     } else {
-        LOG_ERROR("WIF", "Connection to server failed");
+        LOG_ERROR("TCP", "Connection to server failed");
     }
         
     return false;

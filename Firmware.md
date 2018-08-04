@@ -27,7 +27,7 @@ Vcc - в любой 3.3в или 5в.
 
 
 ### c помощью platfomio
-- откройте в командной строке папку ImpCounter85
+- откройте в командной строке папку waterius/Attiny85
 - измените в файле platfomio.ini порт на свой:
 upload_port = /dev/tty.usbmodem1421
 - выполните:
@@ -35,6 +35,7 @@ platformio run --target upload
 
 # Прошивка ESP8266
 ### c помощью platfomio
+- откройте в командной строке папку waterius/ESP8266
 - измените в файле platfomio.ini порт на свой:
 upload_port = /dev/tty.usbmodem1411
 - выполните:
