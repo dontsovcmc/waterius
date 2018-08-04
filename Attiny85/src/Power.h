@@ -20,15 +20,14 @@ struct ESPPowerButton
 	uint8_t power_pin;
 	uint8_t setup_pin;
 
+	bool pressed;                  //пользователь нажал кнопку
 	bool power_on;  		       //Wi-Fi включен
-	bool pressed;
 	unsigned long wake_up_timestamp; //время включения Wi-Fi
 
 	bool sleep_and_pressed();
 	bool is_pressed();
 	void power(const bool);
 	bool elapsed(const unsigned long msec);
-	unsigned long wait_button_release();
 };
 
 #endif
