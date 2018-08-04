@@ -62,10 +62,10 @@ bool loadConfig(struct Settings &sett)
         String hostname = BLYNK_DEFAULT_DOMAIN;
         strncpy0(sett.hostname, hostname.c_str(), HOSTNAME_LEN);
 
-        String email_title = "New values {DEVICE_NAME}";
+        String email_title = "Новые показания {DEVICE_NAME}";
         strncpy0(sett.email_title, email_title.c_str(), EMAIL_TITLE_LEN);
 
-        String email_template = "Hot: {V0} m3, Cold: {V1} m3<br>day:<br>hot: +{V3}, cold: +{V4}<br>power:{V2}";
+        String email_template = "Горячая: {V0}м3, Холодная: {V1}м3<br>За день:<br>Горячая: +{V3}л, Холодная: +{V4}л<br>Напряжение:{V2}В";
         strncpy0(sett.email_template, email_template.c_str(), EMAIL_TEMPLATE_LEN);
 
         LOG_NOTICE("CFG", "version=" << sett.version << ", hostname=" << hostname);
