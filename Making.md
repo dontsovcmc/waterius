@@ -8,7 +8,7 @@
 
 ## Компоненты ESP-01
 * однослойная плата 61 х  14 мм ([плата для ЛУТ](https://github.com/dontsovcmc/ImpCounter/raw/master/Board/waterius-homemade-board.png)
-* ESP-01
+* ESP-01 или ESP-01s (+[удалить резистор](https://esp8266.ru/forum/threads/esp-01s-vysokoe-potreblenie-vo-sne-200ua.3591/))
 + USB-TTL 3.3в для прошивки ESP8266
 
 Вот так выглядит заводская плата с напаенными элеметами:

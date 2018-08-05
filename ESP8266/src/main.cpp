@@ -23,7 +23,7 @@ void setup()
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
     LOG_NOTICE("ESP", "Booted");
     ESP.wdtDisable();     //Выключаем watchdog
-    masterI2C.begin();    //Включаем i2c master + спрашиваем у Attiny85 повод пробуждения
+    masterI2C.begin();    //Включаем i2c master
 }
 
 /*
@@ -48,6 +48,7 @@ void loop()
     float channel0, channel1;
     uint8_t mode;
 
+	// спрашиваем у Attiny85 повод пробуждения и данные
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
     {
         if (mode == SETUP_MODE) {

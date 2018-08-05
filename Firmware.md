@@ -57,19 +57,19 @@ I try with Arduino IDE 1.8.5
 http://arduino.esp8266.com/stable/package_esp8266com_index.json
 
 Board settings:
-Board: Generic ESP8266 Module
-Flash Mode: DIO
-Flash Size: 512K (no SPIFFS)
-Debug port: Disable
-Debug Level: None
-IwIP Varian: v2 Lover Memory
-Reset Method: ck
-Crystal Frequency: 26 MHz
-Flash Frequency: 40MHz
-CPU Frequency: 80 MHz
-Buildin Led: 0
-Upload Speed: 115200
-Port: select your port
+* Board: Generic ESP8266 Module
+* Flash Mode: DIO
+* Flash Size: 512K (no SPIFFS)
+* Debug port: Disable
+* Debug Level: None
+* IwIP Varian: v2 Lover Memory
+* Reset Method: ck
+* Crystal Frequency: 26 MHz
+* Flash Frequency: 40MHz
+* CPU Frequency: 80 MHz
+* Buildin Led: 0
+* Upload Speed: 115200
+* Port: select your port
 
 ### Sketch
 1. rename main.cpp to src.ino 
