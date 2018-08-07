@@ -3,22 +3,10 @@
 Для работы Вотериуса нужно приложение Blynk.cc на телефоне, а также настроить само устройство.
 
 ## Настройка приложения Blynk
-
-<table >
-  <tr>
-    <td>[Установите приложение Blynk на телефон](https://www.blynk.cc/getting-started).</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>Авторизируйтесь в нём</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td>Нажмите на значок QR кода вверху, чтобы скопировать проект waterius (Андроид)</td>
-    <td><img src="https://github.com/dontsovcmc/waterius/blob/master/files/step01.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step01.png" width="200"/> </td>
-  </tr>
-</table>
-
+- [Установите приложение Blynk на телефон](https://www.blynk.cc/getting-started).
+- Авторизируйтесь в нём
+- Нажмите на значок QR кода вверху, чтобы скопировать проект waterius (Андроид)
+<img src="https://github.com/dontsovcmc/waterius/blob/master/files/step01.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step01.png" width="200"/> 
 - Наводим камеру телефона на QR код:
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/qr.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/qr.png" width="200"/> 
 - Будет создан клон проекта. Теперь надо узнать уникальный ключ для отправки данных в проект.
@@ -52,7 +40,7 @@
 - откройте воду на полную, чтобы вылить за 3 мин больше 10л воды и убедиться, что Вотериус пришлет новые показания.
 - далее Вотериус будет слать показания примерно раз в сутки
 
-### Параметры Blynk
+### Параметры Blynk: 
 
 Приложение Blynk должно быть запущено (в углу квадрат "стоп").
 
