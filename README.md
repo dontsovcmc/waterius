@@ -4,8 +4,10 @@
 
 Aвтономное устройство для передачи показаний воды по Wi-Fi.
 Данные смотрим в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8)) или в другом подобном сервисе. 
-
 Также можно отсылать показания на ваш TCP сервер и на электронную почту.
+
+Статьи:
+[Habrahabr.com (ru)](https://habr.com/post/418573/) | [Hackster.io (en)](https://www.hackster.io/dontsovcmc/waterius-4bfaba) | [Blynk forum (en-ru)](https://community.blynk.cc/t/autonomous-impulse-counter-for-water-meters-attiny85-esp-01)
 
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" width="360"/> <img src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" width="180"/>
 
@@ -42,7 +44,7 @@ Aвтономное устройство для передачи показан�
 
 ## Сообщество
 
-ЧАТ ДЛЯ ОБЩЕНИЯ: [Gitter.im/waterius](https://gitter.im/waterius)
+ОБЩИЙ чат для общения: [Gitter.im/waterius](https://gitter.im/waterius)
 
 Можно делиться опытом сборки, установки по хэштегу `#waterius`.
 - [Instagram](https://www.instagram.com/explore/tags/waterius/) (вдруг он у вас зачем-то есть)
@@ -68,7 +70,8 @@ https://easyelectronics.ru
 
 
 # Контакты
-ЧАТ ДЛЯ ОБЩЕНИЯ: [Gitter.im/waterius](https://gitter.im/waterius)
+ОБЩИЙ чат для общения: [Gitter.im/waterius](https://gitter.im/waterius)
+
 Связаться со мной: [Telegram](https://t.me/Dontsovcmc), [Facebook](https://facebook.com/dontsovev), [Hackster.io](https://www.hackster.io/dontsovcmc)
 
  
