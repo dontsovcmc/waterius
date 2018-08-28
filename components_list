@@ -1,0 +1,32 @@
+Resistors:
+3.3kΩ*9, 330Ω*2;
+R1=3301=3.3kΩ;
+R2=3000=300Ω;
+R3=3301=3.3kΩ;
+!!!C2=3.3kΩ!!!;
+R5=3301=3.3kΩ;
+R6=3301=3.3kΩ;
+R7=3301=3.3kΩ;
+R8=3000=300Ω;
+R9=332=3.3kΩ;
+R10=3301=3.3kΩ;
+
+Capacitors:
+0.1 nF*2, 1nF*2
+C1=1nF;
+!!!R4=0.1nF!!!;
+C3=0.1nF
+C4=1nF
+
+IC1=Microchip ATtiny85
+
+Buttons:
+S1=KLS7-TS6606(as example);
+
+Stab
+U2=MCP1700;
+
+Led:
+LED1=?;
+
+RST=Dupont Male on-board 1-pin, 2.54 step;
