@@ -1,16 +1,6 @@
 # Прошивка Attiny85
 
-Прошивка ISP программатором (3.3в-5в).
-
-Распиновка, при прошивки с помощью Arduino Micro или Arduino UNO:
-
-| Micro | UNO | ISP | Attiny85 |   
-| ---- | ---- | ---- | ---- |
-| 15pin | 13pin | SCK | 7pin |
-| 14pin | 12pin | MISO | 6pin |
-| 16pin | 11pin | MOSI | 5pin |
-| 10pin | 10pin | RESET | 1pin |
-+ питание!
+Фьюзы: E:FF, H:DF, L:62
 
 Расположение выводов на разъеме для ESP-01 (вид сверху):
 
@@ -22,17 +12,53 @@
 nc - не используется
 Vcc - в любой 3.3в или 5в.
 
-Используемые библиотеки:
-* [WiFiManager](https://github.com/tzapu/WiFiManager) для настройки wi-fi точки доступа
-* [USIWire](https://github.com/puuu/USIWire) i2c слейв для attiny
+## Arduino в качестве ISP программатора (3.3в-5в).
+
+Распиновка, при прошивки с помощью Arduino Micro или Arduino UNO:
+
+| Micro | UNO | ISP | Attiny85 |   
+| ---- | ---- | ---- | ---- |
+| 15pin | 13pin | SCK | 7pin |
+| 14pin | 12pin | MISO | 6pin |
+| 16pin | 11pin | MOSI | 5pin |
+| 10pin | 10pin | RESET | 1pin |
++ питание!
+
+В platfomio.ini:
+upload_protocol = arduino
+upload_flags = -P$UPLOAD_PORT
+upload_speed = 19200
+
+## Китайский USB-ISP программатор
+Плата MX-USBISP-V5.00
+Программа [ProgISP V1.7.2](https://yandex.ru/search/?text=ProgISP%20V1.7.2&&lr=213)
+Фьюзы: E:FF, H:DF, L:62
+HEX файл взять из platfomio или Arduino IDE.
+
+## USBasp программатор
+Я купил китайский USB-ISP и перепрошил его по [инструкции](https://vochupin.blogspot.com/2016/12/usb-isp.html) в USBasp ([прошивка](https://www.fischl.de/usbasp/)). В диспетчере устройств он стал виден, как USBasp. 
+
+В platfomio.ini:
+upload_protocol = usbasp
+upload_flags = 
+    -Pusb 
+    -B5
 
 
-### c помощью platfomio
+## Работа с platfomio
+Platformio бывает в виде консольной утилиты или как дополнение в Visual Studio Code. 
+[Инструкция по установки утилиты](http://docs.platformio.org/en/latest/installation.html#python-package-manager)
+
 - откройте в командной строке папку waterius/Attiny85
 - измените в файле platfomio.ini порт на свой:
 upload_port = /dev/tty.usbmodem1421
 - выполните:
 platformio run --target upload
+
+Используемые библиотеки:
+* [WiFiManager](https://github.com/tzapu/WiFiManager) для настройки wi-fi точки доступа
+* [USIWire](https://github.com/puuu/USIWire) i2c слейв для attiny
+    
 
 # Прошивка ESP8266
 ### c помощью platfomio
