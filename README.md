@@ -1,5 +1,5 @@
 ### Wi-Fi модуль для счётчиков воды
-# Вотериус 0.4.4
+# Вотериус 0.4.5
 [English description](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
 Aвтономное устройство для передачи показаний воды по Wi-Fi.
