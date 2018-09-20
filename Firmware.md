@@ -56,6 +56,15 @@ avrdude.exe -p t85 -c Usbasp -B 4 -P usb -U flash:w:"<путь_до_репози
 Platformio бывает в виде консольной утилиты или как дополнение в Visual Studio Code. 
 [Инструкция по установки утилиты](http://docs.platformio.org/en/latest/installation.html#python-package-manager)
 
+
+=======
+[Инструкция из интернета](https://medium.com/jungletronics/attiny85-easy-flashing-through-arduino-b5f896c48189) 
+У нас только attiny85 уже сидит на плате, поэтому подключаемся к разъему.
+
+[Скомпилированные прошивки](https://github.com/dontsovcmc/waterius_firmware)
+
+### c помощью platfomio
+>>>>>>> 0fef3f062ab0b92b60a2867e0196404d04ff97f5
 - откройте в командной строке папку waterius/Attiny85
 - измените в файле platfomio.ini порт на свой:
 upload_port = /dev/tty.usbmodem1421
@@ -68,6 +77,13 @@ platformio run --target upload
     
 
 # Прошивка ESP8266
+Для прошивки ESP8266 необходим USB-TTL преобразователь с логическим уровнем 3.3в. Обратите внимание, что у него должен быть регулятор напряжения для питания ESP8266 на 3.3в. У обычных USB-TTL преобразователей логический уровень 5в, поэтому их вывод TX нужно подключить к делителю напряжения. Я использую резисторы 1.5к и 2.2к.
+
+[Инструкция из интернета](http://cordobo.com/2300-flash-esp8266-01-with-arduino-uno) 
+(в большинстве других туториалах подключают 5в логику и делают ESP больно)
+
+[Скомпилированные прошивки](https://github.com/dontsovcmc/waterius_firmware)
+
 ### c помощью platfomio
 - откройте в командной строке папку waterius/ESP8266
 - измените в файле platfomio.ini порт на свой:
@@ -76,7 +92,7 @@ upload_port = /dev/tty.usbmodem1411
 platformio run --target upload
 
 ## с помощью Arduino IDE
-I try with Arduino IDE 1.8.5 
+I try flash ESP with Arduino IDE 1.8.5 
 
 ### Additional Libraries Требуемые библиотеки  
 - WifiManager by tzapu (0.12.0)
