@@ -37,13 +37,20 @@ HEX файл взять из platfomio или Arduino IDE.
 
 ## USBasp программатор
 Я купил китайский USB-ISP и перепрошил его по [инструкции](https://vochupin.blogspot.com/2016/12/usb-isp.html) в USBasp ([прошивка](https://www.fischl.de/usbasp/)). В диспетчере устройств он стал виден, как USBasp. 
-
+Драйвер [v3.0.7](http://www.myrobot.ru/downloads/programs/usbasp-win-driver-x86-x64-v3.0.7.zip)
 В platfomio.ini:
 upload_protocol = usbasp
 upload_flags = 
     -Pusb 
     -B5
 
+Примечание: в Windows7 почему-то не заработал. Windows 10x64 - ок.
+	
+## Avrdude_prog
+```
+avrdude.exe -p t85 -c Usbasp -B 4 -P usb  -U efuse:v:255:m -U lock:v:63:m -U hfuse:v:223:m -U lfuse:v:98:m
+avrdude.exe -p t85 -c Usbasp -B 4 -P usb -U flash:w:"<путь_до_репозитория>\waterius\Attiny85\.pioenvs\attiny85\firmware.hex":a
+```
 
 ## Работа с platfomio
 Platformio бывает в виде консольной утилиты или как дополнение в Visual Studio Code. 
