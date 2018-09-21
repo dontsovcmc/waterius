@@ -8,6 +8,7 @@
 #include "setup_ap.h"
 #include "sender_blynk.h"
 #include "sender_tcp.h"
+#include "sender_json.h"
 
 MasterI2C masterI2C; // Для общения с Attiny85 по i2c
 
@@ -94,25 +95,23 @@ void loop()
                     if (send_blynk(sett, channel0, channel1, data.voltage))
                     {
                         LOG_NOTICE("BLK", "send ok");
-
-                        //Сохраним текущие значения в памяти. Для расхода за сутки.
-                        sett.channel0_previous = channel0;
-                        sett.channel1_previous = channel1;
-                        storeConfig(sett);
                     }
     #endif
     #ifdef SEND_TCP
                     if (send_tcp(sett, channel0, channel1, data.voltage / 1000.0))
                     {
                         LOG_NOTICE("TCP", "send ok");
-
-                        //Сохраним текущие значения в памяти. Для расхода за сутки.
-                        //Оставьте только в 1 месте, если используете и Blynk, и TCP
-                        sett.channel0_previous = channel0;
-                        sett.channel1_previous = channel1;
-                        storeConfig(sett);
                     }
     #endif
+                    if (send_json(sett, data, channel0, channel1))
+                    {
+                        LOG_NOTICE("JSN", "send ok");
+                    }
+
+                    //Сохраним текущие значения в памяти.
+                    sett.channel0_previous = channel0;
+                    sett.channel1_previous = channel1;
+                    storeConfig(sett);
                 }
             }
         }

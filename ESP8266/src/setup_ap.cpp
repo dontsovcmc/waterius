@@ -10,39 +10,41 @@
 #include <EEPROM.h>
 #include "utils.h"
 
-#define AP_NAME "Waterius_0.4.5"
+#define AP_NAME "Waterius_" FIRMWARE_VERSION
 
 void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, const float &channel1) 
 {
     LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
     
-    //WiFi.mode(WIFI_AP);
+    //
+    // Если имя/пароль WiFi не будут изменены, то он не подключится повторно =(
+    // поэтому отключаемся. https://github.com/tzapu/WiFiManager/issues/511
+    WiFi.persistent(false);  
+    WiFi.disconnect(); 
+    WiFi.mode(WIFI_AP);         
+    WiFi.persistent(true);
     
     WiFiManager wm;
     LOG_NOTICE( "AP", "User requested captive portal" );
     
     WiFiManagerParameter param_key( "key", "key",  sett.key, KEY_LEN-1);
-    wm.addParameter( &param_key );
-
     WiFiManagerParameter param_hostname( "host", "host",  sett.hostname, HOSTNAME_LEN-1);
-    wm.addParameter( &param_hostname );
-
     WiFiManagerParameter param_email( "email", "email",  sett.email, EMAIL_LEN-1);
-    wm.addParameter( &param_email );
-    
     WiFiManagerParameter param_email_title( "title", "title",  sett.email_title, EMAIL_TITLE_LEN-1);
-    wm.addParameter( &param_email_title );
-    
     WiFiManagerParameter param_email_template( "template", "template",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
-    wm.addParameter( &param_email_template );
-
+    WiFiManagerParameter param_hostname_json( "hostname_json", "hostname_json",  sett.hostname_json, HOSTNAME_LEN-1);
     FloatParameter param_channel0_start( "channel0", "channel0",  channel0);
-    wm.addParameter( &param_channel0_start );
-    
     FloatParameter param_channel1_start( "channel1", "channel1",  channel1);
-    wm.addParameter( &param_channel1_start );
-
     LongParameter param_litres_per_imp( "factor", "factor",  sett.liters_per_impuls);
+
+    wm.addParameter( &param_key );
+    wm.addParameter( &param_hostname );
+    wm.addParameter( &param_email );
+    wm.addParameter( &param_email_title );
+    wm.addParameter( &param_email_template );
+    wm.addParameter( &param_hostname_json );
+    wm.addParameter( &param_channel0_start );
+    wm.addParameter( &param_channel1_start );
     wm.addParameter( &param_litres_per_imp );
 
     wm.setConfigPortalTimeout(300);
@@ -62,6 +64,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     strncpy0(sett.email, param_email.getValue(), EMAIL_LEN);
     strncpy0(sett.email_title, param_email_title.getValue(), EMAIL_TITLE_LEN);
     strncpy0(sett.email_template, param_email_template.getValue(), EMAIL_TEMPLATE_LEN);
+
+    // JSON
+    strncpy0(sett.hostname_json, param_hostname_json.getValue(), HOSTNAME_LEN);
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();

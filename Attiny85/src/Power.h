@@ -16,19 +16,24 @@ uint16_t readVcc();
 */
 struct ESPPowerButton 
 {
-	ESPPowerButton(const uint8_t, const uint8_t);
+	ESPPowerButton(const uint8_t);
+
+	//Пин подачи питания на ESP
 	uint8_t power_pin;
-	uint8_t setup_pin;
 
-	bool power_on;  		       //Wi-Fi включен
-	bool pressed;
-	unsigned long wake_up_timestamp; //время включения Wi-Fi
+	//Wi-Fi включен
+	bool power_on;  		         
 
-	bool sleep_and_pressed();
-	bool is_pressed();
-	void power(const bool);
+	//Время включения Wi-Fi 
+	//аварийно отключаем через 10 мин при настройке
+	//через 15 секунд при передаче данных
+	unsigned long wake_up_timestamp; 
+
+	//Подать или снять питание с ESP
+	void power(const bool);      
+
+	//Прошло ли больше msec времени с момента wake_up_timestamp
 	bool elapsed(const unsigned long msec);
-	unsigned long wait_button_release();
 };
 
 #endif

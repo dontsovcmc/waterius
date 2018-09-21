@@ -6,46 +6,17 @@
 #include <avr/wdt.h>
 #include "Setup.h"
 
-ESPPowerButton::ESPPowerButton(const uint8_t p, const uint8_t setup)
+
+ESPPowerButton::ESPPowerButton(const uint8_t p)
 	: power_pin(p)
-	, setup_pin(setup)
 	, power_on(false)
-	, pressed(false)
 {
 	pinMode(power_pin, INPUT);
-	pinMode(setup_pin, INPUT);
-}
-
-bool ESPPowerButton::is_pressed()
-{
-	if (digitalRead(setup_pin) == LOW)
-	{
-		delayMicroseconds(20000);  //нельзя delay, т.к. power_off
-		return digitalRead(setup_pin) == LOW;
-	}
-	return false;
-}
-
-bool ESPPowerButton::sleep_and_pressed()
-{
-	if (power_on)
-		return false;
-	pressed = is_pressed();
-	return pressed;
-}
-
-unsigned long ESPPowerButton::wait_button_release()
-{
-	unsigned long press_time = millis();
-	while(is_pressed())
-		;  
-	return millis() - press_time;
 }
 
 void ESPPowerButton::power(const bool on)
 {
 	power_on = on;
-	pressed = false;
 	
 	if (on)
 	{
@@ -55,9 +26,9 @@ void ESPPowerButton::power(const bool on)
 	}
 	else
 	{
-		delayMicroseconds(5000); //чтобы заснул
+		delayMicroseconds(50000);   // чтобы заснул
 		digitalWrite(power_pin, LOW);
-		pinMode(power_pin, INPUT);
+		pinMode(power_pin, INPUT);  // снижаем потребление
 		wake_up_timestamp = 0;
 	}
 }
@@ -69,7 +40,7 @@ bool ESPPowerButton::elapsed(const unsigned long msec)
 
 
 // Меряем напряжение питания Attiny85. 
-// Для каждой attiny будет своя константа.
+// Есть погрешность, поэтому надо калбировать. Для каждой attiny будет своя константа 1126400L.
 uint16_t readVcc() 
 {
 	// Read 1.1V reference against AVcc

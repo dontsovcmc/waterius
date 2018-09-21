@@ -22,16 +22,10 @@
 	Период отправки данных на сервер, мин
 */
 #ifdef TEST_WATERIUS
-#define WAKE_EVERY_MIN 10
+#define WAKE_EVERY_MIN   10
 #else
-#define WAKE_EVERY_MIN                24 * 60U  // 1U 
+#define WAKE_EVERY_MIN   24 * 60U  // 1U 
 #endif
-
-/*
-	Через сколько минут после настройки 
-	счетчик отправит данные на сервер
-*/
-#define WAKE_AFTER_SETUP_MIN          3U        // 1U
 
 /*
 	Сколько милисекунд ждем передачи данных в ESP

@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+#define FIRMWARE_VERSION "0.5"
+
 /*
     Включить отправку данных на свой TCP сервер. см. sender_tcp.h
 */
@@ -36,7 +38,8 @@
 
 #define VER_1 1
 #define VER_2 2
-#define CURRENT_VERSION VER_2
+#define VER_3 3
+#define CURRENT_VERSION VER_3
 
 
 #define KEY_LEN 34
@@ -83,6 +86,12 @@ struct Settings
     SEND_TCP: не используется    
     */
     char     email_template[EMAIL_TEMPLATE_LEN];
+    
+    /*
+    http сервер для отправки данных в виде JSON
+    в виде: http://host:port/path
+    */
+    char     hostname_json[HOSTNAME_LEN];
 
     /*
     Показания счетчиках в кубометрах, 

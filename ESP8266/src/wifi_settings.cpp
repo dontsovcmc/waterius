@@ -40,8 +40,10 @@ bool loadConfig(struct Settings &sett)
         sett.email[EMAIL_LEN-1] = '\0';
         sett.email_title[EMAIL_TITLE_LEN-1] = '\0';
         sett.email_template[EMAIL_TEMPLATE_LEN-1] = '\0'; 
+        sett.hostname_json[HOSTNAME_LEN-1] = '\0';
         
         LOG_NOTICE( "CFG", " email=" << sett.email  << ", hostname=" << sett.hostname);
+        LOG_NOTICE( "CFG", " hostname_json=" << sett.hostname_json);
 
         // Всегда одно и тоже будет
         LOG_NOTICE( "CFG", "channel0_start=" << sett.channel0_start << ", impules0_start=" << sett.impules0_start << ", factor=" << sett.liters_per_impuls );
@@ -68,6 +70,8 @@ bool loadConfig(struct Settings &sett)
         String email_template = "Горячая: {V0}м3, Холодная: {V1}м3<br>За день:<br>Горячая: +{V3}л, Холодная: +{V4}л<br>Напряжение:{V2}В";
         strncpy0(sett.email_template, email_template.c_str(), EMAIL_TEMPLATE_LEN);
 
+        sett.hostname_json[0] = '\0';
+        
         LOG_NOTICE("CFG", "version=" << sett.version << ", hostname=" << hostname);
         return false;
     }
