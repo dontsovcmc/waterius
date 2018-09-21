@@ -23,7 +23,6 @@ void setup()
     memset(&data, 0, sizeof(data)); // На всякий случай
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
     LOG_NOTICE("ESP", "Booted");
-    ESP.wdtDisable();     //Выключаем watchdog
     masterI2C.begin();    //Включаем i2c master
 }
 
@@ -64,7 +63,6 @@ void loop()
             setup_ap(sett, data, channel0, channel1);
         }
         else {   
-            
             // Режим передачи новых показаний
             if (!loadConfig(sett)) {
                 LOG_ERROR("ESP", "error loading config");
