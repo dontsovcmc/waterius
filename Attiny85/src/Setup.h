@@ -48,6 +48,8 @@ struct Header {
 	uint8_t  version;
 	uint8_t  service;
 	uint32_t voltage;
+	uint8_t  resets;
+	uint8_t  reserved;
 	Data     data;
 };
 

@@ -15,6 +15,10 @@
 */
 #define SEND_BLYNK
 
+/*
+    Включить отправку данных на HTTP сервер
+*/
+#define SEND_JSON
 
 /*
     Уровень логирования
@@ -24,7 +28,7 @@
 /*
     Время ответа сервера
 */
-#define SERVER_TIMEOUT 7000UL // ms
+#define SERVER_TIMEOUT 5000UL // ms
 
 /*
     Время подключения к точке доступа

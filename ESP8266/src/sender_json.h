@@ -9,12 +9,13 @@
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 
+#ifdef SEND_JSON
+
 HTTPClient http;
 
 /*
 Функция отправляющая данные в JSON на TCP сервер.
-Ip адрес или имя сайта: sett.hostname_json
-Порт: sett.port_json
+URL HTTP сервера: sett.hostname_json
 */
 bool send_json(const Settings &sett, const SlaveData &data, const float &channel0, const float &channel1)
 {
@@ -37,7 +38,8 @@ bool send_json(const Settings &sett, const SlaveData &data, const float &channel
             root["key"] = sett.key;
             root["version"] = data.version;
             root["version_esp"] = FIRMWARE_VERSION;
-            root["boot"] = data.service;
+            root["boot"] = data.service;  // 2 - reset pin, 3 - power
+            root["resets"] = data.resets;
             root["voltage"] = (float)(data.voltage / 1000.0);
             root["good"] = data.diagnostic;
             root["ch0"] = channel0;
@@ -69,4 +71,5 @@ bool send_json(const Settings &sett, const SlaveData &data, const float &channel
     return false;
 }
 
+#endif  // SEND_JSON
 #endif

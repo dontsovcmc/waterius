@@ -107,4 +107,9 @@ uint8_t EEPROMStorage<T>::crc_8(const unsigned char *input_str, size_t num_bytes
 	return crc;
 }
 
+template<class T>
+uint16_t EEPROMStorage<T>::size() {
+	return flag_shift + blocks;
+}
+
 template class EEPROMStorage<Data>;

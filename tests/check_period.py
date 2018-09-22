@@ -25,7 +25,7 @@ def logger():
 
 
 if __name__ == "__main__":
-    #logger()
+    logger()
 
     #500ms опрос входов
     t1 = datetime.strptime('2018-09-21 20:13:54.738461', '%Y-%m-%d %H:%M:%S.%f')

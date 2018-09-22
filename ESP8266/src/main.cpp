@@ -90,22 +90,23 @@ void loop()
                     LOG_NOTICE("WIF", "Connected, got IP address: " << WiFi.localIP().toString());
 
     #ifdef SEND_BLYNK
-                    if (send_blynk(sett, channel0, channel1, data.voltage))
+                    if (send_blynk(sett, data, channel0, channel1))
                     {
                         LOG_NOTICE("BLK", "send ok");
                     }
     #endif
-    #ifdef SEND_TCP
-                    if (send_tcp(sett, channel0, channel1, data.voltage / 1000.0))
-                    {
-                        LOG_NOTICE("TCP", "send ok");
-                    }
-    #endif
+    #ifdef SEND_JSON
                     if (send_json(sett, data, channel0, channel1))
                     {
                         LOG_NOTICE("JSN", "send ok");
                     }
-
+    #endif
+    #ifdef SEND_TCP
+                    if (send_tcp(sett, data, channel0, channel1))
+                    {
+                        LOG_NOTICE("TCP", "send ok");
+                    }
+    #endif
                     //Сохраним текущие значения в памяти.
                     sett.channel0_previous = channel0;
                     sett.channel1_previous = channel1;

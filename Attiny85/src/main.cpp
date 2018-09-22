@@ -37,7 +37,7 @@ static Counter counter2(BUTTON2_PIN);
 static ESPPowerButton esp(ESP_POWER_PIN);
 
 // Данные
-struct Header info = {DEVICE_ID, 0, 0, {0, 0} };
+struct Header info = {DEVICE_ID, 0, 0, 0, 0, {0, 0} };
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
 //100к * 20 = 2 млн * 10 л / 2 счетчика = 10 000 000 л или 10 000 м3
@@ -98,7 +98,14 @@ inline void counting() {
 void setup() {
 
 	info.service = MCUSR; //причина перезагрузки
-	storage.get(info.data);
+	
+	if (storage.get(info.data)) { //не первая загрузка
+		info.resets = EEPROM.read(storage.size());
+		info.resets++;
+		EEPROM.write(storage.size(), info.resets);
+	} else {
+		EEPROM.write(storage.size(), 0);
+	}
 
 	noInterrupts();
 	ACSR |= bit( ACD ); //выключаем компаратор
@@ -108,15 +115,15 @@ void setup() {
 
 	pinMode(SETUP_BUTTON_PIN, INPUT); //кнопка на корпусе
 
-#ifdef DEBUG
 	DEBUG_CONNECT(9600); 
 	LOG_DEBUG(F("==== START ===="));
 	LOG_DEBUG(F("MCUSR"));
 	LOG_DEBUG(info.service);
+	LOG_DEBUG(F("RESET"));
+	LOG_DEBUG(info.resets);
 	LOG_INFO(F("Data:"));
 	LOG_INFO(info.data.value0);
 	LOG_INFO(info.data.value1);
-#endif
 }
 
 // Проверка нажатия кнопки

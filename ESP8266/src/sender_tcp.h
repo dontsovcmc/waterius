@@ -28,7 +28,7 @@ struct SendData {
 Ip адрес или имя сайта: sett.hostname
 Порт: TCP_SERVER_PORT 4001
 */
-bool send_tcp(const Settings &sett, const float &channel0, const float &channel1, const float &voltage)
+bool send_tcp(const Settings &sett, const SlaveData &data, const float &channel0, const float &channel1)
 {
     client.setTimeout(SERVER_TIMEOUT); 
 
@@ -46,15 +46,15 @@ bool send_tcp(const Settings &sett, const float &channel0, const float &channel1
     }
 
     if (connect) {
-        SendData data;
-        data.channel0 = channel0;
-        data.channel1 = channel1;
-        data.voltage = voltage;
+        SendData d;
+        d.channel0 = channel0;
+        d.channel1 = channel1;
+        d.voltage = data.voltage / 1000.0;
 
-        uint16_t bytesSent = client.write((char*)&data, sizeof(data));
+        uint16_t bytesSent = client.write((char*)&d, sizeof(d));
 
         client.stop();
-        if (bytesSent == sizeof(data)) {
+        if (bytesSent == sizeof(d)) {
             LOG_NOTICE("TCP", "Data sent successfully");
             return true;
         }

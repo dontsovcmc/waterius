@@ -8,7 +8,7 @@
 #include "Logging.h"
 
 #ifdef SEND_BLYNK
-bool send_blynk(const Settings &sett, const float &channel0, const float &channel1, const uint32_t &voltage)
+bool send_blynk(const Settings &sett, const SlaveData &data, const float &channel0, const float &channel1)
 {
     Blynk.config(sett.key, sett.hostname, BLYNK_DEFAULT_PORT);
     if (Blynk.connect(SERVER_TIMEOUT)) {
@@ -20,9 +20,10 @@ bool send_blynk(const Settings &sett, const float &channel0, const float &channe
 
         Blynk.virtualWrite(V0, channel0);
         Blynk.virtualWrite(V1, channel1);
-        Blynk.virtualWrite(V2, (float)(voltage / 1000.0));
+        Blynk.virtualWrite(V2, (float)(data.voltage / 1000.0));
         Blynk.virtualWrite(V3, delta0);
         Blynk.virtualWrite(V4, delta1);
+        Blynk.virtualWrite(V5, data.resets);
 
         LOG_NOTICE( "BLK", "virtualWrite OK");
         
@@ -34,21 +35,24 @@ bool send_blynk(const Settings &sett, const float &channel0, const float &channe
             String title = sett.email_title;
             String v0(channel0, 1);   //.1 для образца СМС сообщения
             String v1(channel1, 1);   //.1 для образца СМС сообщения
-            String v2((float)(voltage / 1000.0), 3);
-            String v3(delta0, 2);
-            String v4(delta1, 2);
+            String v2((float)(data.voltage / 1000.0), 3);
+            String v3(delta0);
+            String v4(delta1);
+            String v5(data.resets);
             
             msg.replace("{V0}", v0);
             msg.replace("{V1}", v1);
             msg.replace("{V2}", v2);
             msg.replace("{V3}", v3);
             msg.replace("{V4}", v4);
+            msg.replace("{V5}", v5);
             
             title.replace("{V0}", v0);
             title.replace("{V1}", v1);
             title.replace("{V2}", v2);
             title.replace("{V3}", v3);
             title.replace("{V4}", v4);
+            title.replace("{V5}", v5);
 
             Blynk.email(sett.email, title, msg);
 
