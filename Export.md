@@ -3,11 +3,16 @@
 ## Настройка Вотериуса
 
 В веб интерфейсе Вотериуса заполните: hostname_json
+
 Вид: http://host:port/path
+
 Без port будет 80
+
 Таймаут ответа: 5 секунд
 
+
 ## Параметры HTTP запроса
+```
 POST
 Content-Type: application/json
 Connection: close
@@ -26,7 +31,7 @@ Connection: close
 	"key": "SECRET",    //ключ 
 	"resets": 1         //количество перезагрузок 
 } 
-
+```
 ## Пример сервера
 
 Вот [Python скрипт](https://github.com/dontsovcmc/waterius/blob/master/Server/Server.py) Flask сервера, получающего от Вотериуса данные.
@@ -52,14 +57,16 @@ def data():
 ```
 
 ### Запуск
+[Flask guide](http://flask.pocoo.org/docs/1.0/quickstart/)
+```
 WIN cmd: set FLASK_APP=server.py
 WIN powershell: $env:FLASK_APP = "server.py"
 UNIX: export FLASK_APP=server.py
+```
 
 ```
 python -m flask run --host=x.x.x.x --port=x
 ```
-[Flask guide](http://flask.pocoo.org/docs/1.0/quickstart/)
 
 ### Проверка
 ```
