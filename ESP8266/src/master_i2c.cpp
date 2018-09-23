@@ -9,7 +9,7 @@ void MasterI2C::begin() {
 
     Wire.begin(SDA_PIN, SCL_PIN);
     Wire.setClock(100000L);
-    Wire.setClockStretchLimit(1500L);  // Иначе связь с Attiny не надежная FF FF в хвосте посылки будут
+    Wire.setClockStretchLimit(1500L);  // Иначе связь с Attiny не надежная будут FF FF в хвосте посылки 
 }
 
 
@@ -78,9 +78,15 @@ bool MasterI2C::getMode(uint8_t &mode) {
 bool MasterI2C::getSlaveData(SlaveData &data) {
 
     sendCmd('B');
+    uint8_t dummy;
     bool good = getByte(data.version);
     good &= getByte(data.service);
     good &= getUint(data.voltage);
+
+    if (data.version >= 5) {
+        good &= getByte(data.resets);
+        good &= getByte(dummy);
+    }
     good &= getUint(data.impulses0);
     good &= getUint(data.impulses1);
     data.diagnostic = good;
@@ -89,6 +95,7 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
         LOG_NOTICE("I2C", "version: " << data.version);
         LOG_NOTICE("I2C", "service: " << data.service);
         LOG_NOTICE("I2C", "voltage: " << data.voltage);
+        LOG_NOTICE("I2C", "resets: " << data.resets);
         LOG_NOTICE("I2C", "impulses0: " << data.impulses0);
         LOG_NOTICE("I2C", "impulses1: " << data.impulses1);
 

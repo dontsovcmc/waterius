@@ -11,39 +11,35 @@
 #include <avr/sleep.h>
 #include <avr/power.h>  
 
-//ИНСТАЛЯЦИЯ: 
-//1. Добавляем в боте счетчик по id и паролю
-//2. подключаем к счетчикам: Вход №1 - ГВС, Вход №2 - ХВС
-//3. Проливаем 10 л каждой воды
-//4. Нажимаем SETUP и настраиваем подключение
-//5. После настройки должно прийти сообщение с ненулевыми показаниями
-
 // Для логирования раскомментируйте LOG_LEVEL_DEBUG в Setup.h
-
 #ifdef DEBUG
 	TinyDebugSerial mySerial;
 #endif
 
 
-#define BUTTON_PIN  4          //Вход 1, Blynk: V0
-#define BUTTON2_PIN 3          //Вход 2, Blynk: V1
+#define BUTTON_PIN  4          //Вход 1, Blynk: V0, горячая вода
+#define BUTTON2_PIN 3          //Вход 2, Blynk: V1, холодная вода (или лог)
 
-#define DEVICE_ID   4   	   // Модель устройства
+#define DEVICE_ID   5   	   // Модель устройства
 
-#define ESP_POWER_PIN    1     // Номер пина, которым будим ESP8266. 
-#define SETUP_BUTTON_PIN 2     // SCL Пин с кнопкой SETUP
+#define ESP_POWER_PIN    1     // пин включения ESP8266. 
+#define SETUP_BUTTON_PIN 2     // пин кнопки SETUP (SCL)
 
-static unsigned long wake_every = WAKE_EVERY_MIN;
+#define LONG_PRESS_MSEC  3000  // Долгое нажатие = Настройка
+                               // Короткое = Передать показания
+
 
 // Счетчики импульсов
 static Counter counter(BUTTON_PIN);
 static Counter counter2(BUTTON2_PIN);
 
-static ESPPowerButton esp(ESP_POWER_PIN, SETUP_BUTTON_PIN);
+// Класс для подачи питания на ESP и нажатия кнопки
+static ESPPowerButton esp(ESP_POWER_PIN);
 
 // Данные
-struct Header info = {DEVICE_ID, 0, 0, {0, 0} };
+struct Header info = {DEVICE_ID, 0, 0, 0, 0, {0, 0} };
 
+//Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
 //100к * 20 = 2 млн * 10 л / 2 счетчика = 10 000 000 л или 10 000 м3
 static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
 
@@ -60,31 +56,32 @@ ISR( WDT_vect ) {
 void resetWatchdog() {
 	
 	MCUSR = 0; // очищаем все флаги прерываний
-
 	WDTCR = bit( WDCE ) | bit( WDE ); // allow changes, disable reset, clear existing interrupt
 
+	// настраиваем период сна и кол-во просыпаний за 1 минуту
 #ifdef TEST_WATERIUS
 	WDTCR = bit( WDIE ) | bit( WDP0 );      // 32 ms
-	#define ONE_MINUTE 20                   // ускоримся для теста
+	#define ONE_MINUTE 20  // ускоримся для теста
 #else
 
-	// настраиваем период
 	//WDTCR = bit( WDIE );                  // 16 ms
+	//#define ONE_MINUTE ?
 
-	//WDTCR = bit( WDIE ) | bit( WDP0 ) | bit( WDP1 );     // 128 ms
-	//#define ONE_MINUTE 480
+	WDTCR = bit( WDIE ) | bit( WDP0 ) | bit( WDP1 );     // 128 ms
+	#define ONE_MINUTE 480
 
-	WDTCR = bit( WDIE ) | bit( WDP2 );                 // 250 ms
-	#define ONE_MINUTE 240
+	//WDTCR = bit( WDIE ) | bit( WDP2 );                 // 250 ms
+	//#define ONE_MINUTE 240
 
 	//WDTCR = bit( WDIE ) | bit( WDP2 ) | bit( WDP0 );    // 500 ms
 	//#define ONE_MINUTE 120
 #endif
-
-														
+									
 	wdt_reset(); // pat the dog
 } 
 
+// Проверяем входы на замыкание. 
+// Замыкание засчитывается только при повторной проверке.
 inline void counting() {
 
 	if (counter.check_close(info.data.value0)) {
@@ -97,10 +94,10 @@ inline void counting() {
 	#endif
 }
 
+// Настройка. Вызывается однократно при запуске.
 void setup() {
 
 	info.service = MCUSR; //причина перезагрузки
-	storage.get(info.data);
 
 	noInterrupts();
 	ACSR |= bit( ACD ); //выключаем компаратор
@@ -108,107 +105,122 @@ void setup() {
 	resetWatchdog(); 
 	adc_disable(); //выключаем ADC
 
-#ifdef DEBUG
+	pinMode(SETUP_BUTTON_PIN, INPUT); //кнопка на корпусе
+
+	if (storage.get(info.data)) { //не первая загрузка
+		info.resets = EEPROM.read(storage.size());
+		info.resets++;
+		EEPROM.write(storage.size(), info.resets);
+	} else {
+		EEPROM.write(storage.size(), 0);
+	}
+
 	DEBUG_CONNECT(9600); 
 	LOG_DEBUG(F("==== START ===="));
 	LOG_DEBUG(F("MCUSR"));
 	LOG_DEBUG(info.service);
+	LOG_DEBUG(F("RESET"));
+	LOG_DEBUG(info.resets);
 	LOG_INFO(F("Data:"));
 	LOG_INFO(info.data.value0);
 	LOG_INFO(info.data.value1);
-#endif
 }
 
+// Проверка нажатия кнопки SETUP
+bool button_pressed() {
+
+	if (digitalRead(SETUP_BUTTON_PIN) == LOW)
+	{	//защита от дребезга
+		delayMicroseconds(20000);  //нельзя delay, т.к. power_off
+		return digitalRead(SETUP_BUTTON_PIN) == LOW;
+	}
+	return false;
+}
+
+// Замеряем сколько времени нажата кнопка в мс
+unsigned long wait_button_release() {
+
+	unsigned long press_time = millis();
+	while(button_pressed())
+		;  
+	return millis() - press_time;
+}
+
+
+// Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop() {
 	
-	power_all_disable();  // power off ADC, Timer 0 and 1, serial interface
+	// Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
+	power_all_disable();  
 
+	// Режим сна
 	set_sleep_mode( SLEEP_MODE_PWR_DOWN );
 
+	// Настраиваем служебный таймер (watchdog)
 	resetWatchdog(); 
 
-	/*
-		Если сон 250мс, то 1 минута через 240 раз
-	*/
-	for (unsigned int i = 0; i < ONE_MINUTE && !esp.pressed; ++i)  {
-
-		wdt_count = wake_every; 
+	// Цикл опроса входов
+	// Выход по прошествию WAKE_EVERY_MIN минут или по нажатию кнопки
+	for (unsigned int i = 0; i < ONE_MINUTE && !button_pressed(); ++i)  {
+		wdt_count = WAKE_EVERY_MIN; 
 		while ( wdt_count > 0 ) {
-
 			noInterrupts();
-			
-			counting();
 
-			if (esp.sleep_and_pressed()) { //Пользователь нажал кнопку
-			
-				interrupts();
+			counting(); //Опрос входов
+
+			if (button_pressed()) { 
+				interrupts();  // Пользователь нажал кнопку
 				break;
 			} else 	{
-
 				interrupts();
-				sleep_mode();
+				sleep_mode();  // Спим (WDTCR)
 			}
 		}
 	}
 		
 	wdt_disable();        // disable watchdog
-	MCUSR = 0;
 	power_all_enable();   // power everything back on
 
-	info.voltage = readVcc();   // заранее запишем текущее напряжение
-	storage.get(info.data);
+	info.voltage = readVcc();   // Текущее напряжение
+	storage.get(info.data);     // Берем из хранилища текущие значения импульсов
 	
 	DEBUG_CONNECT(9600);
 	LOG_INFO(F("Data:"));
 	LOG_INFO(info.data.value0);
 	LOG_INFO(info.data.value1);
 
-	// Пользователь нажал кнопку SETUP
-	if (esp.pressed) {
+	// Если пользователь нажал кнопку SETUP, ждем когда отпустит 
+	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)
+	// Если кнопка не нажата или нажата коротко - передаем показания 
+	unsigned long wake_up_limit;
+	if (wait_button_release() > LONG_PRESS_MSEC) {
 
 		LOG_DEBUG(F("SETUP pressed"));
-		wake_every = WAKE_AFTER_SETUP_MIN;
-
-		while(esp.is_pressed())
-				;  //ждем когда пользователь отпустит кнопку т.к. иначе ESP запустится в режиме программирования
-
 		slaveI2C.begin(SETUP_MODE);	
-		esp.power(true);
-		LOG_DEBUG(F("ESP turn on for SETUP"));
-		
-		while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(SETUP_TIME_MSEC)) {
-			delayMicroseconds(65000);
-		}
+		wake_up_limit = SETUP_TIME_MSEC; //5 мин при настройке
+	} else {
 
-	}
-	else {
 		LOG_DEBUG(F("wake up for transmitting"));
-		wake_every = WAKE_EVERY_MIN;
-
-		// Передаем показания
 		slaveI2C.begin(TRANSMIT_MODE);
-		esp.power(true);
-		LOG_DEBUG(F("ESP turn on for TRANSMITTING"));
+		wake_up_limit = WAIT_ESP_MSEC; //15 секунд при передаче данных
+	}
 
-		//передаем данные в ESP
-		while (!slaveI2C.masterGoingToSleep() 
-			&& !esp.elapsed(WAIT_ESP_MSEC)) { 
-			
-			counting();
-			delayMicroseconds(65000);
+	esp.power(true);
+	LOG_DEBUG(F("ESP turn on"));
+	
+	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit)) {
+
+		counting();
+		delayMicroseconds(65000);
+		if (wait_button_release() > LONG_PRESS_MSEC) {
+			break; // принудительно выключаем
 		}
 	}
 
 	esp.power(false);
 	slaveI2C.end();			// выключаем i2c slave.
 
-	LOG_DEBUG(F("ESP turn off. Wake up (min): "));
-	LOG_DEBUG(wake_every);
-
-	info.service = MCUSR;
-
 	if (!slaveI2C.masterGoingToSleep()) {
-
 		LOG_ERROR(F("ESP wake up fail"));
 	}
 }

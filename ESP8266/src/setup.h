@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+#define FIRMWARE_VERSION "0.5"
+
 /*
     Включить отправку данных на свой TCP сервер. см. sender_tcp.h
 */
@@ -13,6 +15,10 @@
 */
 #define SEND_BLYNK
 
+/*
+    Включить отправку данных на HTTP сервер
+*/
+#define SEND_JSON
 
 /*
     Уровень логирования
@@ -22,7 +28,7 @@
 /*
     Время ответа сервера
 */
-#define SERVER_TIMEOUT 7000UL // ms
+#define SERVER_TIMEOUT 5000UL // ms
 
 /*
     Время подключения к точке доступа
@@ -36,7 +42,8 @@
 
 #define VER_1 1
 #define VER_2 2
-#define CURRENT_VERSION VER_2
+#define VER_3 3
+#define CURRENT_VERSION VER_3
 
 
 #define KEY_LEN 34
@@ -83,6 +90,12 @@ struct Settings
     SEND_TCP: не используется    
     */
     char     email_template[EMAIL_TEMPLATE_LEN];
+    
+    /*
+    http сервер для отправки данных в виде JSON
+    в виде: http://host:port/path
+    */
+    char     hostname_json[HOSTNAME_LEN];
 
     /*
     Показания счетчиках в кубометрах, 

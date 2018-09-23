@@ -28,10 +28,11 @@ public:
 	void add(const T &element);
 	bool get(T &element);
 	bool get_block(const uint8_t block, T &element);
-
+	
+	uint16_t size();	
+private:
 	uint8_t crc_8( const unsigned char *input_str, size_t num_bytes ) ;
 
-private:
 	uint8_t start_addr;
 	uint8_t activeBlock;
 	uint8_t blocks;

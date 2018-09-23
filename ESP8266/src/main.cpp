@@ -8,6 +8,7 @@
 #include "setup_ap.h"
 #include "sender_blynk.h"
 #include "sender_tcp.h"
+#include "sender_json.h"
 
 MasterI2C masterI2C; // Для общения с Attiny85 по i2c
 
@@ -22,7 +23,6 @@ void setup()
     memset(&data, 0, sizeof(data)); // На всякий случай
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
     LOG_NOTICE("ESP", "Booted");
-    ESP.wdtDisable();     //Выключаем watchdog
     masterI2C.begin();    //Включаем i2c master
 }
 
@@ -35,8 +35,7 @@ void calculate_values(Settings &sett, SlaveData &data, float *channel0, float *c
 
     LOG_NOTICE("ESP", "new impulses=" << data.impulses0 << " " << data.impulses1);
 
-    if (sett.liters_per_impuls > 0)
-    {
+    if (sett.liters_per_impuls > 0) {
         *channel0 = sett.channel0_start + (data.impulses0 - sett.impules0_start) / 1000.0 * sett.liters_per_impuls;
         *channel1 = sett.channel1_start + (data.impulses1 - sett.impules1_start) / 1000.0 * sett.liters_per_impuls;
         LOG_NOTICE("ESP", "new values=" << *channel0 << " " << *channel1);
@@ -49,8 +48,7 @@ void loop()
     uint8_t mode;
 
 	// спрашиваем у Attiny85 повод пробуждения и данные
-    if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
-    {
+    if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data)) {
         if (mode == SETUP_MODE) {
 
             // Режим настройки, запускаем точку доступа на 192.168.4.1
@@ -63,7 +61,6 @@ void loop()
             setup_ap(sett, data, channel0, channel1);
         }
         else {   
-            
             // Режим передачи новых показаний
             if (!loadConfig(sett)) {
                 LOG_ERROR("ESP", "error loading config");
@@ -80,45 +77,41 @@ void loop()
 
                 //Ожидаем подключения к точке доступа
                 uint32_t start = millis();
-                while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT)
-                {
+                while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
+
                     LOG_NOTICE("WIF", "Wifi status: " << WiFi.status());
                     delay(200);
                 }
 
-                if (WiFi.status() == WL_CONNECTED)
-                {
+                if (WiFi.status() == WL_CONNECTED) {
+
                     LOG_NOTICE("WIF", "Connected, got IP address: " << WiFi.localIP().toString());
 
-    #ifdef SEND_BLYNK
-                    if (send_blynk(sett, channel0, channel1, data.voltage))
-                    {
+#ifdef SEND_BLYNK
+                    if (send_blynk(sett, data, channel0, channel1)) {
                         LOG_NOTICE("BLK", "send ok");
-
-                        //Сохраним текущие значения в памяти. Для расхода за сутки.
-                        sett.channel0_previous = channel0;
-                        sett.channel1_previous = channel1;
-                        storeConfig(sett);
                     }
-    #endif
-    #ifdef SEND_TCP
-                    if (send_tcp(sett, channel0, channel1, data.voltage / 1000.0))
-                    {
+#endif
+#ifdef SEND_JSON
+                    if (send_json(sett, data, channel0, channel1)) {
+                        LOG_NOTICE("JSN", "send ok");
+                    }
+#endif
+#ifdef SEND_TCP
+                    if (send_tcp(sett, data, channel0, channel1)) {
                         LOG_NOTICE("TCP", "send ok");
-
-                        //Сохраним текущие значения в памяти. Для расхода за сутки.
-                        //Оставьте только в 1 месте, если используете и Blynk, и TCP
-                        sett.channel0_previous = channel0;
-                        sett.channel1_previous = channel1;
-                        storeConfig(sett);
                     }
-    #endif
+#endif
+                    //Сохраним текущие значения в памяти.
+                    sett.channel0_previous = channel0;
+                    sett.channel1_previous = channel1;
+                    storeConfig(sett);
                 }
             }
         }
     }
 
     LOG_NOTICE("ESP", "Going to sleep");
-    masterI2C.sendCmd('Z');          // "Можешь идти спать"
-    ESP.deepSleep(0, RF_DEFAULT); // "Спим до следущего включения EN"
+    masterI2C.sendCmd('Z');        // "Можешь идти спать, attiny"
+    ESP.deepSleep(0, RF_DEFAULT);  // Спим до следущего включения EN
 }

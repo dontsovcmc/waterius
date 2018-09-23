@@ -10,39 +10,40 @@
 #include <EEPROM.h>
 #include "utils.h"
 
-#define AP_NAME "Waterius_0.4.5"
+#define AP_NAME "Waterius_" FIRMWARE_VERSION
 
 void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, const float &channel1) 
 {
     LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
     
-    //WiFi.mode(WIFI_AP);
+    // Без этих строчек корректно подключается к той же сети, которая до этого была
+    // https://github.com/tzapu/WiFiManager/issues/511
+    //WiFi.persistent(false);  
+    //WiFi.disconnect(); 
+    //WiFi.mode(WIFI_AP);         
+    //WiFi.persistent(true);
     
     WiFiManager wm;
     LOG_NOTICE( "AP", "User requested captive portal" );
     
-    WiFiManagerParameter param_key( "key", "key",  sett.key, KEY_LEN-1);
+    WiFiManagerParameter param_key( "key", "Ключ:",  sett.key, KEY_LEN-1);
+    WiFiManagerParameter param_hostname( "host", "Адрес сервера:",  sett.hostname, HOSTNAME_LEN-1);
+    WiFiManagerParameter param_email( "email", "Адрес эл. почты:",  sett.email, EMAIL_LEN-1);
+    WiFiManagerParameter param_email_title( "title", "Заголовок:",  sett.email_title, EMAIL_TITLE_LEN-1);
+    WiFiManagerParameter param_email_template( "template", "Тело письма:",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
+    WiFiManagerParameter param_hostname_json( "hostname_json", "Адрес сервера для JSON:",  sett.hostname_json, HOSTNAME_LEN-1);
+    FloatParameter param_channel0_start( "channel0", "Вход 0 (м3):",  channel0);
+    FloatParameter param_channel1_start( "channel1", "Вход 1 (м3):",  channel1);
+    LongParameter param_litres_per_imp( "factor", "Литров на импульс:",  sett.liters_per_impuls);
+
     wm.addParameter( &param_key );
-
-    WiFiManagerParameter param_hostname( "host", "host",  sett.hostname, HOSTNAME_LEN-1);
     wm.addParameter( &param_hostname );
-
-    WiFiManagerParameter param_email( "email", "email",  sett.email, EMAIL_LEN-1);
     wm.addParameter( &param_email );
-    
-    WiFiManagerParameter param_email_title( "title", "title",  sett.email_title, EMAIL_TITLE_LEN-1);
     wm.addParameter( &param_email_title );
-    
-    WiFiManagerParameter param_email_template( "template", "template",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
     wm.addParameter( &param_email_template );
-
-    FloatParameter param_channel0_start( "channel0", "channel0",  channel0);
+    wm.addParameter( &param_hostname_json );
     wm.addParameter( &param_channel0_start );
-    
-    FloatParameter param_channel1_start( "channel1", "channel1",  channel1);
     wm.addParameter( &param_channel1_start );
-
-    LongParameter param_litres_per_imp( "factor", "factor",  sett.liters_per_impuls);
     wm.addParameter( &param_litres_per_imp );
 
     wm.setConfigPortalTimeout(300);
@@ -62,6 +63,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     strncpy0(sett.email, param_email.getValue(), EMAIL_LEN);
     strncpy0(sett.email_title, param_email_title.getValue(), EMAIL_TITLE_LEN);
     strncpy0(sett.email_template, param_email_template.getValue(), EMAIL_TEMPLATE_LEN);
+
+    // JSON
+    strncpy0(sett.hostname_json, param_hostname_json.getValue(), HOSTNAME_LEN);
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();
