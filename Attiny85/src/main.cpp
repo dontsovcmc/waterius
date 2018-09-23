@@ -22,8 +22,8 @@
 
 #define DEVICE_ID   5   	   // Модель устройства
 
-#define ESP_POWER_PIN    1     // Номер пина, которым будим ESP8266. 
-#define SETUP_BUTTON_PIN 2     // SCL Пин с кнопкой SETUP
+#define ESP_POWER_PIN    1     // пин включения ESP8266. 
+#define SETUP_BUTTON_PIN 2     // пин кнопки SETUP (SCL)
 
 #define LONG_PRESS_MSEC  3000  // Долгое нажатие = Настройка
                                // Короткое = Передать показания
@@ -98,14 +98,6 @@ inline void counting() {
 void setup() {
 
 	info.service = MCUSR; //причина перезагрузки
-	
-	if (storage.get(info.data)) { //не первая загрузка
-		info.resets = EEPROM.read(storage.size());
-		info.resets++;
-		EEPROM.write(storage.size(), info.resets);
-	} else {
-		EEPROM.write(storage.size(), 0);
-	}
 
 	noInterrupts();
 	ACSR |= bit( ACD ); //выключаем компаратор
@@ -114,6 +106,14 @@ void setup() {
 	adc_disable(); //выключаем ADC
 
 	pinMode(SETUP_BUTTON_PIN, INPUT); //кнопка на корпусе
+
+	if (storage.get(info.data)) { //не первая загрузка
+		info.resets = EEPROM.read(storage.size());
+		info.resets++;
+		EEPROM.write(storage.size(), info.resets);
+	} else {
+		EEPROM.write(storage.size(), 0);
+	}
 
 	DEBUG_CONNECT(9600); 
 	LOG_DEBUG(F("==== START ===="));
@@ -126,8 +126,8 @@ void setup() {
 	LOG_INFO(info.data.value1);
 }
 
-// Проверка нажатия кнопки
-bool button_pressed(){
+// Проверка нажатия кнопки SETUP
+bool button_pressed() {
 
 	if (digitalRead(SETUP_BUTTON_PIN) == LOW)
 	{	//защита от дребезга
@@ -138,7 +138,7 @@ bool button_pressed(){
 }
 
 // Замеряем сколько времени нажата кнопка в мс
-unsigned long wait_button_release(){
+unsigned long wait_button_release() {
 
 	unsigned long press_time = millis();
 	while(button_pressed())
@@ -179,7 +179,6 @@ void loop() {
 	}
 		
 	wdt_disable();        // disable watchdog
-	MCUSR = 0;            
 	power_all_enable();   // power everything back on
 
 	info.voltage = readVcc();   // Текущее напряжение
@@ -193,39 +192,33 @@ void loop() {
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит 
 	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания 
+	unsigned long wake_up_limit;
 	if (wait_button_release() > LONG_PRESS_MSEC) {
+
 		LOG_DEBUG(F("SETUP pressed"));
-
 		slaveI2C.begin(SETUP_MODE);	
-		esp.power(true);
-		LOG_DEBUG(F("ESP turn on for SETUP"));
-		
-		while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(SETUP_TIME_MSEC)) {
-			delayMicroseconds(65000);
-			if (wait_button_release() > LONG_PRESS_MSEC) {
-				break; // принудительно выключаем
-			}
-		}
-	}
-	else {
+		wake_up_limit = SETUP_TIME_MSEC; //5 мин при настройке
+	} else {
+
 		LOG_DEBUG(F("wake up for transmitting"));
-
-		// Передаем показания
 		slaveI2C.begin(TRANSMIT_MODE);
-		esp.power(true);
-		LOG_DEBUG(F("ESP turn on for TRANSMITTING"));
+		wake_up_limit = WAIT_ESP_MSEC; //15 секунд при передаче данных
+	}
 
-		//передаем данные в ESP
-		while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(WAIT_ESP_MSEC)) { 
-			counting();
-			delayMicroseconds(65000);
+	esp.power(true);
+	LOG_DEBUG(F("ESP turn on"));
+	
+	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit)) {
+
+		counting();
+		delayMicroseconds(65000);
+		if (wait_button_release() > LONG_PRESS_MSEC) {
+			break; // принудительно выключаем
 		}
 	}
 
 	esp.power(false);
 	slaveI2C.end();			// выключаем i2c slave.
-
-	info.service = MCUSR;
 
 	if (!slaveI2C.masterGoingToSleep()) {
 		LOG_ERROR(F("ESP wake up fail"));

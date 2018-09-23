@@ -16,26 +16,25 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
 {
     LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
     
-    //
-    // Если имя/пароль WiFi не будут изменены, то он не подключится повторно =(
-    // поэтому отключаемся. https://github.com/tzapu/WiFiManager/issues/511
-    WiFi.persistent(false);  
-    WiFi.disconnect(); 
-    WiFi.mode(WIFI_AP);         
-    WiFi.persistent(true);
+    // Без этих строчек корректно подключается к той же сети, которая до этого была
+    // https://github.com/tzapu/WiFiManager/issues/511
+    //WiFi.persistent(false);  
+    //WiFi.disconnect(); 
+    //WiFi.mode(WIFI_AP);         
+    //WiFi.persistent(true);
     
     WiFiManager wm;
     LOG_NOTICE( "AP", "User requested captive portal" );
     
-    WiFiManagerParameter param_key( "key", "key",  sett.key, KEY_LEN-1);
-    WiFiManagerParameter param_hostname( "host", "host",  sett.hostname, HOSTNAME_LEN-1);
-    WiFiManagerParameter param_email( "email", "email",  sett.email, EMAIL_LEN-1);
-    WiFiManagerParameter param_email_title( "title", "title",  sett.email_title, EMAIL_TITLE_LEN-1);
-    WiFiManagerParameter param_email_template( "template", "template",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
-    WiFiManagerParameter param_hostname_json( "hostname_json", "hostname_json",  sett.hostname_json, HOSTNAME_LEN-1);
-    FloatParameter param_channel0_start( "channel0", "channel0",  channel0);
-    FloatParameter param_channel1_start( "channel1", "channel1",  channel1);
-    LongParameter param_litres_per_imp( "factor", "factor",  sett.liters_per_impuls);
+    WiFiManagerParameter param_key( "key", "Ключ:",  sett.key, KEY_LEN-1);
+    WiFiManagerParameter param_hostname( "host", "Адрес сервера:",  sett.hostname, HOSTNAME_LEN-1);
+    WiFiManagerParameter param_email( "email", "Адрес эл. почты:",  sett.email, EMAIL_LEN-1);
+    WiFiManagerParameter param_email_title( "title", "Заголовок:",  sett.email_title, EMAIL_TITLE_LEN-1);
+    WiFiManagerParameter param_email_template( "template", "Тело письма:",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
+    WiFiManagerParameter param_hostname_json( "hostname_json", "Адрес сервера для JSON:",  sett.hostname_json, HOSTNAME_LEN-1);
+    FloatParameter param_channel0_start( "channel0", "Вход 0 (м3):",  channel0);
+    FloatParameter param_channel1_start( "channel1", "Вход 1 (м3):",  channel1);
+    LongParameter param_litres_per_imp( "factor", "Литров на импульс:",  sett.liters_per_impuls);
 
     wm.addParameter( &param_key );
     wm.addParameter( &param_hostname );

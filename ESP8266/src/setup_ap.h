@@ -20,7 +20,7 @@ public:
     IPAddressParameter(const char *id, const char *placeholder, IPAddress address)
         : WiFiManagerParameter("")
     {
-        init(id, placeholder, address.toString().c_str(), 16, "") ;//, WFM_LABEL_BEFORE);
+        init(id, placeholder, address.toString().c_str(), 16, "", WFM_LABEL_BEFORE);
     }
 
     IPAddress getValue() {
@@ -36,7 +36,7 @@ public:
     LongParameter(const char *id, const char *placeholder, long value, const uint8_t length = 10)
         : WiFiManagerParameter("") {
 
-        init(id, placeholder, String(value).c_str(), length, "") ;//, WFM_LABEL_BEFORE);
+        init(id, placeholder, String(value).c_str(), length, "", WFM_LABEL_BEFORE);
     }
 
     long getValue() {
@@ -50,7 +50,7 @@ public:
     FloatParameter(const char *id, const char *placeholder, float value, const uint8_t length = 10)
         : WiFiManagerParameter("") {
             
-        init(id, placeholder, String(value).c_str(), length, "") ;//, WFM_LABEL_BEFORE);
+        init(id, placeholder, String(value).c_str(), length, "", WFM_LABEL_BEFORE);
     }
 
     float getValue() {

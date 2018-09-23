@@ -25,8 +25,6 @@ struct ESPPowerButton
 	bool power_on;  		         
 
 	//Время включения Wi-Fi 
-	//аварийно отключаем через 10 мин при настройке
-	//через 15 секунд при передаче данных
 	unsigned long wake_up_timestamp; 
 
 	//Подать или снять питание с ESP

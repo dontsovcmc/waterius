@@ -36,9 +36,9 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const float &channe
             String v0(channel0, 1);   //.1 для образца СМС сообщения
             String v1(channel1, 1);   //.1 для образца СМС сообщения
             String v2((float)(data.voltage / 1000.0), 3);
-            String v3(delta0);
-            String v4(delta1);
-            String v5(data.resets);
+            String v3(delta0, DEC);
+            String v4(delta1, DEC);
+            String v5(data.resets, DEC);
             
             msg.replace("{V0}", v0);
             msg.replace("{V1}", v1);
