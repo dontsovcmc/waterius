@@ -3,8 +3,11 @@
 [English description](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
 Aвтономное устройство для передачи показаний воды по Wi-Fi.
-Данные смотрим в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8)) или в другом подобном сервисе. 
-Также можно отсылать показания на ваш TCP сервер и на электронную почту.
+Данные получаем:
+- в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8))
+- по электронной почте (ежедневно, через Blynk).
+- на вашем [HTTP сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
+- на вашем TCP сервере
 
 Статьи:
 [Habrahabr.com (ru)](https://habr.com/post/418573/) | [Hackster.io (en)](https://www.hackster.io/dontsovcmc/waterius-4bfaba) | [Blynk forum (en-ru)](https://community.blynk.cc/t/autonomous-impulse-counter-for-water-meters-attiny85-esp-01)
@@ -25,22 +28,14 @@ Aвтономное устройство для передачи показан�
 ## Принцип работы
 Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в Х минут она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого все микросхемы засыпают.
 
-## Потребители данных
-В настоящий момент поддержка следующих сервисов:
-- Приложение [Blynk](https://github.com/dontsovcmc/waterius/blob/master/Setup.md)
-- [Ваш HTTP сервер](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
-
 ## Передача показаний (вручную)
-Автоматическая передача в управляющие компании не реализована. 
-Самый простой способ их передавать: при помощи приложений или [СМС](Send.md).
+Автоматическая передача в управляющие компании не реализована. Простой способ их передавать: при помощи приложений или [СМС](Send.md).
 
 ## Изготовление
-
 - [создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
 - [прошивка Attiny85 и ESP](https://github.com/dontsovcmc/waterius/blob/master/Firmware.md) 
 
 Принципиальная схема:
-
 <img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="400"/>
 
 Если хотите сделать Вотериус, напишите мне - у меня есть заводские платы и стабилизаторы.
@@ -78,8 +73,3 @@ https://easyelectronics.ru
 ОБЩИЙ чат для общения: [Gitter.im/waterius](https://gitter.im/waterius)
 
 Связаться со мной: [Telegram](https://t.me/Dontsovcmc), [Facebook](https://facebook.com/dontsovev), [Hackster.io](https://www.hackster.io/dontsovcmc)
-
- 
-
-
-
