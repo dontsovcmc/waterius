@@ -1,5 +1,7 @@
 # Прошивка Attiny85
 
+## Готовые прошивки в репозитории: [waterius_firmware](https://github.com/dontsovcmc/waterius_firmware)
+
 Фьюзы: E:FF, H:DF, L:62
 
 Расположение выводов на разъеме для ESP-01 (вид сверху):
@@ -90,8 +92,37 @@ upload_port = /dev/tty.usbmodem1411
 - выполните:
 platformio run --target upload
 
-## с помощью Arduino IDE
-I try flash ESP with Arduino IDE 1.8.5 
+### с помощью esptool
+`$ python -m esptool --baud 115200 --port COM7 write_flash --flash_freq 40m --flash_size 1MB --flash_mode dio --verify 0x0 esp.bin`
+
+<details>
+ <summary>output log</summary>
+```
+esptool.py v2.5.0
+Serial port COM7
+Connecting........_____.....____
+Detecting chip type... ESP8266
+Chip is ESP8266EX
+Features: WiFi
+MAC: 68:c6:3a:a4:75:b0
+Uploading stub...
+Running stub...
+Stub running...
+Configuring flash size...
+Flash params set to 0x0220
+Compressed 359840 bytes to 253754...
+Wrote 359840 bytes (253754 compressed) at 0x00000000 in 23.1 seconds (effective 124.8 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Verifying just-written flash...
+(This option is deprecated, flash contents are now always read back after flashing.)
+Flash params set to 0x0220
+Verifying 0x57da0 (359840) bytes @ 0x00000000 in flash against esp.bin...
+-- verify OK (digest matched)
+Hard resetting via RTS pin...
+```
+</details>
 
 ### Additional Libraries Требуемые библиотеки  
 - WifiManager by tzapu (0.12.0)
