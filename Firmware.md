@@ -97,6 +97,7 @@ platformio run --target upload
 
 <details>
  <summary>output log</summary>
+	
 ```
 esptool.py v2.5.0
 Serial port COM7
