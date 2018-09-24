@@ -125,7 +125,8 @@ Hard resetting via RTS pin...
 ```
 </details>
 
-### Additional Libraries Требуемые библиотеки  
+### с помощью Arduino IDE
+#### Additional Libraries Требуемые библиотеки  
 - WifiManager by tzapu (0.12.0)
 - Blynk by Volodymyr Shymanskyy (0.5.2)
 
@@ -134,7 +135,7 @@ Hard resetting via RTS pin...
 2. Move WiFiManagerParameter class 'init' function from private to public 
 
 
-### Additional Boards Managers URLs:
+#### Additional Boards Managers URLs:
 http://arduino.esp8266.com/stable/package_esp8266com_index.json
 
 Board settings:
@@ -152,7 +153,7 @@ Board settings:
 * Upload Speed: 115200
 * Port: select your port
 
-### Sketch
+#### Sketch
 1. rename main.cpp to src.ino 
 2. open src.ino in Arduino IDE
 3. compile
