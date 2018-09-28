@@ -13,7 +13,7 @@
 | 6 | Светодиод 3В | 1 | Любой. Беру GNL-3014PGC 8000мКд, очень яркий. | [chipdip](https://www.chipdip.ru/product/gnl-3014pgc) |
 | 7 | Разъем гнездо на плату 2.54мм PBD-8 | 1 |  | [chipdip](https://www.chipdip.ru/product/pbd-8) |
 | 8 | Кнопка тактовая угловая 7мм KLS7-TS6606-7.0-180 (TC-0206) | 1 |  | [chipdip](https://www.chipdip.ru/product/kls7-ts6606-7.0-180-tc-0206) |
-| 9 | Пин на плату | 1 |  | [chipdip](https://www.chipdip.ru/product/attiny85-20su) |
+| 9 | Пин на плату | 1 |  | [chipdip](https://www.chipdip.ru/product/tyco-826629-2) |
 | 10 | ESP8266-01 | 1 | ESP8266-01s тоже подойдет | [yandex](https://yandex.ru/search/?text=ESP8266-01&lr=213) |
 | 11 | Закрытый батарейный отсек 4xAA | 1 | У ЧипДип KLS5-812-B, качество не очень. | [chipdip](https://www.chipdip.ru/product/fc1-5230) |
 | 12 | Стабилизатор MCP1700T-3002E-TT | 1 |  | [terraelectronica](https://www.terraelectronica.ru/product/241237) |
