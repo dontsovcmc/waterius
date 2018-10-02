@@ -7,17 +7,17 @@
 | ---- | ---- | ---- | ---- | ---- |
 | 1 | Atmega Attiny85-20SU | 1 | Attiny85V тоже ок | [chipdip](https://www.chipdip.ru/product/attiny85-20su) |
 | 2 | Керам. конденсатор SMD 0805 16В 0.1 мкФ | 2 |  | [chipdip](https://www.chipdip.ru/product/grm21br71h104k) |
-| 3 | Керам. конденсатор SMD 0805 16В 1 мкФ  | 2 |  | [chipdip](https://www.chipdip.ru/product/grm21br71c105k) |
-| 4 | Резистор SMD 0805 3.3 кОм | 8 |  | [chipdip](https://www.chipdip.ru/product0/9000079498) |
-| 5 | Резистор SMD 0805 300 Ом | 2 |  | [chipdip](https://www.chipdip.ru/product0/9000079473) |
+| 3 | Керам. конденсатор SMD 0805 16В 1 мкФ  | 2 | для стабилизатора. можно любой > 1 мкФ | [chipdip](https://www.chipdip.ru/product/grm21br71c105k) |
+| 4 | Резистор SMD 0805 3.3 кОм | 8 | Для i2c 2-6кОм, для остальных до 10кОм | [chipdip](https://www.chipdip.ru/product0/9000079498) |
+| 5 | Резистор SMD 0805 300 Ом | 2 | Для светодиода >250Ом, для земли любой до 500Ом | [chipdip](https://www.chipdip.ru/product0/9000079473) |
 | 6 | Светодиод 3В | 1 | Любой. Беру GNL-3014PGC 8000мКд, очень яркий. | [chipdip](https://www.chipdip.ru/product/gnl-3014pgc) |
-| 7 | Разъем гнездо на плату 2.54мм PBD-8 | 1 |  | [chipdip](https://www.chipdip.ru/product/pbd-8) |
-| 8 | Кнопка тактовая угловая 7мм KLS7-TS6606-7.0-180 (TC-0206) | 1 |  | [chipdip](https://www.chipdip.ru/product/kls7-ts6606-7.0-180-tc-0206) |
-| 9 | Пин на плату | 1 |  | [chipdip](https://www.chipdip.ru/product/tyco-826629-2) |
-| 10 | ESP8266-01 | 1 | ESP8266-01s тоже подойдет | [yandex](https://yandex.ru/search/?text=ESP8266-01&lr=213) |
+| 7 | Разъем гнездо на плату 2.54мм PBD-8 | 1 | Для ESP8266-01 | [chipdip](https://www.chipdip.ru/product/pbd-8) |
+| 8 | Кнопка тактовая угловая 7мм KLS7-TS6606-7.0-180 (TC-0206) | 1 | Лучше угловая длиной от 7мм. Прямая кнопка потребует дырку в сдвижной крышке, что не удобно | [chipdip](https://www.chipdip.ru/product/kls7-ts6606-7.0-180-tc-0206) |
+| 9 | Пин на плату | 1 | Любой для прошивки | [chipdip](https://www.chipdip.ru/product/tyco-826629-2) |
+| 10 | ESP8266-01 | 1 | ESP8266-01s потребляют 0мкА, а ESP8266-01 около 10мкА | [yandex](https://yandex.ru/search/?text=ESP8266-01&lr=213) |
 | 11 | Закрытый батарейный отсек 4xAA | 1 | У ЧипДип KLS5-812-B, качество не очень. | [chipdip](https://www.chipdip.ru/product/fc1-5230) |
 | 12 | Стабилизатор MCP1700T-3002E-TT | 1 |  | [terraelectronica](https://www.terraelectronica.ru/product/241237) |
-| 13 | Разъем под кабель на плату 4 контакта 2.54мм | 1 | DG141V-2.54-04P-14-00AH | [terraelectronica](https://www.terraelectronica.ru/product/1072180) |
+| 13 | Разъем под кабель на плату 4 контакта 2.54мм | 1 | Без винтов: DG141V-2.54-04P-14-00AH | [terraelectronica](https://www.terraelectronica.ru/product/1072180) |
 | 14 | [Плата](https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.jpg) | 1 | или [ЛУТ](https://github.com/dontsovcmc/ImpCounter/raw/master/Board/waterius-homemade-board.png) | пишите |
 + программаторы для Attiny85 и ESP8266-01
 
@@ -38,9 +38,10 @@
 ### Исполнение без стабилизатора
 
 Убираем 2 конденсатора на 1 мкФ. Оставляем один 10мкФ или меньший по питанию.
-Подключать две батарейки! Лучше всего литиевые (дороже алкалиновых).
-Чтобы максимизировать время работы устройства от двух батареек, необходимо купить Attiny85V (для пониженного напряжения), тогда счетчик должен работать вплоть до 2.5В. Обычная Attiny85 работает до 2.7В. 
-Напряжение питания вы увидите в blynk на виртуальном пине V2.
+Подключать две батарейки! Лучше всего литиевые 1.5В (~200руб/шт).
+
+Если 2 батарейки не литиевые, то для увеличения времени работы устройства, необходимо купить Attiny85V (для пониженного напряжения), тогда счетчик должен работать вплоть до 2.5В. Обычная Attiny85 работает до 2.7В. 
+Напряжение питания вы увидите в blynk на виртуальном пине V2 (не калиброванное).
 
 ### Примечания
 
@@ -49,7 +50,7 @@
 2. Снять пластиковую основу контактов и откусить 2мм от каждого пина, чтобы микроконтроллер влез по высоте в корпус.
 
 Доработка ESP8266-01s:
-1. [Удалить резистор](https://esp8266.ru/forum/threads/esp-01s-vysokoe-potreblenie-vo-sne-200ua.3591/).
+1. [Удалить резистор](https://esp8266.ru/forum/threads/esp-01s-vysokoe-potreblenie-vo-sne-200ua.3591/). И можно светодиод Wi-Fi.
 2. Снять пластиковую основу контактов и откусить 2мм от каждого пина, чтобы микроконтроллер влез по высоте в корпус.
 
 
