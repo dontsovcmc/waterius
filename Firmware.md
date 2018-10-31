@@ -1,6 +1,28 @@
+# Quickstart
+Инструкция по заливке готовых прошивок без компиляции и IDE для Windows
+
+#### Прошивка attiny85
+1. Скачивем Avrdude: http://www.avislab.com/blog/wp-content/uploads/2012/12/avrdude.zip
+2. Распаковываем архив, заходим в папку. Открываем консоль: shift+правкая кнопка мыши - Открыть окно команд
+3. Скачивем прошивку attiny85:
+curl https://raw.githubusercontent.com/dontsovcmc/waterius_firmware/master/0.5/attiny85.hex --output ./attiny85.hex
+Если нет curl, то открываем ссылку и копируем файл в папку Avrdude.
+4. Подключаем USBAsp программатор с attiny85.
+5. avrdude.exe -p t85 -c Usbasp -B 4 -P usb -U efuse:v:255:m -U lock:v:63:m -U hfuse:v:223:m -U lfuse:v:98:m
+6. avrdude.exe -p t85 -c Usbasp -B 4 -P usb -U flash:w:"attiny85.hex":a
+
+#### Прошивка ESP8266
+1. Ставим Питон 2.7, добавляем в PATH
+2. pip install esptool
+3. Скачивем прошивку ESP8266: curl https://raw.githubusercontent.com/dontsovcmc/waterius_firmware/master/0.5/esp8266.bin --output ./esp8266.bin
+Если нет curl, то открываем ссылку и заходим в папку с файлом.
+4. Подключаем USB-TTL с ESP8266
+5. python -m esptool --baud 115200 --port COM7 write_flash --flash_freq 40m --flash_size 1MB --flash_mode dio --verify 0x0 esp8266.bin
+COM7 замените на порт USB-TTL
+
 # Прошивка Attiny85
 
-## Готовые прошивки в репозитории: [waterius_firmware](https://github.com/dontsovcmc/waterius_firmware)
+#### Готовые прошивки: [waterius_firmware](https://github.com/dontsovcmc/waterius_firmware)
 
 Фьюзы: E:FF, H:DF, L:62
 
@@ -59,11 +81,8 @@ Platformio бывает в виде консольной утилиты или �
 [Инструкция по установки утилиты](http://docs.platformio.org/en/latest/installation.html#python-package-manager)
 
 
-=======
 [Инструкция из интернета](https://medium.com/jungletronics/attiny85-easy-flashing-through-arduino-b5f896c48189) 
 У нас только attiny85 уже сидит на плате, поэтому подключаемся к разъему.
-
-[Скомпилированные прошивки](https://github.com/dontsovcmc/waterius_firmware)
 
 ### c помощью platfomio
 - откройте в командной строке папку waterius/Attiny85
