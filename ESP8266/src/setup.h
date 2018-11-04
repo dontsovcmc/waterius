@@ -53,6 +53,8 @@
 #define EMAIL_TITLE_LEN 64
 #define EMAIL_TEMPLATE_LEN 200
 
+#define HTTP_SERVER_LEN 128
+
 /*
 Настройки хранящиеся EEPROM
 */
@@ -95,7 +97,7 @@ struct Settings
     http сервер для отправки данных в виде JSON
     в виде: http://host:port/path
     */
-    char     hostname_json[HOSTNAME_LEN];
+    char     hostname_json[HTTP_SERVER_LEN];
 
     /*
     Показания счетчиках в кубометрах, 
