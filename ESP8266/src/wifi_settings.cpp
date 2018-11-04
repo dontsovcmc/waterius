@@ -34,7 +34,7 @@ bool loadConfig(struct Settings &sett)
     {
         LOG_NOTICE("CFG", "CRC ok");
 
-        // Для безопасной работы с буферами,  в библиотеках может не быть нет проверок
+        // Для безопасной работы с буферами,  в библиотеках может не быть проверок
         sett.key[KEY_LEN-1] = '\0';
         sett.hostname[HOSTNAME_LEN-1] = '\0';
         sett.email[EMAIL_LEN-1] = '\0';
