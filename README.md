@@ -1,45 +1,42 @@
-### Wi-Fi модуль для счётчиков воды
+### Aвтономное устройство для передачи показаний воды по Wi-Fi
 # Вотериус 0.5
 [Description in English](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
 Поддержать проект: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
 
-Aвтономное устройство для передачи показаний воды по Wi-Fi.
-
-Данные получаем:
+#### Данные получаем:
 - в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8))
 - по электронной почте (ежедневно, через Blynk).
 - на вашем [HTTP сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
 - там, куда сами запрограммируете
 
-Статьи:
+#### Статьи:
 [Habrahabr.com (ru)](https://habr.com/post/418573/) | [Hackster.io (en)](https://www.hackster.io/dontsovcmc/waterius-4bfaba) | [Blynk forum (en-ru)](https://community.blynk.cc/t/autonomous-impulse-counter-for-water-meters-attiny85-esp-01)
 
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" width="360"/> <img src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" width="180"/>
 
 Подключение двух счётчиков.
-
-Питание: 3\*AA алкалиновые или 2\*AA литиевые батарейки. Батареек должно хватить на несколько лет при ежедневной отправке показаний.
+Питание: 3 обычные или 2 литиевые батарейки \*AA. Их должно хватить на несколько лет при ежедневной отправке показаний.
 
 ## Требования
 - Wi-Fi рядом с Вотериусом
 - Счётчики воды с выходом типа "сухой контакт" ("намур" не поддерживается).
 
-## Установка
-Подробная инструкция: [Установка и настройка](https://github.com/dontsovcmc/waterius/blob/master/Setup.md)
+## Изготовление
+- [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
+- [Прошивка Attiny85 и ESP](https://github.com/dontsovcmc/waterius/blob/master/Firmware.md) 
+- [Установка и настройка](https://github.com/dontsovcmc/waterius/blob/master/Setup.md) 
+
+Если хотите сделать Вотериус, напишите мне, вдруг остались платы ;).
 
 ## Принцип работы
 Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в Х минут она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого все микросхемы засыпают.
 
 ## Передача показаний (вручную)
-Автоматическая передача в управляющие компании не реализована. Простой способ их передавать: при помощи приложений или [СМС](Send.md).
+Автоматическая передача в управляющие компании не реализована. 
 
-## Изготовление
-- [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
-- [Прошивка Attiny85 и ESP](https://github.com/dontsovcmc/waterius/blob/master/Firmware.md) 
-- [Подключение](https://github.com/dontsovcmc/waterius/blob/master/Setup.md) 
-
-Если хотите сделать Вотериус, напишите мне - у меня есть заводские платы и стабилизаторы.
+#### АНОНС! Если хотите, чтобы показания отправлялись сами 
+Заполните анкету на сайте: <a href="https://waterius.ru">waterius.ru</a>.
 
 ## Схема
 <img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="600"/>
