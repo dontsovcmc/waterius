@@ -31,7 +31,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     WiFiManagerParameter param_email( "email", "Адрес эл. почты:",  sett.email, EMAIL_LEN-1);
     WiFiManagerParameter param_email_title( "title", "Заголовок:",  sett.email_title, EMAIL_TITLE_LEN-1);
     WiFiManagerParameter param_email_template( "template", "Тело письма:",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
-    WiFiManagerParameter param_hostname_json( "hostname_json", "Адрес сервера для JSON:",  sett.hostname_json, HOSTNAME_LEN-1);
+    WiFiManagerParameter param_hostname_json( "hostname_json", "Адрес сервера для JSON:",  sett.hostname_json, HTTP_SERVER_LEN-1);
     FloatParameter param_channel0_start( "channel0", "Вход 0 (м3):",  channel0);
     FloatParameter param_channel1_start( "channel1", "Вход 1 (м3):",  channel1);
     LongParameter param_litres_per_imp( "factor", "Литров на импульс:",  sett.liters_per_impuls);
