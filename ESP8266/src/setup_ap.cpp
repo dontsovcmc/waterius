@@ -65,7 +65,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     strncpy0(sett.email_template, param_email_template.getValue(), EMAIL_TEMPLATE_LEN);
 
     // JSON
-    strncpy0(sett.hostname_json, param_hostname_json.getValue(), HOSTNAME_LEN);
+    strncpy0(sett.hostname_json, param_hostname_json.getValue(), HTTP_SERVER_LEN);
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();
