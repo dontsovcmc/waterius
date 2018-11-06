@@ -40,7 +40,7 @@ bool loadConfig(struct Settings &sett)
         sett.email[EMAIL_LEN-1] = '\0';
         sett.email_title[EMAIL_TITLE_LEN-1] = '\0';
         sett.email_template[EMAIL_TEMPLATE_LEN-1] = '\0'; 
-        sett.hostname_json[HOSTNAME_LEN-1] = '\0';
+        sett.hostname_json[HTTP_SERVER_LEN-1] = '\0';
         
         LOG_NOTICE( "CFG", " email=" << sett.email  << ", hostname=" << sett.hostname);
         LOG_NOTICE( "CFG", " hostname_json=" << sett.hostname_json);

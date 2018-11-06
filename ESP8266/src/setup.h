@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.5"
+#define FIRMWARE_VERSION "0.5.1"
 
 /*
     Включить отправку данных на свой TCP сервер. см. sender_tcp.h
@@ -43,7 +43,8 @@
 #define VER_1 1
 #define VER_2 2
 #define VER_3 3
-#define CURRENT_VERSION VER_3
+#define VER_4 4
+#define CURRENT_VERSION VER_4
 
 
 #define KEY_LEN 34
