@@ -8,7 +8,7 @@
 `curl https://raw.githubusercontent.com/dontsovcmc/waterius_firmware/master/0.5/attiny85.hex --output ./attiny85.hex`
 Если нет curl, то открываем ссылку и копируем файл в папку Avrdude.
 4. Ставим драйвер программатора [USBAsp](http://www.myrobot.ru/downloads/driver-usbasp-v-2.0-usb-isp-windows-7-8-10-xp.php) и подключаем его с attiny85.
-5. `avrdude.exe -p t85 -c Usbasp -B 4 -P usb -U efuse:v:255:m -U lock:v:63:m -U hfuse:v:223:m -U lfuse:v:98:m`
+5. `avrdude.exe -p t85 -c Usbasp -B 4 -P usb  -U efuse:w:0xFF:m -U hfuse:w:0xDF:m -U lfuse:w:0x62:m`
 6. `avrdude.exe -p t85 -c Usbasp -B 4 -P usb -U flash:w:"attiny85.hex":a`
 
 #### Прошивка ESP8266
@@ -72,7 +72,7 @@ upload_flags =
 	
 ## Avrdude_prog
 ```
-avrdude.exe -p t85 -c Usbasp -B 4 -P usb  -U efuse:v:255:m -U lock:v:63:m -U hfuse:v:223:m -U lfuse:v:98:m
+avrdude.exe -p t85 -c Usbasp -B 4 -P usb  -U efuse:w:0xFF:m -U hfuse:w:0xDF:m -U lfuse:w:0x62:m
 avrdude.exe -p t85 -c Usbasp -B 4 -P usb -U flash:w:"<путь_до_репозитория>\waterius\Attiny85\.pioenvs\attiny85\firmware.hex":a
 ```
 
