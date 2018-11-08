@@ -1,6 +1,11 @@
 #ifndef _SENDERBLYNK_h
 #define _SENDERBLYNK_h
 
+// http://docs.blynk.cc/#widgets-notifications-email
+// Максимальная длина тела электронного письма. М.б. до 1200
+// email + subject + message length
+#define BLYNK_MAX_SENDBYTES 512
+
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
 

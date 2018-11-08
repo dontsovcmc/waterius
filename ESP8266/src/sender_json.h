@@ -21,7 +21,7 @@ bool send_json(const Settings &sett, const SlaveData &data, const float &channel
 {
     bool connect = false;
 
-    if (strnlen(sett.hostname_json, JSON_SERVER_LEN))
+    if (strnlen(sett.hostname_json, HOSTNAME_JSON_LEN))
     {
         LOG_NOTICE("JSN", "Making HTTP connection to: " << sett.hostname_json);
 

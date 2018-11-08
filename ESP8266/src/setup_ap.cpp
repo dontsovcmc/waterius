@@ -31,7 +31,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     WiFiManagerParameter param_email( "email", "Адрес эл. почты:",  sett.email, EMAIL_LEN-1);
     WiFiManagerParameter param_email_title( "title", "Заголовок:",  sett.email_title, EMAIL_TITLE_LEN-1);
     WiFiManagerParameter param_email_template( "template", "Тело письма:",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
-    WiFiManagerParameter param_hostname_json( "hostname_json", "Адрес сервера для JSON:",  sett.hostname_json, JSON_SERVER_LEN-1);
+    WiFiManagerParameter param_hostname_json( "hostname_json", "Адрес сервера для JSON:",  sett.hostname_json, HOSTNAME_JSON_LEN-1);
     FloatParameter param_channel0_start( "channel0", "Вход 0 (м3):",  channel0);
     FloatParameter param_channel1_start( "channel1", "Вход 1 (м3):",  channel1);
     LongParameter param_litres_per_imp( "factor", "Литров на импульс:",  sett.liters_per_impuls);
@@ -65,7 +65,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     strncpy0(sett.email_template, param_email_template.getValue(), EMAIL_TEMPLATE_LEN);
 
     // JSON
-    strncpy0(sett.hostname_json, param_hostname_json.getValue(), JSON_SERVER_LEN);
+    strncpy0(sett.hostname_json, param_hostname_json.getValue(), HOSTNAME_JSON_LEN);
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();

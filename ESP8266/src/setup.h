@@ -51,7 +51,7 @@
 #define EMAIL_TITLE_LEN 64
 #define EMAIL_TEMPLATE_LEN 200
 
-#define JSON_SERVER_LEN 64
+#define HOSTNAME_JSON_LEN 64
 
 /*
 Настройки хранящиеся EEPROM
@@ -96,7 +96,7 @@ struct Settings
     http сервер для отправки данных в виде JSON
     в виде: http://host:port/path
     */
-    char     hostname_json[JSON_SERVER_LEN];
+    char     hostname_json[HOSTNAME_JSON_LEN];
 
     /*
     Показания счетчиках в кубометрах, 
@@ -123,6 +123,12 @@ struct Settings
     */
     float    channel0_previous;
     float    channel1_previous;
+
+    /*
+    Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
+    Будет актуально для On-the-Air обновлений
+    */
+    uint8_t  reserved2[256];
 
     /*
     Контрольная сумма, чтобы гарантировать корректность чтения настроек

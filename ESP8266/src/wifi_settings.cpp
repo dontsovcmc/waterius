@@ -3,9 +3,14 @@
 #include "Logging.h"
 
 #include "Blynk/BlynkConfig.h"
+#include <ESP8266WiFi.h>
 #include <IPAddress.h>
 #include <EEPROM.h>
 #include "utils.h"
+
+//Конвертируем значение переменных компиляции в строки
+#define DEF2STR2(x) #x
+#define DEF2STR(x) DEF2STR2(x)
 
 /* Сохраняем конфигурацию в EEPROM */
 void storeConfig(const Settings &sett) 
@@ -40,7 +45,7 @@ bool loadConfig(struct Settings &sett)
         sett.email[EMAIL_LEN-1] = '\0';
         sett.email_title[EMAIL_TITLE_LEN-1] = '\0';
         sett.email_template[EMAIL_TEMPLATE_LEN-1] = '\0'; 
-        sett.hostname_json[JSON_SERVER_LEN-1] = '\0';
+        sett.hostname_json[HOSTNAME_JSON_LEN-1] = '\0';
         
         LOG_NOTICE( "CFG", " email=" << sett.email  << ", hostname=" << sett.hostname);
         LOG_NOTICE( "CFG", " hostname_json=" << sett.hostname_json);
@@ -65,6 +70,8 @@ bool loadConfig(struct Settings &sett)
         String hostname = BLYNK_DEFAULT_DOMAIN;
         strncpy0(sett.hostname, hostname.c_str(), HOSTNAME_LEN);
 
+        sett.email[EMAIL_LEN-1] = '\0';
+
         String email_title = "Новые показания {DEVICE_NAME}";
         strncpy0(sett.email_title, email_title.c_str(), EMAIL_TITLE_LEN);
 
@@ -74,6 +81,36 @@ bool loadConfig(struct Settings &sett)
         sett.hostname_json[0] = '\0';
 
         LOG_NOTICE("CFG", "version=" << sett.version << ", hostname=" << hostname);
+
+
+//Можно задать константы при компиляции, чтобы Вотериус сразу заработал
+#ifdef BLYNK_KEY
+        String key = DEF2STR(BLYNK_KEY);
+        strncpy0(sett.key, key.c_str(), KEY_LEN);
+        LOG_NOTICE("CFG", "default key=" << key);
+#endif
+#ifdef WATERIUS_EMAIL
+        String email = DEF2STR(WATERIUS_EMAIL);
+        strncpy0(sett.email, email.c_str(), EMAIL_LEN);
+        LOG_NOTICE("CFG", "default email=" << email);
+#endif
+
+#ifdef HOSTNAME_JSON
+        String hostname_json = DEF2STR(HOSTNAME_JSON);
+        strncpy0(sett.hostname_json, hostname_json.c_str(), HOSTNAME_JSON_LEN);
+        LOG_NOTICE("CFG", "default hostname_json=" << hostname_json);
+#endif
+
+#ifdef SSID_NAME && SSID_PASS
+        WiFi.begin(DEF2STR(SSID_NAME), DEF2STR(SSID_PASS));
+        LOG_NOTICE("CFG", "default ssid=" << DEF2STR(SSID_NAME) << ", pwd=" << DEF2STR(SSID_PASS));
+        uint32_t start = millis();
+        while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
+            LOG_NOTICE("WIF", "Wifi default status: " << WiFi.status());
+            delay(200);
+        }
+        return WiFi.status() == WL_CONNECTED;
+#endif
         return false;
     }
 }
