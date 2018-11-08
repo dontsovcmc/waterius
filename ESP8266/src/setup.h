@@ -40,9 +40,6 @@
 
 #define I2C_SLAVE_ADDR 10  // i2c адрес Attiny85
 
-#define VER_1 1
-#define VER_2 2
-#define VER_3 3
 #define VER_4 4
 #define CURRENT_VERSION VER_4
 
@@ -54,15 +51,16 @@
 #define EMAIL_TITLE_LEN 64
 #define EMAIL_TEMPLATE_LEN 200
 
-#define HTTP_SERVER_LEN 128
+#define JSON_SERVER_LEN 64
 
 /*
 Настройки хранящиеся EEPROM
 */
 struct Settings
 {
-    uint8_t  version;   //Версия конфигурации
-    uint8_t  reserved;  //Для кратности x16 bit
+    uint8_t  version;      //Версия конфигурации
+
+    uint8_t  reserved;
     
     /*
     SEND_BLYNK: уникальный ключ устройства blynk
@@ -98,7 +96,7 @@ struct Settings
     http сервер для отправки данных в виде JSON
     в виде: http://host:port/path
     */
-    char     hostname_json[HTTP_SERVER_LEN];
+    char     hostname_json[JSON_SERVER_LEN];
 
     /*
     Показания счетчиках в кубометрах, 
