@@ -8,9 +8,10 @@
 #include <EEPROM.h>
 #include "utils.h"
 
-//Конвертируем значение переменных компиляции в строки
-#define DEF2STR2(x) #x
-#define DEF2STR(x) DEF2STR2(x)
+//Конвертируем значение переменных компиляции в строк
+#define VALUE_TO_STRING(x) #x
+#define VALUE(x) VALUE_TO_STRING(x)
+#define VAR_NAME_VALUE(var) #var "="  VALUE(var)
 
 /* Сохраняем конфигурацию в EEPROM */
 void storeConfig(const Settings &sett) 
@@ -84,32 +85,29 @@ bool loadConfig(struct Settings &sett)
 
 
 //Можно задать константы при компиляции, чтобы Вотериус сразу заработал
-#ifdef BLYNK_KEY
-        String key = DEF2STR(BLYNK_KEY);
+
+#ifdef BLYNK_KEY    
+        #pragma message(VAR_NAME_VALUE(BLYNK_KEY))
+        String key = VALUE(BLYNK_KEY);
         strncpy0(sett.key, key.c_str(), KEY_LEN);
         LOG_NOTICE("CFG", "default key=" << key);
 #endif
-#ifdef WATERIUS_EMAIL
-        String email = DEF2STR(WATERIUS_EMAIL);
-        strncpy0(sett.email, email.c_str(), EMAIL_LEN);
-        LOG_NOTICE("CFG", "default email=" << email);
-#endif
 
 #ifdef HOSTNAME_JSON
-        String hostname_json = DEF2STR(HOSTNAME_JSON);
+        #pragma message(VAR_NAME_VALUE(HOSTNAME_JSON))
+        String hostname_json = VALUE(HOSTNAME_JSON);
         strncpy0(sett.hostname_json, hostname_json.c_str(), HOSTNAME_JSON_LEN);
         LOG_NOTICE("CFG", "default hostname_json=" << hostname_json);
 #endif
 
 #ifdef SSID_NAME && SSID_PASS
-        WiFi.begin(DEF2STR(SSID_NAME), DEF2STR(SSID_PASS));
-        LOG_NOTICE("CFG", "default ssid=" << DEF2STR(SSID_NAME) << ", pwd=" << DEF2STR(SSID_PASS));
-        uint32_t start = millis();
-        while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
-            LOG_NOTICE("WIF", "Wifi default status: " << WiFi.status());
-            delay(200);
-        }
-        return WiFi.status() == WL_CONNECTED;
+        #pragma message(VAR_NAME_VALUE(SSID_NAME))
+        #pragma message(VAR_NAME_VALUE(SSID_PASS))
+        WiFi.begin(VALUE(SSID_NAME), VALUE(SSID_PASS), 0, NULL, false);  //connect=false, т.к. мы следом вызываем Wifi.begin
+        LOG_NOTICE("CFG", "default ssid=" << VALUE(SSID_NAME) << ", pwd=" << VALUE(SSID_PASS));
+        
+        sett.crc = FAKE_CRC; //чтобы больше не попадать сюда
+        return true;
 #endif
         return false;
     }

@@ -51,19 +51,27 @@ template<class T> inline Print &operator <<( Print &obj, T arg ) {
 
 // Depending on log level, add code for logging
 #if LOGLEVEL >= 0
+	#undef LOG_BEGIN
 	#define LOG_BEGIN(baud) do { Serial.begin( baud ,SERIAL_8N1, SERIAL_TX_ONLY); } while(0)
+	#undef LOG_EMERGENCY
 	#define LOG_EMERGENCY(svc, content)	do { LOG_FORMAT_TIME; Serial << "  EMERGENCY (" << svc << ") : " << content << endl; } while(0)
 	#if LOGLEVEL >=1 
+		#undef LOG_ALERT
 		#define LOG_ALERT(svc, content)	do { LOG_FORMAT_TIME; Serial << "  ALERT     (" << svc << ") : " << content << endl; } while(0)
 		#if LOGLEVEL >= 2
+			#undef LOG_CRITICAL
 			#define LOG_CRITICAL(svc, content) do { LOG_FORMAT_TIME; Serial << "  CRITICAL  (" << svc << ") : " << content << endl; } while(0)
 			#if LOGLEVEL >= 3
+				#undef LOG_ERROR
 				#define LOG_ERROR(svc, content) do { LOG_FORMAT_TIME; Serial << "  ERROR     (" << svc << ") : " << content << endl; } while(0)
 				#if LOGLEVEL >= 4
+					#undef LOG_WARNING
 					#define LOG_WARNING(svc, content) do { LOG_FORMAT_TIME; Serial << "  WARNING   (" << svc << ") : " << content << endl; } while(0)
 					#if LOGLEVEL >= 5
+						#undef LOG_NOTICE
 						#define LOG_NOTICE(svc, content) do { LOG_FORMAT_TIME; Serial << "  NOTICE    (" << svc << ") : " << content << endl; } while(0)
 						#if LOGLEVEL >= 6
+							#undef LOG_INFO
 							#define LOG_INFO(svc, content) do { LOG_FORMAT_TIME; Serial << "  INFO      (" << svc << ") : " << content << endl; } while(0)
 							#if LOGLEVEL >= 7
 								#define LOG_DEBUG(svc, content) do { LOG_FORMAT_TIME; Serial << "  DEBUG     (" << svc << ") : " << content << endl; } while(0)
