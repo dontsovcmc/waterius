@@ -19,6 +19,7 @@ temp/
 */logs
 *.db
 ImpCounterServer/run.sh
+*/platformio.ini
 *.a
 *.o
 *.d
