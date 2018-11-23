@@ -4,19 +4,25 @@
 
 Поддержать проект: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
 
+### Характеристики:
+- Wi-Fi
+- 2 счётчика воды ("сухой контакт")
+- питание 3 АА батарейки (~4 года работы)
+
 #### Данные получаем:
+- на сайт <a href="https://waterius.ru">waterius.ru</a> (пишите, добавлю автоотправку в ваш город)
 - в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8))
 - по электронной почте (ежедневно, через Blynk).
 - на вашем [HTTP сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
 - там, куда сами запрограммируете
 
-#### Статьи:
+#### Статьи: 
 [Habrahabr.com (ru)](https://habr.com/post/418573/) | [Hackster.io (en)](https://www.hackster.io/dontsovcmc/waterius-4bfaba) | [Blynk forum (en-ru)](https://community.blynk.cc/t/autonomous-impulse-counter-for-water-meters-attiny85-esp-01)
 
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" width="360"/> <img src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" width="180"/>
 
-Подключение двух счётчиков.
-Питание: 3 обычные или 2 литиевые батарейки \*AA. Их должно хватить на несколько лет при ежедневной отправке показаний.
+
+#### [Заводские и DIY аналоги](https://github.com/dontsovcmc/waterius/issues/10)
 
 ## Требования
 - Wi-Fi рядом с Вотериусом
@@ -34,9 +40,6 @@
 
 ## Передача показаний (вручную)
 Автоматическая передача в управляющие компании не реализована. 
-
-#### АНОНС! Если хотите, чтобы показания отправлялись сами 
-Заполните анкету на сайте: <a href="https://waterius.ru">waterius.ru</a>.
 
 ## Схема
 <img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="600"/>
@@ -69,7 +72,6 @@
 Хорошо бы LoraWan. Платы в Мск вот [Yotster](https://electromicro.ru/market/nodemcu/yotster-lite/) или [на Авито](https://www.avito.ru/moskva/bytovaya_elektronika?s_trg=10&q=Lora), но можно и 433
 Вопрос: чтобы период передачи был одинаковый нужен кварц для МК. Иначе приемник автономным не сделать. Но может и не надо.
 
-
 # Ответственность
 
 Прошивка Вотериуса сделана на основе открытых библиотек, работоспособность которых никто не гарантирует. Я также не могу обещать, что устройство будет работать с вашем оборудованием и вы не получите ущерба как во время изготовления, так и во время эксплуатации устройства =). Пожалуйста, сообщите о любом опыте изготовления и использования [тут](https://github.com/dontsovcmc/waterius/issues). Вы поможете развитию проекта! 
@@ -77,15 +79,11 @@
 [Лицензия GNU GPLv3](https://github.com/dontsovcmc/waterius/blob/master/LICENSE)
 
 # Благодарности
-Ивану Коваленко и Иван Ганжа за консультации по электротехнике
-
-Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1), он был взят за основу.
-
+Ивану Коваленко и Иван Ганжа за консультации по электротехнике. Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1), он был взят за основу.\
 Форумам: 
-https://electronix.ru
-https://esp8266.ru
-https://easyelectronics.ru
-
+- https://electronix.ru
+- https://esp8266.ru
+- https://easyelectronics.ru
 
 ## Контакты
 
