@@ -2,7 +2,6 @@
 #define _SETUP_h
 
 #include <Arduino.h>
-#include "TinyDebugSerial.h"
 
 /* 
 	Включение логирования с TinySerial: 
@@ -14,6 +13,10 @@
 // #define LOG_LEVEL_ERROR
 // #define LOG_LEVEL_INFO
 // #define LOG_LEVEL_DEBUG
+
+#if defined (LOG_LEVEL_DEBUG) || defined (LOG_LEVEL_INFO) || defined (LOG_LEVEL_ERROR)
+#include "TinyDebugSerial.h"
+#endif
 
 //#define TEST_WATERIUS   // Тестирование счетчика при помощи Arduino
 

@@ -17,29 +17,31 @@
 #endif
 
 
-#define BUTTON_PIN  4          //Вход 1, Blynk: V0, горячая вода
-#define BUTTON2_PIN 3          //Вход 2, Blynk: V1, холодная вода (или лог)
+#define INPUT0_PIN  4          //Вход 1, Blynk: V0, горячая вода
+#define INPUT1_PIN  3          //Вход 2, Blynk: V1, холодная вода (или лог)
 
-#define DEVICE_ID   5   	   // Модель устройства
+#define DEVICE_ID   5   	   // Версия прошивки. Передается в ESP и на сервер в данных.
 
 #define ESP_POWER_PIN    1     // пин включения ESP8266. 
-#define SETUP_BUTTON_PIN 2     // пин кнопки SETUP (SCL)
-
-#define LONG_PRESS_MSEC  3000  // Долгое нажатие = Настройка
-                               // Короткое = Передать показания
-
+#define BUTTON_PIN       2     // пин кнопки: (на линии SCL)
+                               // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
+							   // Короткое: ESP передает показания
+#define LONG_PRESS_MSEC  3000  // время долгого нажатия кнопки, милисекунд  
+                               
 
 // Счетчики импульсов
-static Counter counter(BUTTON_PIN);
-static Counter counter2(BUTTON2_PIN);
+static Counter counter(INPUT0_PIN);
+static Counter counter2(INPUT1_PIN);
 
 // Класс для подачи питания на ESP и нажатия кнопки
-static ESPPowerButton esp(ESP_POWER_PIN);
+static ESPPowerPin esp(ESP_POWER_PIN);
 
 // Данные
 struct Header info = {DEVICE_ID, 0, 0, 0, 0, {0, 0} };
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
+//Кольцовой нужен для того, чтобы превысить лимит записи памяти в 100 000 раз
+//Записывается каждый импульс, поэтому для 10л/импульс срок службы памяти 10 000м3
 //100к * 20 = 2 млн * 10 л / 2 счетчика = 10 000 000 л или 10 000 м3
 static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
 
@@ -58,7 +60,6 @@ void resetWatchdog() {
 	MCUSR = 0; // очищаем все флаги прерываний
 	WDTCR = bit( WDCE ) | bit( WDE ); // allow changes, disable reset, clear existing interrupt
 
-	// настраиваем период сна и кол-во просыпаний за 1 минуту
 #ifdef TEST_WATERIUS
 	WDTCR = bit( WDIE ) | bit( WDP0 );      // 32 ms
 	#define ONE_MINUTE 20  // ускоримся для теста
@@ -67,6 +68,9 @@ void resetWatchdog() {
 	//WDTCR = bit( WDIE );                  // 16 ms
 	//#define ONE_MINUTE ?
 
+	// настраиваем период сна и кол-во просыпаний за 1 минуту
+	// Итак, пробуждаемся (проверяем входы) каждые 128 мс
+	// 1 минута примерно равна 480 пробуждениям
 	WDTCR = bit( WDIE ) | bit( WDP0 ) | bit( WDP1 );     // 128 ms
 	#define ONE_MINUTE 480
 
@@ -105,7 +109,7 @@ void setup() {
 	resetWatchdog(); 
 	adc_disable(); //выключаем ADC
 
-	pinMode(SETUP_BUTTON_PIN, INPUT); //кнопка на корпусе
+	pinMode(BUTTON_PIN, INPUT); //кнопка на корпусе
 
 	if (storage.get(info.data)) { //не первая загрузка
 		info.resets = EEPROM.read(storage.size());
@@ -126,13 +130,13 @@ void setup() {
 	LOG_INFO(info.data.value1);
 }
 
-// Проверка нажатия кнопки SETUP
+// Проверка нажатия кнопки 
 bool button_pressed() {
 
-	if (digitalRead(SETUP_BUTTON_PIN) == LOW)
+	if (digitalRead(BUTTON_PIN) == LOW)
 	{	//защита от дребезга
 		delayMicroseconds(20000);  //нельзя delay, т.к. power_off
-		return digitalRead(SETUP_BUTTON_PIN) == LOW;
+		return digitalRead(BUTTON_PIN) == LOW;
 	}
 	return false;
 }

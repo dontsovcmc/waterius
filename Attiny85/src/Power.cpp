@@ -7,14 +7,14 @@
 #include "Setup.h"
 
 
-ESPPowerButton::ESPPowerButton(const uint8_t p)
+ESPPowerPin::ESPPowerPin(const uint8_t p)
 	: power_pin(p)
 	, power_on(false)
 {
 	pinMode(power_pin, INPUT);
 }
 
-void ESPPowerButton::power(const bool on)
+void ESPPowerPin::power(const bool on)
 {
 	power_on = on;
 	
@@ -33,7 +33,7 @@ void ESPPowerButton::power(const bool on)
 	}
 }
 
-bool ESPPowerButton::elapsed(const unsigned long msec)
+bool ESPPowerPin::elapsed(const unsigned long msec)
 {
 	return millis() - wake_up_timestamp > msec;
 }
