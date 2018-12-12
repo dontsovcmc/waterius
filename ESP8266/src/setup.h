@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.5.1"
+#define FIRMWARE_VERSION "0.5.2"
 
 /*
     Включить отправку данных на свой TCP сервер. см. sender_tcp.h

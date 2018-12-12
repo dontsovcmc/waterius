@@ -112,6 +112,7 @@ void loop()
     }
 
     LOG_NOTICE("ESP", "Going to sleep");
+    LOG_END();
     masterI2C.sendCmd('Z');        // "Можешь идти спать, attiny"
     ESP.deepSleep(0, RF_DEFAULT);  // Спим до следущего включения EN
 }
