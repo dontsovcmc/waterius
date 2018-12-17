@@ -55,7 +55,7 @@ template<class T> inline Print &operator <<( Print &obj, T arg ) {
 	#undef LOG_BEGIN
 	#define LOG_BEGIN(baud) do { Serial.begin( baud ,SERIAL_8N1, SERIAL_TX_ONLY); } while(0)
 	#undef LOG_END
-	#define LOG_END() do { Serial.end(); } while(0)
+	#define LOG_END() do { Serial.flush(); Serial.end(); } while(0)
 	#undef LOG_EMERGENCY
 	#define LOG_EMERGENCY(svc, content)	do { LOG_FORMAT_TIME; Serial << "  EMERGENCY (" << svc << ") : " << content << endl; } while(0)
 	#if LOGLEVEL >=1 
