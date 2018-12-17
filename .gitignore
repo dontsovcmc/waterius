@@ -1,3 +1,5 @@
+ESP8266/platformio.ini
+Attiny85/platformio.ini
 key
 *.key
 *.crt
