@@ -5,8 +5,8 @@
 Поддержать проект: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
 
 ### Характеристики:
-- Wi-Fi
-- 2 счётчика воды ("сухой контакт")
+- передача по Wi-Fi
+- 2 счётчика воды ("сухой контакт"/геркон. "намур" не поддерживается)
 - питание 3 АА батарейки (~4 года работы)
 - до 4-х импульсов от счётчика в секунду
 
@@ -24,10 +24,6 @@
 
 
 #### [Заводские и DIY аналоги](https://github.com/dontsovcmc/waterius/issues/10)
-
-## Требования
-- Wi-Fi рядом с Вотериусом
-- Счётчики воды с выходом типа "сухой контакт" ("намур" не поддерживается).
 
 ## Изготовление
 - [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
