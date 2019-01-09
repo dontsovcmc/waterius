@@ -3,10 +3,10 @@ matrix:
   include:
   - name: "Attiny85 firmware"
     python: "2.7"
-    env: PLATFORMIO_CI_SRC=./ESP8266
+    env: PLATFORMIO_CI_SRC=./Attiny85
   - name: "ESP8266 firmware"
     python: "2.7"
-    env: PLATFORMIO_CI_SRC=./Attiny85
+    env: PLATFORMIO_CI_SRC=./ESP8266
     
 git:
   depth: 3
