@@ -1,7 +1,7 @@
 #ifndef _SENDERTCP_h
 #define _SENDERTCP_h
 
-#include "Setup.h"
+#include "setup.h"
 
 #include "master_i2c.h"
 #include "Logging.h"

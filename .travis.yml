@@ -2,6 +2,14 @@ language: python
 python:
     - "2.7"
 
+git:
+  depth: 3
+  submodules: false
+
+branches:
+  only:
+  - master
+  
 cache:
     directories:
         - "~/.platformio"
