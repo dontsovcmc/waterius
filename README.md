@@ -1,6 +1,8 @@
 ### Aвтономное устройство для передачи показаний воды по Wi-Fi
-# Вотериус 0.5
-[Description in English](https://github.com/dontsovcmc/waterius/blob/master/English.md)
+# Вотериус 0.5 [Eng](https://github.com/dontsovcmc/waterius/blob/master/English.md)
+
+<a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
+
 
 Поддержать проект: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
 
