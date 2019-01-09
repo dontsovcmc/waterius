@@ -1,0 +1,21 @@
+language: python
+python:
+    - "2.7"
+
+cache:
+    directories:
+        - "~/.platformio"
+
+env:
+    - PLATFORMIO_CI_SRC=./ESP8266
+
+install:
+    - pip install -U platformio
+
+script:
+    - platformio ci --project-conf=./ESP8266/platformio.ini
+    
+notifications:
+  email:
+    on_success: change
+    on_failure: change
