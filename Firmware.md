@@ -38,6 +38,8 @@ Vcc - в любой 3.3в или 5в.
 
 ## Arduino в качестве ISP программатора (3.3в-5в).
 
+1. Залейте скетч ISP программатора с помощью Arduino IDE в плату Arduino [[инструкция](http://www.martyncurrey.com/arduino-nano-as-an-isp-programmer/)]
+2. Подключите плату Arduino к Вотериусу:
 Распиновка, при прошивки с помощью Arduino Micro или Arduino UNO:
 
 | Micro | UNO | ISP | Attiny85 |   
