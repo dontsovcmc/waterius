@@ -3,7 +3,14 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.5.2"
+#define FIRMWARE_VERSION "0.5.3"
+
+/*
+Версии прошивки для ESP
+
+0.5.3 - 2019.01.22 - WifiManager 0.14 + hotfixes
+0.5.2 - 2018.09.22 - WifiManager 0.14
+*/ 
 
 /*
     Включить отправку данных на свой TCP сервер. см. sender_tcp.h
