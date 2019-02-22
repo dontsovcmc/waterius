@@ -20,7 +20,7 @@
 #define INPUT0_PIN  4          //Вход 1, Blynk: V0, горячая вода
 #define INPUT1_PIN  3          //Вход 2, Blynk: V1, холодная вода (или лог)
 
-#define DEVICE_ID   5   	   // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER   6   	   // Версия прошивки. Передается в ESP и на сервер в данных.
 
 #define ESP_POWER_PIN    1     // пин включения ESP8266. 
 #define BUTTON_PIN       2     // пин кнопки: (на линии SCL)
@@ -37,7 +37,7 @@ static Counter counter2(INPUT1_PIN);
 static ESPPowerPin esp(ESP_POWER_PIN);
 
 // Данные
-struct Header info = {DEVICE_ID, 0, 0, 0, 0, {0, 0} };
+struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, {0, 0} };
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
 //Кольцовой нужен для того, чтобы превысить лимит записи памяти в 100 000 раз
