@@ -179,6 +179,9 @@ Board settings:
 2. open src.ino in Arduino IDE
 3. compile
 
+## Драйверы для USB-TTL:
+- [CH430G](https://all-arduino.ru/drajver-ch340g-dlya-arduino/)
+- [PL2303](http://www.prolific.com.tw/US/ShowProduct.aspx?p_id=225&pcid=41)
 
 
 

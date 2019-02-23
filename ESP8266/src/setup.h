@@ -40,7 +40,7 @@
 /*
     Время подключения к точке доступа
 */
-#define ESP_CONNECT_TIMEOUT 10000UL
+#define ESP_CONNECT_TIMEOUT 13000UL
 
 
 #define LITRES_PER_IMPULS_DEFAULT 10  // При первом включении заполним 10 литров на импульс
