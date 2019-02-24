@@ -15,7 +15,7 @@
 #ifdef SEND_BLYNK
 bool send_blynk(const Settings &sett, const SlaveData &data, const float &channel0, const float &channel1)
 {
-    Blynk.config(sett.key, sett.hostname, BLYNK_DEFAULT_PORT);
+    Blynk.config(sett.key, sett.hostname_blynk, BLYNK_DEFAULT_PORT);
     if (Blynk.connect(SERVER_TIMEOUT)) {
         
         LOG_NOTICE( "BLK", "run");

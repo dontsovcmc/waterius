@@ -27,7 +27,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     LOG_NOTICE( "AP", "User requested captive portal" );
     
     WiFiManagerParameter param_key( "key", "Ключ:",  sett.key, KEY_LEN-1);
-    WiFiManagerParameter param_hostname( "host", "Адрес сервера:",  sett.hostname, HOSTNAME_LEN-1);
+    WiFiManagerParameter param_hostname_blynk( "host", "Адрес сервера:",  sett.hostname_blynk, HOSTNAME_BLYNK_LEN-1);
     WiFiManagerParameter param_email( "email", "Адрес эл. почты:",  sett.email, EMAIL_LEN-1);
     WiFiManagerParameter param_email_title( "title", "Заголовок:",  sett.email_title, EMAIL_TITLE_LEN-1);
     WiFiManagerParameter param_email_template( "template", "Тело письма:",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
@@ -37,7 +37,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     LongParameter param_litres_per_imp( "factor", "Литров на импульс:",  sett.liters_per_impuls);
 
     wm.addParameter( &param_key );
-    wm.addParameter( &param_hostname );
+    wm.addParameter( &param_hostname_blynk );
     wm.addParameter( &param_email );
     wm.addParameter( &param_email_title );
     wm.addParameter( &param_email_template );
@@ -59,7 +59,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
 
     // Переписываем введенные пользователем значения в Конфигурацию
     strncpy0(sett.key, param_key.getValue(), KEY_LEN);
-    strncpy0(sett.hostname, param_hostname.getValue(), HOSTNAME_LEN);
+    strncpy0(sett.hostname_blynk, param_hostname_blynk.getValue(), HOSTNAME_BLYNK_LEN);
     strncpy0(sett.email, param_email.getValue(), EMAIL_LEN);
     strncpy0(sett.email_title, param_email_title.getValue(), EMAIL_TITLE_LEN);
     strncpy0(sett.email_template, param_email_template.getValue(), EMAIL_TEMPLATE_LEN);

@@ -15,7 +15,7 @@
 /*
     Включить отправку данных на свой TCP сервер. см. sender_tcp.h
 */
-//#define SEND_TCP   
+#define SEND_TCP   
 
 /*
     Включить отправку данных в приложение Blynk.cc
@@ -52,7 +52,7 @@
 
 
 #define KEY_LEN 34
-#define HOSTNAME_LEN 32
+#define HOSTNAME_BLYNK_LEN 32
 
 #define EMAIL_LEN 32
 #define EMAIL_TITLE_LEN 64
@@ -68,41 +68,25 @@ struct Settings
     uint8_t  version;      //Версия конфигурации
 
     uint8_t  reserved;
-    
-    /*
-    SEND_BLYNK: уникальный ключ устройства blynk
-    SEND_TCP: не используется
-    */
+
+    //SEND_BLYNK 
+
+    //уникальный ключ устройства blynk
     char     key[KEY_LEN];
+    //сервер blynk.com или свой blynk сервер
+    char     hostname_blynk[HOSTNAME_BLYNK_LEN];
 
-    /*
-    SEND_BLYNK: сервер blynk.com или свой blynk сервер
-    SEND_TCP: ip адрес или имя хоста куда слать данные
-    */
-    char     hostname[HOSTNAME_LEN];
-
-    /*
-    SEND_BLYNK: Если email не пустой, то отсылается e-mail
-    SEND_TCP: не используется    
-    */
+    //Если email не пустой, то отсылается e-mail
     char     email[EMAIL_LEN];
-    
-    /*
-    SEND_BLYNK: Заголовок письма. {V0}-{V4} заменяются на данные 
-    SEND_TCP: не используется    
-    */
+    //Заголовок письма. {V0}-{V4} заменяются на данные 
     char     email_title[EMAIL_TITLE_LEN];
-
-    /*
-    SEND_BLYNK: Шаблон эл. письма. {V0}-{V4} заменяются на данные 
-    SEND_TCP: не используется    
-    */
+    //Шаблон эл. письма. {V0}-{V4} заменяются на данные 
     char     email_template[EMAIL_TEMPLATE_LEN];
+
+    //SEND_JSON
     
-    /*
-    http сервер для отправки данных в виде JSON
-    в виде: http://host:port/path
-    */
+    //http сервер для отправки данных в виде JSON
+    //вид: http://host:port/path
     char     hostname_json[HOSTNAME_JSON_LEN];
 
     /*

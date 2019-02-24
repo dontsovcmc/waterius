@@ -7,7 +7,6 @@
 #include "master_i2c.h"
 #include "setup_ap.h"
 #include "sender_blynk.h"
-#include "sender_tcp.h"
 #include "sender_json.h"
 
 MasterI2C masterI2C; // Для общения с Attiny85 по i2c
@@ -50,8 +49,9 @@ void loop()
 	// спрашиваем у Attiny85 повод пробуждения и данные
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data)) {
         if (mode == SETUP_MODE) {
+            //Режим настройки - запускаем точку доступа на 192.168.4.1
 
-            // Режим настройки, запускаем точку доступа на 192.168.4.1
+            //Загружаем конфигурацию из EEPROM
             loadConfig(sett);
 
             //Вычисляем текущие показания
@@ -97,11 +97,7 @@ void loop()
                         LOG_NOTICE("JSN", "send ok");
                     }
 #endif
-#ifdef SEND_TCP
-                    if (send_tcp(sett, data, channel0, channel1)) {
-                        LOG_NOTICE("TCP", "send ok");
-                    }
-#endif
+
                     //Сохраним текущие значения в памяти.
                     sett.channel0_previous = channel0;
                     sett.channel1_previous = channel1;

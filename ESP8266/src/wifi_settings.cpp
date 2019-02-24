@@ -42,13 +42,13 @@ bool loadConfig(struct Settings &sett)
 
         // Для безопасной работы с буферами,  в библиотеках может не быть проверок
         sett.key[KEY_LEN-1] = '\0';
-        sett.hostname[HOSTNAME_LEN-1] = '\0';
+        sett.hostname_blynk[HOSTNAME_BLYNK_LEN-1] = '\0';
         sett.email[EMAIL_LEN-1] = '\0';
         sett.email_title[EMAIL_TITLE_LEN-1] = '\0';
         sett.email_template[EMAIL_TEMPLATE_LEN-1] = '\0'; 
         sett.hostname_json[HOSTNAME_JSON_LEN-1] = '\0';
         
-        LOG_NOTICE( "CFG", " email=" << sett.email  << ", hostname=" << sett.hostname);
+        LOG_NOTICE( "CFG", " email=" << sett.email  << ", hostname=" << sett.hostname_blynk);
         LOG_NOTICE( "CFG", " hostname_json=" << sett.hostname_json);
 
         // Всегда одно и тоже будет
@@ -69,7 +69,7 @@ bool loadConfig(struct Settings &sett)
         sett.liters_per_impuls = LITRES_PER_IMPULS_DEFAULT;
         
         String hostname = BLYNK_DEFAULT_DOMAIN;
-        strncpy0(sett.hostname, hostname.c_str(), HOSTNAME_LEN);
+        strncpy0(sett.hostname_blynk, hostname.c_str(), HOSTNAME_BLYNK_LEN);
 
         sett.email[EMAIL_LEN-1] = '\0';
 
