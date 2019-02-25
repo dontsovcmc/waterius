@@ -1,13 +1,14 @@
-#ifndef _SETUP_h
-#define _SETUP_h
+#ifndef _WATERIUS_SETUP_h
+#define _WATERIUS_SETUP_h
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.5.3"
+#define FIRMWARE_VERSION "0.5.4"
 
 /*
 Версии прошивки для ESP
 
+0.5.4 - 2019.02.25 - обновил framework espressif8266 2.0.1 (arduino 2.5.0), blynk, json 
 0.5.3 - 2019.01.22 - WifiManager 0.14 + hotfixes
 0.5.2 - 2018.09.22 - WifiManager 0.14
 */ 

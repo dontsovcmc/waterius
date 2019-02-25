@@ -1,5 +1,5 @@
-#ifndef _LOGGING1_h
-#define _LOGGING1_h
+#ifndef _WATERIUS_LOGGING_h
+#define _WATERIUS_LOGGING_h
 
 #include "setup.h"
 #define LOG_TIME_FORMAT 2

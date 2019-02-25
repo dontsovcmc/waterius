@@ -12,6 +12,7 @@
 #ifdef SEND_JSON
 
 HTTPClient http;
+WiFiClient client;
 
 /*
 Функция отправляющая данные в JSON на TCP сервер.
@@ -26,7 +27,7 @@ bool send_json(const Settings &sett, const SlaveData &data, const float &channel
         LOG_NOTICE("JSN", "Making HTTP connection to: " << sett.hostname_json);
 
         http.setTimeout(SERVER_TIMEOUT);
-        connect = http.begin(sett.hostname_json);      //Specify request destination
+        connect = http.begin(client, sett.hostname_json);      //Specify request destination
         
         if (connect) {
 
