@@ -11,8 +11,6 @@
 
 #ifdef SEND_JSON
 
-HTTPClient http;
-WiFiClient client;
 
 /*
 Функция отправляющая данные в JSON на TCP сервер.
@@ -20,6 +18,9 @@ URL HTTP сервера: sett.hostname_json
 */
 bool send_json(const Settings &sett, const SlaveData &data, const float &channel0, const float &channel1)
 {
+    HTTPClient http;
+    WiFiClient client;
+    
     bool connect = false;
 
     if (strnlen(sett.hostname_json, HOSTNAME_JSON_LEN))
