@@ -6,13 +6,14 @@
 // email + subject + message length
 #define BLYNK_MAX_SENDBYTES 512
 
+#ifdef SEND_BLYNK
+
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
 
 #include "master_i2c.h"
 #include "Logging.h"
 
-#ifdef SEND_BLYNK
 bool send_blynk(const Settings &sett, const SlaveData &data, const float &channel0, const float &channel1)
 {
     Blynk.config(sett.key, sett.hostname_blynk, BLYNK_DEFAULT_PORT);

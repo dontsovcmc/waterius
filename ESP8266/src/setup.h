@@ -1,31 +1,33 @@
-#ifndef _SETUP_h
-#define _SETUP_h
+#ifndef _WATERIUS_SETUP_h
+#define _WATERIUS_SETUP_h
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.5.3"
+#define FIRMWARE_VERSION "0.5.4"
+
+#define DEBUG_ESP_HTTP_CLIENT
+#define DEBUG_ESP_PORT Serial
 
 /*
 Версии прошивки для ESP
 
+0.5.4 - 2019.02.25 - обновил framework espressif8266 2.0.1 (arduino 2.5.0), blynk, json 
 0.5.3 - 2019.01.22 - WifiManager 0.14 + hotfixes
 0.5.2 - 2018.09.22 - WifiManager 0.14
 */ 
-
-/*
-    Включить отправку данных на свой TCP сервер. см. sender_tcp.h
-*/
-#define SEND_TCP   
+  
 
 /*
     Включить отправку данных в приложение Blynk.cc
 */
-#define SEND_BLYNK
+//#define SEND_BLYNK
 
 /*
     Включить отправку данных на HTTP сервер
 */
-#define SEND_JSON
+//#define SEND_JSON
+
+#define SEND_HTTPS
 
 /*
     Уровень логирования
@@ -47,8 +49,8 @@
 
 #define I2C_SLAVE_ADDR 10  // i2c адрес Attiny85
 
-#define VER_4 4
-#define CURRENT_VERSION VER_4
+#define VER_5 5
+#define CURRENT_VERSION VER_5
 
 
 #define KEY_LEN 34
@@ -60,6 +62,7 @@
 
 #define HOSTNAME_JSON_LEN 64
 
+#define CERT_LEN 2000
 /*
 Настройки хранящиеся EEPROM
 */
@@ -114,6 +117,11 @@ struct Settings
     */
     float    channel0_previous;
     float    channel1_previous;
+
+    /*
+    Сертификат
+    */
+    char     ca[CERT_LEN];
 
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
