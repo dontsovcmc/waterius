@@ -16,11 +16,21 @@
 	TinyDebugSerial mySerial;
 #endif
 
+/*
+Версии прошивок 
+FIRMWARE_VER
+
+7 - 2019.03.01 - dontsovcmc
+	1. Обновил фреймворк до Platformio Atmel AVR 1.12.5
+	2. Время аварийного отключения ESP 120сек. 
+	   Даже при отсутствии связи ESP раньше в таймауты уйдет и пришлет "спим".
+	
+*/
 
 #define INPUT0_PIN  4          //Вход 1, Blynk: V0, горячая вода
 #define INPUT1_PIN  3          //Вход 2, Blynk: V1, холодная вода (или лог)
 
-#define FIRMWARE_VER   6   	   // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER   7   	   // Версия прошивки. Передается в ESP и на сервер в данных.
 
 #define ESP_POWER_PIN    1     // пин включения ESP8266. 
 #define BUTTON_PIN       2     // пин кнопки: (на линии SCL)

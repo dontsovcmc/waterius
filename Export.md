@@ -54,22 +54,20 @@ def data():
     except Exception as err:
         return "{}".format(err), 400
     return 'OK'
+
+if __name__ == "__main__":
+	app.run(host='192.168.1.2', port=8000)
 ```
 
 ### Запуск
 [Flask guide](http://flask.pocoo.org/docs/1.0/quickstart/)
-```
-WIN cmd: set FLASK_APP=server.py
-WIN powershell: $env:FLASK_APP = "server.py"
-UNIX: export FLASK_APP=server.py
-```
 
 ```
-python -m flask run --host=x.x.x.x --port=x
+python server.py
 ```
 
 ### Проверка
 ```
-curl -X POST -H "Content-Type: application/json" -d '{"ch0": 1.1, "ch1": 2.0}' http://x.x.x.x:x/data
+curl -X POST -H "Content-Type: application/json" -d '{"ch0": 1.1, "ch1": 2.0}' http://192.168.1.2:8000/data
 ```
 Без заголовка application/json Flask не вернет JSON

@@ -15,3 +15,7 @@ def data():
     except Exception as err:
         return "{}".format(err), 400
     return 'OK'
+
+
+if __name__ == "__main__":
+	app.run(host='192.168.1.2', port=8000)

@@ -3,12 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.5.4"
+#define FIRMWARE_VERSION "0.5.5"
 
 /*
 Версии прошивки для ESP
 
-0.5.4 - 2019.02.25 - обновил framework espressif8266 2.0.1 (arduino 2.5.0), blynk, json 
+0.5.5 - 2019.03.01 -  
+0.5.4 - 2019.02.25 - обновил framework espressif8266 2.0.1 (arduino 2.5.0), blynk 0.6.1, json 5.13.4
 0.5.3 - 2019.01.22 - WifiManager 0.14 + hotfixes
 0.5.2 - 2018.09.22 - WifiManager 0.14
 */ 
