@@ -20,12 +20,12 @@
 /*
     Включить отправку данных в приложение Blynk.cc
 */
-//#define SEND_BLYNK
+#define SEND_BLYNK
 
 /*
     Включить отправку данных на HTTP сервер
 */
-//#define SEND_JSON
+#define SEND_JSON
 
 #define SEND_HTTPS
 
@@ -37,7 +37,7 @@
 /*
     Время ответа сервера
 */
-#define SERVER_TIMEOUT 5000UL // ms
+#define SERVER_TIMEOUT 12000UL // ms
 
 /*
     Время подключения к точке доступа

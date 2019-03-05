@@ -8,18 +8,14 @@
 #include "master_i2c.h"
 #include "setup_ap.h"
 #include "sender_blynk.h"
-#include "sender_https.h"
-#include "ota_update.h"
-#include "WiFiClient.h"
+#include "sender_json.h"
 #include "utils.h"
-
+#include "cert.h"
 
 MasterI2C masterI2C; // Для общения с Attiny85 по i2c
 
 SlaveData data; // Данные от Attiny85
 Settings sett;  // Настройки соединения и предыдущие показания из EEPROM
-
-StaticJsonBuffer<1000> jsonBuffer;
 
 /*
 Выполняется однократно при включении
@@ -48,10 +44,6 @@ void calculate_values(Settings &sett, SlaveData &data, float *channel0, float *c
     }
 }
 
-BearSSL::WiFiClientSecure client_tls;
-WiFiClient client;
-BearSSL::X509List cert;
-HTTPClient http;
 
 void loop()
 {
@@ -104,66 +96,12 @@ void loop()
                         LOG_NOTICE("BLK", "send ok");
                     }
 #endif  
-                    bool https = strstr(sett.hostname_json, "https") > 0;
 
-                    if (!https || setClock()) {
-                        WiFiClient *c = &client;
-                        if (https) {
-                            cert.append(lets_encrypt_x3_ca);
-                            cert.append(lets_encrypt_x4_ca);
-                            cert.append(cloud_waterius_ru_ca);
-                    
-                            client_tls.setTrustAnchors(&cert);
-                            c = &client_tls;
-                        } 
-                        
-                        c->setTimeout(SERVER_TIMEOUT);
-
-                        /*
-                        bool mfln = client.probeMaxFragmentLength("192.168.1.42", 5000, 1024);  // server must be the same as in ESPhttpUpdate.update()
-                        Serial.printf("MFLN supported: %s\n", mfln ? "yes" : "no");
-                        if (mfln) {
-                            client.setBufferSizes(1024, 1024);
-                        }*/
-
-                        
-                        //http.setTimeout(SERVER_TIMEOUT);
-
-                        ESP.resetFreeContStack();
-                        LOG_NOTICE("SYS", "Stack: " << ESP.getFreeContStack());
-
-                        http.setReuse(false); //only 1 request
-                        
-                        JsonObject& root = jsonBuffer.createObject();
-                        String responce;
-                        String request;
-
-                        prepareJson(root, sett, data, channel0, channel1);
-                        root.printTo(request);
-
-                        LOG_NOTICE("JSN", "json: " << request);
-                        LOG_NOTICE("JSN", "POST to: " << sett.hostname_json);
-                        if (http.begin(*c, sett.hostname_json)) {  // hostname); 
-                            http.addHeader("Content-Type", "application/json"); 
-
-                            int httpCode = http.POST(request);   //Send the request
-                            
-                            LOG_NOTICE("JSN", httpCode);
-                            if (httpCode == HTTP_CODE_OK) {
-                                responce = http.getString();
-                                LOG_NOTICE("JSN", "Responce: \n" << responce);
-                                JsonObject& root = jsonBuffer.parseObject(responce);
-                                if (!root.success()) {
-                                    LOG_NOTICE("JSN", responce);
-                                } else {
-                                    LOG_ERROR("JSN", "parse response error");
-                                }
-                            } 
-                        }
-
-                        c->stop();
-                    }
-
+#ifdef SEND_JSON
+                    if (send_json(sett, data, channel0, channel1)) {
+                        LOG_NOTICE("JSN", "send ok");
+                    }                   
+#endif
                 }
 
                 //Сохраним текущие значения в памяти.
