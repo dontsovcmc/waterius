@@ -31,8 +31,6 @@ void prepareJson(JsonObject& root, Settings &sett, const SlaveData &data, const 
     root["ch1"] = channel1;
     root["delta0"] = (channel0 - sett.channel0_previous)*1000;  // litres
     root["delta1"] = (channel1 - sett.channel1_previous)*1000;
-    root["ca_crc"] = CRC16(0, (char*)digicert, strlen(digicert));
-    root["ca2_crc"] = CRC16(0, sett.ca, strlen(sett.ca));
 }
 
 

@@ -19,8 +19,7 @@ MasterI2C masterI2C; // Для общения с Attiny85 по i2c
 SlaveData data; // Данные от Attiny85
 Settings sett;  // Настройки соединения и предыдущие показания из EEPROM
 
-StaticJsonBuffer<2000> jsonBuffer;
-String request;
+StaticJsonBuffer<1000> jsonBuffer;
 
 /*
 Выполняется однократно при включении
@@ -49,7 +48,8 @@ void calculate_values(Settings &sett, SlaveData &data, float *channel0, float *c
     }
 }
 
-BearSSL::WiFiClientSecure client;
+BearSSL::WiFiClientSecure client_tls;
+WiFiClient client;
 BearSSL::X509List cert;
 HTTPClient http;
 
@@ -104,20 +104,21 @@ void loop()
                         LOG_NOTICE("BLK", "send ok");
                     }
 #endif  
+                    bool https = strstr(sett.hostname_json, "https") > 0;
 
-                    if (setClock()) {
-
-                        cert.append(digicert);
-                        if (strlen(sett.ca) > 500) {
-                            LOG_ERROR("TLS", "add CA2 certificate");
-                            cert.append(sett.ca);
-                        } else {
-                            LOG_ERROR("TLS", "not CA2");
-                        }
-
-                        client.setTrustAnchors(&cert);
-                        //client.setInsecure();
+                    if (!https || setClock()) {
+                        WiFiClient *c = &client;
+                        if (https) {
+                            cert.append(lets_encrypt_x3_ca);
+                            cert.append(lets_encrypt_x4_ca);
+                            cert.append(cloud_waterius_ru_ca);
+                    
+                            client_tls.setTrustAnchors(&cert);
+                            c = &client_tls;
+                        } 
                         
+                        c->setTimeout(SERVER_TIMEOUT);
+
                         /*
                         bool mfln = client.probeMaxFragmentLength("192.168.1.42", 5000, 1024);  // server must be the same as in ESPhttpUpdate.update()
                         Serial.printf("MFLN supported: %s\n", mfln ? "yes" : "no");
@@ -125,26 +126,13 @@ void loop()
                             client.setBufferSizes(1024, 1024);
                         }*/
 
-                        client.setTimeout(20000);
                         
-                        http.setTimeout(SERVER_TIMEOUT);
+                        //http.setTimeout(SERVER_TIMEOUT);
 
                         ESP.resetFreeContStack();
                         LOG_NOTICE("SYS", "Stack: " << ESP.getFreeContStack());
 
-                        http.setReuse(true);
-                        
-                        /*
-                        if (http.begin(client, host, port, "/ping")) {  // hostname); 
-                            LOG_NOTICE("GET", "waterius connected");
-                            http.addHeader("Content-Type", "application/json"); 
-
-                            int httpCode = http.GET(); 
-                            LOG_NOTICE("GET", httpCode);
-                            if (httpCode == HTTP_CODE_OK) {
-                                //String responce = http.getString();
-                            } 
-                        } */
+                        http.setReuse(false); //only 1 request
                         
                         JsonObject& root = jsonBuffer.createObject();
                         String responce;
@@ -154,45 +142,8 @@ void loop()
                         root.printTo(request);
 
                         LOG_NOTICE("JSN", "json: " << request);
-
-                        /*
-                        client.connect(host, port);
-                        if (!client.connected()) {
-                            Serial.printf("*** Can't connect. ***\n-------\n");
-                            return;
-                        }
-                        char len[7];
-                        itoa(request.length(), len, 10);
-                        Serial.printf("Connected!\n-------\n");
-                        client.write("POST ");
-                        client.write("/");
-                        client.write(" HTTP/1.0");
-                        client.write("\r\nHost: ");
-                        client.write(host);
-                        client.write("\r\nConnection: keep-alive");
-                        client.write("\r\nContent-Length: ");
-                        client.write(len);
-                        client.write("\r\nContent-Type: application/json");
-                        client.write("\r\n\r\n");
-                        client.write(request.c_str());
-
-                        uint32_t to = millis() + SERVER_TIMEOUT;
-                        if (client.connected()) {
-                            do {
-                                char tmp[40];
-                                memset(tmp, 0, 40);
-                                int rlen = client.read((uint8_t*)tmp, sizeof(tmp) - 1);
-                                yield();
-                                if (rlen < 0) {
-                                    break;
-                                }
-                                Serial.print(tmp);
-                            } while (millis() < to);
-                        }
-                        */
-                        
-                        LOG_NOTICE("JSN", "Try POST: " << sett.hostname_json);
-                        if (http.begin(client, sett.hostname_json)) {  // hostname); 
+                        LOG_NOTICE("JSN", "POST to: " << sett.hostname_json);
+                        if (http.begin(*c, sett.hostname_json)) {  // hostname); 
                             http.addHeader("Content-Type", "application/json"); 
 
                             int httpCode = http.POST(request);   //Send the request
@@ -203,35 +154,14 @@ void loop()
                                 LOG_NOTICE("JSN", "Responce: \n" << responce);
                                 JsonObject& root = jsonBuffer.parseObject(responce);
                                 if (!root.success()) {
-                                    if (root.containsKey("ca2")) {
-                                        strncpy0(sett.ca, root["ca2"], CERT_LEN);
-                                        LOG_NOTICE("JSN", "Key CA2 updated");
-                                    } else {
-                                        LOG_NOTICE("JSN", "No CA2 in response");
-                                        LOG_NOTICE("JSN", responce);
-                                    }
+                                    LOG_NOTICE("JSN", responce);
                                 } else {
                                     LOG_ERROR("JSN", "parse response error");
                                 }
-
-                                if (root.containsKey("firmware_path")) {
-                                    
-                                    auto path = root["firmware_path"].as<char*>();
-                                    LOG_ERROR("OTA", "firmware_path found " << path);
-                                    //Сохраним текущие значения в памяти.
-                                    sett.channel0_previous = channel0;
-                                    sett.channel1_previous = channel1;
-                                    storeConfig(sett);
-                                    LOG_ERROR("SYS", "config saved");
-
-                                    LOG_ERROR("OTA", "start");
-                                    //ota_update(client, host, port, path);
-                                }
-
                             } 
                         }
 
-                        client.stop();
+                        c->stop();
                     }
 
                 }
