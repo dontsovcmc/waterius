@@ -7,24 +7,26 @@ class WateriusHttps
 {
     public:
     /**
-     * -- TODO -- NOT CRITICAL --
-     * Updates `trustAnchors` variable with new certificates.
-     * Returns true if update was success.
+     * Contains response data from request (REST API)
      **/
-    bool updateTrustAnchors(const char **certificates);
+    struct ResponseData
+    {
+        const bool isSuccess;
+        const int code;
+        const String body;
+
+        ResponseData(bool isSuccess, int code, String body) : isSuccess{isSuccess}, code{code}, body{body} {}
+    };
 
     /**
-     * -- TODO HTTPS -- NOT CRITICAL --
      * JSON post request through WiFi.
      * Supports only HTTP.
-     * Returns true if JSON post request was success.
      **/
-    static bool sendPostRequestWithJson(const String &url, const String &body);
+    static ResponseData sendPostRequestWithJson(const String &url, const String &body);
 
     /**
      * Get request through WiFi.
-     * Supports HTTP.
-     * Returns true if get request was success.
+     * Supports only HTTP.
      **/
-    static bool sendGetRequest(const String &url);
+    static ResponseData sendGetRequest(const String &url);
 };
