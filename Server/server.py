@@ -43,7 +43,7 @@ openssl x509 -in ca_cer.pem -text
 """
 
 
-@app.route('/', methods=['POST'])
+@app.route('/data', methods=['POST'])
 def root():
     """
     Получение данных от Вотериуса 

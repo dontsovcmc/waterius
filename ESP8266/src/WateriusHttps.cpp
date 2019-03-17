@@ -62,6 +62,8 @@ bool WateriusHttps::sendPostRequestWithJson(const String &url, const String &bod
         } else {
             return_result = false;
         }
+    } else {
+        return_result = false;
     }
 
     LOG_INFO("RQT", "Result -- " << (return_result ? "SUCCESS" : "ERROR"));
@@ -118,6 +120,8 @@ bool WateriusHttps::sendGetRequest(const String &url)
         } else {
             return_result = false;
         }
+    } else {
+        return_result = false;
     }
 
     LOG_INFO("RQT", "Result -- " << (return_result ? "SUCCESS" : "ERROR"));

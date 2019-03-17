@@ -43,7 +43,7 @@ bool UserAuth::reg(char *email)
     x.add(email, sizeof(email));
     x.add(&salt, sizeof(salt));
     x.end();
-    token = (char *)x.hash();
+    token = (char *)x.hash();  //нет 0 в конце, значит может быть переполнение
     LOG_INFO("REG", "Token: " << token);
     
     // Register
