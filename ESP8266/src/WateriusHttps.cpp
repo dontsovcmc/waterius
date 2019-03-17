@@ -12,9 +12,8 @@
 #define JSON_BUFFER_SIZE 1000
 
 
-bool WateriusHttps::sendPostRequestWithJson(const String &url, const String &body)
+WateriusHttps::ResponseData WateriusHttps::sendPostRequestWithJson(const String &url, const String &body)
 {
-    String method_name;
     WiFiClient wifiClient;
 
     LOG_NOTICE("RQT", "START :: HTTP JSON POST request");
@@ -40,41 +39,31 @@ bool WateriusHttps::sendPostRequestWithJson(const String &url, const String &bod
     httpClient.setTimeout(HTTP_TIMEOUT_MILLES);
     httpClient.setReuse(false);
 
-    bool return_result = true;
+    bool responseResult = true;
+    int responseCode = 0;
+    String responseBody;
     if (httpClient.begin(wifiClient, url)) {
         // Request
         httpClient.addHeader("Content-Type", "application/json");
-        int responseCode = httpClient.POST(body);
+        responseCode = httpClient.POST(body);
         LOG_INFO("RQT", "Response code -- " << responseCode);
-        String responseBody = httpClient.getString();
+        responseBody = httpClient.getString();
         LOG_INFO("RQT", "Response body -- " << body);
         httpClient.end();
         wifiClient.stop();
-
-        // Response processing
-        if (responseCode == HTTP_CODE_OK) {
-            StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
-            JsonObject& root = jsonBuffer.parseObject(responseBody);
-            if (!root.success()) {
-                LOG_INFO("RQT", "Response status -- ERROR");
-                return_result = false;
-            }
-        } else {
-            return_result = false;
-        }
     } else {
-        return_result = false;
+        responseResult = false;
+        LOG_ERROR("RQT", "Cannot begin HTTP client");
     }
 
-    LOG_INFO("RQT", "Result -- " << (return_result ? "SUCCESS" : "ERROR"));
+    LOG_INFO("RQT", "Result -- " << (responseResult ? "SUCCESS" : "ERROR"));
     LOG_NOTICE("RQT", "END :: HTTP JSON POST request");
 
-    return return_result;
+    return WateriusHttps::ResponseData(responseResult, responseCode, responseBody);
 }
 
-bool WateriusHttps::sendGetRequest(const String &url)
+WateriusHttps::ResponseData WateriusHttps::sendGetRequest(const String &url)
 {
-    String method_name;
     WiFiClient wifiClient;
 
     LOG_NOTICE("RQT", "START :: HTTP GET request");
@@ -99,7 +88,9 @@ bool WateriusHttps::sendGetRequest(const String &url)
     httpClient.setTimeout(HTTP_TIMEOUT_MILLES);
     httpClient.setReuse(false);
 
-    bool return_result = true;
+    bool responseResult = true;
+    int responseCode = 0;
+    String responseBody;
     if (httpClient.begin(wifiClient, url)) {
         // Request
         int responseCode = httpClient.GET();
@@ -108,24 +99,13 @@ bool WateriusHttps::sendGetRequest(const String &url)
         LOG_INFO("RQT", "Response body -- " << responseBody);
         httpClient.end();
         wifiClient.stop();
-
-        // Response processing
-        if (responseCode == HTTP_CODE_OK) {
-            StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
-            JsonObject& root = jsonBuffer.parseObject(responseBody);
-            if (!root.success()) {
-                LOG_INFO("RQT", "Response status -- ERROR");
-                return_result = false;
-            }
-        } else {
-            return_result = false;
-        }
     } else {
-        return_result = false;
+        responseResult = false;
+        LOG_ERROR("RQT", "Cannot begin HTTP client");
     }
 
-    LOG_INFO("RQT", "Result -- " << (return_result ? "SUCCESS" : "ERROR"));
+    LOG_INFO("RQT", "Result -- " << (responseResult ? "SUCCESS" : "ERROR"));
     LOG_NOTICE("RQT", "END :: HTTP GET request");
 
-    return return_result;
+    return WateriusHttps::ResponseData(responseResult, responseCode, responseBody);
 }
