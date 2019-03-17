@@ -97,7 +97,7 @@ void loop()
                     }
 #endif  
 
-#ifdef SEND_JSON
+#ifdef SEND_WATERIUS
                     if (send_json(sett, data, channel0, channel1)) {
                         LOG_NOTICE("JSN", "send ok");
                     }                   

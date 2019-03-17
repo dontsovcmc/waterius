@@ -16,53 +16,47 @@
 0.5.2 - 2018.09.22 - WifiManager 0.14
 */ 
   
-
-/*
-    Включить отправку данных в приложение Blynk.cc
-*/
-#define SEND_BLYNK
-
-/*
-    Включить отправку данных на HTTP сервер
-*/
-#define SEND_JSON
-
-#define SEND_HTTPS
-
 /*
     Уровень логирования
 */
 #define LOGLEVEL 6
 
 /*
-    Время ответа сервера
+    Включить отправку данных на HTTP сервер
 */
-#define SERVER_TIMEOUT 12000UL // ms
+#define SEND_WATERIUS
+#define WATERIUS_DEFAULT_DOMAIN "https://dev.waterius.ru/api/source/waterius/"
+//"https://cloud.waterius.ru"
 
 /*
-    Время подключения к точке доступа
+    Включить отправку данных в приложение Blynk.cc
 */
-#define ESP_CONNECT_TIMEOUT 13000UL
+#define SEND_BLYNK
 
 
-#define LITRES_PER_IMPULS_DEFAULT 10  // При первом включении заполним 10 литров на импульс
+#define ESP_CONNECT_TIMEOUT 15000UL // Время подключения к точке доступа, ms
+
+#define SERVER_TIMEOUT 12000UL // Время ответа сервера, ms
+
+
+#define LITRES_PER_IMPULS_DEFAULT 10  // 10 литров на импульс
 
 #define I2C_SLAVE_ADDR 10  // i2c адрес Attiny85
 
 #define VER_5 5
 #define CURRENT_VERSION VER_5
 
+#define WATERIUS_KEY_LEN  34
+#define WATERIUS_HOST_LEN 64
 
-#define KEY_LEN 34
-#define HOSTNAME_BLYNK_LEN 32
+#define BLYNK_KEY_LEN 34
+#define BLYNK_HOST_LEN 32
 
 #define EMAIL_LEN 32
 #define EMAIL_TITLE_LEN 64
 #define EMAIL_TEMPLATE_LEN 200
 
-#define HOSTNAME_JSON_LEN 64
 
-#define CERT_LEN 2000
 /*
 Настройки хранящиеся EEPROM
 */
@@ -72,12 +66,22 @@ struct Settings
 
     uint8_t  reserved;
 
+
+    //SEND_WATERIUS
+    
+    //http/https сервер для отправки данных в виде JSON
+    //вид: http://host:port/path
+    //     https://host:port/path
+    char     waterius_host[WATERIUS_HOST_LEN];
+    char     waterius_key[WATERIUS_KEY_LEN];
+
+
     //SEND_BLYNK 
 
     //уникальный ключ устройства blynk
-    char     key[KEY_LEN];
+    char     blynk_key[BLYNK_KEY_LEN];
     //сервер blynk.com или свой blynk сервер
-    char     hostname_blynk[HOSTNAME_BLYNK_LEN];
+    char     blynk_host[BLYNK_HOST_LEN];
 
     //Если email не пустой, то отсылается e-mail
     char     email[EMAIL_LEN];
@@ -85,12 +89,6 @@ struct Settings
     char     email_title[EMAIL_TITLE_LEN];
     //Шаблон эл. письма. {V0}-{V4} заменяются на данные 
     char     email_template[EMAIL_TEMPLATE_LEN];
-
-    //SEND_JSON
-    
-    //http сервер для отправки данных в виде JSON
-    //вид: http://host:port/path
-    char     hostname_json[HOSTNAME_JSON_LEN];
 
     /*
     Показания счетчиках в кубометрах, 
@@ -117,11 +115,6 @@ struct Settings
     */
     float    channel0_previous;
     float    channel1_previous;
-
-    /*
-    Сертификат
-    */
-    char     ca[CERT_LEN];
 
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
