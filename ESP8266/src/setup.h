@@ -25,7 +25,7 @@
     Включить отправку данных на HTTP сервер
 */
 #define SEND_WATERIUS
-#define WATERIUS_DEFAULT_DOMAIN "http://192.168.1.2:4000/data"
+#define WATERIUS_DEFAULT_DOMAIN "https://dev.waterius.ru/api/source/waterius/"
 //"https://cloud.waterius.ru"
 
 /*

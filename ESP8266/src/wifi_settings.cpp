@@ -42,6 +42,7 @@ bool loadConfig(struct Settings &sett)
 
         // Для безопасной работы с буферами,  в библиотеках может не быть проверок
         sett.blynk_key[BLYNK_KEY_LEN-1] = '\0';
+        sett.blynk_key[0] = '\0';
         sett.blynk_host[BLYNK_HOST_LEN-1] = '\0';
         sett.email[EMAIL_LEN-1] = '\0';
         sett.email_title[EMAIL_TITLE_LEN-1] = '\0';
@@ -69,9 +70,11 @@ bool loadConfig(struct Settings &sett)
         memset(&sett, 0, sizeof(sett));
 
         sett.version = CURRENT_VERSION;  //для совместимости в будущем
+        LOG_NOTICE("CFG", "version=" << sett.version);
 
-        sett.liters_per_impuls = LITRES_PER_IMPULS_DEFAULT;
-        
+        strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, WATERIUS_HOST_LEN);
+        strncpy0(sett.waterius_key, "123", 10);
+
         strncpy0(sett.blynk_host, BLYNK_DEFAULT_DOMAIN, BLYNK_HOST_LEN);
 
         sett.email[0] = '\0';
@@ -82,10 +85,8 @@ bool loadConfig(struct Settings &sett)
         String email_template = "Горячая: {V0}м3, Холодная: {V1}м3<br>За день:<br>Горячая: +{V3}л, Холодная: +{V4}л<br>Напряжение:{V2}В";
         strncpy0(sett.email_template, email_template.c_str(), EMAIL_TEMPLATE_LEN);
 
-        strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, WATERIUS_HOST_LEN);
 
-        LOG_NOTICE("CFG", "version=" << sett.version);
-
+        sett.liters_per_impuls = LITRES_PER_IMPULS_DEFAULT;
 
 //Можно задать константы при компиляции, чтобы Вотериус сразу заработал
 
