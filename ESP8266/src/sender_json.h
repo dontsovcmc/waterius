@@ -14,7 +14,7 @@
 #include "WifiClientSecure.h"
 #include "ESP8266HTTPClient.h"
 
-#ifdef SEND_HTTPS
+#ifdef SEND_WATERIUS
 
 StaticJsonBuffer<1000> jsonBuffer;
 
@@ -26,7 +26,7 @@ BearSSL::WiFiClientSecure client_tls;
 void prepareJson(String& out, Settings &sett, const SlaveData &data, const float &channel0, const float &channel1) 
 {
     JsonObject& root = jsonBuffer.createObject();
-    root["key"] = sett.key;
+    root["key"] = sett.waterius_key;
     root["version"] = data.version;
     root["version_esp"] = FIRMWARE_VERSION;
     root["boot"] = data.service;  // 2 - reset pin, 3 - power
@@ -43,7 +43,7 @@ void prepareJson(String& out, Settings &sett, const SlaveData &data, const float
 bool send_json(Settings &sett, const SlaveData &data, const float &channel0, const float &channel1)
 {
     String body;
-    String url(sett.hostname_json);
+    String url(sett.waterius_host);
     WiFiClient *c;
 
     LOG_NOTICE("JSN", "POST to: " << url);
