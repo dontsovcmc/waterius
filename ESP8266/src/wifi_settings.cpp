@@ -77,7 +77,7 @@ bool loadConfig(struct Settings &sett)
 
         strncpy0(sett.blynk_host, BLYNK_DEFAULT_DOMAIN, BLYNK_HOST_LEN);
 
-        sett.email[0] = '\0';
+        strncpy0(sett.email, "test@gmail.com", 14);
 
         String email_title = "Новые показания {DEVICE_NAME}";
         strncpy0(sett.email_title, email_title.c_str(), EMAIL_TITLE_LEN);

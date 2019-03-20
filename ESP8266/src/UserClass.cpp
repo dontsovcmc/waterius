@@ -30,7 +30,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["version"] =       settings.version;
     root["voltage"] =       (float)(data.voltage/1000.0);
     root["version_esp"] =   FIRMWARE_VERSION;
-    root["key"] =           settings.key;
+    root["key"] =           settings.waterius_key;
     root["resets"] =        data.resets;
     root["email"] =         settings.email;
     root.printTo(jsonBody);

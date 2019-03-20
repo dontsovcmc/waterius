@@ -8,7 +8,7 @@
 #include "master_i2c.h"
 #include "setup_ap.h"
 #include "sender_blynk.h"
-#include "sender_json.h"
+#include "UserClass.h"
 #include "utils.h"
 #include "cert.h"
 
@@ -98,9 +98,7 @@ void loop()
 #endif  
 
 #ifdef SEND_WATERIUS
-                    if (send_json(sett, data, channel0, channel1)) {
-                        LOG_NOTICE("JSN", "send ok");
-                    }                   
+                    UserClass::sendNewData(sett, data, channel0, channel1);
 #endif
                 }
 
