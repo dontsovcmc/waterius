@@ -21,13 +21,14 @@ app = Flask(__name__)
 В Вотериус запишем сертификат Центра сертификации. Он подтвердит, что сервер тот, за кого себя выдает.
 
 openssl genrsa -out ca_key.pem 2048
-openssl req -x509 -new -nodes -key ca_key.pem -days 4096 -out ca_cer.pem
+openssl req -x509 -new -nodes -key ca_key.pem -days 8000 -out ca_cer.pem -subj '/CN=192.168.1.10/C=RU/ST=Moscow/L=Moscow/O=Waterius LLC/OU=Waterius community'
 openssl genrsa -out server_key.pem 2048
 
 # Замените 192.168.1.10 на свой домен или IP адрес сервера (!). Именно его и подтверждает сертификат.
-openssl req -out server_req.csr -key server_key.pem -new -subj '/CN=192.168.1.10/C=RU/ST=Moscow/L=Moscow/O=Waterius LLC/OU=Waterius community/emailAddress=your@email.ru'
+openssl req -out server_req.csr -key server_key.pem -new -subj '/CN=192.168.1.10/C=RU/ST=Moscow/L=Moscow/O=Waterius LLC/OU=Waterius community'
+# в windows другие / надо указывать: openssl req -out server_req.csr -key server_key.pem -new -subj '//CN=192.168.1.10\C=RU\ST=Moscow\L=Moscow\O=Waterius LLC\OU=Waterius community'
 
-openssl x509 -req -in server_req.csr -out server_cer.pem -sha256 -CAcreateserial -days 4000 -CA ca_cer.pem -CAkey ca_key.pem
+openssl x509 -req -in server_req.csr -out server_cer.pem -sha256 -CAcreateserial -days 8000 -CA ca_cer.pem -CAkey ca_key.pem
 
 
 ca_key.pem - ключ вашего Центра сертификации. Храним в сейфе.
@@ -48,8 +49,8 @@ def root():
     """
     Получение данных от Вотериуса 
 
-    curl -X POST -d '{"ch0": 1, "ch1": 2, "key": "123", "delta0": 1, "delta1":  
-    "version": 1, "voltage": 3.0, "version_esp": "0", "resets": 0}' 
+    curl -X POST -d '{"ch0": 1, "ch1": 2, "key": "123", "delta0": 1, "delta1": 1, 
+    "version": 1, "voltage": 3.0, "version_esp": "0", "resets": 0, "good": 0, "boot": 0}' 
     -H "Content-Type: application/json" http://127.0.0.1:8000/ -v
     """
     try:
