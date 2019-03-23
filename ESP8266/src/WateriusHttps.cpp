@@ -80,7 +80,7 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
 }
 
 
-void WateriusHttps::generateSha256Token(char *hash, const char *email)
+void WateriusHttps::generateSha256Token(char *token, const char *email)
 {
     constexpr char THIS_FUNC_DESCRIPTION[] = "Generate SHA256 token from email";
     constexpr char THIS_FUNC_SVC[] = "TKN";
@@ -90,11 +90,12 @@ void WateriusHttps::generateSha256Token(char *hash, const char *email)
     randomSeed(time(nullptr));
     int salt = rand();
     auto x = BearSSL::HashSHA256();
-    x.add(email, sizeof(email));
+    x.add(email, sizeof(*email));
     x.add(&salt, sizeof(salt));
     x.end();
-    snprintf(hash, x.len(), "%X", x.hash());
+    unsigned int *hash = (unsigned int *)x.hash();
+    snprintf(token, 64, "%x%x%x%x%x%x%x%x", *(hash + 0), *(hash + 4), *(hash + 8), *(hash + 12), *(hash + 16), *(hash + 20), *(hash + 24), *(hash + 28));
 
-    LOG_INFO(THIS_FUNC_SVC, "SHA256 token: " << hash);
+    LOG_INFO(THIS_FUNC_SVC, "SHA256 token: " << token);
     LOG_NOTICE(THIS_FUNC_SVC, "-- END --");
 }
