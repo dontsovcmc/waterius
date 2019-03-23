@@ -26,8 +26,7 @@ class WateriusHttps
     static ResponseData sendJsonPostRequest(const String &url, const String &body);
 
     /**
-     * Get request through WiFi.
-     * Supports HTTPS.
+     * Generate SHA256 Token from random & email.
      **/
-    static ResponseData sendGetRequest(const String &url);
+    static void generateToken(const char *email, char *hash, const int hash_len);
 };

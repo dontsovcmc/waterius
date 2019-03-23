@@ -25,8 +25,7 @@
     Включить отправку данных на HTTP сервер
 */
 #define SEND_WATERIUS
-#define WATERIUS_DEFAULT_DOMAIN "https://dev.waterius.ru/api/source/waterius/"
-//"https://cloud.waterius.ru"
+#define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 
 /*
     Включить отправку данных в приложение Blynk.cc
@@ -46,16 +45,16 @@
 #define VER_5 5
 #define CURRENT_VERSION VER_5
 
+#define EMAIL_LEN 32
+
 #define WATERIUS_KEY_LEN  34
 #define WATERIUS_HOST_LEN 64
 
 #define BLYNK_KEY_LEN 34
 #define BLYNK_HOST_LEN 32
 
-#define EMAIL_LEN 32
-#define EMAIL_TITLE_LEN 64
-#define EMAIL_TEMPLATE_LEN 200
-
+#define BLYNK_EMAIL_TITLE_LEN 64
+#define BLYNK_EMAIL_TEMPLATE_LEN 200
 
 /*
 Настройки хранящиеся EEPROM
@@ -70,11 +69,11 @@ struct Settings
     //SEND_WATERIUS
     
     //http/https сервер для отправки данных в виде JSON
-    //вид: http://host:port/path
-    //     https://host:port/path
+    //вид: http://host[:port][/path]
+    //     https://host[:port][/path]
     char     waterius_host[WATERIUS_HOST_LEN];
     char     waterius_key[WATERIUS_KEY_LEN];
-
+    char     waterius_email[EMAIL_LEN];
 
     //SEND_BLYNK 
 
@@ -84,11 +83,11 @@ struct Settings
     char     blynk_host[BLYNK_HOST_LEN];
 
     //Если email не пустой, то отсылается e-mail
-    char     email[EMAIL_LEN];
+    char     blynk_email[EMAIL_LEN];
     //Заголовок письма. {V0}-{V4} заменяются на данные 
-    char     email_title[EMAIL_TITLE_LEN];
+    char     blynk_email_title[BLYNK_EMAIL_TITLE_LEN];
     //Шаблон эл. письма. {V0}-{V4} заменяются на данные 
-    char     email_template[EMAIL_TEMPLATE_LEN];
+    char     blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN];
 
     /*
     Показания счетчиках в кубометрах, 
@@ -106,15 +105,15 @@ struct Settings
     Кол-во импульсов Attiny85 соответствующие показаниям счетчиков, 
     введенных пользователем при настройке
     */
-    uint32_t impules0_start;
-    uint32_t impules1_start;
+    uint32_t impulses0_start;
+    uint32_t impulses1_start;
 
     /*
     Не понятно, как получить от Blynk прирост показаний, 
     поэтому сохраним их в памяти каждое включение
     */
-    float    channel0_previous;
-    float    channel1_previous;
+    uint32_t impulses0_previous;
+    uint32_t impulses1_previous;
 
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.

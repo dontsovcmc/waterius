@@ -78,3 +78,15 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     LOG_NOTICE(THIS_FUNC_SVC, "-- END --");
     return WateriusHttps::ResponseData(responseResult, responseCode, responseBody);
 }
+
+
+void WateriusHttps::generateToken(const char *email, char *hash, const int hash_len)
+{
+    randomSeed(time(nullptr));
+    int salt = rand();
+    auto x = BearSSL::HashSHA256();
+    x.add(email, sizeof(email));
+    x.add(&salt, sizeof(salt));
+    x.end();
+    strncpy0(hash, (char*)x.hash(), min(hash_len, 33));
+}

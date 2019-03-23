@@ -38,8 +38,8 @@ void calculate_values(Settings &sett, SlaveData &data, float *channel0, float *c
     LOG_NOTICE("ESP", "new impulses=" << data.impulses0 << " " << data.impulses1);
 
     if (sett.liters_per_impuls > 0) {
-        *channel0 = sett.channel0_start + (data.impulses0 - sett.impules0_start) / 1000.0 * sett.liters_per_impuls;
-        *channel1 = sett.channel1_start + (data.impulses1 - sett.impules1_start) / 1000.0 * sett.liters_per_impuls;
+        *channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.liters_per_impuls;
+        *channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.liters_per_impuls;
         LOG_NOTICE("ESP", "new values=" << *channel0 << " " << *channel1);
     }
 }
@@ -103,8 +103,8 @@ void loop()
                 }
 
                 //Сохраним текущие значения в памяти.
-                sett.channel0_previous = channel0;
-                sett.channel1_previous = channel1;
+                sett.impulses0_previous = data.impulses0;
+                sett.impulses1_previous = data.impulses1;
                 storeConfig(sett);
             }
         }
