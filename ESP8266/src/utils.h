@@ -14,8 +14,6 @@ inline void strncpy0(char *dest, const char *src, const size_t len)
     dest[len-1] = '\0';
 } 
 
-unsigned int CRC16(unsigned int crc, char *buf, const int len);
-
 bool setClock();
 
 #endif

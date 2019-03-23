@@ -32,13 +32,15 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
 
     WiFiManagerParameter param_waterius_host( "hostname_json", "Waterius сервер:",  sett.waterius_host, WATERIUS_HOST_LEN-1);
     WiFiManagerParameter param_waterius_key( "key", "Waterius ключ:",  sett.waterius_key, WATERIUS_KEY_LEN-1);
+    WiFiManagerParameter param_waterius_email( "email", "Адрес эл. почты:",  sett.waterius_email, EMAIL_LEN-1);
 
     // Настройки для Blynk 
     WiFiManagerParameter param_blynk_host( "host", "Blynk сервер:",  sett.blynk_host, BLYNK_HOST_LEN-1);
     WiFiManagerParameter param_blynk_key( "key", "Blynk ключ:",  sett.blynk_key, BLYNK_KEY_LEN-1);
-    WiFiManagerParameter param_email( "email", "Адрес эл. почты:",  sett.email, EMAIL_LEN-1);
-    WiFiManagerParameter param_email_title( "title", "Заголовок:",  sett.email_title, EMAIL_TITLE_LEN-1);
-    WiFiManagerParameter param_email_template( "template", "Тело письма:",  sett.email_template, EMAIL_TEMPLATE_LEN-1);
+
+    WiFiManagerParameter param_blynk_email( "email", "Адрес эл. почты:",  sett.blynk_email, EMAIL_LEN-1);
+    WiFiManagerParameter param_blynk_email_title( "title", "Заголовок:",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
+    WiFiManagerParameter param_blynk_email_template( "template", "Тело письма:",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
 
     wm.addParameter( &param_channel0_start );
     wm.addParameter( &param_channel1_start );
@@ -50,9 +52,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     wm.addParameter( &param_blynk_host );
     wm.addParameter( &param_blynk_key );
 
-    wm.addParameter( &param_email );
-    wm.addParameter( &param_email_title );
-    wm.addParameter( &param_email_template );
+    wm.addParameter( &param_blynk_email );
+    wm.addParameter( &param_blynk_email_title );
+    wm.addParameter( &param_blynk_email_template );
 
     wm.setConfigPortalTimeout(300);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
@@ -70,13 +72,14 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     // Blynk
     strncpy0(sett.blynk_key, param_blynk_key.getValue(), BLYNK_KEY_LEN);
     strncpy0(sett.blynk_host, param_blynk_host.getValue(), BLYNK_HOST_LEN);
-    strncpy0(sett.email, param_email.getValue(), EMAIL_LEN);
-    strncpy0(sett.email_title, param_email_title.getValue(), EMAIL_TITLE_LEN);
-    strncpy0(sett.email_template, param_email_template.getValue(), EMAIL_TEMPLATE_LEN);
+    strncpy0(sett.blynk_email, param_blynk_email.getValue(), EMAIL_LEN);
+    strncpy0(sett.blynk_email_title, param_blynk_email_title.getValue(), BLYNK_EMAIL_TITLE_LEN);
+    strncpy0(sett.blynk_email_template, param_blynk_email_template.getValue(), BLYNK_EMAIL_TEMPLATE_LEN);
 
     // JSON
     strncpy0(sett.waterius_host, param_waterius_host.getValue(), WATERIUS_HOST_LEN);
     strncpy0(sett.waterius_key, param_waterius_key.getValue(), WATERIUS_KEY_LEN);
+    strncpy0(sett.waterius_email, param_waterius_email.getValue(), EMAIL_LEN);
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();

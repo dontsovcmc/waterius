@@ -8,7 +8,6 @@
 
 
 #define JSON_BUFFER_SIZE 1000
-#define SENDNEWDATA_REQUEST_URL "https://dev.waterius.ru/api/source/waterius/"
 
 
 bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, const float &channel0, const float &channel1)
@@ -32,11 +31,16 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["version_esp"] =   FIRMWARE_VERSION;
     root["key"] =           settings.waterius_key;
     root["resets"] =        data.resets;
-    root["email"] =         settings.email;
+    root["email"] =         settings.waterius_email;
     root.printTo(jsonBody);
 
+    if (strlen(settings.waterius_key) == 0) {
+        LOG_NOTICE(THIS_FUNC_SVC, "NO Waterius key. SKIP");
+        return false;
+    };
+
     // Try to send
-    WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(SENDNEWDATA_REQUEST_URL, jsonBody);
+    WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(settings.waterius_host, jsonBody);
     bool send_result = responseData.isSuccess && responseData.code == 200;
 
     LOG_INFO(THIS_FUNC_SVC, "Send result:\t" << (send_result ? "Success" : "Error"));

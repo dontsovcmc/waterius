@@ -16,8 +16,10 @@
 
 bool send_blynk(const Settings &sett, const SlaveData &data, const float &channel0, const float &channel1)
 {
-    if (strlen(sett.blynk_key) == 0)
+    if (strlen(sett.blynk_key) == 0) {
+        LOG_NOTICE( "BLK", "No key. SKIP");
         return false;
+    }
         
     Blynk.config(sett.blynk_key, sett.blynk_host, BLYNK_DEFAULT_PORT);
     if (Blynk.connect(SERVER_TIMEOUT)) {
@@ -37,11 +39,11 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const float &channe
         LOG_NOTICE( "BLK", "virtualWrite OK");
         
         // Если заполнен параметр email отправим эл. письмо
-        if (strlen(sett.email) > 4) {
-            LOG_NOTICE( "BLK", "send email: " << sett.email);
+        if (strlen(sett.blynk_email) > 4) {
+            LOG_NOTICE( "BLK", "send email: " << sett.blynk_email);
 
-            String msg = sett.email_template;
-            String title = sett.email_title;
+            String msg = sett.blynk_email_template;
+            String title = sett.blynk_email_title;
             String v0(channel0, 1);   //.1 для образца СМС сообщения
             String v1(channel1, 1);   //.1 для образца СМС сообщения
             String v2((float)(data.voltage / 1000.0), 3);
@@ -63,7 +65,7 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const float &channe
             title.replace("{V4}", v4);
             title.replace("{V5}", v5);
 
-            Blynk.email(sett.email, title, msg);
+            Blynk.email(sett.blynk_email, title, msg);
 
             LOG_NOTICE("BLK", "email was send");
             LOG_NOTICE("BLK", title);
