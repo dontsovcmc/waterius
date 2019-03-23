@@ -105,8 +105,8 @@ struct Settings
     Кол-во импульсов Attiny85 соответствующие показаниям счетчиков, 
     введенных пользователем при настройке
     */
-    uint32_t impules0_start;
-    uint32_t impules1_start;
+    uint32_t impulses0_start;
+    uint32_t impulses1_start;
 
     /*
     Не понятно, как получить от Blynk прирост показаний, 

@@ -26,8 +26,8 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const float &channe
         
         LOG_NOTICE( "BLK", "run");
 
-        unsigned int delta0 = (channel0 - sett.channel0_previous)*1000;  // litres
-        unsigned int delta1 = (channel1 - sett.channel1_previous)*1000;
+        unsigned int delta0 = (data.impulses0 - sett.impulses0_previous)*sett.liters_per_impuls; // litres
+        unsigned int delta1 = (data.impulses1 - sett.impulses1_previous)*sett.liters_per_impuls; 
 
         Blynk.virtualWrite(V0, channel0);
         Blynk.virtualWrite(V1, channel1);
