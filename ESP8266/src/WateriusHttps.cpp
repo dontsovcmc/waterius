@@ -80,7 +80,8 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
 }
 
 
-void WateriusHttps::generateSha256Token(char *hash, const char *email)
+void WateriusHttps::generateSha256Token(char *hash, const int hash_len,
+                                        const char *email, const int email_len)
 {
     constexpr char THIS_FUNC_DESCRIPTION[] = "Generate SHA256 token from email";
     constexpr char THIS_FUNC_SVC[] = "TKN";

@@ -47,7 +47,7 @@
 
 #define EMAIL_LEN 32
 
-#define WATERIUS_KEY_LEN  34
+#define WATERIUS_KEY_LEN  66
 #define WATERIUS_HOST_LEN 64
 
 #define BLYNK_KEY_LEN 34

@@ -105,7 +105,8 @@ bool loadConfig(struct Settings &sett)
         LOG_NOTICE("CFG", "default waterius key=" << VALUE(WATERIUS_KEY));
 #else
         LOG_NOTICE("CFG", "Generate waterius key");
-        WateriusHttps::generateSha256Token(sett.waterius_key, sett.waterius_email);
+        WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, 
+                                           sett.waterius_email, EMAIL_LEN);
 #endif
 
 #if defined(SSID_NAME) 
