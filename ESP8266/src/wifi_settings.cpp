@@ -56,8 +56,8 @@ bool loadConfig(struct Settings &sett)
         LOG_NOTICE("CFG", " waterius host=" << sett.waterius_host << " key=" << sett.waterius_key);
 
         // Всегда одно и тоже будет
-        LOG_NOTICE("CFG", "channel0_start=" << sett.channel0_start << ", impules0_start=" << sett.impules0_start << ", factor=" << sett.liters_per_impuls );
-        LOG_NOTICE("CFG", "channel1_start=" << sett.channel1_start << ", impules1_start=" << sett.impules1_start);
+        LOG_NOTICE("CFG", "channel0_start=" << sett.channel0_start << ", impulses0_start=" << sett.impulses0_start << ", factor=" << sett.liters_per_impuls );
+        LOG_NOTICE("CFG", "channel1_start=" << sett.channel1_start << ", impulses1_start=" << sett.impulses1_start);
         
         return true;
 

@@ -84,19 +84,19 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();
     sett.channel1_start = param_channel1_start.getValue();
-    
-    // Предыдущие показания счетчиков. Вносим текущие значения.
-    sett.channel0_previous = param_channel0_start.getValue();
-    sett.channel1_previous = param_channel1_start.getValue();
 
     sett.liters_per_impuls = param_litres_per_imp.getValue();
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
-    sett.impules0_start = data.impulses0;
-    sett.impules1_start = data.impulses1;
+    sett.impulses0_start = data.impulses0;
+    sett.impulses1_start = data.impulses1;
 
-    LOG_NOTICE( "AP", "impulses0=" << sett.impules0_start );
-    LOG_NOTICE( "AP", "impulses1=" << sett.impules1_start );
+    // Предыдущие показания счетчиков. Вносим текущие значения.
+    sett.impulses0_previous = sett.impulses0_start;
+    sett.impulses1_previous = sett.impulses1_start;
+
+    LOG_NOTICE( "AP", "impulses0=" << sett.impulses0_start );
+    LOG_NOTICE( "AP", "impulses1=" << sett.impulses1_start );
 
     sett.crc = FAKE_CRC; // todo: сделать нормальный crc16
     storeConfig(sett);
