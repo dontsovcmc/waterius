@@ -25,7 +25,7 @@
     Включить отправку данных на HTTP сервер
 */
 #define SEND_WATERIUS
-#define WATERIUS_DEFAULT_DOMAIN "https://cloud.dev.waterius.ru"
+#define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 
 /*
     Включить отправку данных в приложение Blynk.cc
