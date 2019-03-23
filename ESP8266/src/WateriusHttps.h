@@ -28,5 +28,5 @@ class WateriusHttps
     /**
      * Generate SHA256 Token from random & email.
      **/
-    static void generateToken(const char *email, char *hash, const int hash_len);
+    static void generateSha256Token(char *hash, const char *email);
 };
