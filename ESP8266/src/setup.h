@@ -112,8 +112,8 @@ struct Settings
     Не понятно, как получить от Blynk прирост показаний, 
     поэтому сохраним их в памяти каждое включение
     */
-    float    channel0_previous;
-    float    channel1_previous;
+    uint32_t impulses0_previous;
+    uint32_t impulses1_previous;
 
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.

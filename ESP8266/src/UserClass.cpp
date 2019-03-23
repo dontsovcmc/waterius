@@ -20,8 +20,8 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     String jsonBody;
     StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
-    root["delta0"] =        (channel0 - settings.channel0_previous)*1000;
-    root["delta1"] =        (channel1 - settings.channel1_previous)*1000;
+    root["delta0"] =        (data.impulses0 - settings.impulses0_previous)*settings.liters_per_impuls;
+    root["delta1"] =        (data.impulses1 - settings.impulses1_previous)*settings.liters_per_impuls;
     root["good"] =          data.diagnostic;
     root["boot"] =          data.version;
     root["ch0"] =           channel0;

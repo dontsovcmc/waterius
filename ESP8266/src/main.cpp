@@ -103,8 +103,8 @@ void loop()
                 }
 
                 //Сохраним текущие значения в памяти.
-                sett.channel0_previous = channel0;
-                sett.channel1_previous = channel1;
+                sett.impulses0_previous = data.impulses0;
+                sett.impulses1_previous = data.impulses1;
                 storeConfig(sett);
             }
         }

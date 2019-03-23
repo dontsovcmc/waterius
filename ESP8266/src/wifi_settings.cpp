@@ -72,18 +72,14 @@ bool loadConfig(struct Settings &sett)
         LOG_NOTICE("CFG", "version=" << sett.version);
 
         strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, WATERIUS_HOST_LEN);
-        sett.waterius_key[0] = '\0';
-        sett.waterius_email[0] = '\0';
 
         strncpy0(sett.blynk_host, BLYNK_DEFAULT_DOMAIN, BLYNK_HOST_LEN);
-        sett.blynk_email[0] = '\0';
 
         String email_title = "Новые показания {DEVICE_NAME}";
         strncpy0(sett.blynk_email_title, email_title.c_str(), BLYNK_EMAIL_TITLE_LEN);
 
         String email_template = "Горячая: {V0}м3, Холодная: {V1}м3<br>За день:<br>Горячая: +{V3}л, Холодная: +{V4}л<br>Напряжение:{V2}В";
         strncpy0(sett.blynk_email_template, email_template.c_str(), BLYNK_EMAIL_TEMPLATE_LEN);
-
 
         sett.liters_per_impuls = LITRES_PER_IMPULS_DEFAULT;
 
@@ -107,13 +103,10 @@ bool loadConfig(struct Settings &sett)
         #pragma message(VAR_NAME_VALUE(WATERIUS_KEY))
         strncpy0(sett.waterius_key, VALUE(WATERIUS_KEY), WATERIUS_KEY_LEN);
         LOG_NOTICE("CFG", "default waterius key=" << VALUE(WATERIUS_KEY));
+#else
+        LOG_NOTICE("CFG", "Generate waterius key");
+        WateriusHttps::generateToken(sett.waterius_email, sett.waterius_key, WATERIUS_KEY_LEN);
 #endif
-
-        if (strlen(sett.waterius_key) == 0) {
-            LOG_NOTICE("CFG", "Generate waterius key");
-            WateriusHttps::generateToken(sett.waterius_email, sett.waterius_key, WATERIUS_KEY_LEN);
-        }
-        
 
 #if defined(SSID_NAME) 
 #if defined(SSID_PASS)
