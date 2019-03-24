@@ -56,8 +56,8 @@ Description in [english](https://github.com/dontsovcmc/waterius/blob/master/Engl
 (надо что-то сделать тем, у кого нет проводов у счётчиков)
 1. ~~Поддержка HTTPS~~, спасибо [marvel-m9y](https://github.com/marvel-m9y)
 2. Поддержка датчика протечек
-На attiny85 пине Reset сделал [OloloevReal](https://github.com/OloloevReal) тут [схема](https://github.com/dontsovcmc/waterius/issues/51)
-Можно взять МК с большим количеством пинов. Для [Attiny84](https://github.com/dontsovcmc/waterius/issues/41#issuecomment-439402464) 1 строчка кода 
+- На Reset пине attiny85 сделал [OloloevReal](https://github.com/OloloevReal), вот [схема](https://github.com/dontsovcmc/waterius/issues/51)
+- Можно взять МК с большим количеством пинов. Для [Attiny84](https://github.com/dontsovcmc/waterius/issues/41#issuecomment-439402464) 1 строчка кода 
 3. Переход на ESP32
 - разобраться, как считать импульсы на сопроцессоре
 - портировать код
