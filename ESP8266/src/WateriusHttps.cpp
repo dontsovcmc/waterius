@@ -1,19 +1,16 @@
 #include "WateriusHttps.h"
+#include <utility>
 #include "time.h"
 #include "Logging.h"
 #include "cert.h"
 #include "utils.h"
-#include <ArduinoJson.h>
-#include "WifiClientSecure.h"
-#include "ESP8266HTTPClient.h"
+#include "WiFiClientSecureBearSSL.h"
 #include "setup.h"
-
-#include <utility>
 
 BearSSL::X509List certs;
 HTTPClient httpClient;
 WiFiClient wifiClient;
-WiFiClientSecure wifiTlsClient;
+BearSSL::WiFiClientSecure wifiTlsClient;
 
 #define JSON_BUFFER_SIZE 1000
 

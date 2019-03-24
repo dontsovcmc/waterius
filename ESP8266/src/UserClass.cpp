@@ -1,10 +1,7 @@
 #include "UserClass.h"
-#include <WiFiClientSecureBearSSL.h>
-#include <random>
 #include "WateriusHttps.h"
 #include "Logging.h"
 #include <ArduinoJson.h>
-#include "master_i2c.h"
 
 
 #define JSON_BUFFER_SIZE 1000
