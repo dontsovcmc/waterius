@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.5.4"
+#define FIRMWARE_VERSION "0.6"
 
 #define DEBUG_ESP_HTTP_CLIENT
 #define DEBUG_ESP_PORT Serial
@@ -11,6 +11,7 @@
 /*
 Версии прошивки для ESP
 
+0.6   - 2019.03.23 - Поддержка HTTPS
 0.5.4 - 2019.02.25 - обновил framework espressif8266 2.0.1 (arduino 2.5.0), blynk, json 
 0.5.3 - 2019.01.22 - WifiManager 0.14 + hotfixes
 0.5.2 - 2018.09.22 - WifiManager 0.14
@@ -47,7 +48,7 @@
 
 #define EMAIL_LEN 32
 
-#define WATERIUS_KEY_LEN  66
+#define WATERIUS_KEY_LEN  34
 #define WATERIUS_HOST_LEN 64
 
 #define BLYNK_KEY_LEN 34

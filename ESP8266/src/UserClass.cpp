@@ -18,8 +18,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     
     // Set JSON body
     String jsonBody;
-    StaticJsonBuffer<JSON_BUFFER_SIZE> jsonBuffer;
-    JsonObject& root = jsonBuffer.createObject();
+    StaticJsonDocument<JSON_BUFFER_SIZE> root;
     root["delta0"] =        (data.impulses0 - settings.impulses0_previous)*settings.liters_per_impuls;
     root["delta1"] =        (data.impulses1 - settings.impulses1_previous)*settings.liters_per_impuls;
     root["good"] =          data.diagnostic;
@@ -32,7 +31,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["key"] =           settings.waterius_key;
     root["resets"] =        data.resets;
     root["email"] =         settings.waterius_email;
-    root.printTo(jsonBody);
+    serializeJson(root, jsonBody);
 
     if (strlen(settings.waterius_key) == 0) {
         LOG_NOTICE(THIS_FUNC_SVC, "NO Waterius key. SKIP");

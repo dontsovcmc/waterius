@@ -7,7 +7,6 @@
 #include <IPAddress.h>
 #include <EEPROM.h>
 #include "utils.h"
-#include "WateriusHttps.h"
 
 //Конвертируем значение переменных компиляции в строк
 #define VALUE_TO_STRING(x) #x
@@ -64,7 +63,7 @@ bool loadConfig(struct Settings &sett)
     } else {    
         // Конфигурация не была сохранена в EEPROM, инициализируем с нуля
         LOG_NOTICE("CFG", "crc failed=" << sett.crc );
-
+        
         // Заполняем нулями всю конфигурацию
         memset(&sett, 0, sizeof(sett));
 
@@ -103,10 +102,6 @@ bool loadConfig(struct Settings &sett)
         #pragma message(VAR_NAME_VALUE(WATERIUS_KEY))
         strncpy0(sett.waterius_key, VALUE(WATERIUS_KEY), WATERIUS_KEY_LEN);
         LOG_NOTICE("CFG", "default waterius key=" << VALUE(WATERIUS_KEY));
-#else
-        LOG_NOTICE("CFG", "Generate waterius key");
-        WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, 
-                                           sett.waterius_email, EMAIL_LEN);
 #endif
 
 #if defined(SSID_NAME) 

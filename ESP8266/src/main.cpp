@@ -51,8 +51,7 @@ void loop()
     uint8_t mode = TRANSMIT_MODE;
 
 	// спрашиваем у Attiny85 повод пробуждения и данные
-    //if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data)) {
-    if (true) {
+    if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data)) {
         if (mode == SETUP_MODE) {
             //Режим настройки - запускаем точку доступа на 192.168.4.1
 
