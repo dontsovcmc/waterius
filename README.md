@@ -1,8 +1,7 @@
 ### Aвтономное устройство для передачи показаний воды по Wi-Fi
-# Вотериус 0.5 [Eng](https://github.com/dontsovcmc/waterius/blob/master/English.md)
-
+# Вотериус 0.6
+#### [English](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
-
 
 Поддержать проект: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
 
@@ -16,7 +15,7 @@
 - на сайт <a href="https://waterius.ru">waterius.ru</a> (пишите, добавлю автоотправку в ваш город)
 - в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8))
 - по электронной почте (ежедневно, через Blynk).
-- на вашем [HTTP сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
+- на вашем [HTTP/HTTPS сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
 - там, куда сами запрограммируете
 
 #### Статьи: 
@@ -43,7 +42,9 @@
 ## Схема
 <img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="600"/>
 
-<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board.jpg" width="400"/>
+2-я версия заводской платы:
+<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" width="400"/>
+<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_top.jpg" width="400"/>
 
 # Помочь проекту
 
@@ -51,19 +52,17 @@
 
 0. Прикрутить дешевую китайскую камеру к ESP
 (надо что-то сделать тем, у кого нет проводов у счётчиков)
-1. Поддержка HTTPS 
-- переписать код на HTTPS
-- протестировать
+1. ~~Поддержка HTTPS~~, спасибо [marvel-m9y](https://github.com/marvel-m9y)
 2. Поддержка датчика протечек
-+ 1 строчка кода ([Attiny84](https://github.com/dontsovcmc/waterius/issues/41#issuecomment-439402464))
-- развести плату
+На attiny85 пине Reset сделал [OloloevReal](https://github.com/OloloevReal) тут [схема](https://github.com/dontsovcmc/waterius/issues/51)
+Можно взять МК с большим количеством пинов. Для [Attiny84](https://github.com/dontsovcmc/waterius/issues/41#issuecomment-439402464) 1 строчка кода 
 3. Переход на ESP32
 - разобраться, как считать импульсы на сопроцессоре
 - портировать код
 - начертить плату, придумать корпус (распаячная коробка?)
 - расширить функционал
 4. OTA обновления для ESP8266-01 1Мб
-- разобраться как они работают
+- ~~разобраться как они работают~~ OTA влезет на 1Мб, если убрать HTTPS. Можно перепаять память на 4Мб.
 - предложить код прошивки и пример веб сервера
 5. Радиоканал вместо Wi-Fi
 - сделать вместо ESP-01 плату с радиомодулем
@@ -78,7 +77,11 @@
 [Лицензия GNU GPLv3](https://github.com/dontsovcmc/waterius/blob/master/LICENSE)
 
 # Благодарности
-Ивану Коваленко и Иван Ганжа за консультации по электротехнике. Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1), он был взят за основу.\
+- [marvel-m9y](https://github.com/marvel-m9y) за поддержку HTTPS
+- [OloloevReal](https://github.com/OloloevReal) за датчик протечки
+- Ивану Коваленко и Иван Ганжа за консультации по электротехнике
+- Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1).
+
 Форумам: 
 - https://electronix.ru
 - https://esp8266.ru
@@ -88,8 +91,10 @@
 
 Чат: <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
-Хэштег проекта `#waterius`: [Instagram](https://www.instagram.com/explore/tags/waterius/), [Facebook](https://www.facebook.com/search/top/?q=waterius) 
+`#waterius`: [Instagram](https://www.instagram.com/explore/tags/waterius/)
+
+Группа [Facebook](https://www.facebook.com/waterius) 
 
 Найденные ошибки [сюда](https://github.com/dontsovcmc/waterius/issues)
 
-Связь: [Telegram](https://t.me/Dontsovcmc), [Facebook](https://facebook.com/dontsovev), [Hackster.io](https://www.hackster.io/dontsovcmc)
+Связь: [Telegram](https://t.me/Dontsovcmc), [Facebook](https://facebook.com/dontsovev)
