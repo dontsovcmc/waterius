@@ -1,6 +1,7 @@
 #ifndef _WATERIUS_INIT_h
 #define _WATERIUS_INIT_h
 
+#include "c_types.h"
 #include "string.h"
 
 /*
@@ -12,5 +13,7 @@ inline void strncpy0(char *dest, const char *src, const size_t len)
     strncpy(dest, src, len-1);
     dest[len-1] = '\0';
 } 
+
+bool setClock();
 
 #endif

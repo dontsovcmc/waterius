@@ -41,66 +41,71 @@ bool loadConfig(struct Settings &sett)
         LOG_NOTICE("CFG", "CRC ok");
 
         // Для безопасной работы с буферами,  в библиотеках может не быть проверок
-        sett.key[KEY_LEN-1] = '\0';
-        sett.hostname_blynk[HOSTNAME_BLYNK_LEN-1] = '\0';
-        sett.email[EMAIL_LEN-1] = '\0';
-        sett.email_title[EMAIL_TITLE_LEN-1] = '\0';
-        sett.email_template[EMAIL_TEMPLATE_LEN-1] = '\0'; 
-        sett.hostname_json[HOSTNAME_JSON_LEN-1] = '\0';
-        
-        LOG_NOTICE( "CFG", " email=" << sett.email  << ", hostname=" << sett.hostname_blynk);
-        LOG_NOTICE( "CFG", " hostname_json=" << sett.hostname_json);
+        sett.waterius_host[WATERIUS_HOST_LEN-1] = '\0';
+        sett.waterius_key[WATERIUS_KEY_LEN-1] = '\0';
+        sett.waterius_email[EMAIL_LEN-1] = '\0';
+
+        sett.blynk_key[BLYNK_KEY_LEN-1] = '\0';
+        sett.blynk_host[BLYNK_HOST_LEN-1] = '\0';
+        sett.blynk_email[EMAIL_LEN-1] = '\0';
+        sett.blynk_email_title[BLYNK_EMAIL_TITLE_LEN-1] = '\0';
+        sett.blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN-1] = '\0'; 
+
+        LOG_NOTICE("CFG", " waterius_email=" << sett.waterius_email);
+        LOG_NOTICE("CFG", " waterius host=" << sett.waterius_host << " key=" << sett.waterius_key);
 
         // Всегда одно и тоже будет
-        LOG_NOTICE( "CFG", "channel0_start=" << sett.channel0_start << ", impules0_start=" << sett.impules0_start << ", factor=" << sett.liters_per_impuls );
-        LOG_NOTICE( "CFG", "channel1_start=" << sett.channel1_start << ", impules1_start=" << sett.impules1_start);
+        LOG_NOTICE("CFG", "channel0_start=" << sett.channel0_start << ", impulses0_start=" << sett.impulses0_start << ", factor=" << sett.liters_per_impuls );
+        LOG_NOTICE("CFG", "channel1_start=" << sett.channel1_start << ", impulses1_start=" << sett.impulses1_start);
         
         return true;
 
     } else {    
         // Конфигурация не была сохранена в EEPROM, инициализируем с нуля
-        LOG_NOTICE( "CFG", "crc failed=" << sett.crc );
-
+        LOG_NOTICE("CFG", "crc failed=" << sett.crc );
+        
         // Заполняем нулями всю конфигурацию
         memset(&sett, 0, sizeof(sett));
 
         sett.version = CURRENT_VERSION;  //для совместимости в будущем
+        LOG_NOTICE("CFG", "version=" << sett.version);
 
-        sett.liters_per_impuls = LITRES_PER_IMPULS_DEFAULT;
-        
-        String hostname = BLYNK_DEFAULT_DOMAIN;
-        strncpy0(sett.hostname_blynk, hostname.c_str(), HOSTNAME_BLYNK_LEN);
+        strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, WATERIUS_HOST_LEN);
 
-        sett.email[EMAIL_LEN-1] = '\0';
+        strncpy0(sett.blynk_host, BLYNK_DEFAULT_DOMAIN, BLYNK_HOST_LEN);
 
         String email_title = "Новые показания {DEVICE_NAME}";
-        strncpy0(sett.email_title, email_title.c_str(), EMAIL_TITLE_LEN);
+        strncpy0(sett.blynk_email_title, email_title.c_str(), BLYNK_EMAIL_TITLE_LEN);
 
         String email_template = "Горячая: {V0}м3, Холодная: {V1}м3<br>За день:<br>Горячая: +{V3}л, Холодная: +{V4}л<br>Напряжение:{V2}В";
-        strncpy0(sett.email_template, email_template.c_str(), EMAIL_TEMPLATE_LEN);
+        strncpy0(sett.blynk_email_template, email_template.c_str(), BLYNK_EMAIL_TEMPLATE_LEN);
 
-        sett.hostname_json[0] = '\0';
-
-        LOG_NOTICE("CFG", "version=" << sett.version << ", hostname=" << hostname);
-
+        sett.liters_per_impuls = LITRES_PER_IMPULS_DEFAULT;
 
 //Можно задать константы при компиляции, чтобы Вотериус сразу заработал
 
 #ifdef BLYNK_KEY    
         #pragma message(VAR_NAME_VALUE(BLYNK_KEY))
         String key = VALUE(BLYNK_KEY);
-        strncpy0(sett.key, key.c_str(), KEY_LEN);
-        LOG_NOTICE("CFG", "default key=" << key);
+        strncpy0(sett.blynk_key, key.c_str(), BLYNK_KEY_LEN);
+        LOG_NOTICE("CFG", "default Blynk key=" << key);
 #endif
 
-#ifdef HOSTNAME_JSON
-        #pragma message(VAR_NAME_VALUE(HOSTNAME_JSON))
-        String hostname_json = VALUE(HOSTNAME_JSON);
-        strncpy0(sett.hostname_json, hostname_json.c_str(), HOSTNAME_JSON_LEN);
-        LOG_NOTICE("CFG", "default hostname_json=" << hostname_json);
+#ifdef WATERIUS_HOST
+        #pragma message(VAR_NAME_VALUE(WATERIUS_HOST))
+        String waterius_host = VALUE(WATERIUS_HOST);
+        strncpy0(sett.waterius_host, waterius_host.c_str(), WATERIUS_HOST_LEN);
+        LOG_NOTICE("CFG", "default waterius_host=" << waterius_host);
 #endif
 
-#ifdef SSID_NAME && SSID_PASS
+#ifdef WATERIUS_KEY
+        #pragma message(VAR_NAME_VALUE(WATERIUS_KEY))
+        strncpy0(sett.waterius_key, VALUE(WATERIUS_KEY), WATERIUS_KEY_LEN);
+        LOG_NOTICE("CFG", "default waterius key=" << VALUE(WATERIUS_KEY));
+#endif
+
+#if defined(SSID_NAME) 
+#if defined(SSID_PASS)
         #pragma message(VAR_NAME_VALUE(SSID_NAME))
         #pragma message(VAR_NAME_VALUE(SSID_PASS))
         WiFi.begin(VALUE(SSID_NAME), VALUE(SSID_PASS), 0, NULL, false);  //connect=false, т.к. мы следом вызываем Wifi.begin
@@ -108,6 +113,7 @@ bool loadConfig(struct Settings &sett)
         
         sett.crc = FAKE_CRC; //чтобы больше не попадать сюда
         return true;
+#endif
 #endif
         return false;
     }
