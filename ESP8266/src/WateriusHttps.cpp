@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 #include "WifiClientSecure.h"
 #include "ESP8266HTTPClient.h"
+#include "setup.h"
 
 #include <utility>
 
@@ -14,7 +15,6 @@ HTTPClient httpClient;
 WiFiClient wifiClient;
 WiFiClientSecure wifiTlsClient;
 
-#define HTTP_TIMEOUT_MILLES 5000
 #define JSON_BUFFER_SIZE 1000
 
 WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url, const String &body)
@@ -46,7 +46,7 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
 
     // HTTP settings
     HTTPClient *hc = &httpClient;
-    hc->setTimeout(HTTP_TIMEOUT_MILLES);
+    hc->setTimeout(SERVER_TIMEOUT);
     hc->setReuse(false);
     
     // Check input data
