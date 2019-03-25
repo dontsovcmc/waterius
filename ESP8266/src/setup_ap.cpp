@@ -32,15 +32,15 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     FloatParameter param_channel1_start( "channel1", "Вход 1 (м3):",  channel1);
     LongParameter param_litres_per_imp( "factor", "Литров на импульс:",  sett.liters_per_impuls);
 
-    WiFiManagerParameter param_waterius_host( "hostname_json", "Waterius сервер:",  sett.waterius_host, WATERIUS_HOST_LEN-1);
-    WiFiManagerParameter param_waterius_email( "email", "Адрес эл. почты:",  sett.waterius_email, EMAIL_LEN-1);
-    WiFiManagerParameter param_waterius_key( "key", "Waterius ключ. Заполнится автоматически.",  sett.waterius_key, WATERIUS_KEY_LEN-1);
+    WiFiManagerParameter param_waterius_host( "whost", "Waterius сервер:",  sett.waterius_host, WATERIUS_HOST_LEN-1);
+    WiFiManagerParameter param_waterius_email( "wmail", "Адрес эл. почты:",  sett.waterius_email, EMAIL_LEN-1);
+    WiFiManagerParameter param_waterius_key( "wkey", "Waterius ключ. Заполнится автоматически.",  sett.waterius_key, WATERIUS_KEY_LEN-1);
     
     // Настройки для Blynk 
-    WiFiManagerParameter param_blynk_host( "host", "Blynk сервер:",  sett.blynk_host, BLYNK_HOST_LEN-1);
-    WiFiManagerParameter param_blynk_key( "key", "Blynk ключ:",  sett.blynk_key, BLYNK_KEY_LEN-1);
+    WiFiManagerParameter param_blynk_host( "bhost", "Blynk сервер:",  sett.blynk_host, BLYNK_HOST_LEN-1);
+    WiFiManagerParameter param_blynk_key( "bkey", "Blynk ключ:",  sett.blynk_key, BLYNK_KEY_LEN-1);
 
-    WiFiManagerParameter param_blynk_email( "email1", "Адрес эл. почты:",  sett.blynk_email, EMAIL_LEN-1);
+    WiFiManagerParameter param_blynk_email( "bemail", "Адрес эл. почты:",  sett.blynk_email, EMAIL_LEN-1);
     WiFiManagerParameter param_blynk_email_title( "title", "Заголовок:",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
     WiFiManagerParameter param_blynk_email_template( "template", "Тело письма:",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
 
