@@ -8,12 +8,18 @@ Description in [english](https://github.com/dontsovcmc/waterius/blob/master/Engl
 
 ### Характеристики:
 - передача по Wi-Fi
-- 2 счётчика воды ("сухой контакт"/геркон. "намур" не поддерживается)
+- 2 счётчика воды ("сухой контакт"/геркон) "намур" не поддерживается
 - питание 3 АА батарейки (~4 года работы)
 - до 4-х импульсов от счётчика в секунду
 
+[Список поддерживаемых счётчиков](https://github.com/dontsovcmc/waterius/issues/65)
+
+## Передача показаний
+Автоматическая передача будет реализована через сайт [waterius.ru](http://waterius.ru).
+Напишите, [куда вам требуется их отослать тут](https://github.com/dontsovcmc/waterius/issues/64)
+
 #### Данные получаем:
-- на сайт <a href="https://waterius.ru">waterius.ru</a> (пишите, добавлю автоотправку в ваш город)
+- на сайт <a href="https://waterius.ru">waterius.ru</a>
 - в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8))
 - по электронной почте (ежедневно, через Blynk).
 - на вашем [HTTP/HTTPS сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
@@ -36,9 +42,6 @@ Description in [english](https://github.com/dontsovcmc/waterius/blob/master/Engl
 
 ## Принцип работы
 Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в Х минут она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого все микросхемы засыпают.
-
-## Передача показаний (вручную)
-Автоматическая передача в управляющие компании не реализована. 
 
 ## Схема
 <img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="600"/>
