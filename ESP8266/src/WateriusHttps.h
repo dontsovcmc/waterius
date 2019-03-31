@@ -23,7 +23,7 @@ class WateriusHttps
      * JSON post request through WiFi.
      * Supports HTTPS.
      **/
-    static ResponseData sendJsonPostRequest(const String &url, const String &body);
+    static ResponseData sendJsonPostRequest(const String &url, const char *key, const char *email, const String &body);
 
     /**
      * Generate SHA256 Token from random & email.

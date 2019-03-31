@@ -16,7 +16,7 @@
 
 bool send_blynk(const Settings &sett, const SlaveData &data, const float &channel0, const float &channel1)
 {
-    if (strlen(sett.blynk_key) == 0) {
+    if (strnlen(sett.blynk_key, BLYNK_KEY_LEN) == 0) {
         LOG_NOTICE( "BLK", "No key. SKIP");
         return false;
     }
@@ -39,7 +39,7 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const float &channe
         LOG_NOTICE( "BLK", "virtualWrite OK");
         
         // Если заполнен параметр email отправим эл. письмо
-        if (strlen(sett.blynk_email) > 4) {
+        if (strnlen(sett.blynk_email, EMAIL_LEN) > 4) {
             LOG_NOTICE( "BLK", "send email: " << sett.blynk_email);
 
             String msg = sett.blynk_email_template;

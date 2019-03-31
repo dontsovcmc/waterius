@@ -36,7 +36,8 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     };
 
     // Try to send
-    WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(settings.waterius_host, jsonBody);
+    WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(
+        settings.waterius_host, settings.waterius_key, settings.waterius_email, jsonBody);
     bool send_result = responseData.isSuccess && responseData.code == 200;
 
     LOG_INFO(THIS_FUNC_SVC, "Send result:\t" << (send_result ? "Success" : "Error"));

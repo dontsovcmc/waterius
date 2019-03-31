@@ -14,7 +14,7 @@ BearSSL::WiFiClientSecure wifiTlsClient;
 
 #define JSON_BUFFER_SIZE 1000
 
-WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url, const String &body)
+WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url, const char *key, const char *email, const String &body)
 {
     constexpr char THIS_FUNC_DESCRIPTION[] = "Send JSON POST request";
     constexpr char THIS_FUNC_SVC[] = "RQT";
@@ -60,6 +60,12 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     String responseBody;
     if (hc->begin(*wc, url)) {
         hc->addHeader("Content-Type", "application/json");
+        if (strnlen(key, WATERIUS_KEY_LEN)) {
+            hc->addHeader("Waterius-Token", key);
+        }
+        if (strnlen(email, EMAIL_LEN)) {
+            hc->addHeader("Waterius-Email", email);
+        }
         responseCode = hc->POST(body);
         LOG_INFO(THIS_FUNC_SVC, "Response code:\t" << responseCode);
         responseBody = hc->getString();

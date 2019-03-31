@@ -43,7 +43,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     WiFiManagerParameter param_blynk_email( "bemail", "Адрес эл. почты:",  sett.blynk_email, EMAIL_LEN-1);
     WiFiManagerParameter param_blynk_email_title( "title", "Заголовок:",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
     WiFiManagerParameter param_blynk_email_template( "template", "Тело письма:",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
-
+    
     wm.addParameter( &param_channel0_start );
     wm.addParameter( &param_channel1_start );
     wm.addParameter( &param_litres_per_imp );
