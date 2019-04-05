@@ -43,18 +43,25 @@
 
 
 struct Data {
-	uint32_t value0;
-	uint32_t value1;
+    uint32_t value0;
+    uint32_t value1;
+};
+
+struct CounterState {
+    uint8_t  state0;  // состояние входа
+    uint8_t  state1;  // не добавляем в Data, т.к. та в буфере кольцевом
 };
 
 struct Header {
-	uint8_t  version;
-	uint8_t  service;
-	uint32_t voltage;
-	uint8_t  resets;
-	uint8_t  reserved;
-	Data     data;
+    uint8_t       version;
+    uint8_t       service;
+    uint32_t      voltage;
+    uint8_t       resets;
+    uint8_t       reserved;
+    CounterState  states;
+    Data          data;
 };
+
 
 /*
 	define для логирования. Не менять.

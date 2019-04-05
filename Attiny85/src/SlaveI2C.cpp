@@ -5,6 +5,7 @@
 #include "Setup.h"
 
 extern struct Header info;
+extern struct CounterState counter_states;
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
