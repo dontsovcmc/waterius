@@ -18,14 +18,19 @@
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/step04.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step04.png" width="280"/> 
 
 ## Установка Вотериуса
+- скопируйте Токен из Blynk, если используете это приложение
 - подключите счётчики воды к разъемам Wi-fi счётчика
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/input.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/input.png" width="280"/> 
 - включите питание
-- нажмите кнопку >3сек на корпусе - включится Веб сервер для настройки
-- найдите телефоном Wi-Fi точку доступа Waterius_0.5
-- откройте [http://192.168.4.1](http://192.168.4.1)
+- нажмите кнопку >4сек на корпусе - включится Веб сервер для настройки
+- найдите телефоном Wi-Fi точку доступа Waterius_0.6.1
+- откройте http://192.168.4.1
+- Нажмите Configure WiFi
 
 ### Настройки 
+
+<img src="https://github.com/dontsovcmc/waterius/blob/master/files/wifi_setup.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/wifi_setup.jpg"/> 
+
 - имя сети домашнего Wi-Fi
 - пароль домашнего Wi-Fi
 #### Настройки счётчиков
@@ -33,9 +38,9 @@
 - текущее показание счетчика холодной воды
 - кол-во литров на 1 импульс (по умолчанию 10)
 #### Настройки waterius.ru или своего сервера
-- сервер, куда будет отправлет JSON. Если не заполнен, отправки не будет. https://cloud.waterius.ru
+- [сервер, куда будет отправлет JSON](https://github.com/dontsovcmc/waterius/blob/master/Export.md). Если не заполнен, отправки не будет. https://cloud.waterius.ru
 - поле JSON "email". для waterius.ru введите электронную почту указанную для доступа в личный кабинет
-- поле JSON "token". для waterius.ru ключ сгенерируется автоматически.
+- поле JSON "token". оставьте поле пустым. ключ сгенерируется автоматически.
 #### Настройки Blynk
 - сервер blynk. blynk-cloud.com
 - ключ Blynk. Копируете из проекта в приложении Blynk. Если пустой, отправки нет.
@@ -43,13 +48,12 @@
 - заголовок письма от Blynk
 - текст письма от Blynk
 
+- нажмите Save
 
-<img src="https://github.com/dontsovcmc/waterius/blob/master/files/wifi_setup.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/wifi_setup.jpg"/> 
+- убедитесь, что светодиод погас через 3-10 секунд, что говорит об успешном подключении к Wi-Fi. Если светодиод не погас, то заново откройте 192.168.4.1 и введите корректные настройки Wi-Fi сети
 
-- при желании получать эл. письма с показаниями введите свой эл. адрес (письма будут приходить ежедневно)
-- можете указать URL своего HTTP сервера для получения данных ([параметры сервера](https://github.com/dontsovcmc/waterius/blob/master/Export.md))
-- нажмите ОК
-- убедитесь, что светодиод погас через 3-10 секунд, что говорит об успешном подключении к Wi-Fi. Если светодиод не погас, то заново откройте 192.168.4.1 и введите корректные настройки.
+#### Завершение настройки, проверка связи с счётчиками и серверами
+- нажмите на кнопку коротким нажатием (меньше 2сек) - Вотериус пришлет введенные вами показания.
 - откройте воду на полную, чтобы вылить больше 10л воды
 - нажмите на кнопку коротким нажатием - Вотериус пришлет новые показания.
 - далее Вотериус будет слать показания примерно раз в сутки
