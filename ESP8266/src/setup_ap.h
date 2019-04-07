@@ -16,21 +16,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
 /*
 Дополнение к WifiManager: классы упрощающие работу
 */
-class IPAddressParameter : public WiFiManagerParameter {
-public:
 
-    IPAddressParameter(const char *id, const char *placeholder, IPAddress address)
-        : WiFiManagerParameter("")
-    {
-        init(id, placeholder, address.toString().c_str(), 16, "");
-    }
-
-    IPAddress getValue() {
-        IPAddress ip;
-        ip.fromString(WiFiManagerParameter::getValue());
-        return ip;
-    }
-};
+const char LONG_ATTR[] PROGMEM             = " type=\"number\"";
 
 class LongParameter : public WiFiManagerParameter {
 public:
@@ -38,7 +25,7 @@ public:
     LongParameter(const char *id, const char *placeholder, long value, const uint8_t length = 10)
         : WiFiManagerParameter("") {
 
-        init(id, placeholder, String(value).c_str(), length, "");
+        init(id, placeholder, String(value).c_str(), length, LONG_ATTR);
     }
 
     long getValue() {
@@ -46,17 +33,21 @@ public:
     }
 };
 
+const char FLOAT_ATTR[] PROGMEM             = " type=\"number\" step=\"0.001\"";
+
 class FloatParameter : public WiFiManagerParameter {
 public:
 
     FloatParameter(const char *id, const char *placeholder, float value, const uint8_t length = 10)
         : WiFiManagerParameter("") {
             
-        init(id, placeholder, String(value).c_str(), length, "");
+        init(id, placeholder, String(value).c_str(), length, FLOAT_ATTR);
     }
 
     float getValue() {
-        return String(WiFiManagerParameter::getValue()).toFloat();
+        String val(WiFiManagerParameter::getValue());
+        val.replace(",", ".");
+        return val.toFloat();
     }
 };
 

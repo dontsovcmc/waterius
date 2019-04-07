@@ -87,6 +87,10 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
         good &= getByte(data.resets);
         good &= getByte(dummy);
     }
+    if (data.version >= 8) {
+        good &= getByte(data.state0);
+        good &= getByte(data.state1);
+    }
     good &= getUint(data.impulses0);
     good &= getUint(data.impulses1);
     data.diagnostic = good;
@@ -96,6 +100,8 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
         LOG_NOTICE("I2C", "service: " << data.service);
         LOG_NOTICE("I2C", "voltage: " << data.voltage);
         LOG_NOTICE("I2C", "resets: " << data.resets);
+        LOG_NOTICE("I2C", "state0: " << data.state0);
+        LOG_NOTICE("I2C", "state1: " << data.state1);
         LOG_NOTICE("I2C", "impulses0: " << data.impulses0);
         LOG_NOTICE("I2C", "impulses1: " << data.impulses1);
 

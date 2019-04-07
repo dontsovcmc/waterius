@@ -13,6 +13,11 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     constexpr char THIS_FUNC_SVC[] = "SND";
     LOG_NOTICE(THIS_FUNC_SVC, "-- START -- " << THIS_FUNC_DESCRIPTION);
     
+    if (strlen(settings.waterius_key) == 0) {
+        LOG_NOTICE(THIS_FUNC_SVC, "NO Waterius key. SKIP");
+        return false;
+    };
+
     // Set JSON body
     String jsonBody;
     StaticJsonDocument<JSON_BUFFER_SIZE> root;
@@ -29,11 +34,6 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["resets"] =        data.resets;
     root["email"] =         settings.waterius_email;
     serializeJson(root, jsonBody);
-
-    if (strlen(settings.waterius_key) == 0) {
-        LOG_NOTICE(THIS_FUNC_SVC, "NO Waterius key. SKIP");
-        return false;
-    };
 
     // Try to send
     WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(

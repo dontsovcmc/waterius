@@ -22,6 +22,8 @@ struct SlaveData {
     uint8_t  version;     //Версия ПО Attiny
     uint8_t  service;     //Причина загрузки Attiny
     uint32_t voltage;     //Напряжение питания в мВ
+    uint8_t  state0;      //Состояние входа 0
+    uint8_t  state1;      //Состояние входа 1
     uint32_t impulses0;   //Импульсов, канал 0
     uint32_t impulses1;   //Импульсов, канал 1
     uint8_t  diagnostic;  //1 - ок, 0 - нет связи с Attiny
