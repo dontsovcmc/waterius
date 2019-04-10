@@ -41,6 +41,7 @@ bool ESPPowerPin::elapsed(const unsigned long msec)
 
 // Меряем напряжение питания Attiny85. 
 // Есть погрешность, поэтому надо калбировать. Для каждой attiny будет своя константа 1126400L.
+// https://provideyourown.com/2012/secret-arduino-voltmeter-measure-battery-voltage/
 uint16_t readVcc() 
 {
 	// Read 1.1V reference against AVcc
@@ -51,11 +52,16 @@ uint16_t readVcc()
 
 	#if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
 		ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+    #elif defined (__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
+        ADMUX = _BV(MUX5) | _BV(MUX0) ;
 	#elif defined (__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
 		ADMUX = _BV(MUX3) | _BV(MUX2);
-	#endif 
-
-	delay(2); // Wait for Vref to settle
+    #else
+        ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+    #endif 
+    
+    //delayMicroseconds(5);    // only needed if using sensors with source resistance > 10K
+	delay(2); // Wait for Vref to settle. See Table 17-4. Input Channel Selections
 	ADCSRA |= _BV(ADSC); // Start conversion
 	while (bit_is_set(ADCSRA,ADSC)); // measuring
 
