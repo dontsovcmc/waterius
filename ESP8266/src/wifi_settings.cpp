@@ -51,10 +51,16 @@ bool loadConfig(struct Settings &sett)
         sett.blynk_email_title[BLYNK_EMAIL_TITLE_LEN-1] = '\0';
         sett.blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN-1] = '\0'; 
 
-        LOG_NOTICE("CFG", " waterius_email=" << sett.waterius_email);
-        LOG_NOTICE("CFG", " waterius host=" << sett.waterius_host << " key=" << sett.waterius_key);
-
+        LOG_NOTICE("CFG", "WATERIUS.RU");
+        LOG_NOTICE("CFG", "email=" << sett.waterius_email);
+        LOG_NOTICE("CFG", "host=" << sett.waterius_host << " key=" << sett.waterius_key);
+        
+        LOG_NOTICE("CFG", "BLYNK.CC");
+        LOG_NOTICE("CFG", "host=" << sett.blynk_host << " key=" << sett.blynk_key);
+        LOG_NOTICE("CFG", "email=" << sett.blynk_email);
+        
         // Всегда одно и тоже будет
+        LOG_NOTICE("CFG", "COUNTERS");
         LOG_NOTICE("CFG", "channel0_start=" << sett.channel0_start << ", impulses0_start=" << sett.impulses0_start << ", factor=" << sett.liters_per_impuls );
         LOG_NOTICE("CFG", "channel1_start=" << sett.channel1_start << ", impulses1_start=" << sett.impulses1_start);
         

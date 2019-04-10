@@ -3,12 +3,16 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.6.1"
+#define FIRMWARE_VERSION "0.7"
 
 
 /*
 Версии прошивки для ESP
 
+0.7   - 2019.04.10 - Поддержка НАМУР
+                   - Русскоязычный интерфейс настройки
+                   - Отправка waterius.ru
+                   - Проверка подключения счётчика в веб интерфейсе
 0.6.1 - 2019.03.31 - Заголовки Waterius-Token, Waterius-Email
 0.6   - 2019.03.23 - Поддержка HTTPS
 0.5.4 - 2019.02.25 - обновил framework espressif8266 2.0.1 (arduino 2.5.0), blynk, json 

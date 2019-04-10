@@ -19,7 +19,7 @@ extern MasterI2C masterI2C;
 
 SlaveData runtime_data;
 
-const char STATE_START[] PROGMEM = "\"Откройте кран, проверим соединение\"";
+const char STATE_START[] PROGMEM = "\"Откройте воду, проверим соединение\"";
 const char STATE_CONNECTED[] PROGMEM = "\"Подключен\"";
 
 
@@ -49,7 +49,13 @@ void update_data(String &message)
     }
 }
 
+const char LABEL_WATERIUS[] PROGMEM       = "<label><b>Waterius.ru</b></br></label>";
 const char LABEL_WATERIUS_EMAIL[] PROGMEM       = "<label>Адрес эл. почты на waterius.ru</label>";
+
+const char LABEL_BLYNK[] PROGMEM       = "<label><b>Blynk.cc</b></br></label>";
+
+const char LABEL_COUNTERS[] PROGMEM       = "<label><b>Счётчики</b></br></label>";
+
 const char LABEL_GET_IMPULSES[] PROGMEM         = "Получено: <a id=\"delta0\"></a> имп. и <a id=\"delta1\"></a> имп.</br>";
 const char LABEL_LITRES_PER_IMP[] PROGMEM       = "<label>Литров на импульс</label>";
 const char LABEL_CHANNEL0[] PROGMEM             = "<label><b>Вход 0</b>: </label><label id=\"state0\"></label></br>";
@@ -84,8 +90,24 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
 
     LOG_NOTICE( "AP", "User requested captive portal" );
     
+    // Настройки Waterius.ru
+    WiFiManagerParameter label_waterius(LABEL_WATERIUS);
     WiFiManagerParameter label_waterius_email(LABEL_WATERIUS_EMAIL);
     WiFiManagerParameter param_waterius_email( "wmail", "Адрес эл. почты:",  sett.waterius_email, EMAIL_LEN-1);
+    WiFiManagerParameter param_waterius_host( "whost", "Waterius сервер",  sett.waterius_host, WATERIUS_HOST_LEN-1);
+    WiFiManagerParameter param_waterius_key( "wkey", "Waterius ключ",  sett.waterius_key, WATERIUS_KEY_LEN-1);
+
+    // Настройки Blynk.сс
+    WiFiManagerParameter label_blynk(LABEL_BLYNK);
+    WiFiManagerParameter param_blynk_host( "bhost", "Blynk сервер",  sett.blynk_host, BLYNK_HOST_LEN-1);
+    WiFiManagerParameter param_blynk_key( "bkey", "Blynk ключ",  sett.blynk_key, BLYNK_KEY_LEN-1);
+
+    WiFiManagerParameter param_blynk_email( "bemail", "Адрес эл. почты",  sett.blynk_email, EMAIL_LEN-1);
+    WiFiManagerParameter param_blynk_email_title( "title", "Заголовок",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
+    WiFiManagerParameter param_blynk_email_template( "template", "Тело письма",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
+    
+    // Счетчиков
+    WiFiManagerParameter label_counters(LABEL_COUNTERS);
     WiFiManagerParameter label_get_impulses(LABEL_GET_IMPULSES);
     WiFiManagerParameter label_litres_per_imp(LABEL_LITRES_PER_IMP);
     LongParameter param_litres_per_imp( "factor", "",  sett.liters_per_impuls);
@@ -100,9 +122,23 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
 
     WiFiManagerParameter javascript_callback(WATERIUS_CALLBACK);
 
+    wm.addParameter( &label_waterius);
     wm.addParameter( &label_waterius_email);
     wm.addParameter( &param_waterius_email);
     
+#ifndef ONLY_CLOUD_WATERIUS    
+    wm.addParameter( &param_waterius_host );
+    wm.addParameter( &param_waterius_key );
+
+    wm.addParameter( &label_blynk);
+    wm.addParameter( &param_blynk_host );
+    wm.addParameter( &param_blynk_key );
+    wm.addParameter( &param_blynk_email );
+    wm.addParameter( &param_blynk_email_title );
+    wm.addParameter( &param_blynk_email_template );
+#endif
+
+    wm.addParameter( &label_counters);
     wm.addParameter( &label_get_impulses);
     wm.addParameter( &label_litres_per_imp);
     wm.addParameter( &param_litres_per_imp);
@@ -117,28 +153,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     wm.addParameter( &param_channel1_start );;
 
     wm.addParameter( &javascript_callback);
-
-#ifndef ONLY_CLOUD_WATERIUS    
-    WiFiManagerParameter param_waterius_host( "whost", "Waterius сервер",  sett.waterius_host, WATERIUS_HOST_LEN-1);
-    WiFiManagerParameter param_waterius_key( "wkey", "Waterius ключ",  sett.waterius_key, WATERIUS_KEY_LEN-1);
-
-    // Настройки для Blynk 
-    WiFiManagerParameter param_blynk_host( "bhost", "Blynk сервер",  sett.blynk_host, BLYNK_HOST_LEN-1);
-    WiFiManagerParameter param_blynk_key( "bkey", "Blynk ключ",  sett.blynk_key, BLYNK_KEY_LEN-1);
-
-    WiFiManagerParameter param_blynk_email( "bemail", "Адрес эл. почты",  sett.blynk_email, EMAIL_LEN-1);
-    WiFiManagerParameter param_blynk_email_title( "title", "Заголовок",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
-    WiFiManagerParameter param_blynk_email_template( "template", "Тело письма",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
-    
-    wm.addParameter( &param_waterius_host );
-    wm.addParameter( &param_waterius_key );
-
-    wm.addParameter( &param_blynk_host );
-    wm.addParameter( &param_blynk_key );
-    wm.addParameter( &param_blynk_email );
-    wm.addParameter( &param_blynk_email_title );
-    wm.addParameter( &param_blynk_email_template );
-#endif
 
     wm.setConfigPortalTimeout(300);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
@@ -167,7 +181,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     strncpy0(sett.blynk_email_template, param_blynk_email_template.getValue(), BLYNK_EMAIL_TEMPLATE_LEN);
 #endif
     
-    if (!strlen(sett.waterius_key)) {
+    if (!strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0) {
         LOG_NOTICE("CFG", "Generate waterius key");
         WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, 
                                            sett.waterius_email);

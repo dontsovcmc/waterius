@@ -53,7 +53,9 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     if (wc->available()) {
         LOG_WARNING(THIS_FUNC_SVC, "Wi-Fi client is not available");
     }
-
+    
+    
+    LOG_INFO(THIS_FUNC_SVC, "Begin client");
     // Request
     bool responseResult = false;
     int responseCode = 0;

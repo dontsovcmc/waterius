@@ -13,7 +13,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     constexpr char THIS_FUNC_SVC[] = "SND";
     LOG_NOTICE(THIS_FUNC_SVC, "-- START -- " << THIS_FUNC_DESCRIPTION);
     
-    if (strlen(settings.waterius_key) == 0) {
+    if (strnlen(settings.waterius_key, WATERIUS_KEY_LEN) == 0) {
         LOG_NOTICE(THIS_FUNC_SVC, "NO Waterius key. SKIP");
         return false;
     };
@@ -27,6 +27,8 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["boot"] =          data.version;
     root["ch0"] =           channel0;
     root["ch1"] =           channel1;
+    root["imp0"] =          data.impulses0;
+    root["imp1"] =          data.impulses1;
     root["version"] =       settings.version;
     root["voltage"] =       (float)(data.voltage/1000.0);
     root["version_esp"] =   FIRMWARE_VERSION;
@@ -40,6 +42,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
         settings.waterius_host, settings.waterius_key, settings.waterius_email, jsonBody);
     bool send_result = responseData.isSuccess && responseData.code == 200;
 
+    LOG_INFO(THIS_FUNC_SVC, "Send HTTP code:\t" << responseData.code);
     LOG_INFO(THIS_FUNC_SVC, "Send result:\t" << (send_result ? "Success" : "Error"));
     LOG_NOTICE(THIS_FUNC_SVC, "-- END --");
 
