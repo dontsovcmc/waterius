@@ -46,10 +46,15 @@ struct Counter
         return ret;
     }
 
+    inline bool digBit() 
+    {
+        return bit_is_set(PINB, _pin);
+    }
+
     inline bool digRead() 
     {
         PORTB |= _BV(_pin);  // INPUT_PULLUP
-        bool ret = bit_is_set(PINB, _pin);
+        bool ret = digBit();
         PORTB &= ~_BV(_pin); // INPUT
         return ret;
     }
@@ -61,22 +66,6 @@ struct Counter
         uint16_t value = aRead();
         state = value2state(value);
         return state == CounterState_e::CLOSE || state == CounterState_e::NAMUR_CLOSE;
-    }
-
-    bool pressed()  //Для кнопки
-    {
-        if (digRead() == LOW) {
-            if (_checks < TRIES) {
-                _checks++;
-            }
-            if (_checks == TRIES) {
-                _checks++;
-                return true;
-            } 
-        } else {
-          _checks = 0;
-        }
-        return false;
     }
 
     bool is_impuls()

@@ -151,15 +151,25 @@ void setup() {
 	LOG_INFO(info.data.value1);
 }
 
-// Замеряем сколько времени нажата кнопка в мс
-bool button_pressed_long(unsigned long delay) {
+// Проверка нажатия кнопки 
+bool button_pressed() {
 
-	unsigned long press_time = millis();
-	while(button.pressed() && millis() - press_time < delay)
-		;  
-	return button.pressed();
+	if (button.digBit() == LOW)
+	{	//защита от дребезга
+		delayMicroseconds(20000);  //нельзя delay, т.к. power_off
+		return button.digBit() == LOW;
+	}
+	return false;
 }
 
+// Замеряем сколько времени нажата кнопка в мс
+unsigned long wait_button_release() {
+
+	unsigned long press_time = millis();
+	while(button_pressed())
+		;  
+	return millis() - press_time;
+}
 
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop() {
@@ -172,14 +182,14 @@ void loop() {
 
 	// Цикл опроса входов
 	// Выход по прошествию WAKE_EVERY_MIN минут или по нажатию кнопки
-	for (unsigned int i = 0; i < ONE_MINUTE && !button.pressed(); ++i)  {
+	for (unsigned int i = 0; i < ONE_MINUTE && !button_pressed(); ++i)  {
 		wdt_count = WAKE_EVERY_MIN; 
 		while ( wdt_count > 0 ) {
 			noInterrupts();
 
 			counting(); //Опрос входов
 
-			if (button.pressed()) { 
+			if (button_pressed()) { 
 				interrupts();  // Пользователь нажал кнопку
 				break;
 			} else 	{
@@ -204,7 +214,7 @@ void loop() {
 	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания 
 	unsigned long wake_up_limit;
-	if (button_pressed_long(LONG_PRESS_MSEC)) {
+	if (wait_button_release() > LONG_PRESS_MSEC) {
 
 		LOG_DEBUG(F("SETUP pressed"));
 		slaveI2C.begin(SETUP_MODE);	
@@ -224,7 +234,7 @@ void loop() {
 		counting();
 
 		delayMicroseconds(65000);
-		if (button_pressed_long(LONG_PRESS_MSEC)) {
+		if (wait_button_release() > LONG_PRESS_MSEC) {
 			break; // принудительно выключаем
 		}
 	}
