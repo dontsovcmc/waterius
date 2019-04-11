@@ -2,9 +2,12 @@
 # Вотериус 0.6 
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
-Description in [english](https://github.com/dontsovcmc/waterius/blob/master/English.md)
+[Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
-Поддержать проект: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
+### КУПИТЬ
+плату|конструктор|готовый -> [Telegram](http://t-do.ru/Dontsovcmc)
+
+Поддержать морально: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
 
 ### Характеристики:
 - передача по Wi-Fi
@@ -37,8 +40,6 @@ Description in [english](https://github.com/dontsovcmc/waterius/blob/master/Engl
 - [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
 - [Прошивка Attiny85 и ESP](https://github.com/dontsovcmc/waterius/blob/master/Firmware.md) 
 - [Установка и настройка](https://github.com/dontsovcmc/waterius/blob/master/Setup.md) 
-
-Если хотите сделать Вотериус, напишите мне, вдруг остались платы ;).
 
 ## Принцип работы
 Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в Х минут она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого все микросхемы засыпают.
