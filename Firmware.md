@@ -1,15 +1,22 @@
 # Quickstart
 Как можно прошить attiny & esp:
 1. Взять готовые hex файлы и залить их
-- прошивка attiny утилитой avrdude 
-- прошивка esp python пакетом esptool
 2. Скомпилировать исходный код в platformio (cli или visual studio code)
-- зависимости загрузятся автоматически
-- смените порт и программатор
 3. Скомпилировать исходный код в Arduino IDE
-Нужно поменять файлы, скачать зависимости.
+
+Чем прошить attiny:
+- Программатором USBAsp
+- Платой Arduino, загрузив в нее скетч Arduino-as-ISP
+- другим программатором для AVR
+
+Чем прошить ESP8266:
+- USB-TTL 3.3v переходником
+- Платой Arduino, подключившись к ee RX,TX + делитель до 3.3v
+
 
 ## Программаторы Attiny
+Фьюзы: E:FF, H:DF, L:62
+
 #### Утилита Avrdude
 http://www.avislab.com/blog/wp-content/uploads/2012/12/avrdude.zip
 
@@ -32,6 +39,17 @@ upload_protocol = arduino
 upload_flags = -P$UPLOAD_PORT
 upload_speed = 19200
 
+#### Распиновка разъема Ватериус для прошивки attiny
+(вид сверху)
+
+| **GND** | **SCK 15** | **MOSI 16** | nc  | 
+| ---- | ---- | ---- | ---- |
+|  nc | **MISO 14** | nc  | **Vcc** |
++ 10й пин на ресет Attiny85
+
+nc - не используется
+Vcc - в любой 3.3в или 5в.
+
 #### Китайский USB-ISP программатор
 Плата MX-USBISP-V5.00
 Программа [ProgISP V1.7.2](https://yandex.ru/search/?text=ProgISP%20V1.7.2&&lr=213)
@@ -47,7 +65,6 @@ upload_flags =
     -B5
 
 Примечание: в Windows7 почему-то не заработал. Windows 10x64 - ок.
-	
 	
 ## Программаторы ESP8266
 Для прошивки ESP8266 необходим USB-TTL преобразователь с логическим уровнем 3.3в. Обратите внимание, что у него должен быть регулятор напряжения для питания ESP8266 на 3.3в. У обычных USB-TTL преобразователей логический уровень 5в, поэтому их вывод TX нужно подключить к делителю напряжения. Я использую резисторы 1.5к и 2.2к.
@@ -72,16 +89,6 @@ upload_flags =
 5. `avrdude.exe -p t85 -c Usbasp -B 4 -P usb  -U efuse:w:0xFF:m -U hfuse:w:0xDF:m -U lfuse:w:0x62:m`
 6. `avrdude.exe -p t85 -c Usbasp -B 4 -P usb -U flash:w:"<путь_до_репозитория>\waterius\Attiny85\.pioenvs\attiny85\firmware.hex":a`
 
-#### Распиновка разъема Ватериус для прошивки attiny
-Фьюзы: E:FF, H:DF, L:62
-(вид сверху)
-| **GND** | **SCK 15** | **MOSI 16** | nc  | 
-| ---- | ---- | ---- | ---- |
-|  nc | **MISO 14** | nc  | **Vcc** |
-+ 10й пин на ресет Attiny85
-
-nc - не используется
-Vcc - в любой 3.3в или 5в.
 
 ### Прошивка ESP8266
 Программатор не нужен, а нужен переходник с USB на TTL 3.3 вольт.
@@ -155,8 +162,18 @@ platformio run --target upload
 #### Attiny: Additional Libraries Требуемые библиотеки  
 * [USIWire](https://github.com/dontsovcmc/USIWire#master) i2c слейв для attiny
 
+#### Attiny: Sketch
+1. rename main.cpp to src.ino 
+2. open src.ino in Arduino IDE
+3. compile
 
-#### Attiny: Additional Boards Managers URLs:
+### ESP8266: Additional Libraries Требуемые библиотеки   
+
+* Blynk by Volodymyr Shymanskyy (0.5.2)
+* ArduinoJSON
+* [WiFiManager#waterius_release_070](https://github.com/dontsovcmc/WiFiManager/tree/waterius_release_070) для настройки wi-fi точки доступа (определенную ветку, сейчас актуальная waterius_release_070!)
+
+#### ESP8266: Additional Boards Managers URLs:
 http://arduino.esp8266.com/stable/package_esp8266com_index.json
 
 Board settings:
@@ -174,21 +191,10 @@ Board settings:
 * Upload Speed: 115200
 * Port: select your port
 
-#### Sketch
+#### Attiny: Sketch
 1. rename main.cpp to src.ino 
 2. open src.ino in Arduino IDE
 3. compile
-
-### ESP8266: Additional Libraries Требуемые библиотеки   
-
-* Blynk by Volodymyr Shymanskyy (0.5.2)
-* ArduinoJSON
-* [WiFiManager#waterius_release_070](https://github.com/dontsovcmc/WiFiManager/tree/waterius_release_070) для настройки wi-fi точки доступа (определенную ветку, сейчас актуальная waterius_release_070!)
-
-
-
-
-
 
 
 
