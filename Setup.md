@@ -37,6 +37,8 @@
 - SSID: имя сети домашнего Wi-Fi
 - password: пароль домашнего Wi-Fi
 
+SSID и password надо вводить каждый раз при входе в режим настройки!
+
 #### Настройки waterius.ru или своего сервера
 - [сервер, куда будет отправлет JSON](https://github.com/dontsovcmc/waterius/blob/master/Export.md). Если не заполнен, отправки не будет. https://cloud.waterius.ru
 - поле JSON "email". для waterius.ru введите электронную почту указанную для доступа в личный кабинет
