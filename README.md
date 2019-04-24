@@ -1,5 +1,5 @@
 ### Aвтономное устройство для передачи показаний воды по Wi-Fi
-# Вотериус 0.6 
+# Вотериус 0.7 
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
@@ -11,7 +11,7 @@
 
 ### Характеристики:
 - передача по Wi-Fi
-- 2 счётчика воды ("сухой контакт"/геркон) "намур" не поддерживается
+- 2 счётчика воды ("сухой контакт" или "НАМУР")
 - питание 3 АА батарейки (~4 года работы)
 - до 4-х импульсов от счётчика в секунду
 
@@ -75,6 +75,7 @@
 - сделать приемник с экраном и модулем (желательно автономный, но не критично)
 Хорошо бы LoraWan. Платы в Мск вот [Yotster](https://electromicro.ru/market/nodemcu/yotster-lite/) или [на Авито](https://www.avito.ru/moskva/bytovaya_elektronika?s_trg=10&q=Lora), но можно и 433
 Вопрос: чтобы период передачи был одинаковый нужен кварц для МК. Иначе приемник автономным не сделать. Но может и не надо.
+6. ~~Поддержка НАМУР~~
 
 # Ответственность
 
