@@ -103,8 +103,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     WiFiManagerParameter param_blynk_key( "bkey", "Blynk ключ",  sett.blynk_key, BLYNK_KEY_LEN-1);
 
     WiFiManagerParameter param_blynk_email( "bemail", "Адрес эл. почты",  sett.blynk_email, EMAIL_LEN-1);
-    WiFiManagerParameter param_blynk_email_title( "title", "Заголовок",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
-    WiFiManagerParameter param_blynk_email_template( "template", "Тело письма",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
+    WiFiManagerParameter param_blynk_email_title( "btitle", "Заголовок",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
+    WiFiManagerParameter param_blynk_email_template( "btemplate", "Тело письма",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
     
     // Счетчиков
     WiFiManagerParameter label_counters(LABEL_COUNTERS);
@@ -181,7 +181,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     strncpy0(sett.blynk_email_template, param_blynk_email_template.getValue(), BLYNK_EMAIL_TEMPLATE_LEN);
 #endif
     
-    if (!strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0) {
+    if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0) {
         LOG_NOTICE("CFG", "Generate waterius key");
         WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, 
                                            sett.waterius_email);
