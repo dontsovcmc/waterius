@@ -54,6 +54,8 @@ const char LABEL_WATERIUS_EMAIL[] PROGMEM       = "<label>Адрес эл. по�
 
 const char LABEL_BLYNK[] PROGMEM       = "<label><b>Blynk.cc</b></br></label>";
 
+const char LABEL_MQTT[] PROGMEM       = "<label><b>MQTT</b></br></label>";
+
 const char LABEL_COUNTERS[] PROGMEM       = "<label><b>Счётчики</b></br></label>";
 
 const char LABEL_GET_IMPULSES[] PROGMEM         = "Получено: <a id=\"delta0\"></a> имп. и <a id=\"delta1\"></a> имп.</br>";
@@ -105,6 +107,16 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     WiFiManagerParameter param_blynk_email( "bemail", "Адрес эл. почты",  sett.blynk_email, EMAIL_LEN-1);
     WiFiManagerParameter param_blynk_email_title( "btitle", "Заголовок",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
     WiFiManagerParameter param_blynk_email_template( "btemplate", "Тело письма",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
+
+    // Настройки MQTT
+    WiFiManagerParameter label_mqtt(LABEL_MQTT);
+    WiFiManagerParameter param_mqtt_host( "mhost", "MQTT сервер",  sett.mqtt_host, MQTT_HOST_LEN-1);
+    LongParameter param_mqtt_port( "mport", "Blynk ключ",  sett.mqtt_port);
+    WiFiManagerParameter param_mqtt_login( "mlogin", "MQTT логин",  sett.mqtt_login, MQTT_LOGIN_LEN-1);
+    WiFiManagerParameter param_mqtt_password( "mpassword", "MQTT пароль",  sett.mqtt_password, MQTT_LOGIN_LEN-1);
+    WiFiManagerParameter param_mqtt_topic_c0( "mtopic_c0", "MQTT topic для входа 0",  sett.mqtt_topic_c0, MQTT_TOPIC_C0_LEN-1);
+    WiFiManagerParameter param_mqtt_topic_c1( "mtopic_c1", "MQTT topic для входа 1",  sett.mqtt_topic_c1, MQTT_TOPIC_C1_LEN-1);
+    WiFiManagerParameter param_mqtt_topic_bat( "mtopic_bat", "MQTT topic для напряжения батареи",  sett.mqtt_topic_bat, MQTT_TOPIC_BAT_LEN-1);
     
     // Счетчиков
     WiFiManagerParameter label_counters(LABEL_COUNTERS);
@@ -137,6 +149,15 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     wm.addParameter( &param_blynk_email_title );
     wm.addParameter( &param_blynk_email_template );
 #endif
+
+    wm.addParameter( &label_mqtt);
+    wm.addParameter( &param_mqtt_host );
+    wm.addParameter( &param_mqtt_port );
+    wm.addParameter( &param_mqtt_login );
+    wm.addParameter( &param_mqtt_password );
+    wm.addParameter( &param_mqtt_topic_c0 );
+    wm.addParameter( &param_mqtt_topic_c1 );
+    wm.addParameter( &param_mqtt_topic_bat );
 
     wm.addParameter( &label_counters);
     wm.addParameter( &label_get_impulses);
@@ -180,6 +201,15 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     strncpy0(sett.blynk_email_title, param_blynk_email_title.getValue(), BLYNK_EMAIL_TITLE_LEN);
     strncpy0(sett.blynk_email_template, param_blynk_email_template.getValue(), BLYNK_EMAIL_TEMPLATE_LEN);
 #endif
+
+    // MQTT
+    strncpy0(sett.mqtt_host, param_mqtt_host.getValue(), MQTT_HOST_LEN);
+    strncpy0(sett.mqtt_login, param_mqtt_login.getValue(), MQTT_LOGIN_LEN);
+    strncpy0(sett.mqtt_password, param_mqtt_password.getValue(), MQTT_PASSWORD_LEN);
+    strncpy0(sett.mqtt_topic_c0, param_mqtt_topic_c0.getValue(), MQTT_TOPIC_C0_LEN);
+    strncpy0(sett.mqtt_topic_c1, param_mqtt_topic_c1.getValue(), MQTT_TOPIC_C1_LEN);
+    strncpy0(sett.mqtt_topic_bat, param_mqtt_topic_bat.getValue(), MQTT_TOPIC_BAT_LEN);
+    sett.mqtt_port = param_mqtt_port.getValue();
     
     if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0) {
         LOG_NOTICE("CFG", "Generate waterius key");
