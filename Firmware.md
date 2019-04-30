@@ -59,11 +59,12 @@ Vcc - в любой 3.3в или 5в.
 Я купил китайский USB-ISP и перепрошил его по [инструкции](https://vochupin.blogspot.com/2016/12/usb-isp.html) в USBasp ([прошивка](https://www.fischl.de/usbasp/)). В диспетчере устройств он стал виден, как USBasp. 
 Драйвер [v3.0.7](http://www.myrobot.ru/downloads/programs/usbasp-win-driver-x86-x64-v3.0.7.zip)
 В platfomio.ini:
+```
 upload_protocol = usbasp
 upload_flags = 
     -Pusb 
     -B5
-
+```
 Примечание: в Windows7 почему-то не заработал. Windows 10x64 - ок.
 	
 ## Программаторы ESP8266
