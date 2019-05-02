@@ -30,13 +30,13 @@
 /*
     Включить отправку данных на HTTP сервер
 */
-//#define SEND_WATERIUS
+#define SEND_WATERIUS
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 
 /*
     Включить отправку данных в приложение Blynk.cc
 */
-//#define SEND_BLYNK
+#define SEND_BLYNK
 
 /*
     Включить отправку данных в MQTT
