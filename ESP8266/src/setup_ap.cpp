@@ -114,9 +114,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     LongParameter param_mqtt_port( "mport", "Blynk ключ",  sett.mqtt_port);
     WiFiManagerParameter param_mqtt_login( "mlogin", "MQTT логин",  sett.mqtt_login, MQTT_LOGIN_LEN-1);
     WiFiManagerParameter param_mqtt_password( "mpassword", "MQTT пароль",  sett.mqtt_password, MQTT_LOGIN_LEN-1);
-    WiFiManagerParameter param_mqtt_topic_c0( "mtopic_c0", "MQTT topic для входа 0",  sett.mqtt_topic_c0, MQTT_TOPIC_C0_LEN-1);
-    WiFiManagerParameter param_mqtt_topic_c1( "mtopic_c1", "MQTT topic для входа 1",  sett.mqtt_topic_c1, MQTT_TOPIC_C1_LEN-1);
-    WiFiManagerParameter param_mqtt_topic_bat( "mtopic_bat", "MQTT topic для напряжения батареи",  sett.mqtt_topic_bat, MQTT_TOPIC_BAT_LEN-1);
+    WiFiManagerParameter param_mqtt_topic( "mtopic", "MQTT topic",  sett.mqtt_topic, MQTT_TOPIC_LEN-1);
     
     // Счетчиков
     WiFiManagerParameter label_counters(LABEL_COUNTERS);
@@ -155,9 +153,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     wm.addParameter( &param_mqtt_port );
     wm.addParameter( &param_mqtt_login );
     wm.addParameter( &param_mqtt_password );
-    wm.addParameter( &param_mqtt_topic_c0 );
-    wm.addParameter( &param_mqtt_topic_c1 );
-    wm.addParameter( &param_mqtt_topic_bat );
+    wm.addParameter( &param_mqtt_topic );
 
     wm.addParameter( &label_counters);
     wm.addParameter( &label_get_impulses);
@@ -206,9 +202,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
     strncpy0(sett.mqtt_host, param_mqtt_host.getValue(), MQTT_HOST_LEN);
     strncpy0(sett.mqtt_login, param_mqtt_login.getValue(), MQTT_LOGIN_LEN);
     strncpy0(sett.mqtt_password, param_mqtt_password.getValue(), MQTT_PASSWORD_LEN);
-    strncpy0(sett.mqtt_topic_c0, param_mqtt_topic_c0.getValue(), MQTT_TOPIC_C0_LEN);
-    strncpy0(sett.mqtt_topic_c1, param_mqtt_topic_c1.getValue(), MQTT_TOPIC_C1_LEN);
-    strncpy0(sett.mqtt_topic_bat, param_mqtt_topic_bat.getValue(), MQTT_TOPIC_BAT_LEN);
+    strncpy0(sett.mqtt_topic, param_mqtt_topic.getValue(), MQTT_TOPIC_LEN);
+    
     sett.mqtt_port = param_mqtt_port.getValue();
     
     if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0) {

@@ -54,9 +54,7 @@ bool loadConfig(struct Settings &sett)
         sett.mqtt_host[MQTT_HOST_LEN-1] = '\0'; 
         sett.mqtt_login[MQTT_LOGIN_LEN-1] = '\0'; 
         sett.mqtt_password[MQTT_PASSWORD_LEN-1] = '\0'; 
-        sett.mqtt_topic_c0[MQTT_TOPIC_C0_LEN-1] = '\0'; 
-        sett.mqtt_topic_c1[MQTT_TOPIC_C1_LEN-1] = '\0'; 
-        sett.mqtt_topic_bat[MQTT_TOPIC_BAT_LEN-1] = '\0'; 
+        sett.mqtt_topic[MQTT_TOPIC_LEN-1] = '\0'; 
 
         LOG_NOTICE("CFG", "WATERIUS.RU");
         LOG_NOTICE("CFG", "email=" << sett.waterius_email);
@@ -68,10 +66,7 @@ bool loadConfig(struct Settings &sett)
 
         LOG_NOTICE("CFG", "MQTT");
         LOG_NOTICE("CFG", "host=" << sett.mqtt_host << " port " << sett.mqtt_port << " login=" << sett.mqtt_login);
-        LOG_NOTICE("CFG", "topic counter 0 =" << sett.mqtt_topic_c0);
-        LOG_NOTICE("CFG", "topic counter 1 =" << sett.mqtt_topic_c1);
-        LOG_NOTICE("CFG", "topic counter battery =" << sett.mqtt_topic_bat);
-        
+        LOG_NOTICE("CFG", "topic =" << sett.mqtt_topic);        
         
         // Всегда одно и тоже будет
         LOG_NOTICE("CFG", "COUNTERS");
@@ -100,9 +95,11 @@ bool loadConfig(struct Settings &sett)
         String email_template = "Горячая: {V0}м3, Холодная: {V1}м3<br>За день:<br>Горячая: +{V3}л, Холодная: +{V4}л<br>Напряжение:{V2}В";
         strncpy0(sett.blynk_email_template, email_template.c_str(), BLYNK_EMAIL_TEMPLATE_LEN);
 
-        strncpy0(sett.mqtt_topic_c0, MQTT_DEFAULT_TOPIC_C0, MQTT_TOPIC_C0_LEN);
-        strncpy0(sett.mqtt_topic_c1, MQTT_DEFAULT_TOPIC_C1, MQTT_TOPIC_C1_LEN);
-        strncpy0(sett.mqtt_topic_bat, MQTT_DEFAULT_TOPIC_BAT, MQTT_TOPIC_BAT_LEN);
+        String defaultTopic = String(MQTT_DEFAULT_TOPIC_PREFIX);
+        defaultTopic += ESP.getChipId();
+        defaultTopic += "/";
+
+        strncpy0(sett.mqtt_topic, defaultTopic.c_str(), MQTT_TOPIC_LEN);
         sett.mqtt_port = MQTT_DEFAULT_PORT;
 
         sett.liters_per_impuls = LITRES_PER_IMPULS_DEFAULT;

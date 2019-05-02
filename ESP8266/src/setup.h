@@ -30,13 +30,13 @@
 /*
     Включить отправку данных на HTTP сервер
 */
-#define SEND_WATERIUS
+//#define SEND_WATERIUS
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 
 /*
     Включить отправку данных в приложение Blynk.cc
 */
-#define SEND_BLYNK
+//#define SEND_BLYNK
 
 /*
     Включить отправку данных в MQTT
@@ -70,13 +70,9 @@
 #define MQTT_HOST_LEN 64
 #define MQTT_LOGIN_LEN 32
 #define MQTT_PASSWORD_LEN 32
-#define MQTT_TOPIC_C0_LEN 64
-#define MQTT_TOPIC_C1_LEN 64
-#define MQTT_TOPIC_BAT_LEN 64
+#define MQTT_TOPIC_LEN 64
 
-#define MQTT_DEFAULT_TOPIC_C0 "waterius/counter/0"
-#define MQTT_DEFAULT_TOPIC_C1 "waterius/counter/1"
-#define MQTT_DEFAULT_TOPIC_BAT "waterius/counter/bat"
+#define MQTT_DEFAULT_TOPIC_PREFIX "waterius/"
 #define MQTT_DEFAULT_PORT 1883
 
 /*
@@ -116,9 +112,7 @@ struct Settings
     uint16_t mqtt_port;
     char     mqtt_login[MQTT_LOGIN_LEN];
     char     mqtt_password[MQTT_PASSWORD_LEN];
-    char     mqtt_topic_c0[MQTT_TOPIC_C0_LEN];
-    char     mqtt_topic_c1[MQTT_TOPIC_C1_LEN];
-    char     mqtt_topic_bat[MQTT_TOPIC_BAT_LEN];
+    char     mqtt_topic[MQTT_TOPIC_LEN];
 
     /*
     Показания счетчиках в кубометрах, 
