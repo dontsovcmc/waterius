@@ -99,7 +99,7 @@ void loop()
 
 #ifdef SEND_MQTT
                     if (send_mqtt(sett, data, channel0, channel1)) {
-                        LOG_NOTICE("MQTT", "send ok");
+                        LOG_NOTICE("MQT", "send ok");
                     }
 #endif  
 

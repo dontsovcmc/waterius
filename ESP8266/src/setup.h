@@ -31,6 +31,7 @@
     Включить отправку данных на HTTP сервер
 */
 #define SEND_WATERIUS
+
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 
 /*
@@ -42,6 +43,10 @@
     Включить отправку данных в MQTT
 */
 #define SEND_MQTT
+
+#define MQTT_DEFAULT_HOST "test.mosquitto.org"
+#define MQTT_DEFAULT_TOPIC_PREFIX "waterius/"
+#define MQTT_DEFAULT_PORT 1883
 
 
 #define ESP_CONNECT_TIMEOUT 15000UL // Время подключения к точке доступа, ms
@@ -72,8 +77,6 @@
 #define MQTT_PASSWORD_LEN 32
 #define MQTT_TOPIC_LEN 64
 
-#define MQTT_DEFAULT_TOPIC_PREFIX "waterius/"
-#define MQTT_DEFAULT_PORT 1883
 
 /*
 Настройки хранящиеся EEPROM
@@ -150,6 +153,6 @@ struct Settings
     Контрольная сумма, чтобы гарантировать корректность чтения настроек
     */
     uint16_t crc;
-};
+}; //976 байт
 
 #endif
