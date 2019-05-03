@@ -26,6 +26,7 @@
 - в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8))
 - по электронной почте (ежедневно, через Blynk).
 - на вашем [HTTP/HTTPS сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
+- по MQTT [настройка](https://github.com/dontsovcmc/waterius/blob/master/Mqtt.md)
 - там, куда сами запрограммируете
 
 #### Статьи: 
@@ -75,7 +76,8 @@
 - сделать приемник с экраном и модулем (желательно автономный, но не критично)
 Хорошо бы LoraWan. Платы в Мск вот [Yotster](https://electromicro.ru/market/nodemcu/yotster-lite/) или [на Авито](https://www.avito.ru/moskva/bytovaya_elektronika?s_trg=10&q=Lora), но можно и 433
 Вопрос: чтобы период передачи был одинаковый нужен кварц для МК. Иначе приемник автономным не сделать. Но может и не надо.
-6. ~~Поддержка НАМУР~~
+6. ~~Поддержка НАМУР~~, спасибо Мише и его счетчику)
+7. ~~Поддержка MQTT~~, спасибо [popsodav](https://github.com/popsodav)
 
 # Ответственность
 
@@ -86,6 +88,7 @@
 # Благодарности
 - [marvel-m9y](https://github.com/marvel-m9y) за поддержку HTTPS
 - [OloloevReal](https://github.com/OloloevReal) за датчик протечки
+- [popsodav](https://github.com/popsodav) за MQTT
 - Ивану Коваленко и Иван Ганжа за консультации по электротехнике
 - Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1).
 
