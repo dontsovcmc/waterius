@@ -1,11 +1,10 @@
 # Отправка данных по HTTP на сервер
 
-## Настройка Вотериуса
+## Настройка Ватериуса
 
 В веб интерфейсе Вотериуса заполните: waterius_host
 Вид: 
 ```http://host[:port][/path]```, [] - необязательные части
-
 
 ## Параметры HTTP запроса
 ```
@@ -40,7 +39,7 @@ Connection: close
 
 ## Сервер
 
-Вот [Python скрипт](https://github.com/dontsovcmc/waterius/blob/master/Server/Server.py) Flask сервера, получающего от Вотериуса данные. HTTPS и HTTP версия, смотрите аргументы запуска.
+Вот [Python скрипт](https://github.com/dontsovcmc/waterius/blob/master/Server/server.py) Flask сервера, получающего от Вотериуса данные. HTTPS и HTTP версия, смотрите аргументы запуска.
 
 Только HTTP сервер выглядит ещё проще:
 ```
