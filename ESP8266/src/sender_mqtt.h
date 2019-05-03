@@ -3,6 +3,13 @@
 
 #ifdef SEND_MQTT
 
+#ifdef MQTT_SOCKET_TIMEOUT
+#undef MQTT_SOCKET_TIMEOUT
+#endif
+
+#define MQTT_SOCKET_TIMEOUT 5
+
+
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 

@@ -65,8 +65,9 @@ bool loadConfig(struct Settings &sett)
         LOG_NOTICE("CFG", "email=" << sett.blynk_email);
 
         LOG_NOTICE("CFG", "MQTT");
-        LOG_NOTICE("CFG", "host=" << sett.mqtt_host << " port " << sett.mqtt_port << " login=" << sett.mqtt_login);
-        LOG_NOTICE("CFG", "topic =" << sett.mqtt_topic);        
+        LOG_NOTICE("CFG", "host=" << sett.mqtt_host << " port=" << sett.mqtt_port);
+        LOG_NOTICE("CFG", "login=" << sett.mqtt_login << " pass=" << sett.mqtt_password);
+        LOG_NOTICE("CFG", "topic=" << sett.mqtt_topic);        
         
         // Всегда одно и тоже будет
         LOG_NOTICE("CFG", "COUNTERS");
