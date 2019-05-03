@@ -8,6 +8,7 @@
 #include "master_i2c.h"
 #include "setup_ap.h"
 #include "sender_blynk.h"
+#include "sender_mqtt.h"
 #include "UserClass.h"
 #include "utils.h"
 #include "cert.h"
@@ -93,6 +94,12 @@ void loop()
 #ifdef SEND_BLYNK
                     if (send_blynk(sett, data, channel0, channel1)) {
                         LOG_NOTICE("BLK", "send ok");
+                    }
+#endif  
+
+#ifdef SEND_MQTT
+                    if (send_mqtt(sett, data, channel0, channel1)) {
+                        LOG_NOTICE("MQT", "send ok");
                     }
 #endif  
 

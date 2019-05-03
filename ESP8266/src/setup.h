@@ -31,12 +31,22 @@
     Включить отправку данных на HTTP сервер
 */
 #define SEND_WATERIUS
+
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 
 /*
     Включить отправку данных в приложение Blynk.cc
 */
 #define SEND_BLYNK
+
+/*
+    Включить отправку данных в MQTT
+*/
+#define SEND_MQTT
+
+#define MQTT_DEFAULT_HOST "test.mosquitto.org"
+#define MQTT_DEFAULT_TOPIC_PREFIX "waterius/"
+#define MQTT_DEFAULT_PORT 1883
 
 
 #define ESP_CONNECT_TIMEOUT 15000UL // Время подключения к точке доступа, ms
@@ -61,6 +71,12 @@
 
 #define BLYNK_EMAIL_TITLE_LEN 64
 #define BLYNK_EMAIL_TEMPLATE_LEN 200
+
+#define MQTT_HOST_LEN 64
+#define MQTT_LOGIN_LEN 32
+#define MQTT_PASSWORD_LEN 32
+#define MQTT_TOPIC_LEN 64
+
 
 /*
 Настройки хранящиеся EEPROM
@@ -94,6 +110,12 @@ struct Settings
     char     blynk_email_title[BLYNK_EMAIL_TITLE_LEN];
     //Шаблон эл. письма. {V0}-{V4} заменяются на данные 
     char     blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN];
+
+    char     mqtt_host[MQTT_HOST_LEN];
+    uint16_t mqtt_port;
+    char     mqtt_login[MQTT_LOGIN_LEN];
+    char     mqtt_password[MQTT_PASSWORD_LEN];
+    char     mqtt_topic[MQTT_TOPIC_LEN];
 
     /*
     Показания счетчиках в кубометрах, 
@@ -131,6 +153,6 @@ struct Settings
     Контрольная сумма, чтобы гарантировать корректность чтения настроек
     */
     uint16_t crc;
-};
+}; //976 байт
 
 #endif
