@@ -47,7 +47,6 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const float &channel
         client.publish((topic + "imp1").c_str(), String(data.impulses1).c_str());
         client.publish((topic + "version").c_str(), String(sett.version).c_str());
         client.publish((topic + "version_esp").c_str(), String(FIRMWARE_VERSION).c_str());
-        client.publish((topic + "resets").c_str(), String(data.resets).c_str());
 
         client.disconnect();
         return true;

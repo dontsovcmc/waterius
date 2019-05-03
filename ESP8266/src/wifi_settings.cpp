@@ -96,9 +96,7 @@ bool loadConfig(struct Settings &sett)
         strncpy0(sett.blynk_email_template, email_template.c_str(), BLYNK_EMAIL_TEMPLATE_LEN);
 
         strncpy0(sett.mqtt_host, MQTT_DEFAULT_HOST, MQTT_HOST_LEN);
-        String defaultTopic(MQTT_DEFAULT_TOPIC_PREFIX);
-        defaultTopic += ESP.getChipId();
-        defaultTopic += "/";
+        String defaultTopic = String(MQTT_DEFAULT_TOPIC_PREFIX) + String(ESP.getChipId()) + "/";
 
         strncpy0(sett.mqtt_topic, defaultTopic.c_str(), MQTT_TOPIC_LEN);
         sett.mqtt_port = MQTT_DEFAULT_PORT;
