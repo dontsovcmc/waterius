@@ -3,12 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.7"
+#define FIRMWARE_VERSION "0.8"
 
 
 /*
 Версии прошивки для ESP
 
+0.8   - 2019.05.04 - Поддержка MQTT
 0.7   - 2019.04.10 - Поддержка НАМУР
                    - Русскоязычный интерфейс настройки
                    - Отправка waterius.ru
