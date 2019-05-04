@@ -1,7 +1,7 @@
 #include "SlaveI2C.h"
 #include <Arduino.h>
 #include "Storage.h"
-#include <USIWire.h>
+#include <Wire.h>
 #include "Setup.h"
 
 extern struct Header info;

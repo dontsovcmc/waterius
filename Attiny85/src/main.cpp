@@ -1,7 +1,7 @@
 #include "Setup.h"
 
 #include <avr/pgmspace.h>
-#include <USIWire.h>
+#include <Wire.h>
 
 #include "Power.h"
 #include "SlaveI2C.h"
@@ -20,6 +20,9 @@
 Версии прошивок 
 FIRMWARE_VER
 
+9 - 2019.05.04 - dontsovcmc
+    1. USIWire заменен на Wire
+
 8 - 2019.04.05 - dontsovcmc
     1. Добавил поддержку НАМУР. Теперь чтение состояния analogRead
 	2. Добавил состояние входов.
@@ -36,7 +39,7 @@ FIRMWARE_VER
 #define INPUT0_ADC  2
 #define INPUT1_ADC  3
 
-#define FIRMWARE_VER     8     // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER     9     // Версия прошивки. Передается в ESP и на сервер в данных.
 
 #define ESP_POWER_PIN    1     // пин включения ESP8266. 
 #define BUTTON_PIN       2     // пин кнопки: (на линии SCL)
