@@ -6,7 +6,7 @@
 /* 
 	Включение логирования с TinySerial: 
 	3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
-	При логировании не работает счетчик2 на 3-м пине (value1).
+	При логировании не работает счетчик2 на 3-м пине (Вход 2).
 
 	Для логирования раскомментируйте LOG_LEVEL_DEBUG
 */
@@ -73,23 +73,27 @@ struct Header {
 
 
 #if defined (LOG_LEVEL_DEBUG) || defined (LOG_LEVEL_INFO) || defined (LOG_LEVEL_ERROR)
-	#define DEBUG
-	class TinyDebugSerial;
-  	extern TinyDebugSerial mySerial;
+    #define DEBUG
+    class TinyDebugSerial;
+    extern TinyDebugSerial mySerial;
+    #undef DEBUG_CONNECT
     #define DEBUG_CONNECT(x)  mySerial.begin(x)
     #define PRINT_NOW(x) mySerial.print(millis()); mySerial.print(x);
 #endif
 
 #ifdef LOG_LEVEL_DEBUG
-	#define LOG_DEBUG(x) { PRINT_NOW(F(" [D]: ")); mySerial.println(x); }
-	#define LOG_LEVEL_INFO
+    #undef LOG_DEBUG
+    #define LOG_DEBUG(x) { PRINT_NOW(F(" [D]: ")); mySerial.println(x); }
+    #define LOG_LEVEL_INFO
 #endif
 #ifdef LOG_LEVEL_INFO
-	#define LOG_INFO(x) { PRINT_NOW(F(" [I]: ")); mySerial.println(x); }
-	#define LOG_LEVEL_ERROR
+    #undef LOG_INFO
+    #define LOG_INFO(x) { PRINT_NOW(F(" [I]: ")); mySerial.println(x); }
+    #define LOG_LEVEL_ERROR
 #endif
 #ifdef LOG_LEVEL_ERROR
-	#define LOG_ERROR(x) { PRINT_NOW(F(" [E]: ")); mySerial.println(x); }
+    #undef LOG_ERROR
+    #define LOG_ERROR(x) { PRINT_NOW(F(" [E]: ")); mySerial.println(x); }
 #endif
 
 #endif

@@ -48,7 +48,7 @@ EEPROMStorage<T>::EEPROMStorage(const uint8_t _blocks, const uint8_t _start_addr
 	}
 
 	activeBlock = 0;
-	for (int i = start_addr; i < flag_shift + blocks; i++) {
+	for (uint16_t i = start_addr; i < flag_shift + blocks; i++) {
 		EEPROM.write(i, 0);
 	}
 }
