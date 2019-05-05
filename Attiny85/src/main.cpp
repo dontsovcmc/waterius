@@ -190,12 +190,12 @@ void loop() {
 		while ( wdt_count > 0 ) {
 			noInterrupts();
 
-			counting(); //Опрос входов
-
 			if (button_pressed()) { 
 				interrupts();  // Пользователь нажал кнопку
 				break;
 			} else 	{
+				counting(); //Опрос входов. Тут т.к. https://github.com/dontsovcmc/waterius/issues/76
+
 				interrupts();
 				sleep_mode();  // Спим (WDTCR)
 			}
