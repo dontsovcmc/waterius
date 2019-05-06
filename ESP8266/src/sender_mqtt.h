@@ -17,7 +17,7 @@
 #include "Logging.h"
 
 
-bool send_mqtt(const Settings &sett, const SlaveData &data, const float &channel0, const float &channel1)
+bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
     if (strnlen(sett.mqtt_host, MQTT_HOST_LEN) == 0) {
         LOG_NOTICE( "MQT", "No host. SKIP");
@@ -36,16 +36,12 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const float &channel
     String topic(sett.mqtt_topic);
     if (!topic.endsWith("/"))
         topic += '/';
-
-
-    unsigned int delta0 = (data.impulses0 - sett.impulses0_previous)*sett.liters_per_impuls; // litres
-    unsigned int delta1 = (data.impulses1 - sett.impulses1_previous)*sett.liters_per_impuls; 
     
     if (client.connect(clientId.c_str(), login, pass)) {
-        client.publish((topic + "ch0").c_str(), String(channel0).c_str());
-        client.publish((topic + "ch1").c_str(), String(channel1).c_str());
-        client.publish((topic + "delta0").c_str(), String(delta0).c_str());
-        client.publish((topic + "delta1").c_str(), String(delta1).c_str());
+        client.publish((topic + "ch0").c_str(), String(cdata.channel0).c_str());
+        client.publish((topic + "ch1").c_str(), String(cdata.channel1).c_str());
+        client.publish((topic + "delta0").c_str(), String(cdata.delta0).c_str());
+        client.publish((topic + "delta1").c_str(), String(cdata.delta1).c_str());
         client.publish((topic + "voltage").c_str(), String((float)(data.voltage / 1000.0)).c_str());
         client.publish((topic + "resets").c_str(), String(data.resets).c_str());
         client.publish((topic + "good").c_str(), String(data.diagnostic).c_str());

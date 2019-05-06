@@ -82,7 +82,7 @@ const char WATERIUS_CALLBACK[] PROGMEM = "<script>\
     }, 1000);\
 </script>";
 
-void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, const float &channel1) 
+void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata) 
 {
     LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
     
@@ -153,9 +153,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, cons
 
     WiFiManagerParameter label_channels(LABEL_CHANNELS);
     WiFiManagerParameter label_channel0_value(LABEL_CHANNEL0_VALUE);
-    FloatParameter param_channel0_start( "ch0", "xxx.xx",  channel0);
+    FloatParameter param_channel0_start( "ch0", "xxx.xx",  cdata.channel0);
     WiFiManagerParameter label_channel1_value(LABEL_CHANNEL1_VALUE);
-    FloatParameter param_channel1_start( "ch1", "xxx.xx",  channel1);
+    FloatParameter param_channel1_start( "ch1", "xxx.xx",  cdata.channel1);
 
     WiFiManagerParameter javascript_callback(WATERIUS_CALLBACK);
 

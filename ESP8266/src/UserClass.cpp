@@ -7,7 +7,7 @@
 #define JSON_BUFFER_SIZE 1000
 
 
-bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, const float &channel0, const float &channel1)
+bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, const CalculatedData &cdata)
 {
     constexpr char THIS_FUNC_DESCRIPTION[] = "Send new data";
     constexpr char THIS_FUNC_SVC[] = "SND";
@@ -21,12 +21,12 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     // Set JSON body
     String jsonBody;
     StaticJsonDocument<JSON_BUFFER_SIZE> root;
-    root["delta0"] =        (data.impulses0 - settings.impulses0_previous)*settings.liters_per_impuls;
-    root["delta1"] =        (data.impulses1 - settings.impulses1_previous)*settings.liters_per_impuls;
+    root["delta0"] =        cdata.delta0;
+    root["delta1"] =        cdata.delta1;
     root["good"] =          data.diagnostic;
     root["boot"] =          data.version;
-    root["ch0"] =           channel0;
-    root["ch1"] =           channel1;
+    root["ch0"] =           cdata.channel0;
+    root["ch1"] =           cdata.channel1;
     root["imp0"] =          data.impulses0;
     root["imp1"] =          data.impulses1;
     root["version"] =       settings.version;
