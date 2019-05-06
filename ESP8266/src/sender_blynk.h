@@ -14,7 +14,7 @@
 #include "master_i2c.h"
 #include "Logging.h"
 
-bool send_blynk(const Settings &sett, const SlaveData &data, const float &channel0, const float &channel1)
+bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
     if (strnlen(sett.blynk_key, BLYNK_KEY_LEN) == 0) {
         LOG_NOTICE( "BLK", "No key. SKIP");
@@ -26,14 +26,14 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const float &channe
         
         LOG_NOTICE( "BLK", "run");
 
-        unsigned int delta0 = (data.impulses0 - sett.impulses0_previous)*sett.liters_per_impuls; // litres
-        unsigned int delta1 = (data.impulses1 - sett.impulses1_previous)*sett.liters_per_impuls; 
+        // LOG_INFO("BLK", "Delta0:" << cdata.delta0);
+        // LOG_INFO("BLK", "Delta1:" << cdata.delta1);
 
-        Blynk.virtualWrite(V0, channel0);
-        Blynk.virtualWrite(V1, channel1);
+        Blynk.virtualWrite(V0, cdata.channel0);
+        Blynk.virtualWrite(V1, cdata.channel1);
         Blynk.virtualWrite(V2, (float)(data.voltage / 1000.0));
-        Blynk.virtualWrite(V3, delta0);
-        Blynk.virtualWrite(V4, delta1);
+        Blynk.virtualWrite(V3, cdata.delta0);
+        Blynk.virtualWrite(V4, cdata.delta1);
         Blynk.virtualWrite(V5, data.resets);
 
         LOG_NOTICE( "BLK", "virtualWrite OK");
@@ -44,11 +44,11 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const float &channe
 
             String msg = sett.blynk_email_template;
             String title = sett.blynk_email_title;
-            String v0(channel0, 1);   //.1 для образца СМС сообщения
-            String v1(channel1, 1);   //.1 для образца СМС сообщения
+            String v0(cdata.channel0, 1);   //.1 для образца СМС сообщения
+            String v1(cdata.channel1, 1);   //.1 для образца СМС сообщения
             String v2((float)(data.voltage / 1000.0), 3);
-            String v3(delta0, DEC);
-            String v4(delta1, DEC);
+            String v3(cdata.delta0, DEC);
+            String v4(cdata.delta1, DEC);
             String v5(data.resets, DEC);
             
             msg.replace("{V0}", v0);

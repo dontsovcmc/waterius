@@ -79,6 +79,13 @@
 #define MQTT_TOPIC_LEN 64
 
 
+struct CalculatedData{
+    float channel0;
+    float channel1;
+    uint32_t delta0;
+    uint32_t delta1;
+};
+
 /*
 Настройки хранящиеся EEPROM
 */

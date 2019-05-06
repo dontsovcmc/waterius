@@ -11,7 +11,7 @@
 /*
 Запускаем вебсервер для настройки подключения к Интернету и ввода текущих показаний
 */
-void setup_ap(Settings &sett, const SlaveData &data, const float &channel0, const float &channel1);
+void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata);
 
 /*
 Дополнение к WifiManager: классы упрощающие работу
