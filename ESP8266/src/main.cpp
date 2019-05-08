@@ -34,18 +34,18 @@ void setup()
 Берем начальные показания и кол-во импульсов, 
 вычисляем текущие показания по новому кол-ву импульсов
 */
-void calculate_values(Settings &sett, SlaveData &data, CalculatedData *cdata)
+void calculate_values(const Settings &sett, const SlaveData &data, CalculatedData &cdata)
 {
-
     LOG_NOTICE("ESP", "new impulses=" << data.impulses0 << " " << data.impulses1);
 
     if (sett.liters_per_impuls > 0) {
-        cdata->channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.liters_per_impuls;
-        cdata->channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.liters_per_impuls;
-        LOG_NOTICE("ESP", "new values=" << cdata->channel0 << " " << cdata->channel1);
-        cdata->delta0  = (data.impulses0 - sett.impulses0_previous)*sett.liters_per_impuls;
-        cdata->delta1 = (data.impulses1 - sett.impulses1_previous)*sett.liters_per_impuls;
-        LOG_NOTICE("ESP", "delta values=" << cdata->delta0 << " " << cdata->delta1);
+        cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.liters_per_impuls;
+        cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.liters_per_impuls;
+        LOG_NOTICE("ESP", "new value0=" << cdata.channel0 << " value1=" << cdata.channel1);
+        
+        cdata.delta0  = (data.impulses0 - sett.impulses0_previous)*sett.liters_per_impuls;
+        cdata.delta1 = (data.impulses1 - sett.impulses1_previous)*sett.liters_per_impuls;
+        LOG_NOTICE("ESP", "delta0=" << cdata.delta0 << " delta1=" << cdata.delta1);
     }
 }
 
@@ -57,30 +57,31 @@ void loop()
 
 	// спрашиваем у Attiny85 повод пробуждения и данные
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data)) {
-        if (mode == SETUP_MODE) {
-            //Режим настройки - запускаем точку доступа на 192.168.4.1
+        
+        //Загружаем конфигурацию из EEPROM
+        bool success = loadConfig(sett);
+        if (!success) {
+            LOG_ERROR("ESP", "error loading config");
+        }
 
-            //Загружаем конфигурацию из EEPROM
-            loadConfig(sett);
+        //Вычисляем текущие показания
+        calculate_values(sett, data, cdata);
 
-            //Вычисляем текущие показания
-            calculate_values(sett, data, &cdata);
-
+        if (mode == SETUP_MODE) { //Режим настройки - запускаем точку доступа на 192.168.4.1
+            success = true;
             //Запускаем точку доступа с вебсервером
             setup_ap(sett, data, cdata);
-        }
-        else {   
-            // Режим передачи новых показаний
-            if (!loadConfig(sett)) {
-                LOG_ERROR("ESP", "error loading config");
-            }
-            else {
-                //Вычисляем текущие показания
-                calculate_values(sett, data, &cdata);
 
+            //Если вышли, то уже подключены к WiFi
+        }
+        
+        if (success) {
+            if (mode == TRANSMIT_MODE) { 
+                //Проснулись для передачи показаний
                 LOG_NOTICE("WIF", "Starting");
                 
                 WiFi.mode(WIFI_STA);
+
                 //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                 WiFi.begin(); 
 
@@ -90,33 +91,33 @@ void loop()
                     LOG_NOTICE("WIF", "Status: " << WiFi.status());
                     delay(200);
                 }
+            }
 
-                if (WiFi.status() == WL_CONNECTED) {
+            if (WiFi.status() == WL_CONNECTED) {
 
-                    LOG_NOTICE("WIF", "Connected, IP: " << WiFi.localIP().toString());
+                LOG_NOTICE("WIF", "Connected, IP: " << WiFi.localIP().toString());
 
 #ifdef SEND_BLYNK
-                    if (send_blynk(sett, data, cdata)) {
-                        LOG_NOTICE("BLK", "send ok");
-                    }
+                if (send_blynk(sett, data, cdata)) {
+                    LOG_NOTICE("BLK", "send ok");
+                }
 #endif  
 
 #ifdef SEND_MQTT
-                    if (send_mqtt(sett, data, cdata)) {
-                        LOG_NOTICE("MQT", "send ok");
-                    }
+                if (send_mqtt(sett, data, cdata)) {
+                    LOG_NOTICE("MQT", "send ok");
+                }
 #endif  
 
 #ifdef SEND_WATERIUS
-                    UserClass::sendNewData(sett, data, cdata);
+                UserClass::sendNewData(sett, data, cdata);
 #endif
-                }
-
-                //Сохраним текущие значения в памяти.
-                sett.impulses0_previous = data.impulses0;
-                sett.impulses1_previous = data.impulses1;
-                storeConfig(sett);
             }
+
+            //Сохраним текущие значения в памяти.
+            sett.impulses0_previous = data.impulses0;
+            sett.impulses1_previous = data.impulses1;
+            storeConfig(sett);
         }
     }
 
