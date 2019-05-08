@@ -22,10 +22,10 @@ const char LONG_ATTR[] PROGMEM             = " type=\"number\"";
 class LongParameter : public WiFiManagerParameter {
 public:
 
-    LongParameter(const char *id, const char *placeholder, long value, const uint8_t length = 10)
+    LongParameter(const char *id, const char *placeholder, long value, const uint8_t length = 10, const char *custom = LONG_ATTR)
         : WiFiManagerParameter("") {
 
-        init(id, placeholder, String(value).c_str(), length, LONG_ATTR);
+        init(id, placeholder, String(value).c_str(), length, custom);
     }
 
     long getValue() {

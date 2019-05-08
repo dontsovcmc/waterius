@@ -19,15 +19,21 @@ extern MasterI2C masterI2C;
 
 SlaveData runtime_data;
 
-const char STATE_START[] PROGMEM = "\"Откройте воду, проверим соединение\"";
-const char STATE_CONNECTED[] PROGMEM = "\"Подключен\"";
+const char STATE_START[] PROGMEM = "\"не подключен\"";
+const char STATE_CONNECTED[] PROGMEM = "\"подключен\"";
 
+#define IMPULS_LIMIT_1 3  // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
+
+uint8_t get_factor() {
+    return (runtime_data.impulses1 - data.impulses1 <= IMPULS_LIMIT_1) ? 10 : 1;
+}
 
 void update_data(String &message)
 {
     if (masterI2C.getSlaveData(runtime_data)) {
         String state0(STATE_START);
         String state1(STATE_START);
+        String factor;
         uint32_t delta0 = runtime_data.impulses0 - data.impulses0;
         uint32_t delta1 = runtime_data.impulses1 - data.impulses1;
         
@@ -40,8 +46,7 @@ void update_data(String &message)
 
         message = "{\"state0\": " + state0
                 + ", \"state1\": " + state1 
-                + ", \"delta0\": " + delta0
-                + ", \"delta1\": " + delta1
+                + ", \"factor\": " + String(get_factor())
                 + " }";
     }
     else {
@@ -49,22 +54,24 @@ void update_data(String &message)
     }
 }
 
-const char LABEL_WATERIUS[] PROGMEM       = "<label><b>Waterius.ru</b></br></label>";
-const char LABEL_WATERIUS_EMAIL[] PROGMEM       = "<label>Адрес эл. почты на waterius.ru</label>";
+const char LABEL_WATERIUS_EMAIL[] PROGMEM       = "<label>Введите электронную почту, которую используете на сайте waterius.ru</label>";
 
 const char LABEL_BLYNK[] PROGMEM       = "<label><b>Blynk.cc</b></br></label>";
 
 const char LABEL_MQTT[] PROGMEM       = "<label><b>MQTT</b></br></label>";
 
-const char LABEL_COUNTERS[] PROGMEM       = "<label><b>Счётчики</b></br></label>";
+const char LABEL_COLD[] PROGMEM       = "<label><b>Счётчик холодной воды</b></br></label>";
+const char LABEL_COLD_INFO[] PROGMEM       = "<label>Спустите унитаз 1-3 раза, пока надпись не сменится на &quotподключен&quot. Если статус &quotне подключен&quot, проверьте подключение провода.</br></label>";
+const char LABEL_COLD_STATE[] PROGMEM             = "<label class=\"cold\" id=\"state0\"></label></br>";
 
-const char LABEL_GET_IMPULSES[] PROGMEM         = "Получено: <a id=\"delta0\"></a> имп. и <a id=\"delta1\"></a> имп.</br>";
-const char LABEL_LITRES_PER_IMP[] PROGMEM       = "<label>Литров на импульс</label>";
-const char LABEL_CHANNEL0[] PROGMEM             = "<label><b>Вход 0</b>: </label><label id=\"state0\"></label></br>";
-const char LABEL_CHANNEL1[] PROGMEM             = "<label><b>Вход 1</b>: </label><label id=\"state1\"></label></br>";
-const char LABEL_CHANNELS[] PROGMEM       = "<label>После подключения, введите текущее значение счётчиков в кубометрах</label></br>";
-const char LABEL_CHANNEL0_VALUE[] PROGMEM       = "<label>Вход 0:</label>";
-const char LABEL_CHANNEL1_VALUE[] PROGMEM       = "<label>Вход 1:</label>";
+const char LABEL_VALUE[] PROGMEM             = "<label>Введите показания:</label></br>";
+
+const char LABEL_HOT[] PROGMEM       = "<label><b>Счётчик горячей воды</b></label></br>";
+const char LABEL_HOT_INFO[] PROGMEM       = "<label>Откройте кран горячей воды, пока надпись не сменится на &quotподключен&quot.</label>";
+const char LABEL_HOT_STATE[] PROGMEM       = "<label class=\"hot\" id=\"state1\"></label></br>";
+
+const char LABEL_FACTOR[] PROGMEM       = "<label>Множитель: <a id=\"factor\"></a> л. на импульс</label></br>";
+
 const char WATERIUS_CALLBACK[] PROGMEM = "<script>\
     let timerId = setTimeout(function run() {\
         const xhr = new XMLHttpRequest();\
@@ -93,11 +100,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_NOTICE( "AP", "User requested captive portal" );
     
 #ifdef SEND_WATERIUS  // Настройки JSON 
-    WiFiManagerParameter label_waterius(LABEL_WATERIUS);
     WiFiManagerParameter label_waterius_email(LABEL_WATERIUS_EMAIL);
     WiFiManagerParameter param_waterius_email( "wmail", "Адрес эл. почты:",  sett.waterius_email, EMAIL_LEN-1);
 
-    wm.addParameter( &label_waterius);
     wm.addParameter( &label_waterius_email);
     wm.addParameter( &param_waterius_email);
 
@@ -144,37 +149,43 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 #endif
 
     // Счетчиков
-    WiFiManagerParameter label_counters(LABEL_COUNTERS);
-    WiFiManagerParameter label_get_impulses(LABEL_GET_IMPULSES);
-    WiFiManagerParameter label_litres_per_imp(LABEL_LITRES_PER_IMP);
-    LongParameter param_litres_per_imp( "factor", "",  sett.liters_per_impuls);
-    WiFiManagerParameter label_channel0(LABEL_CHANNEL0);
-    WiFiManagerParameter label_channel1(LABEL_CHANNEL1);
+    WiFiManagerParameter label_cold(LABEL_COLD);
+    WiFiManagerParameter label_cold_info(LABEL_COLD_INFO);
+    WiFiManagerParameter label_cold_state(LABEL_COLD_STATE);
 
-    WiFiManagerParameter label_channels(LABEL_CHANNELS);
-    WiFiManagerParameter label_channel0_value(LABEL_CHANNEL0_VALUE);
+    WiFiManagerParameter label_value0(LABEL_VALUE);
     FloatParameter param_channel0_start( "ch0", "xxx.xx",  cdata.channel0);
-    WiFiManagerParameter label_channel1_value(LABEL_CHANNEL1_VALUE);
-    FloatParameter param_channel1_start( "ch1", "xxx.xx",  cdata.channel1);
 
+    WiFiManagerParameter label_hot(LABEL_HOT);
+    WiFiManagerParameter label_hot_info(LABEL_HOT_INFO);
+    WiFiManagerParameter label_hot_state(LABEL_HOT_STATE);
+
+    WiFiManagerParameter label_value1(LABEL_VALUE);
+    FloatParameter param_channel1_start( "ch1", "xxx.xx",  cdata.channel1);
+    
+    WiFiManagerParameter label_factor(LABEL_FACTOR);
+    //LongParameter param_litres_per_imp( "factor", "",  sett.liters_per_impuls, 5, "type=\"number\"");
+    
     WiFiManagerParameter javascript_callback(WATERIUS_CALLBACK);
 
-    wm.addParameter( &label_counters);
-    wm.addParameter( &label_get_impulses);
-    wm.addParameter( &label_litres_per_imp);
-    wm.addParameter( &param_litres_per_imp);
+    wm.addParameter( &label_cold);
+    wm.addParameter( &label_cold_info);
+    wm.addParameter( &label_cold_state);
 
-    wm.addParameter( &label_channel0);
-    wm.addParameter( &label_channel1);
+    wm.addParameter( &label_value1);
+    wm.addParameter( &param_channel1_start);
 
-    wm.addParameter( &label_channels);
-    wm.addParameter( &label_channel0_value);
-    wm.addParameter( &param_channel0_start );
-    wm.addParameter( &label_channel1_value);
-    wm.addParameter( &param_channel1_start );;
+    wm.addParameter( &label_hot);
+    wm.addParameter( &label_hot_info);
+    wm.addParameter( &label_hot_state );
 
+    wm.addParameter( &label_value0);
+    wm.addParameter( &param_channel0_start);
+
+    wm.addParameter( &label_factor);
+
+    //wm.addParameter( &param_litres_per_imp);
     wm.addParameter( &javascript_callback);
-
 
     wm.setConfigPortalTimeout(300);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
@@ -226,8 +237,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.channel0_start = param_channel0_start.getValue();
     sett.channel1_start = param_channel1_start.getValue();
 
-    sett.liters_per_impuls = param_litres_per_imp.getValue();
-
+    sett.liters_per_impuls = get_factor(); //param_litres_per_imp.getValue();
+    LOG_NOTICE( "AP", "factor=" << sett.liters_per_impuls );
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = data.impulses0;
