@@ -19,8 +19,9 @@ extern MasterI2C masterI2C;
 
 SlaveData runtime_data;
 
-const char STATE_START[] PROGMEM = "\"не подключен\"";
-const char STATE_CONNECTED[] PROGMEM = "\"подключен\"";
+const char STATE_BAD[] PROGMEM = "\"Не подключен\"";
+const char STATE_CONNECTED[] PROGMEM = "\"Подключен\"";
+const char STATE_NULL[] PROGMEM = "\"\"";
 
 #define IMPULS_LIMIT_1 3  // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
 
@@ -31,21 +32,27 @@ uint8_t get_factor() {
 void update_data(String &message)
 {
     if (masterI2C.getSlaveData(runtime_data)) {
-        String state0(STATE_START);
-        String state1(STATE_START);
+        String state0good(STATE_NULL);
+        String state0bad(STATE_BAD);
+        String state1good(STATE_NULL);
+        String state1bad(STATE_BAD);
         String factor;
         uint32_t delta0 = runtime_data.impulses0 - data.impulses0;
         uint32_t delta1 = runtime_data.impulses1 - data.impulses1;
         
         if (delta0 > 0) {
-            state0 = STATE_CONNECTED;
+            state0good = STATE_CONNECTED;
+            state0bad = STATE_NULL;
         }
         if (delta1 > 0) {
-            state1 = STATE_CONNECTED;
+            state1good = STATE_CONNECTED;
+            state1bad = STATE_NULL;
         }
 
-        message = "{\"state0\": " + state0
-                + ", \"state1\": " + state1 
+        message = "{\"state0good\": " + state0good
+                + ", \"state0bad\": " + state0bad 
+                + ", \"state1good\": " + state1good
+                + ", \"state1bad\": " + state1bad
                 + ", \"factor\": " + String(get_factor())
                 + " }";
     }
@@ -56,21 +63,21 @@ void update_data(String &message)
 
 const char LABEL_WATERIUS_EMAIL[] PROGMEM       = "<label>Введите электронную почту, которую используете на сайте waterius.ru</label>";
 
-const char LABEL_BLYNK[] PROGMEM       = "<label><b>Blynk.cc</b></br></label>";
+const char LABEL_BLYNK[] PROGMEM       = "<label><b>Blynk.cc</b></label>";
 
-const char LABEL_MQTT[] PROGMEM       = "<label><b>MQTT</b></br></label>";
+const char LABEL_MQTT[] PROGMEM        = "<label><b>MQTT</b></label>";
 
-const char LABEL_COLD[] PROGMEM       = "<label><b>Счётчик холодной воды</b></br></label>";
-const char LABEL_COLD_INFO[] PROGMEM       = "<label>Спустите унитаз 1-3 раза, пока надпись не сменится на &quotподключен&quot. Если статус &quotне подключен&quot, проверьте подключение провода.</br></label>";
-const char LABEL_COLD_STATE[] PROGMEM             = "<label class=\"cold\" id=\"state0\"></label></br>";
+const char LABEL_COLD[] PROGMEM        = "<label><b>Счётчик <a class=\"cold\">холодной</a> воды</b></label></br>";
+const char LABEL_COLD_INFO[] PROGMEM   = "<label>Спустите унитаз 1-3 раза, пока надпись не сменится на &quotподключен&quot. Если статус &quotне подключен&quot, проверьте подключение провода.</label></br>";
+const char LABEL_COLD_STATE[] PROGMEM  = "<label><a class=\"bad\" id=\"state1bad\"></a><a class=\"good\" id=\"state1good\"></a></label></br>";
 
-const char LABEL_VALUE[] PROGMEM             = "<label>Введите показания:</label></br>";
+const char LABEL_VALUE[] PROGMEM       = "<label>Введите показания</label>";
 
-const char LABEL_HOT[] PROGMEM       = "<label><b>Счётчик горячей воды</b></label></br>";
-const char LABEL_HOT_INFO[] PROGMEM       = "<label>Откройте кран горячей воды, пока надпись не сменится на &quotподключен&quot.</label>";
-const char LABEL_HOT_STATE[] PROGMEM       = "<label class=\"hot\" id=\"state1\"></label></br>";
+const char LABEL_HOT[] PROGMEM         = "<label><b>Счётчик <a class=\"hot\">горячей</a> воды</b></label></br>";
+const char LABEL_HOT_INFO[] PROGMEM    = "<label>Откройте кран горячей воды, пока надпись не сменится на &quotподключен&quot.</label><br/>";
+const char LABEL_HOT_STATE[] PROGMEM   = "<label><a class=\"bad\" id=\"state0bad\"></a><a class=\"good\" id=\"state0good\"></a></label></br>";
 
-const char LABEL_FACTOR[] PROGMEM       = "<label>Множитель: <a id=\"factor\"></a> л. на импульс</label></br>";
+const char LABEL_FACTOR[] PROGMEM      = "<label>Множитель: <a id=\"factor\"></a> л. на импульс</label>";
 
 const char WATERIUS_CALLBACK[] PROGMEM = "<script>\
     let timerId = setTimeout(function run() {\
@@ -101,7 +108,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     
 #ifdef SEND_WATERIUS  // Настройки JSON 
     WiFiManagerParameter label_waterius_email(LABEL_WATERIUS_EMAIL);
-    WiFiManagerParameter param_waterius_email( "wmail", "Адрес эл. почты:",  sett.waterius_email, EMAIL_LEN-1);
+    WiFiManagerParameter param_waterius_email( "wmail", "адрес эл. почты",  sett.waterius_email, EMAIL_LEN-1);
 
     wm.addParameter( &label_waterius_email);
     wm.addParameter( &param_waterius_email);
@@ -163,7 +170,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label_value1(LABEL_VALUE);
     FloatParameter param_channel1_start( "ch1", "xxx.xx",  cdata.channel1);
     
-    WiFiManagerParameter label_factor(LABEL_FACTOR);
+    WiFiManagerParameter label_factor(LABEL_FACTOR); //для визуального контроля л/имп
     //LongParameter param_litres_per_imp( "factor", "",  sett.liters_per_impuls, 5, "type=\"number\"");
     
     WiFiManagerParameter javascript_callback(WATERIUS_CALLBACK);
@@ -231,7 +238,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     strncpy0(sett.mqtt_topic, param_mqtt_topic.getValue(), MQTT_TOPIC_LEN);
     sett.mqtt_port = param_mqtt_port.getValue();    
 #endif
-
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();

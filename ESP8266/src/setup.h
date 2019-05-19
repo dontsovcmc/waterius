@@ -3,12 +3,14 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.8.1"
+#define FIRMWARE_VERSION "0.8.2"
 
 
 /*
 Версии прошивки для ESP
 
+0.8.2 - 2019.05.19 - Ошибка +импульс при замкнутом положении НАМУР
+                   - Автоматическое определение литров/импульс
 0.8   - 2019.05.04 - Поддержка MQTT
 0.7   - 2019.04.10 - Поддержка НАМУР
                    - Русскоязычный интерфейс настройки
@@ -44,6 +46,13 @@
     Включить отправку данных в MQTT
 */
 #define SEND_MQTT
+
+#ifdef ONLY_CLOUD_WATERIUS 
+#undef SEND_BLYNK
+#pragma message("SEND_BLYNK off")
+#undef SEND_MQTT
+#pragma message("SEND_MQTT off")
+#endif
 
 #define MQTT_DEFAULT_HOST "broker.hivemq.com"  // Брокер только для теста. Данные в открытом виде!
 #define MQTT_DEFAULT_TOPIC_PREFIX "waterius/"  // Проверка: mosquitto_sub -h test.mosquitto.org -t "waterius/#" -v

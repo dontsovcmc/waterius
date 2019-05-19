@@ -68,11 +68,10 @@ void loop()
         calculate_values(sett, data, cdata);
 
         if (mode == SETUP_MODE) { //Режим настройки - запускаем точку доступа на 192.168.4.1
-            success = true;
             //Запускаем точку доступа с вебсервером
             setup_ap(sett, data, cdata);
 
-            //Если вышли, то уже подключены к WiFi
+            success = false; // ESP падает при https, поэтому идём спать
         }
         
         if (success) {
