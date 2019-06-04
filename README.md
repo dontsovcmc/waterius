@@ -10,23 +10,23 @@
 Поддержать морально: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
 
 ### Характеристики:
-- передача по Wi-Fi
-- 2 счётчика воды ("сухой контакт" или "НАМУР")
+- 2 счётчика воды (вам не нужно знать, какого типа выход: "сухой контакт" или "НАМУР")
+- передача по Wi-Fi раз в сутки
 - питание 3 АА батарейки (~4 года работы)
-- до 4-х импульсов от счётчика в секунду
+- не нужно знать, сколько литров на импульс (Ватериус сам определит 1 или 10л/имп)
 
 [Список поддерживаемых счётчиков](https://github.com/dontsovcmc/waterius/issues/65)
 
 ## Передача показаний
 Автоматическая передача будет реализована через сайт [waterius.ru](http://waterius.ru).
-Напишите, [куда вам требуется их отослать тут](https://github.com/dontsovcmc/waterius/issues/64)
+Напишите, куда вам требуется их отослать [тут](https://github.com/dontsovcmc/waterius/issues/64)
 
-#### Данные получаем:
-- на сайт <a href="https://waterius.ru">waterius.ru</a>
+#### Данные с Ватериуса можно увидеть:
+- на сайте <a href="https://waterius.ru">waterius.ru</a>
 - в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8))
-- по электронной почте (ежедневно, через Blynk).
+- на электронной почте (ежедневно, через Blynk).
 - на вашем [HTTP/HTTPS сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
-- по MQTT [настройка](https://github.com/dontsovcmc/waterius/blob/master/Mqtt.md)
+- в MQTT клиенте [настройка](https://github.com/dontsovcmc/waterius/blob/master/Mqtt.md)
 - там, куда сами запрограммируете
 
 #### Статьи: 
