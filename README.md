@@ -4,6 +4,9 @@
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
+Самое простое в настройке устройство для передачи показаний воды! Достаточно спустить унитаз, чтобы Ватериус определил тип счётчика =) 
+([включение режима настройки](https://waterius.ru/manual)).
+
 ### КУПИТЬ
 плату|конструктор|готовый -> [Telegram](http://t-do.ru/Dontsovcmc)
 
