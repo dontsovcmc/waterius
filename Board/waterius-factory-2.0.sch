@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.0.1">
+<eagle version="9.0.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -9372,8 +9372,6 @@ at 30/07/2012 11:22:31</description>
 <part name="C3" library="rcl" deviceset="C-EU" device="C0805" value="0.1uF"/>
 <part name="GND7" library="supply1" deviceset="GND" device=""/>
 <part name="U$1" library="Microchip_By_element14_Batch_1" deviceset="MCP1700T-3002E/TT" device=""/>
-<part name="R10" library="resistor" deviceset="R-EU_" device="R0805" value="47к"/>
-<part name="GND6" library="supply1" deviceset="GND" device=""/>
 <part name="S1" library="switch-omron" library_urn="urn:adsk.eagle:library:377" deviceset="31-XX" device="" package3d_urn="urn:adsk.eagle:package:27487/1"/>
 </parts>
 <sheets>
@@ -9411,8 +9409,6 @@ at 30/07/2012 11:22:31</description>
 <instance part="C3" gate="G$1" x="76.2" y="15.24"/>
 <instance part="GND7" gate="1" x="76.2" y="2.54"/>
 <instance part="U$1" gate="A" x="17.78" y="96.52"/>
-<instance part="R10" gate="G$1" x="-22.86" y="15.24" rot="R90"/>
-<instance part="GND6" gate="1" x="-22.86" y="7.62"/>
 <instance part="S1" gate="1" x="43.18" y="25.4" rot="MR180"/>
 </instances>
 <busses>
@@ -9589,10 +9585,6 @@ at 30/07/2012 11:22:31</description>
 <wire x1="76.2" y1="5.08" x2="76.2" y2="7.62" width="0.1524" layer="91"/>
 <junction x="76.2" y="7.62"/>
 </segment>
-<segment>
-<pinref part="R10" gate="G$1" pin="1"/>
-<pinref part="GND6" gate="1" pin="GND"/>
-</segment>
 </net>
 <net name="N$3" class="0">
 <segment>
@@ -9662,15 +9654,11 @@ at 30/07/2012 11:22:31</description>
 <segment>
 <pinref part="U3" gate="G$1" pin="TXD"/>
 <pinref part="LOG" gate="G$1" pin="1"/>
-<wire x1="-5.08" y1="33.02" x2="-22.86" y2="33.02" width="0.1524" layer="91"/>
-<wire x1="-22.86" y1="33.02" x2="-33.02" y2="33.02" width="0.1524" layer="91"/>
+<wire x1="-5.08" y1="33.02" x2="-33.02" y2="33.02" width="0.1524" layer="91"/>
 <wire x1="-33.02" y1="33.02" x2="-33.02" y2="45.72" width="0.1524" layer="91"/>
 <pinref part="LED1" gate="G$1" pin="A"/>
 <wire x1="-33.02" y1="30.48" x2="-33.02" y2="33.02" width="0.1524" layer="91"/>
 <junction x="-33.02" y="33.02"/>
-<pinref part="R10" gate="G$1" pin="2"/>
-<wire x1="-22.86" y1="20.32" x2="-22.86" y2="33.02" width="0.1524" layer="91"/>
-<junction x="-22.86" y="33.02"/>
 </segment>
 </net>
 <net name="N$6" class="0">
