@@ -96,13 +96,27 @@ const char WATERIUS_CALLBACK[] PROGMEM = "<script>\
     }, 1000);\
 </script>";
 
+WiFiManager wm;
+
+void handleStates(){
+  Serial.println("[HTTP] states route");
+  String message;
+  update_data(message);
+  wm.server->send(200, "text/plain", message);
+}
+
+void bindServerCallback(){
+  wm.server->on("/states", handleStates);
+}
+
+
 void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata) 
 {
     LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
     
-    WiFiManager wm;
-
-    wm.setWateriusCallback(&update_data);
+    wm.debugPlatformInfo();
+    wm.setWebServerCallback(bindServerCallback);
+    //wm.setWateriusCallback(&update_data);
 
     LOG_NOTICE( "AP", "User requested captive portal" );
     

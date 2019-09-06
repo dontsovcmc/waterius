@@ -25,7 +25,7 @@ public:
     LongParameter(const char *id, const char *placeholder, long value, const uint8_t length = 10, const char *custom = LONG_ATTR)
         : WiFiManagerParameter("") {
 
-        init(id, placeholder, String(value).c_str(), length, custom);
+        init(id, placeholder, String(value).c_str(), length, custom, WFM_LABEL_BEFORE);
     }
 
     long getValue() {
@@ -41,7 +41,7 @@ public:
     FloatParameter(const char *id, const char *placeholder, float value, const uint8_t length = 10)
         : WiFiManagerParameter("") {
             
-        init(id, placeholder, String(value).c_str(), length, FLOAT_ATTR);
+        init(id, placeholder, String(value).c_str(), length, FLOAT_ATTR, WFM_LABEL_BEFORE);
     }
 
     float getValue() {

@@ -24,6 +24,7 @@ CalculatedData cdata; //вычисляемые данные
 */
 void setup()
 {
+    WiFi.mode(WIFI_STA);
     memset(&data, 0, sizeof(data)); // На всякий случай
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
     LOG_NOTICE("ESP", "Booted");
@@ -71,7 +72,8 @@ void loop()
             //Запускаем точку доступа с вебсервером
             setup_ap(sett, data, cdata);
 
-            success = false; // ESP падает при https, поэтому идём спать
+            success = false; // ESP падает после настройки при https, поэтому идём спать. 
+                             // в будущем, когда вылечим, ESP будет выходить на связь сразу после настройки
         }
         
         if (success) {
