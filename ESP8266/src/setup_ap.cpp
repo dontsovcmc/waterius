@@ -12,7 +12,7 @@
 #include "WateriusHttps.h"
 #include "master_i2c.h"
 
-#define AP_NAME "Waterius_" FIRMWARE_VERSION
+#define AP_NAME "Waterius"
 
 extern SlaveData data;
 extern MasterI2C masterI2C;
@@ -82,7 +82,7 @@ const char LABEL_FACTOR[] PROGMEM      = "<label>Множитель: <a id=\"fac
 const char WATERIUS_CALLBACK[] PROGMEM = "<script>\
     let timerId = setTimeout(function run() {\
         const xhr = new XMLHttpRequest();\
-        xhr.open('GET', '/states');\
+        xhr.open('GET', '/states');xhr.timeout = 500;\
         xhr.send();\
         xhr.onreadystatechange = function (e) {\
             if(xhr.readyState === 4 && xhr.status === 200) {\
@@ -92,8 +92,8 @@ const char WATERIUS_CALLBACK[] PROGMEM = "<script>\
                 })\
             };\
         };\
-        timerId = setTimeout(run, 1000);\
-    }, 1000);\
+        timerId = setTimeout(run, 2000);\
+    }, 2000);\
 </script>";
 
 WiFiManager wm;
