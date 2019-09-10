@@ -17,6 +17,10 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
         LOG_NOTICE(THIS_FUNC_SVC, "NO Waterius key. SKIP");
         return false;
     };
+    if (strnlen(settings.waterius_host, WATERIUS_HOST_LEN) == 0) {
+        LOG_NOTICE(THIS_FUNC_SVC, "NO Waterus host. SKIP");
+        return false;
+    }
 
     // Set JSON body
     String jsonBody;

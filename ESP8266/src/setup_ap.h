@@ -5,7 +5,6 @@
 #include "master_i2c.h"
 #include <Arduino.h>
 
-#define WIFI_MANAGER_MAX_PARAMS 30
 #include <WiFiManager.h>    
 
 /*

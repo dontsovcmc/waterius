@@ -12,7 +12,7 @@
 #include "WateriusHttps.h"
 #include "master_i2c.h"
 
-#define AP_NAME "Waterius"
+#define AP_NAME "Waterius_" FIRMWARE_VERSION
 
 extern SlaveData data;
 extern MasterI2C masterI2C;
@@ -61,23 +61,21 @@ void update_data(String &message)
     }
 }
 
-const char LABEL_WATERIUS_EMAIL[] PROGMEM       = "<label>Введите электронную почту, которую используете на сайте waterius.ru</label>";
+const char LABEL_WATERIUS_EMAIL[] PROGMEM       = "<h3>Ватериус</h3>";
 
-const char LABEL_BLYNK[] PROGMEM       = "<label><b>Blynk.cc</b></label>";
+const char LABEL_BLYNK[] PROGMEM       = "<h3>Blynk.cc</h3>";
 
-const char LABEL_MQTT[] PROGMEM        = "<label><b>MQTT</b></label>";
+const char LABEL_MQTT[] PROGMEM        = "<h3>MQTT</h3>";
 
-const char LABEL_COLD[] PROGMEM        = "<label><b>Счётчик <a class=\"cold\">холодной</a> воды</b></label></br>";
-const char LABEL_COLD_INFO[] PROGMEM   = "<label>Спустите унитаз 1-3 раза, пока надпись не сменится на &quotподключен&quot. Если статус &quotне подключен&quot, проверьте подключение провода.</label></br>";
-const char LABEL_COLD_STATE[] PROGMEM  = "<label><a class=\"bad\" id=\"state1bad\"></a><a class=\"good\" id=\"state1good\"></a></label></br>";
+const char LABEL_COLD[] PROGMEM        = "<label class=\"cold\">Показания холодной воды (xxx.xx)</label>";
+const char LABEL_COLD_INFO[] PROGMEM   = "<p>Спустите унитаз 1-3 раза, пока надпись не сменится на &quotподключен&quot. Если статус &quotне подключен&quot, проверьте провод в разъёме.</p>";
+const char LABEL_COLD_STATE[] PROGMEM  = "<b><p class=\"bad\" id=\"state1bad\"></p><p class=\"good\" id=\"state1good\"></p></b>";
 
-const char LABEL_VALUE[] PROGMEM       = "<label>Введите показания</label>";
+const char LABEL_HOT[] PROGMEM         = "<label class=\"hot\">Показания горячей воды (xxx.xx)</label>";
+const char LABEL_HOT_INFO[] PROGMEM    = "<p>Откройте кран горячей воды, пока надпись не сменится на &quotподключен&quot.</p>";
+const char LABEL_HOT_STATE[] PROGMEM   = "<b><p class=\"bad\" id=\"state0bad\"></p><p class=\"good\" id=\"state0good\"></p></b>";
 
-const char LABEL_HOT[] PROGMEM         = "<label><b>Счётчик <a class=\"hot\">горячей</a> воды</b></label></br>";
-const char LABEL_HOT_INFO[] PROGMEM    = "<label>Откройте кран горячей воды, пока надпись не сменится на &quotподключен&quot.</label><br/>";
-const char LABEL_HOT_STATE[] PROGMEM   = "<label><a class=\"bad\" id=\"state0bad\"></a><a class=\"good\" id=\"state0good\"></a></label></br>";
-
-const char LABEL_FACTOR[] PROGMEM      = "<label>Множитель: <a id=\"factor\"></a> л. на импульс</label>";
+const char LABEL_FACTOR[] PROGMEM      = "<label>Автонастройка: <span id=\"factor\"></span> л. на импульс</label>";
 
 const char WATERIUS_CALLBACK[] PROGMEM = "<script>\
     let timerId = setTimeout(function run() {\
@@ -114,6 +112,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 {
     LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
     
+    
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
     //wm.setWateriusCallback(&update_data);
@@ -121,86 +120,77 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_NOTICE( "AP", "User requested captive portal" );
     
 #ifdef SEND_WATERIUS  // Настройки JSON 
-    WiFiManagerParameter label_waterius_email(LABEL_WATERIUS_EMAIL);
-    WiFiManagerParameter param_waterius_email( "wmail", "адрес эл. почты",  sett.waterius_email, EMAIL_LEN-1);
 
+    WiFiManagerParameter label_waterius_email(LABEL_WATERIUS_EMAIL);
     wm.addParameter( &label_waterius_email);
+    WiFiManagerParameter param_waterius_email( "wmail", "Электронная почта с сайта waterius.ru",  sett.waterius_email, EMAIL_LEN-1);
     wm.addParameter( &param_waterius_email);
 
 #ifndef ONLY_CLOUD_WATERIUS 
-    WiFiManagerParameter param_waterius_host( "whost", "Waterius сервер",  sett.waterius_host, WATERIUS_HOST_LEN-1);
-    WiFiManagerParameter param_waterius_key( "wkey", "Waterius ключ",  sett.waterius_key, WATERIUS_KEY_LEN-1);
 
+    WiFiManagerParameter param_waterius_host( "whost", "Адрес сервера (включает отправку)",  sett.waterius_host, WATERIUS_HOST_LEN-1);
     wm.addParameter( &param_waterius_host );
+    WiFiManagerParameter param_waterius_key( "wkey", "Уникальный ключ",  sett.waterius_key, WATERIUS_KEY_LEN-1);
     wm.addParameter( &param_waterius_key );
 #endif
 #endif
 
 #ifdef SEND_BLYNK  // Настройки Blynk.сс
+
     WiFiManagerParameter label_blynk(LABEL_BLYNK);
-    WiFiManagerParameter param_blynk_host( "bhost", "Blynk сервер",  sett.blynk_host, BLYNK_HOST_LEN-1);
-    WiFiManagerParameter param_blynk_key( "bkey", "Blynk ключ",  sett.blynk_key, BLYNK_KEY_LEN-1);
-
-    WiFiManagerParameter param_blynk_email( "bemail", "Адрес эл. почты",  sett.blynk_email, EMAIL_LEN-1);
-    WiFiManagerParameter param_blynk_email_title( "btitle", "Заголовок",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
-    WiFiManagerParameter param_blynk_email_template( "btemplate", "Тело письма",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
-
     wm.addParameter( &label_blynk);
+    WiFiManagerParameter param_blynk_host( "bhost", "Адрес сервера",  sett.blynk_host, BLYNK_HOST_LEN-1);
     wm.addParameter( &param_blynk_host );
+    WiFiManagerParameter param_blynk_key( "bkey", "Уникальный ключ (включает отправку)",  sett.blynk_key, BLYNK_KEY_LEN-1);
     wm.addParameter( &param_blynk_key );
+    WiFiManagerParameter param_blynk_email( "bemail", "Адрес эл. почты (включает ежедневные письма)",  sett.blynk_email, EMAIL_LEN-1);
     wm.addParameter( &param_blynk_email );
+    WiFiManagerParameter param_blynk_email_title( "btitle", "Заголовок",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
     wm.addParameter( &param_blynk_email_title );
+    WiFiManagerParameter param_blynk_email_template( "btemplate", "Тело письма",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
     wm.addParameter( &param_blynk_email_template );
 #endif
 
 #ifdef SEND_MQTT  // Настройки MQTT
-    WiFiManagerParameter label_mqtt(LABEL_MQTT);
-    WiFiManagerParameter param_mqtt_host( "mhost", "MQTT сервер",  sett.mqtt_host, MQTT_HOST_LEN-1);
-    LongParameter param_mqtt_port( "mport", "MQTT порт",  sett.mqtt_port);
-    WiFiManagerParameter param_mqtt_login( "mlogin", "MQTT логин",  sett.mqtt_login, MQTT_LOGIN_LEN-1);
-    WiFiManagerParameter param_mqtt_password( "mpassword", "MQTT пароль",  sett.mqtt_password, MQTT_PASSWORD_LEN-1);
-    WiFiManagerParameter param_mqtt_topic( "mtopic", "MQTT topic",  sett.mqtt_topic, MQTT_TOPIC_LEN-1);
     
+    WiFiManagerParameter label_mqtt(LABEL_MQTT);
     wm.addParameter( &label_mqtt);
+    WiFiManagerParameter param_mqtt_host( "mhost", "Адрес сервера (включает отправку).<br/>Пример: broker.hivemq.com",  sett.mqtt_host, MQTT_HOST_LEN-1);
     wm.addParameter( &param_mqtt_host );
+    LongParameter param_mqtt_port( "mport", "Порт",  sett.mqtt_port);
     wm.addParameter( &param_mqtt_port );
+    WiFiManagerParameter param_mqtt_login( "mlogin", "Логин",  sett.mqtt_login, MQTT_LOGIN_LEN-1);
     wm.addParameter( &param_mqtt_login );
+    WiFiManagerParameter param_mqtt_password( "mpassword", "Пароль",  sett.mqtt_password, MQTT_PASSWORD_LEN-1);
     wm.addParameter( &param_mqtt_password );
+    WiFiManagerParameter param_mqtt_topic( "mtopic", "Topic",  sett.mqtt_topic, MQTT_TOPIC_LEN-1);
     wm.addParameter( &param_mqtt_topic );
 #endif
 
-    // Счетчиков
-    WiFiManagerParameter label_cold(LABEL_COLD);
-    WiFiManagerParameter label_cold_info(LABEL_COLD_INFO);
-    WiFiManagerParameter label_cold_state(LABEL_COLD_STATE);
-
-    WiFiManagerParameter label_value0(LABEL_VALUE);
-    FloatParameter param_channel0_start( "ch0", "xxx.xx",  cdata.channel0);
-
-    WiFiManagerParameter label_hot(LABEL_HOT);
-    WiFiManagerParameter label_hot_info(LABEL_HOT_INFO);
-    WiFiManagerParameter label_hot_state(LABEL_HOT_STATE);
-
-    WiFiManagerParameter label_value1(LABEL_VALUE);
-    FloatParameter param_channel1_start( "ch1", "xxx.xx",  cdata.channel1);
-    
     WiFiManagerParameter label_factor(LABEL_FACTOR); //для визуального контроля л/имп
     //LongParameter param_litres_per_imp( "factor", "",  sett.liters_per_impuls, 5, "type=\"number\"");
     
     WiFiManagerParameter javascript_callback(WATERIUS_CALLBACK);
 
-    wm.addParameter( &label_cold);
+    // Счетчиков
+    WiFiManagerParameter label_cold_info(LABEL_COLD_INFO);
     wm.addParameter( &label_cold_info);
+    WiFiManagerParameter label_cold_state(LABEL_COLD_STATE);
     wm.addParameter( &label_cold_state);
 
-    wm.addParameter( &label_value1);
+    WiFiManagerParameter label_cold(LABEL_COLD);
+    wm.addParameter( &label_cold);
+    FloatParameter param_channel1_start( "ch1", "",  cdata.channel1);
     wm.addParameter( &param_channel1_start);
 
-    wm.addParameter( &label_hot);
+    WiFiManagerParameter label_hot_info(LABEL_HOT_INFO);
     wm.addParameter( &label_hot_info);
+    WiFiManagerParameter label_hot_state(LABEL_HOT_STATE);
     wm.addParameter( &label_hot_state );
 
-    wm.addParameter( &label_value0);
+    WiFiManagerParameter label_hot(LABEL_HOT);
+    wm.addParameter( &label_hot);
+    FloatParameter param_channel0_start( "ch0", "",  cdata.channel0);
     wm.addParameter( &param_channel0_start);
 
     wm.addParameter( &label_factor);

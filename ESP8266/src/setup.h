@@ -55,7 +55,6 @@
 #pragma message("SEND_MQTT off")
 #endif
 
-#define MQTT_DEFAULT_HOST "broker.hivemq.com"  // Брокер только для теста. Данные в открытом виде!
 #define MQTT_DEFAULT_TOPIC_PREFIX "waterius/"  // Проверка: mosquitto_sub -h test.mosquitto.org -t "waterius/#" -v
 #define MQTT_DEFAULT_PORT 1883
 
