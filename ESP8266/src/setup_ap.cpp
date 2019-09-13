@@ -19,9 +19,9 @@ extern MasterI2C masterI2C;
 
 SlaveData runtime_data;
 
-const char STATE_BAD[] PROGMEM = "\"Не подключен\"";
-const char STATE_CONNECTED[] PROGMEM = "\"Подключен\"";
-const char STATE_NULL[] PROGMEM = "\"\"";
+const char STATE_BAD[]  = "\"Не подключен\"";
+const char STATE_CONNECTED[]  = "\"Подключен\"";
+const char STATE_NULL[]  = "\"\"";
 
 #define IMPULS_LIMIT_1 3  // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
 
@@ -57,42 +57,9 @@ void update_data(String &message)
                 + " }";
     }
     else {
-        message = "{\"error\": \"connect failed\"}";
+        message = "{\"error\": \"Ошибка\"}";
     }
 }
-
-const char LABEL_WATERIUS_EMAIL[] PROGMEM       = "<h3>Ватериус</h3>";
-
-const char LABEL_BLYNK[] PROGMEM       = "<h3>Blynk.cc</h3>";
-
-const char LABEL_MQTT[] PROGMEM        = "<h3>MQTT</h3>";
-
-const char LABEL_COLD[] PROGMEM        = "<label class=\"cold\">Показания холодной воды (xxx.xx)</label>";
-const char LABEL_COLD_INFO[] PROGMEM   = "<p>Спустите унитаз 1-3 раза, пока надпись не сменится на &quotподключен&quot. Если статус &quotне подключен&quot, проверьте провод в разъёме.</p>";
-const char LABEL_COLD_STATE[] PROGMEM  = "<b><p class=\"bad\" id=\"state1bad\"></p><p class=\"good\" id=\"state1good\"></p></b>";
-
-const char LABEL_HOT[] PROGMEM         = "<label class=\"hot\">Показания горячей воды (xxx.xx)</label>";
-const char LABEL_HOT_INFO[] PROGMEM    = "<p>Откройте кран горячей воды, пока надпись не сменится на &quotподключен&quot.</p>";
-const char LABEL_HOT_STATE[] PROGMEM   = "<b><p class=\"bad\" id=\"state0bad\"></p><p class=\"good\" id=\"state0good\"></p></b>";
-
-const char LABEL_FACTOR[] PROGMEM      = "<label>Автонастройка: <span id=\"factor\"></span> л. на импульс</label>";
-
-const char WATERIUS_CALLBACK[] PROGMEM = "<script>\
-    let timerId = setTimeout(function run() {\
-        const xhr = new XMLHttpRequest();\
-        xhr.open('GET', '/states');xhr.timeout = 500;\
-        xhr.send();\
-        xhr.onreadystatechange = function (e) {\
-            if(xhr.readyState === 4 && xhr.status === 200) {\
-                var data = JSON.parse(xhr.responseText);\
-                Object.keys(data).forEach(function(key) {\
-                    document.getElementById(key).innerHTML = data[key];\
-                })\
-            };\
-        };\
-        timerId = setTimeout(run, 2000);\
-    }, 2000);\
-</script>";
 
 WiFiManager wm;
 
@@ -110,18 +77,14 @@ void bindServerCallback(){
 
 void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata) 
 {
-    LOG_NOTICE( "ESP", "I2C-begined: mode SETUP" );
-    
-    
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
-    //wm.setWateriusCallback(&update_data);
 
     LOG_NOTICE( "AP", "User requested captive portal" );
     
 #ifdef SEND_WATERIUS  // Настройки JSON 
 
-    WiFiManagerParameter label_waterius_email(LABEL_WATERIUS_EMAIL);
+    WiFiManagerParameter label_waterius_email("<h3>Ватериус</h3>");
     wm.addParameter( &label_waterius_email);
     WiFiManagerParameter param_waterius_email( "wmail", "Электронная почта с сайта waterius.ru",  sett.waterius_email, EMAIL_LEN-1);
     wm.addParameter( &param_waterius_email);
@@ -137,7 +100,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
 #ifdef SEND_BLYNK  // Настройки Blynk.сс
 
-    WiFiManagerParameter label_blynk(LABEL_BLYNK);
+    WiFiManagerParameter label_blynk("<h3>Blynk.cc</h3>");
     wm.addParameter( &label_blynk);
     WiFiManagerParameter param_blynk_host( "bhost", "Адрес сервера",  sett.blynk_host, BLYNK_HOST_LEN-1);
     wm.addParameter( &param_blynk_host );
@@ -153,7 +116,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
 #ifdef SEND_MQTT  // Настройки MQTT
     
-    WiFiManagerParameter label_mqtt(LABEL_MQTT);
+    WiFiManagerParameter label_mqtt("<h3>MQTT</h3>");
     wm.addParameter( &label_mqtt);
     WiFiManagerParameter param_mqtt_host( "mhost", "Адрес сервера (включает отправку).<br/>Пример: broker.hivemq.com",  sett.mqtt_host, MQTT_HOST_LEN-1);
     wm.addParameter( &param_mqtt_host );
@@ -167,35 +130,51 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter( &param_mqtt_topic );
 #endif
 
-    WiFiManagerParameter label_factor(LABEL_FACTOR); //для визуального контроля л/имп
-    //LongParameter param_litres_per_imp( "factor", "",  sett.liters_per_impuls, 5, "type=\"number\"");
-    
-    WiFiManagerParameter javascript_callback(WATERIUS_CALLBACK);
-
     // Счетчиков
-    WiFiManagerParameter label_cold_info(LABEL_COLD_INFO);
+    WiFiManagerParameter label_cold_info("<p>Спустите унитаз 1-3 раза, пока надпись не сменится на &quotподключен&quot. Если статус &quotне подключен&quot, проверьте провод в разъёме.</p>");
     wm.addParameter( &label_cold_info);
-    WiFiManagerParameter label_cold_state(LABEL_COLD_STATE);
+
+    WiFiManagerParameter label_cold_state("<b><p class=\"bad\" id=\"state1bad\"></p><p class=\"good\" id=\"state1good\"></p></b>");
     wm.addParameter( &label_cold_state);
 
-    WiFiManagerParameter label_cold(LABEL_COLD);
+    WiFiManagerParameter label_cold("<label class=\"cold\">Показания холодной воды (xxx.xx)</label>");
     wm.addParameter( &label_cold);
     FloatParameter param_channel1_start( "ch1", "",  cdata.channel1);
     wm.addParameter( &param_channel1_start);
 
-    WiFiManagerParameter label_hot_info(LABEL_HOT_INFO);
+    WiFiManagerParameter label_hot_info("<p>Откройте кран горячей воды, пока надпись не сменится на &quotподключен&quot.</p>");
     wm.addParameter( &label_hot_info);
-    WiFiManagerParameter label_hot_state(LABEL_HOT_STATE);
+    
+    WiFiManagerParameter label_hot_state("<b><p class=\"bad\" id=\"state0bad\"></p><p class=\"good\" id=\"state0good\"></p></b>");
     wm.addParameter( &label_hot_state );
 
-    WiFiManagerParameter label_hot(LABEL_HOT);
+    WiFiManagerParameter label_hot("<label class=\"hot\">Показания горячей воды (xxx.xx)</label>");
     wm.addParameter( &label_hot);
     FloatParameter param_channel0_start( "ch0", "",  cdata.channel0);
     wm.addParameter( &param_channel0_start);
 
+    WiFiManagerParameter label_factor("<label>Автонастройка: <span id=\"factor\"></span> л. на импульс</label>"); //для визуального контроля л/имп
+    //LongParameter param_litres_per_imp( "factor", "",  sett.liters_per_impuls, 5, "type=\"number\"");
+   
     wm.addParameter( &label_factor);
 
     //wm.addParameter( &param_litres_per_imp);
+    WiFiManagerParameter javascript_callback("<script>\
+        let timerId = setTimeout(function run() {\
+            const xhr = new XMLHttpRequest();\
+            xhr.open('GET', '/states');xhr.timeout = 500;\
+            xhr.send();\
+            xhr.onreadystatechange = function (e) {\
+                if(xhr.readyState === 4 && xhr.status === 200) {\
+                    var data = JSON.parse(xhr.responseText);\
+                    Object.keys(data).forEach(function(key) {\
+                        document.getElementById(key).innerHTML = data[key];\
+                    })\
+                };\
+            };\
+            timerId = setTimeout(run, 2000);\
+        }, 2000);\
+    </script>");
     wm.addParameter( &javascript_callback);
 
     wm.setConfigPortalTimeout(300);

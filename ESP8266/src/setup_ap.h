@@ -16,7 +16,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 Дополнение к WifiManager: классы упрощающие работу
 */
 
-const char LONG_ATTR[] PROGMEM             = " type=\"number\"";
+const char LONG_ATTR[] = " type=\"number\"";
 
 class LongParameter : public WiFiManagerParameter {
 public:
@@ -32,7 +32,7 @@ public:
     }
 };
 
-const char FLOAT_ATTR[] PROGMEM             = " type=\"number\" step=\"0.001\"";
+const char FLOAT_ATTR[] = " type=\"number\" step=\"0.001\"";
 
 class FloatParameter : public WiFiManagerParameter {
 public:
@@ -49,6 +49,7 @@ public:
         return val.toFloat();
     }
 };
+
 
 #endif
 
