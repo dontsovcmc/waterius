@@ -1,5 +1,5 @@
 ### Aвтономное устройство для передачи показаний воды по Wi-Fi
-# Вотериус 0.8.2
+# Вотериус 0.9.0
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
@@ -20,14 +20,13 @@
 
 [Список поддерживаемых счётчиков](https://github.com/dontsovcmc/waterius/issues/65)
 
-## Передача показаний
+## Передача показаний в упр. компании
 Автоматическая передача будет реализована через сайт [waterius.ru](http://waterius.ru).
 Напишите, куда вам требуется их отослать [тут](https://github.com/dontsovcmc/waterius/issues/64)
 
 #### Данные с Ватериуса можно увидеть:
 - на сайте <a href="https://waterius.ru">waterius.ru</a>
 - в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8))
-- на электронной почте (ежедневно, через Blynk).
 - на вашем [HTTP/HTTPS сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
 - в MQTT клиенте [настройка](https://github.com/dontsovcmc/waterius/blob/master/Mqtt.md)
 - там, куда сами запрограммируете
@@ -36,7 +35,6 @@
 [Habrahabr.com (ru)](https://habr.com/post/418573/) | [Hackster.io (en)](https://www.hackster.io/dontsovcmc/waterius-4bfaba) | [Blynk forum (en-ru)](https://community.blynk.cc/t/autonomous-impulse-counter-for-water-meters-attiny85-esp-01)
 
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" width="360"/> <img src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" width="180"/>
-
 
 #### [Заводские и DIY аналоги](https://github.com/dontsovcmc/waterius/issues/10)
 
@@ -84,7 +82,7 @@
 
 # Ответственность
 
-Прошивка Вотериуса сделана на основе открытых библиотек, работоспособность которых никто не гарантирует. Я также не могу обещать, что устройство будет работать с вашем оборудованием и вы не получите ущерба как во время изготовления, так и во время эксплуатации устройства =). Пожалуйста, сообщите о любом опыте изготовления и использования [тут](https://github.com/dontsovcmc/waterius/issues). Вы поможете развитию проекта! 
+Прошивка Ватериуса сделана на основе открытых библиотек, работоспособность которых никто не гарантирует. Я также не могу обещать, что устройство будет работать с вашем оборудованием и вы не получите ущерба как во время изготовления, так и во время эксплуатации устройства =). Пожалуйста, сообщите о любом опыте изготовления и использования [тут](https://github.com/dontsovcmc/waterius/issues). Вы поможете развитию проекта! 
 
 [Лицензия GNU GPLv3](https://github.com/dontsovcmc/waterius/blob/master/LICENSE)
 
