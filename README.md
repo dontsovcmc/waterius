@@ -8,7 +8,8 @@
 ([включение режима настройки](https://waterius.ru/manual)).
 
 ### КУПИТЬ
-плату|конструктор|готовый -> [Telegram](http://t-do.ru/Dontsovcmc)
+- плату|конструктор -> [Telegram](http://t-do.ru/Dontsovcmc)
+- готовый -> [waterius.ru](https://waterius.ru/sell)
 
 Поддержать морально: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
 
