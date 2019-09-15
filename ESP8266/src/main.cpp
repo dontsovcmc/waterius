@@ -24,7 +24,8 @@ CalculatedData cdata; //вычисляемые данные
 */
 void setup()
 {
-    WiFi.mode(WIFI_STA);
+    WiFi.mode(WIFI_OFF);
+    memset(&cdata, 0, sizeof(cdata));
     memset(&data, 0, sizeof(data)); // На всякий случай
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
     LOG_NOTICE("ESP", "Booted");
@@ -50,10 +51,8 @@ void calculate_values(const Settings &sett, const SlaveData &data, CalculatedDat
     }
 }
 
-
 void loop()
 {
-    memset(&cdata, 0, sizeof(cdata));
     uint8_t mode = TRANSMIT_MODE;
 
 	// спрашиваем у Attiny85 повод пробуждения и данные
@@ -70,18 +69,21 @@ void loop()
 
         if (mode == SETUP_MODE) { //Режим настройки - запускаем точку доступа на 192.168.4.1
             //Запускаем точку доступа с вебсервером
+            WiFi.mode(WIFI_AP_STA);
             setup_ap(sett, data, cdata);
 
             success = false; // ESP падает после настройки при https, поэтому идём спать. 
                              // в будущем, когда вылечим, ESP будет выходить на связь сразу после настройки
+                             // пока не хватает памяти для HTTPS и падение в момент создании объекта
+            //WiFi.mode(WIFI_OFF);
+            //delay(500);
+            //mode = TRANSMIT_MODE;
         }
         
         if (success) {
             if (mode == TRANSMIT_MODE) { 
                 //Проснулись для передачи показаний
                 LOG_NOTICE("WIF", "Starting");
-                
-                WiFi.mode(WIFI_STA);
 
                 //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                 WiFi.begin(); 
@@ -94,9 +96,10 @@ void loop()
                 }
             }
 
-            if (WiFi.status() == WL_CONNECTED) {
+            if (WiFi.status() == WL_CONNECTED && masterI2C.getSlaveData(data)) {  //update voltage
 
                 LOG_NOTICE("WIF", "Connected, IP: " << WiFi.localIP().toString());
+                LOG_NOTICE("ESP", "V: " << data.voltage);
 
 #ifdef SEND_BLYNK
                 if (send_blynk(sett, data, cdata)) {

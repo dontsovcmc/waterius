@@ -12,7 +12,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     constexpr char THIS_FUNC_DESCRIPTION[] = "Send new data";
     constexpr char THIS_FUNC_SVC[] = "SND";
     LOG_NOTICE(THIS_FUNC_SVC, "-- START -- " << THIS_FUNC_DESCRIPTION);
-    
+
     if (strnlen(settings.waterius_key, WATERIUS_KEY_LEN) == 0) {
         LOG_NOTICE(THIS_FUNC_SVC, "NO Waterius key. SKIP");
         return false;
@@ -40,7 +40,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["resets"] =        data.resets;
     root["email"] =         settings.waterius_email;
     serializeJson(root, jsonBody);
-
+    
     // Try to send
     WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(
         settings.waterius_host, settings.waterius_key, settings.waterius_email, jsonBody);

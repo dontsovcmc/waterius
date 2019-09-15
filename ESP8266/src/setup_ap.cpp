@@ -36,7 +36,6 @@ void update_data(String &message)
         String state0bad(STATE_BAD);
         String state1good(STATE_NULL);
         String state1bad(STATE_BAD);
-        String factor;
         uint32_t delta0 = runtime_data.impulses0 - data.impulses0;
         uint32_t delta1 = runtime_data.impulses1 - data.impulses1;
         
@@ -49,12 +48,17 @@ void update_data(String &message)
             state1bad = STATE_NULL;
         }
 
-        message = "{\"state0good\": " + state0good
-                + ", \"state0bad\": " + state0bad 
-                + ", \"state1good\": " + state1good
-                + ", \"state1bad\": " + state1bad
-                + ", \"factor\": " + String(get_factor())
-                + " }";
+        message = "{\"state0good\": ";
+        message += state0good;
+        message += ", \"state0bad\": ";
+        message += state0bad;
+        message += ", \"state1good\": ";
+        message += state1good;
+        message += ", \"state1bad\": ";
+        message += state1bad;
+        message += ", \"factor\": ";
+        message += String(get_factor());
+        message += " }";
     }
     else {
         message = "{\"error\": \"Ошибка\"}";
@@ -66,6 +70,7 @@ WiFiManager wm;
 void handleStates(){
   Serial.println("[HTTP] states route");
   String message;
+  message.reserve(200);
   update_data(message);
   wm.server->send(200, "text/plain", message);
 }
@@ -73,6 +78,7 @@ void handleStates(){
 void bindServerCallback(){
   wm.server->on("/states", handleStates);
 }
+
 
 
 void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata) 
@@ -154,28 +160,28 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter( &param_channel0_start);
 
     WiFiManagerParameter label_factor("<label>Автонастройка: <span id=\"factor\"></span> л. на импульс</label>"); //для визуального контроля л/имп
-    //LongParameter param_litres_per_imp( "factor", "",  sett.liters_per_impuls, 5, "type=\"number\"");
-   
+    
     wm.addParameter( &label_factor);
+    //LongParameter param_litres_per_imp( "factor", "",  sett.liters_per_impuls, 5, "type=\"number\"");
 
     //wm.addParameter( &param_litres_per_imp);
     WiFiManagerParameter javascript_callback("<script>\
-        let timerId = setTimeout(function run() {\
-            const xhr = new XMLHttpRequest();\
-            xhr.open('GET', '/states');xhr.timeout = 500;\
-            xhr.send();\
-            xhr.onreadystatechange = function (e) {\
-                if(xhr.readyState === 4 && xhr.status === 200) {\
-                    var data = JSON.parse(xhr.responseText);\
-                    Object.keys(data).forEach(function(key) {\
-                        document.getElementById(key).innerHTML = data[key];\
-                    })\
-                };\
-            };\
-            timerId = setTimeout(run, 2000);\
-        }, 2000);\
-    </script>");
-    wm.addParameter( &javascript_callback);
+		let timerId = setTimeout(function run() {\
+			const xhr = new XMLHttpRequest();\
+			xhr.open('GET', '/states');xhr.timeout = 500;\
+			xhr.send();\
+			xhr.onreadystatechange = function (e) {\
+				if(xhr.readyState === 4 && xhr.status === 200) {\
+					var data = JSON.parse(xhr.responseText);\
+						Object.keys(data).forEach(function(key) {\
+						document.getElementById(key).innerHTML = data[key];\
+					})\
+				};\
+			};\
+			timerId = setTimeout(run, 2000);\
+		}, 2000);\
+	</script>");
+    wm.addParameter(&javascript_callback);
 
     wm.setConfigPortalTimeout(300);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
