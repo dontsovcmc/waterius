@@ -12,7 +12,7 @@ HTTPClient httpClient;
 WiFiClient wifiClient;
 BearSSL::WiFiClientSecure wifiTlsClient;
 
-#define JSON_BUFFER_SIZE 1000
+#define JSON_BUFFER_SIZE 500
 
 WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url, const char *key, const char *email, const String &body)
 {

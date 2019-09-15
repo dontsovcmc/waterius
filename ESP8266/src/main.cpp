@@ -96,10 +96,9 @@ void loop()
                 }
             }
 
-            if (WiFi.status() == WL_CONNECTED && masterI2C.getSlaveData(data)) {  //update voltage
+            if (WiFi.status() == WL_CONNECTED) { 
 
                 LOG_NOTICE("WIF", "Connected, IP: " << WiFi.localIP().toString());
-                LOG_NOTICE("ESP", "V: " << data.voltage);
 
 #ifdef SEND_BLYNK
                 if (send_blynk(sett, data, cdata)) {
