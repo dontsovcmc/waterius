@@ -19,7 +19,7 @@ app = Flask(__name__)
 """
 Настроим защищенную передачу данных от Вотериуса. 
 Создадим Центр сертификации и сгенерируем ключ/сертификат для сервера.
-В Вотериус запишем сертификат Центра сертификации. Он подтвердит, что сервер тот, за кого себя выдает.
+В Ватериус запишем сертификат Центра сертификации. Он подтвердит, что сервер тот, за кого себя выдает.
 
 openssl genrsa -out ca_key.pem 2048
 openssl req -x509 -new -nodes -key ca_key.pem -days 8000 -out ca_cer.pem -subj '/CN=192.168.1.10/C=RU/ST=Moscow/L=Moscow/O=Waterius LLC/OU=Waterius community'
@@ -48,7 +48,7 @@ openssl x509 -in ca_cer.pem -text
 @app.route('/data', methods=['POST'])
 def root():
     """
-    Получение данных от Вотериуса 
+    Получение данных от Ватериуса 
 
     curl -X POST -d '{"ch0": 1, "ch1": 2, "key": "123", "delta0": 1, "delta1": 1, 
     "version": 1, "voltage": 3.0, "version_esp": "0", "resets": 0, "good": 0, "boot": 0}' 

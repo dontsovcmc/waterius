@@ -26,7 +26,7 @@ http://www.avislab.com/blog/wp-content/uploads/2012/12/avrdude.zip
 2. Подключите плату Arduino к Вотериусу:
 Распиновка, при прошивки с помощью Arduino Micro или Arduino UNO:
 
-| Micro | UNO | ISP | Attiny85 |   
+| Micro | UNO/NANO | ISP | Attiny85 |   
 | ---- | ---- | ---- | ---- |
 | 15pin | 13pin | SCK | 7pin |
 | 14pin | 12pin | MISO | 6pin |
