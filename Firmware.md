@@ -160,8 +160,8 @@ platformio run --target upload
 
 
 ## Прошивка с помощью Arduino IDE
-#### Attiny: Additional Libraries Требуемые библиотеки  
-* [USIWire](https://github.com/dontsovcmc/USIWire#master) i2c слейв для attiny
+
+Установить [поддержку Attiny плат](https://github.com/SpenceKonde/ATTinyCore/blob/master/Installation.md), выбрать 1 MHz internal 
 
 #### Attiny: Sketch
 1. rename main.cpp to src.ino 
@@ -170,9 +170,10 @@ platformio run --target upload
 
 ### ESP8266: Additional Libraries Требуемые библиотеки   
 
-* Blynk by Volodymyr Shymanskyy (0.5.2)
-* ArduinoJSON
-* [WiFiManager#waterius_release_070](https://github.com/dontsovcmc/WiFiManager/tree/waterius_release_070) для настройки wi-fi точки доступа (определенную ветку, сейчас актуальная waterius_release_070!)
+* Blynk by Volodymyr Shymanskyy (0.6.1)
+* ArduinoJSON (6.12.0)
+* PubSubClient (2.7.0)
+* Установить вручную из zip [WiFiManager#waterius_release_090](https://github.com/dontsovcmc/WiFiManager/tree/waterius_release_090) 
 
 #### ESP8266: Additional Boards Managers URLs:
 http://arduino.esp8266.com/stable/package_esp8266com_index.json
@@ -180,7 +181,7 @@ http://arduino.esp8266.com/stable/package_esp8266com_index.json
 Board settings:
 * Board: Generic ESP8266 Module
 * Flash Mode: DIO
-* Flash Size: 512K (no SPIFFS)
+* Flash Size: 1M (no SPIFFS)
 * Debug port: Disable
 * Debug Level: None
 * IwIP Varian: v2 Lover Memory
@@ -191,11 +192,6 @@ Board settings:
 * Buildin Led: 0
 * Upload Speed: 115200
 * Port: select your port
-
-#### Attiny: Sketch
-1. rename main.cpp to src.ino 
-2. open src.ino in Arduino IDE
-3. compile
 
 
 
