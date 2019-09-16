@@ -4,7 +4,7 @@
 #include <ArduinoJson.h>
 
 
-#define JSON_BUFFER_SIZE 1000
+#define JSON_BUFFER_SIZE 500
 
 
 bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, const CalculatedData &cdata)
@@ -39,6 +39,8 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["key"] =           settings.waterius_key;
     root["resets"] =        data.resets;
     root["email"] =         settings.waterius_email;
+    root["voltage_low"] =   cdata.low_voltage;
+    root["voltage_diff"] =  cdata.voltage_diff;
     serializeJson(root, jsonBody);
     
     // Try to send

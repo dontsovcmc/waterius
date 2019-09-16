@@ -51,6 +51,24 @@ void calculate_values(const Settings &sett, const SlaveData &data, CalculatedDat
     }
 }
 
+#define LOW_BATTERY_DIFF_MV 15  //надо еще учесть качество замеров (компаратора у attiny)
+#define ALERT_POWER_DIFF_MV 40
+
+bool check_voltage(SlaveData &data, CalculatedData &cdata)
+{   
+    uint32_t prev = data.voltage;
+	if (masterI2C.getSlaveData(data)) {
+        uint32_t diff = abs(prev - data.voltage);
+        if (diff > cdata.voltage_diff) {
+            cdata.voltage_diff = diff;
+        }
+        
+        cdata.low_voltage = cdata.voltage_diff >= LOW_BATTERY_DIFF_MV;
+        return cdata.voltage_diff < ALERT_POWER_DIFF_MV;
+	}
+    return true; //пропустим если ошибка i2c
+}
+
 void loop()
 {
     uint8_t mode = TRANSMIT_MODE;
@@ -87,16 +105,21 @@ void loop()
 
                 //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                 WiFi.begin(); 
-
+                
                 //Ожидаем подключения к точке доступа
                 uint32_t start = millis();
                 while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
                     LOG_NOTICE("WIF", "Status: " << WiFi.status());
                     delay(200);
+
+                    check_voltage(data, cdata);
                 }
             }
 
-            if (WiFi.status() == WL_CONNECTED) { 
+            //В будущем добавим success, означающее, что напряжение не критично изменяется, можно продолжать
+            //иначе есть риск ошибки ESP и стирания конфигурации
+            if (WiFi.status() == WL_CONNECTED 
+                && masterI2C.getSlaveData(data)) { //тут надо достоверно прочитать i2c
 
                 LOG_NOTICE("WIF", "Connected, IP: " << WiFi.localIP().toString());
 
@@ -115,12 +138,12 @@ void loop()
 #ifdef SEND_WATERIUS
                 UserClass::sendNewData(sett, data, cdata);
 #endif
-            }
 
-            //Сохраним текущие значения в памяти.
-            sett.impulses0_previous = data.impulses0;
-            sett.impulses1_previous = data.impulses1;
-            storeConfig(sett);
+                //Сохраним текущие значения в памяти.
+                sett.impulses0_previous = data.impulses0;
+                sett.impulses1_previous = data.impulses1;
+                storeConfig(sett);
+            }
         }
     }
 

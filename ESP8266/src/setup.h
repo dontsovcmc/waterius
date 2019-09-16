@@ -3,12 +3,14 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.9.0"
+#define FIRMWARE_VERSION "0.9.1"
   
 
 /*
 Версии прошивки для ESP
 
+0.9.1 - 2019.09.16 - Замеряю просадку напряжения.
+                     Совместим с attiny ver <=9, но для функции нужна ver 10.
 0.9.0 - 2019.09.07 - WiFiManager ветка development
 0.8.2 - 2019.05.19 - Ошибка +импульс при замкнутом положении НАМУР
                    - Автоматическое определение литров/импульс
@@ -88,11 +90,14 @@
 #define MQTT_TOPIC_LEN 64
 
 
-struct CalculatedData{
+struct CalculatedData {
     float channel0;
     float channel1;
     uint32_t delta0;
     uint32_t delta1;
+
+    uint32_t voltage_diff;
+    bool  low_voltage;
 };
 
 /*
@@ -122,6 +127,7 @@ struct Settings
     char     blynk_host[BLYNK_HOST_LEN];
 
     //Если email не пустой, то отсылается e-mail
+    //Чтобы работало нужен виджет эл. почта в приложении
     char     blynk_email[EMAIL_LEN];
     //Заголовок письма. {V0}-{V4} заменяются на данные 
     char     blynk_email_title[BLYNK_EMAIL_TITLE_LEN];
