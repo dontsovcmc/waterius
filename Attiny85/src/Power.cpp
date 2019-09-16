@@ -48,6 +48,7 @@ uint16_t readVcc()
 	// set the reference to Vcc and the measurement to the internal 1.1V reference
 
 	//Включаем ADC 
+	power_adc_enable();
 	adc_enable();
 
 	#if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
@@ -75,6 +76,7 @@ uint16_t readVcc()
 
 	//Выключаем ADC
 	adc_disable();
+	power_adc_disable();
 
 	return result; //милиВольт
 }

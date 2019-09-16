@@ -39,7 +39,7 @@
 	Сколько милисекунд пользователь может 
 	настраивать ESP. Если не закончил, питание ESP выключится.
 */
-#define SETUP_TIME_MSEC  300000UL 
+#define SETUP_TIME_MSEC  600000UL 
 
 
 struct Data {
