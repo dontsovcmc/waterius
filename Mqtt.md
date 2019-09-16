@@ -62,4 +62,7 @@ waterius/6901727/imp0 0
 waterius/6901727/imp1 0
 waterius/6901727/version 5
 waterius/6901727/version_esp 0.7
+waterius/6901727/voltage_diff 0.020
+waterius/6901727/voltage_low 0
+
 ```

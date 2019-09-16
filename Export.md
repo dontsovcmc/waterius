@@ -28,6 +28,8 @@ Connection: close
 	"key": "SECRET",    //ключ для waterius.ru
 	"resets": 1         //количество перезагрузок 
 	"email": ""         //поле электронный адрес нужно для waterius.ru
+	"voltage_low": true/false //низкий заряд батарейки
+	"voltage_diff": 0.020 //величина просадки питания (чтобы определить низкий заряд)
 } 
 ```
 

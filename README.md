@@ -1,5 +1,5 @@
 ### Aвтономное устройство для передачи показаний воды по Wi-Fi
-# Вотериус 0.9.0
+# Вотериус 0.9.1
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
@@ -18,6 +18,7 @@
 - передача по Wi-Fi раз в сутки
 - питание 3 АА батарейки (~4 года работы)
 - не нужно знать, сколько литров на импульс (Ватериус сам определит 1 или 10л/имп)
+- детектор низкого заряда (экспериментально)
 
 [Список поддерживаемых счётчиков](https://github.com/dontsovcmc/waterius/issues/65)
 

@@ -10,6 +10,7 @@ Full article on [Hackster.io](https://www.hackster.io/dontsovcmc/waterius-4bfaba
 - voltage
 - e-mail by Blynk (title and message template)
 - data to your TCP server
+- low voltage detector (experimental)
 
 Values saved in ATtiny EEPROM cycle buffer (~2 millions cycles). "Software ESD protection".
 
