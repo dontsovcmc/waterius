@@ -20,6 +20,10 @@
 Версии прошивок 
 FIRMWARE_VER
 
+10 - 2019.09.16 - dontsovcmc 
+    1. Замеряем питание пока общаемся с ESP
+	2. Время настройки 10 минут.
+
 9 - 2019.05.04 - dontsovcmc
     1. USIWire заменен на Wire
 
@@ -39,7 +43,7 @@ FIRMWARE_VER
 #define INPUT0_ADC  2
 #define INPUT1_ADC  3
 
-#define FIRMWARE_VER     9     // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER     10    // Версия прошивки. Передается в ESP и на сервер в данных.
 
 #define ESP_POWER_PIN    1     // пин включения ESP8266. 
 #define BUTTON_PIN       2     // пин кнопки: (на линии SCL)
@@ -205,7 +209,6 @@ void loop() {
 	wdt_disable();        // disable watchdog
 	power_all_enable();   // power everything back on
 
-	info.voltage = readVcc();   // Текущее напряжение
 	storage.get(info.data);     // Берем из хранилища текущие значения импульсов
 	
 	DEBUG_CONNECT(9600);
@@ -233,6 +236,8 @@ void loop() {
 	LOG_DEBUG(F("ESP turn on"));
 	
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit)) {
+
+		info.voltage = readVcc();   // Текущее напряжение
 
 		counting();
 
