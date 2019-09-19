@@ -33,7 +33,7 @@
 * в MQTT клиенте [настройка](https://github.com/dontsovcmc/waterius/blob/master/Mqtt.md)
   * в HomeAssistant [конфигурация](https://github.com/dontsovcmc/waterius/blob/master/homeassistant.configuration.yaml)
 * там, куда сами запрограммируете
-  * [httpwaterius](https://github.com/httpwaterius) - web сервер с простым UI от [grffio](https://github.com/grffio)
+  * [httpwaterius](https://github.com/grffio/httpwaterius) - web сервер с простым UI от [grffio](https://github.com/grffio)
 
 #### Статьи: 
 [Habrahabr.com (ru)](https://habr.com/post/418573/) | [Hackster.io (en)](https://www.hackster.io/dontsovcmc/waterius-4bfaba) | [Blynk forum (en-ru)](https://community.blynk.cc/t/autonomous-impulse-counter-for-water-meters-attiny85-esp-01)
