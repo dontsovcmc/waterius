@@ -44,6 +44,9 @@ Connection: close
 
 ## Сервер
 
+Проекты сообщества, которыми можно воспользоваться:
+- [httpwaterius][httpwaterius] - web сервер с простым UI
+
 Вот [Python скрипт](https://github.com/dontsovcmc/waterius/blob/master/Server/server.py) Flask сервера, получающего от Вотериуса данные. HTTPS и HTTP версия, смотрите аргументы запуска.
 
 Только HTTP сервер выглядит ещё проще:
@@ -82,3 +85,5 @@ python server.py
 curl -X POST -H "Content-Type: application/json" -d '{"ch0": 1.1, "ch1": 2.0}' http://192.168.1.2:8000/data
 ```
 Без заголовка application/json Flask не вернет JSON
+
+[httpwaterius]: https://github.com/grffio/httpwaterius

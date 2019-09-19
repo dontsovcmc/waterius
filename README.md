@@ -32,6 +32,7 @@
 - на вашем [HTTP/HTTPS сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
 - в MQTT клиенте [настройка](https://github.com/dontsovcmc/waterius/blob/master/Mqtt.md)
 - там, куда сами запрограммируете
+- [httpwaterius][httpwaterius] - web сервер с простым UI
 
 #### Статьи: 
 [Habrahabr.com (ru)](https://habr.com/post/418573/) | [Hackster.io (en)](https://www.hackster.io/dontsovcmc/waterius-4bfaba) | [Blynk forum (en-ru)](https://community.blynk.cc/t/autonomous-impulse-counter-for-water-meters-attiny85-esp-01)
@@ -111,3 +112,5 @@
 Найденные ошибки [сюда](https://github.com/dontsovcmc/waterius/issues)
 
 Связь: [Telegram](https://t.me/Dontsovcmc), [Facebook](https://facebook.com/dontsovev)
+
+[httpwaterius]: https://github.com/grffio/httpwaterius
