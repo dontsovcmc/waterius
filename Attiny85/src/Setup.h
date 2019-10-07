@@ -53,11 +53,40 @@ struct CounterState {
 };
 
 struct Header {
+
+    /*
+    Версия прошивки
+    */
     uint8_t       version;
-    uint8_t       service;
+    
+    /*
+    Причина перезагрузки (регистр MCUSR datasheet 8.5.1):
+         0001 - PORF: Power-on Reset Flag. Напряжение питания было низкое или 0.
+         0010 - EXTRF: External Reset Flag. Пин ресет был в низком уровне.
+         0100 - BORF: Brown-out Reset Flag. Напряжение питание было ниже требуемого. 
+         1000 - WDRF: Watchdog Reset Flag. Завершение работы таймера.
+
+    8  - 1000 - WDRF
+    9  - 1001 - WDRF + PORF
+    10 - 1010 - WDRF + EXTRF
+    */
+    uint8_t       service; 
+
+    /*
+    Напряжение питания в мВ.
+    */
     uint32_t      voltage;
+    
+    /*
+    Количество перезагрузок.
+    */
     uint8_t       resets;
+
+    /*
+    Резерв. Для 16битности.
+    */
     uint8_t       reserved;
+
     CounterState  states;
     Data          data;
 };
