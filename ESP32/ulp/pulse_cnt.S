@@ -75,33 +75,39 @@ entry:
 	 * Check which IO this is.
 	 */
 	move r0, r3
-	jumpr read_io_high, 16, ge
+	jumpr read_io_high, 16, ge  //Jump to a relative offset (condition based on R0)
 
 	/* Read the value of lower 16 RTC IOs into R0 */
 	READ_RTC_REG(RTC_GPIO_IN_REG, RTC_GPIO_IN_NEXT_S, 16)
-	rsh r0, r0, r3
+	rsh r0, r0, r3   //Logical Shift Right
 	jump read_done
 
 	/* Read the value of RTC IOs 16-17, into R0 */
 read_io_high:
 	READ_RTC_REG(RTC_GPIO_IN_REG, RTC_GPIO_IN_NEXT_S + 16, 2)
-	sub r3, r3, 16
-	rsh r0, r0, r3
+	sub r3, r3, 16    // r3 = r3 - 16
+	rsh r0, r0, r3    //Logical Shift Right
 
 read_done:
-	and r0, r0, 1
+	and r0, r0, 1     // r0 = r0 & 1
+
 	/* State of input changed? */
 	move r3, next_edge
-	ld r3, r3, 0
-	add r3, r0, r3
+	ld r3, r3, 0    //Load data from the memory
+
+	add r3, r0, r3   //R3 = R0 + R3
+
 	and r3, r3, 1
-	jump changed, eq
+
+	jump changed, eq  //Jump to an absolute address.
+					  //EQ – jump if last ALU operation result was zero
+
 	/* Not changed */
 	/* Reset debounce_counter to debounce_max_count */
 	move r3, debounce_max_count
 	move r2, debounce_counter
-	ld r3, r3, 0
-	st r3, r2, 0
+	ld r3, r3, 0  //Load data from the memory
+	st r3, r2, 0  //Store data to the memory
 	/* End program */
 	halt
 
