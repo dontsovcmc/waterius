@@ -28,12 +28,12 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["delta0"] =        cdata.delta0;
     root["delta1"] =        cdata.delta1;
     root["good"] =          data.diagnostic;
-    root["boot"] =          data.version;
+    root["boot"] =          data.service;
     root["ch0"] =           cdata.channel0;
     root["ch1"] =           cdata.channel1;
     root["imp0"] =          data.impulses0;
     root["imp1"] =          data.impulses1;
-    root["version"] =       settings.version;
+    root["version"] =       data.version;
     root["voltage"] =       (float)(data.voltage/1000.0);
     root["version_esp"] =   FIRMWARE_VERSION;
     root["key"] =           settings.waterius_key;

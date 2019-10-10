@@ -44,11 +44,11 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "delta1").c_str(), String(cdata.delta1).c_str());
         client.publish((topic + "voltage").c_str(), String((float)(data.voltage / 1000.0), 3).c_str());
         client.publish((topic + "resets").c_str(), String(data.resets).c_str());
+        client.publish((topic + "boot").c_str(), String(data.service).c_str());
         client.publish((topic + "good").c_str(), String(data.diagnostic).c_str());
-        client.publish((topic + "boot").c_str(), String(data.version).c_str());
         client.publish((topic + "imp0").c_str(), String(data.impulses0).c_str());
         client.publish((topic + "imp1").c_str(), String(data.impulses1).c_str());
-        client.publish((topic + "version").c_str(), String(sett.version).c_str());
+        client.publish((topic + "version").c_str(), String(data.version).c_str());
         client.publish((topic + "version_esp").c_str(), String(FIRMWARE_VERSION).c_str());
         client.publish((topic + "voltage_low").c_str(), String(cdata.low_voltage).c_str());
         client.publish((topic + "voltage_diff").c_str(), String((float)(cdata.voltage_diff / 1000.0), 3).c_str());
