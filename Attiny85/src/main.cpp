@@ -20,6 +20,9 @@
 Версии прошивок 
 FIRMWARE_VER
 
+11 - 2019.10.20 - dontsovcmc
+    1. Обновил алгоритм подсчёта импульсов.
+	
 10 - 2019.09.16 - dontsovcmc 
     1. Замеряем питание пока общаемся с ESP
 	2. Время настройки 10 минут.
@@ -43,7 +46,7 @@ FIRMWARE_VER
 #define INPUT0_ADC  2
 #define INPUT1_ADC  3
 
-#define FIRMWARE_VER     10    // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER     11    // Версия прошивки. Передается в ESP и на сервер в данных.
 
 #define ESP_POWER_PIN    1     // пин включения ESP8266. 
 #define BUTTON_PIN       2     // пин кнопки: (на линии SCL)
@@ -87,15 +90,15 @@ void resetWatchdog() {
 	WDTCR = bit( WDCE ) | bit( WDE ); // allow changes, disable reset, clear existing interrupt
 
 	// настраиваем период сна и кол-во просыпаний за 1 минуту
-	// Итак, пробуждаемся (проверяем входы) каждые 128 мс
-	// 1 минута примерно равна 480 пробуждениям
+	// Итак, пробуждаемся (проверяем входы) каждые 250 мс
+	// 1 минута примерно равна 240 пробуждениям
 	
 #ifdef TEST_WATERIUS
 	WDTCR = bit( WDIE ) | bit( WDP0 );      // 32 ms
 	#define ONE_MINUTE 20  // ускоримся для теста
 #else
-	WDTCR = bit( WDIE ) | bit( WDP0 ) | bit( WDP1 );     // 128 ms
-	#define ONE_MINUTE 480
+	WDTCR = bit( WDIE ) | bit( WDP2 );     // 250 ms
+	#define ONE_MINUTE 240
 #endif
 									
 	wdt_reset(); // pat the dog

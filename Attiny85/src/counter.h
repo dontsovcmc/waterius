@@ -12,7 +12,8 @@
 #define LIMIT_NAMUR_OPEN   800   // < 800 - намур разомкнут
                                  // > - обрыв
 
-#define TRIES 2  // Сколько раз проверяем вход, пока не вернем замыкание
+#define TRIES 3  //Сколько раз после окончания импульса 
+                 //должно его не быть, чтобы мы зарегистририровали импульс
 
 enum CounterState_e
 {
@@ -24,7 +25,7 @@ enum CounterState_e
 
 struct Counter 
 {
-    uint8_t _checks;
+    int8_t _checks; // -1 <= _checks <= TRIES
     
     uint8_t _pin;   // дискретный вход
     uint8_t _apin;  // номер аналогового входа
@@ -70,16 +71,18 @@ struct Counter
 
     bool is_impuls()
     { 
+        //Детектируем импульс когда он заканчивается.
+        //Дребезг проверяем 
         if (is_close()) {
-            if (_checks < TRIES) {
-                _checks++;
+            _checks = TRIES;
+        }
+        else {
+            if (_checks >= 0) {
+                _checks--;
             }
-            if (_checks == TRIES) {
-                _checks++;
+            if (_checks == 0) {
                 return true;
-            } 
-        } else {
-          _checks = 0;
+            }
         }
         return false;
     }
