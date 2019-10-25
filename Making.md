@@ -16,8 +16,8 @@
 | 7 | Разъем гнездо на плату 2.54мм PBD-8 | 1 | Для ESP8266-01 | [chipdip](https://www.chipdip.ru/product/pbd-8) |
 | 8 | Кнопка тактовая угловая 7мм KLS7-TS6606-7.0-180 (TC-0206) | 1 | Лучше угловая длиной от 7мм. Прямая кнопка потребует дырку в сдвижной крышке, что нeудобно | [chipdip](https://www.chipdip.ru/product/kls7-ts6606-7.0-180-tc-0206) |
 | 9 | Пин на плату | 1 | Любой для прошивки | [chipdip](https://www.chipdip.ru/product/tyco-826629-2) |
-| 10 | ESP8266-01 | 1 | ESP8266-01s потребляют 0мкА, а ESP8266-01 около 10мкА | [yandex](https://yandex.ru/search/?text=ESP8266-01&lr=213) |
-| 11 | Закрытый батарейный отсек 4xAA | 1 | У ЧипДип KLS5-812-B, качество не очень. | [chipdip](https://www.chipdip.ru/product/fc1-5230) |
+| 10 | ESP8266-01 | 1 | ESP8266-01s потребляют 0мкА, а ESP8266-01 около 10мкА | [aliexpress](http://s.click.aliexpress.com/e/BTUNMvCk) (проверенный) [yandex](https://yandex.ru/search/?text=ESP8266-01&lr=213) |
+| 11 | Закрытый батарейный отсек 4xAA | 1 | У ЧипДип KLS5-812-B, качество не очень. | [aliexpress](http://s.click.aliexpress.com/e/43K45ruk)(проверенный) [chipdip](https://www.chipdip.ru/product/fc1-5230) |
 | 12 | Стабилизатор MCP1700T-3002E-TT | 1 |  | [terraelectronica](https://www.terraelectronica.ru/product/241237) |
 | 13 | Разъем под кабель на плату 4 контакта 2.54мм | 1 | Без винтов: DG141V-2.54-04P-14-00AH | [terraelectronica](https://www.terraelectronica.ru/product/1072180) |
 | 14 | [Плата](waterius-factory-board2_bottom.jpg) | 1 | или [ЛУТ](https://github.com/dontsovcmc/ImpCounter/raw/master/Board/waterius-homemade-board.png) | - |
