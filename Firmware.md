@@ -100,10 +100,10 @@ upload_flags =
 Если нет curl, то открываем ссылку и заходим в папку с файлом.
 4. Подключаем USB-TTL с ESP8266
 5. `python -m esptool --baud 115200 --port COM7 write_flash --flash_freq 40m --flash_size 1MB --flash_mode dio --verify 0x0 esp8266.bin`
-COM7 замените на порт USB-TTL
+   COM7 замените на порт USB-TTL
 
 <details>
- <summary>output log</summary>
+ <summary>output log (esptool 2.5.0)</summary>
 	
 ```
 esptool.py v2.5.0
@@ -129,6 +129,35 @@ Flash params set to 0x0220
 Verifying 0x57da0 (359840) bytes @ 0x00000000 in flash against esp.bin...
 -- verify OK (digest matched)
 Hard resetting via RTS pin...
+```
+</details>
+
+5b. Чуть больше ключей:
+`python -m esptool --chip esp8266 --port /dev/cu.wchusbserial1410 --baud 115200 --after no_reset write_flash --flash_freq 40m --flash_size 1MB --flash_mode dio --verify 0x0 .pio/build/esp01_1m/firmware.bin`
+
+<details>
+ <summary>output log (esptool 2.2.1)</summary>
+	
+```
+esptool.py v2.2.1
+Connecting........_____....._____....._____....._
+Chip is ESP8266EX
+Uploading stub...
+Running stub...
+Stub running...
+Configuring flash size...
+Flash params set to 0x0220
+Compressed 512800 bytes to 359241...
+Wrote 512800 bytes (359241 compressed) at 0x00000000 in 38.1 seconds (effective 107.8 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Verifying just-written flash...
+(This option is deprecated, flash contents are now always read back after flashing.)
+Flash params set to 0x0220
+Verifying 0x7d320 (512800) bytes @ 0x00000000 in flash against .pio/build/esp01_1m/firmware.bin...
+-- verify OK (digest matched)
+Staying in bootloader.
 ```
 </details>
 
@@ -193,5 +222,21 @@ Board settings:
 * Upload Speed: 115200
 * Port: select your port
 
+# FAQ
 
+<details>
+<summary>1. Лог прошитой ESP без подключения к ватериусу</summary>
+	
+```
+pio device monitor --port /dev/cu.wchusbserial1410 --baud 115200
+--- Miniterm on /dev/cu.wchusbserial1410  115200,8,N,1 ---
+--- Quit: Ctrl+C | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H ---
+;l␀d��|␀�$�|␃␄␌␄�␌$�␄c|ǃ␂�␛�{�c�␄c��o'�lno���␌b␜x�$c␇l{lx�n�␘␃␌␌�␌d␌��␌␄␌c␄g�|␃l�␌␄�c��'o�␀$��l`␃�␛␓no␄$`␃␏␃'{���o␄␄c␄�␏l␇s��'␄␌c␌�␇d�␃�␃$l�␒�$`␃��'�␂000:00:00:00:396  NOTICE    (ESP) : Booted
+000:00:00:00:397  ERROR     (I2C) : end error:2
+000:00:00:00:397  ERROR     (I2C) : get mode failed. Check i2c line.
+000:00:00:00:400  NOTICE    (ESP) : Going to sleep
+000:00:00:00:404  ERROR     (I2C) : end error:2
+```
+</details>
+ЕSP включается, запрашивает режим включения у Attiny, нет ответа, идёт спать.
 
