@@ -99,7 +99,7 @@ upload_flags =
 3. Скачивем прошивку ESP8266: `curl https://raw.githubusercontent.com/dontsovcmc/waterius_firmware/master/0.5/esp8266.bin --output ./esp8266.bin`
 Если нет curl, то открываем ссылку и заходим в папку с файлом.
 4. Подключаем USB-TTL с ESP8266
-5. `python -m esptool --baud 115200 --port COM7 write_flash --flash_freq 40m --flash_size 1MB --flash_mode dio --verify 0x0 esp8266.bin`
+5. `python -m esptool --baud 115200 --port COM7 write_flash --flash_freq 40m --flash_size 1MB --flash_mode qio --verify 0x0 esp8266.bin`
    COM7 замените на порт USB-TTL
 
 <details>
@@ -133,7 +133,7 @@ Hard resetting via RTS pin...
 </details>
 
 5b. Чуть больше ключей:
-`python -m esptool --chip esp8266 --port /dev/cu.wchusbserial1410 --baud 115200 --after no_reset write_flash --flash_freq 40m --flash_size 1MB --flash_mode dio --verify 0x0 .pio/build/esp01_1m/firmware.bin`
+`python -m esptool --chip esp8266 --port /dev/cu.wchusbserial1410 --baud 115200 --after no_reset write_flash --flash_freq 40m --flash_size 1MB --flash_mode qio --verify 0x0 .pio/build/esp01_1m/firmware.bin`
 
 <details>
  <summary>output log (esptool 2.2.1)</summary>
@@ -160,6 +160,7 @@ Verifying 0x7d320 (512800) bytes @ 0x00000000 in flash against .pio/build/esp01_
 Staying in bootloader.
 ```
 </details>
+
 
 
 ## Прошивка через PlatformIO
@@ -209,7 +210,7 @@ http://arduino.esp8266.com/stable/package_esp8266com_index.json
 
 Board settings:
 * Board: Generic ESP8266 Module
-* Flash Mode: DIO
+* Flash Mode: QIO
 * Flash Size: 1M (no SPIFFS)
 * Debug port: Disable
 * Debug Level: None
