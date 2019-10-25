@@ -3,13 +3,14 @@
 #include "setup_ap.h"
 #include "transmit.h"
 
-#define LED_PIN    GPIO_NUM_32
+#define LED_PIN    GPIO_NUM_4
+#define CAMERA_PIN GPIO_NUM_32
 #define BUTTON_PIN GPIO_NUM_7
 
 
-#define TIME_TO_SLEEP_SEC  2 //60        // Time ESP32 will go to sleep (in seconds)
+#define TIME_TO_SLEEP_SEC  5 //60        // Time ESP32 will go to sleep (in seconds)
 
-#define TRANSMIT_PERIOD_MIN  3 //60*24   // 1 day
+#define TRANSMIT_PERIOD_MIN  1 //60*24   // 1 day
 
 RTC_DATA_ATTR int bootCount = 0;
 
@@ -18,13 +19,10 @@ WateriusButton button(BUTTON_PIN);
 void init_wakeup()
 {
     Serial.printf("Init timer wakeup"); 
-    bootCount = 0;
     esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_SEC * 1000000);
     esp_sleep_enable_ext0_wakeup(BUTTON_PIN, HIGH);
 
-    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_SEC * 1000000);
     Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP_SEC) + " Seconds");
-
 }
 
 void disable_wakeup()
@@ -63,15 +61,17 @@ void setup()
                 transmit_data();
             }
             
+            bootCount = 0;
             init_wakeup();
             break;
         case ESP_SLEEP_WAKEUP_TIMER: 
             Serial.println("Wakeup caused by timer"); 
-
-            if (bootCount > TRANSMIT_PERIOD_MIN) {
+            
+            if (bootCount >= TRANSMIT_PERIOD_MIN) {
+                bootCount = 0;
                 transmit_data();
-                init_wakeup();
             }
+            init_wakeup();
             break;
         case ESP_SLEEP_WAKEUP_EXT0: Serial.println("Wakeup caused by external signal using RTC_IO"); break;
         case ESP_SLEEP_WAKEUP_TOUCHPAD: Serial.println("Wakeup caused by touchpad"); break;
