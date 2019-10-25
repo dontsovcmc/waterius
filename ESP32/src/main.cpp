@@ -1,4 +1,8 @@
 #include <Arduino.h>
+
+#define LOGLEVEL 6
+
+#include "Logging.h"
 #include "wbutton.h"
 #include "setup_ap.h"
 #include "transmit.h"
@@ -32,10 +36,39 @@ void disable_wakeup()
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_EXT0);
 }
 
+void test_current()
+{
+    Serial.printf("wait 5 sec"); 
+    delay(5000);
+
+    Serial.printf("Init timer wakeup"); 
+
+    Serial.printf("Init timer wakeup"); 
+    esp_sleep_enable_timer_wakeup(60 * 1000000);
+    //esp_sleep_enable_ext0_wakeup(BUTTON_PIN, HIGH);
+    Serial.println("Setup ESP32 to sleep for every " + String(TIME_TO_SLEEP_SEC) + " Seconds");
+    Serial.flush(); 
+    esp_deep_sleep_start();
+    esp_deep_sleep_disable_rom_logging(); // suppress boot messages
+}
+
 void setup()
 {
-    Serial.begin(115200);
+    
+    LOG_BEGIN(115200);
     delay(1000); //Take some time to open up the Serial Monitor
+    
+    /* Disconnect GPIO12 and GPIO15 to remove current drain through
+     * pullup/pulldown resistors.
+     * GPIO12 may be pulled high to select flash voltage.
+     */
+    //rtc_gpio_isolate(GPIO_NUM_12);
+    //rtc_gpio_isolate(GPIO_NUM_15);
+
+    pinMode(OUTPUT_OPEN_DRAIN, GPIO_NUM_12); // safe 50uA
+    pinMode(OUTPUT_OPEN_DRAIN, GPIO_NUM_15); // safe 50uA
+
+    test_current();
 
     //Increment boot number and print it every reboot
     ++bootCount;

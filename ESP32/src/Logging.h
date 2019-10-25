@@ -1,7 +1,6 @@
 #ifndef _WATERIUS_LOGGING_h
 #define _WATERIUS_LOGGING_h
 
-#include "setup.h"
 #define LOG_TIME_FORMAT 2
 
 #include <Arduino.h>
@@ -53,7 +52,7 @@ template<class T> inline Print &operator <<( Print &obj, T arg ) {
 // Depending on log level, add code for logging
 #if LOGLEVEL >= 0
 	#undef LOG_BEGIN
-	#define LOG_BEGIN(baud) do { Serial.begin( baud ,SERIAL_8N1, SERIAL_TX_ONLY); } while(0)
+	#define LOG_BEGIN(baud) do { Serial.begin( baud ); } while(0)
 	#undef LOG_END
 	#define LOG_END() do { Serial.flush(); Serial.end(); } while(0)
 	#undef LOG_EMERGENCY
