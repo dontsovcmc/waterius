@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.0.0">
+<eagle version="9.0.1">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -97,11 +97,10 @@
 <text x="6.9088" y="1.3" size="0.7" layer="26" rot="MR0">RST</text>
 <text x="12.2428" y="1.3" size="1" layer="26" rot="MR0">TX</text>
 <text x="1.8542" y="10.9982" size="1" layer="26" rot="MR270">waterius.ru</text>
-<text x="5.2324" y="5.461" size="1.5" layer="25">+</text>
+<text x="5.1562" y="8.001" size="1.5" layer="25">+</text>
 <dimension x1="0" y1="0" x2="0" y2="7.5" x3="-10.774365625" y3="3.75" textsize="1.778" layer="47"/>
 <dimension x1="0" y1="0" x2="0" y2="30.5" x3="-15.66665" y3="15.25" textsize="1.778" layer="47"/>
 <text x="12.9286" y="35.3314" size="1.778" layer="26" rot="MR0">-   +</text>
-<dimension x1="-1.8542" y1="35.4584" x2="-1.8542" y2="39.4208" x3="-2.7686" y3="37.4396" textsize="1.778" layer="1"/>
 <dimension x1="0" y1="52" x2="3.0226" y2="51.9684" x3="1.5338625" y3="54.1427" textsize="1.778" layer="1"/>
 <dimension x1="0" y1="0" x2="-0.0508" y2="39.5224" x3="-11.58323125" y3="19.74634375" textsize="1.778" layer="1"/>
 <text x="1.8542" y="14.4018" size="1" layer="26" rot="MR270">v0.2</text>
@@ -2868,7 +2867,7 @@ design rules under a new name.</description>
 <attribute name="NAME" x="10.5358" y="21.3688" size="1" layer="25" rot="R180"/>
 </element>
 <element name="U3" library="esp8266modules" package="ESP01" value="ESP01" x="7.3816" y="19.5462" smashed="yes" rot="MR0"/>
-<element name="LED1" library="led" package="LED3MM" value="RED" x="7.3424" y="7.4654" smashed="yes" rot="MR90"/>
+<element name="LED1" library="led" package="LED3MM" value="RED" x="7.3424" y="7.4654" smashed="yes" rot="MR270"/>
 <element name="R11" library="resistor" package="R0805" value="300" x="10.7086" y="6.215" smashed="yes" rot="MR0">
 <attribute name="NAME" x="11.86" y="4.2732" size="1" layer="26" rot="MR0"/>
 </element>
@@ -3151,14 +3150,14 @@ design rules under a new name.</description>
 <wire x1="10.795" y1="10.9571" x2="11.2066" y2="11.3687" width="0.3048" layer="1"/>
 <wire x1="10.795" y1="9.5078" x2="10.795" y2="10.9571" width="0.3048" layer="1"/>
 <wire x1="10.0348" y1="8.7476" x2="9.7434" y2="8.4562" width="0.3048" layer="1"/>
-<wire x1="10.0348" y1="8.7476" x2="7.4826" y2="6.1954" width="0.3048" layer="1"/>
-<wire x1="7.4826" y1="6.1954" x2="7.3424" y2="6.1954" width="0.3048" layer="1"/>
+<wire x1="10.0348" y1="8.7476" x2="7.381" y2="8.7354" width="0.3048" layer="1"/>
+<wire x1="7.381" y1="8.7354" x2="7.3424" y2="8.7354" width="0.3048" layer="1"/>
 </signal>
 <signal name="N$6">
 <contactref element="R11" pad="2"/>
 <contactref element="LED1" pad="K"/>
-<wire x1="7.3424" y1="8.7354" x2="9.7586" y2="6.3192" width="0.3048" layer="16"/>
-<wire x1="9.7586" y1="6.3192" x2="9.7586" y2="6.215" width="0.3048" layer="16"/>
+<wire x1="7.3424" y1="6.1954" x2="9.6062" y2="6.1922" width="0.3048" layer="16"/>
+<wire x1="9.6062" y1="6.1922" x2="9.7586" y2="6.215" width="0.3048" layer="16"/>
 </signal>
 <signal name="N$4">
 <contactref element="R5" pad="1"/>
