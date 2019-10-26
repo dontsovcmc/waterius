@@ -78,7 +78,7 @@ upload_flags =
 - [PL2303](http://www.prolific.com.tw/US/ShowProduct.aspx?p_id=225&pcid=41)
 
 ## Готовые hex файлы
-[файлы waterius_firmware](https://github.com/dontsovcmc/waterius_firmware)
+[На странице releases](https://github.com/dontsovcmc/waterius/releases)
 
 ### Прошивка attiny85 с помощью Avrdude & Usbasp
 1. Скачивем Avrdude: http://www.avislab.com/blog/wp-content/uploads/2012/12/avrdude.zip
