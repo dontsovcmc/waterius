@@ -126,6 +126,12 @@ bool loadConfig(struct Settings &sett)
         LOG_NOTICE("CFG", "default waterius key=" << VALUE(WATERIUS_KEY));
 #endif
 
+#ifdef WATERIUS_EMAIL
+        #pragma message(VAR_NAME_VALUE(WATERIUS_EMAIL))
+        strncpy0(sett.waterius_email, VALUE(WATERIUS_EMAIL), EMAIL_LEN);
+        LOG_NOTICE("CFG", "default waterius email=" << VALUE(WATERIUS_EMAIL));
+#endif
+
 #if defined(SSID_NAME) 
 #if defined(SSID_PASS)
         #pragma message(VAR_NAME_VALUE(SSID_NAME))
