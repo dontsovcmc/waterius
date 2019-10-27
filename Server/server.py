@@ -52,12 +52,12 @@ def root():
 
     curl -X POST -d '{"ch0": 1, "ch1": 2, "key": "123", "delta0": 1, "delta1": 1, 
     "version": 1, "voltage": 3.0, "version_esp": "0", "resets": 0, "good": 0, "boot": 0}' 
-    -H "Content-Type: application/json" http://127.0.0.1:8000/ -v
+    -H "Content-Type: application/json" http://192.168.1.10:10000/data -v
     """
     try:
         j = request.get_json()
-        print(j['ch0'])
-        print(j['ch1'])
+        ret = 'OK' if j['ch0'] > 0 and j['ch1'] > 0 else 'ERROR null value'
+        print('{} ({}, {})'.format(ret, j['ch0'], j['ch1']))
     except Exception as err:
         return "{}".format(err), 400
     return 'OK'
@@ -68,7 +68,7 @@ def ping():
     """
     Проверка сервера GET запросом утилиты Curl:
 
-    curl https://192.168.1.10/ping --cacert ./certs/ca_cer.pem
+    curl https://192.168.1.10:10000/ping --cacert ./certs/ca_cer.pem
     """
     return 'pong'
 
@@ -78,12 +78,12 @@ if __name__ == "__main__":
     Пример вызова скрипта:
     
     HTTP сервер
-    python server.py --host 192.168.1.10 --port 5000 
+    python server.py --host 192.168.1.10 --port 10000 
 
     HTTPS сервер
     сгенерируйте свои ключи и положите в папку certs. запишите в waterius ca_cer.pem.
     
-    python server.py --host 192.168.1.10 --port 5000 --tls
+    python server.py --host 192.168.1.10 --port 10000 --tls
     """
     parser = argparse.ArgumentParser(description='Waterius TLS server example')
     parser.add_argument('--host', help='Ip address')
