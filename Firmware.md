@@ -94,13 +94,17 @@ upload_flags =
 ### Прошивка ESP8266
 Программатор не нужен, а нужен переходник с USB на TTL 3.3 вольт.
 
-1. Ставим Питон 2.7, добавляем в PATH
+1. Ставим Питон 2.7
+Win: Добавляем в PATH:
+C:\Users\Админ\AppData\Local\Programs\Python\Python38-32
+2. Скачиваем pip. Выполняем python get-pip.py - Питон установит утилиту pip.
+добавляем в PATH:
+C:\Users\Админ\AppData\Local\Programs\Python\Python38-32\Scripts
 2. pip install esptool
-3. Скачивем прошивку ESP8266: `curl https://raw.githubusercontent.com/dontsovcmc/waterius_firmware/master/0.5/esp8266.bin --output ./esp8266.bin`
-Если нет curl, то открываем ссылку и заходим в папку с файлом.
-4. Подключаем USB-TTL с ESP8266
+3. Скачивем [прошивку ESP8266](https://github.com/dontsovcmc/waterius/releases) файл esp8266.bin
+4. Подключаем USB-TTL с ESP8266 замкнув GPIO0 на GND
 5. `python -m esptool --baud 115200 --port COM7 write_flash --flash_freq 40m --flash_size 1MB --flash_mode qio --verify 0x0 esp8266.bin`
-   COM7 замените на порт USB-TTL
+COM7 замените на свой порт
 
 <details>
  <summary>output log (esptool 2.5.0)</summary>
@@ -161,6 +165,8 @@ Staying in bootloader.
 ```
 </details>
 
+Очистить конфигурацию можно вместе с памятью:
+python -m esptool --chip esp8266 --port COM3 --after no_reset erase_flash
 
 
 ## Прошивка через PlatformIO
