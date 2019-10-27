@@ -93,11 +93,21 @@ void WateriusHttps::generateSha256Token(char *token, const int token_len,
     LOG_NOTICE(THIS_FUNC_SVC, "-- START -- " << THIS_FUNC_DESCRIPTION);
     LOG_INFO(THIS_FUNC_SVC, "E-mail:\t" << email);
     
-    randomSeed(time(nullptr));
-    int salt = rand();
     auto x = BearSSL::HashSHA256();
     x.add(email, strlen(email));
+
+    randomSeed(micros());
+    uint32_t salt = rand();
+    LOG_INFO(THIS_FUNC_SVC, "salt:\t" << salt);
     x.add(&salt, sizeof(salt));
+
+    salt = ESP.getChipId();
+    x.add(&salt, sizeof(salt));
+    LOG_NOTICE(THIS_FUNC_SVC, "chip id: " << salt);
+    
+    salt = ESP.getFlashChipId();
+    x.add(&salt, sizeof(salt));
+    LOG_NOTICE(THIS_FUNC_SVC, "flash id: " << salt);
     x.end();
     unsigned char *hash = (unsigned char *)x.hash();
 
