@@ -3,12 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.9.2"
+#define FIRMWARE_VERSION "0.9.3"
   
 
 /*
 Версии прошивки для ESP
 
+0.9.3 - 2019.10.27 - Исправил random
 0.9.2 - 2019.10.16 - Исправил поля в json (boot, version)
 0.9.1 - 2019.09.16 - Замеряю просадку напряжения.
                      Совместим с attiny ver <=9, но для функции нужна ver 10.
