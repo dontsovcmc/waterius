@@ -4,8 +4,8 @@
  * Espressif IoT Development Framework Configuration
  *
  */
-#define CONFIG_ULP_COPROC_ENABLED 1
-#define CONFIG_ULP_COPROC_RESERVE_MEM 1024
+//#define CONFIG_ULP_COPROC_ENABLED 0
+//#define CONFIG_ULP_COPROC_RESERVE_MEM 1024
 
 #define CONFIG_GATTC_ENABLE 1
 #define CONFIG_ESP32_PHY_MAX_TX_POWER 20
