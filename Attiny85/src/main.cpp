@@ -94,8 +94,9 @@ void resetWatchdog() {
 	// 1 минута примерно равна 240 пробуждениям
 	
 #ifdef TEST_WATERIUS
-	WDTCR = bit( WDIE ) | bit( WDP0 );      // 32 ms
-	#define ONE_MINUTE 20  // ускоримся для теста
+	WDTCR = bit( WDIE ) | bit( WDP2 );      // bit( WDP0 )  32 ms
+											// bit( WDP2 ) 250 ms
+	#define ONE_MINUTE 240  
 #else
 	WDTCR = bit( WDIE ) | bit( WDP2 );     // 250 ms
 	#define ONE_MINUTE 240

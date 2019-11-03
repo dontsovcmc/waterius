@@ -2,15 +2,27 @@
 
 #include "TaskScheduler.h"
 
-#define OUTPUT1_PIN LED_BUILTIN  // 13
+// 
+// Генератор импульсов для тестирования счетчика импульсов
+// 
+// Настройка:
+// диапазон длины импульса 
+// диапазон длины паузы 
+// 2 выхода
+// 
+// В случайном порядке импульсы будут поданы на выходы
+// 
+
+#define OUTPUT1_PIN 11 
 #define OUTPUT2_PIN 12
+
 
 #define RETRIES 100
 
-#define IMPULSE_MS_MIN 500
+#define IMPULSE_MS_MIN 250+25
 #define IMPULSE_MS_MAX 5000
 
-#define WAIT_MS_MIN 1500
+#define WAIT_MS_MIN 750+75
 #define WAIT_MS_MAX 5000
 
 void WrapperStart();
@@ -25,6 +37,7 @@ Scheduler ts;
 
 uint32_t count1 = 0;
 uint32_t count2 = 0;
+float    total_hours = 0.0;
 
 Task tStart(0, TASK_ONCE, &WrapperStart, &ts, true);
 Task tImpulseOn1(0, TASK_ONCE, &ImpulseStart1, &ts, false);
@@ -45,6 +58,7 @@ void ImpulseStart1()
 {
 	TurnOn(OUTPUT1_PIN);
 	tImpulseOff1.restartDelayed(IMPULSE_MS_MIN + random(IMPULSE_MS_MAX-IMPULSE_MS_MIN));
+	digitalWrite(LED_BUILTIN, LOW);
 }
 
 void ImpulseStop1()
@@ -52,6 +66,7 @@ void ImpulseStop1()
 	TurnOff(OUTPUT1_PIN);
 	if (++count1 < RETRIES)
 	{
+		digitalWrite(LED_BUILTIN, HIGH);
 		tImpulseOn1.restartDelayed(WAIT_MS_MIN + random(WAIT_MS_MAX-WAIT_MS_MIN));
 	}
 }
@@ -60,6 +75,7 @@ void ImpulseStart2()
 {
 	TurnOn(OUTPUT2_PIN);
 	tImpulseOff2.restartDelayed(IMPULSE_MS_MIN + random(IMPULSE_MS_MAX-IMPULSE_MS_MIN));
+	digitalWrite(LED_BUILTIN, LOW);
 }
 
 void ImpulseStop2()
@@ -67,6 +83,7 @@ void ImpulseStop2()
 	TurnOff(OUTPUT2_PIN);
 	if (++count2 < RETRIES)
 	{
+		digitalWrite(LED_BUILTIN, HIGH);
 		tImpulseOn2.restartDelayed(WAIT_MS_MIN + random(WAIT_MS_MAX-WAIT_MS_MIN));
 	}
 }
@@ -77,35 +94,46 @@ void TurnOn(uint8_t pin)
 	Serial.print(" : ");
 	Serial.print("ON ");
 	Serial.println(pin);
-	digitalWrite(pin, HIGH);
+
+	pinMode(pin, OUTPUT);
+	digitalWrite(pin, LOW);
 }
 
 void TurnOff(uint8_t pin)
-{
+{	
 	Serial.print(millis());
 	Serial.print(" : ");
 	Serial.print("OFF ");
 	Serial.println(pin);
-	digitalWrite(pin, LOW);
+
+	digitalWrite(pin, HIGH);
+	pinMode(pin, INPUT);
 }
 
 void setup() 
 {
 	Serial.begin(115200);
-
-	Serial.print("Total time ~: ");
-	Serial.print((IMPULSE_MS_MAX - IMPULSE_MS_MIN + WAIT_MS_MAX - WAIT_MS_MIN) / 1000.0 * RETRIES / 60.0 / 60.0);
-	Serial.println(" hours");
 	
-
-
-
-	pinMode(OUTPUT1_PIN, OUTPUT);
-	pinMode(OUTPUT2_PIN, OUTPUT);
+	total_hours = (IMPULSE_MS_MAX - IMPULSE_MS_MIN + WAIT_MS_MAX - WAIT_MS_MIN) / 2.0 / 1000.0 * RETRIES / 60.0 / 60.0;
+	Serial.print("Total time ~: ");
+	if (total_hours >= 1.0) 
+	{
+		Serial.print(total_hours);
+		Serial.println(" hours");
+	}
+	else
+	{
+		Serial.print(total_hours * 60.0);
+		Serial.println(" minutes");
+	}
+	
+	pinMode(OUTPUT1_PIN, INPUT);
+	pinMode(OUTPUT2_PIN, INPUT);
 	randomSeed(analogRead(0) + millis());
 }
 
 void loop() 
 {
+	pinMode(LED_BUILTIN, OUTPUT);
 	ts.execute();
 }
