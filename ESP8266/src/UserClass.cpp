@@ -41,6 +41,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["email"] =         settings.waterius_email;
     root["voltage_low"] =   cdata.low_voltage;
     root["voltage_diff"] =  cdata.voltage_diff;
+    root["f"] =             settings.liters_per_impuls;
     serializeJson(root, jsonBody);
     
     // Try to send
