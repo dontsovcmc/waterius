@@ -1,7 +1,6 @@
 #ifndef _SENDERMQTT_h
 #define _SENDERMQTT_h
 
-#ifdef SEND_MQTT
 
 #ifdef MQTT_SOCKET_TIMEOUT
 #undef MQTT_SOCKET_TIMEOUT
@@ -61,7 +60,5 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
 
     return false;
 }        
-
-#endif //#ifdef SEND_MQTT
 
 #endif

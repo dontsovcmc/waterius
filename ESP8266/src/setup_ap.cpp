@@ -19,9 +19,9 @@ extern MasterI2C masterI2C;
 
 SlaveData runtime_data;
 
-const char STATE_BAD[]  = "\"Не подключен\"";
-const char STATE_CONNECTED[]  = "\"Подключен\"";
-const char STATE_NULL[]  = "\"\"";
+const char STATE_BAD[]  = "'Не подключен'";
+const char STATE_CONNECTED[]  = "'Подключен'";
+const char STATE_NULL[]  = "''";
 
 #define IMPULS_LIMIT_1 3  // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
 
@@ -48,20 +48,20 @@ void update_data(String &message)
             state1bad = STATE_NULL;
         }
 
-        message = "{\"state0good\": ";
+        message = "{'state0good': ";
         message += state0good;
-        message += ", \"state0bad\": ";
+        message += ", 'state0bad': ";
         message += state0bad;
-        message += ", \"state1good\": ";
+        message += ", 'state1good': ";
         message += state1good;
-        message += ", \"state1bad\": ";
+        message += ", 'state1bad': ";
         message += state1bad;
-        message += ", \"factor\": ";
+        message += ", 'factor': ";
         message += String(get_factor());
         message += " }";
     }
     else {
-        message = "{\"error\": \"Ошибка\"}";
+        message = "{'error': 'Ошибка'}";
     }
 }
 
@@ -83,28 +83,36 @@ void bindServerCallback(){
 
 void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata) 
 {
+    wm.setClass("dummy1");
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
 
     LOG_NOTICE( "AP", "User requested captive portal" );
     
-#ifdef SEND_WATERIUS  // Настройки JSON 
+    // Настройки HTTP 
 
-    WiFiManagerParameter label_waterius_email("<h3>Ватериус</h3>");
-    wm.addParameter( &label_waterius_email);
     WiFiManagerParameter param_waterius_email( "wmail", "Электронная почта с сайта waterius.ru",  sett.waterius_email, EMAIL_LEN-1);
     wm.addParameter( &param_waterius_email);
 
-#ifndef ONLY_CLOUD_WATERIUS 
+    // Чекбокс доп. настроек
+
+    WiFiManagerParameter checkbox("<br><br>\
+        <label class='container'>Доп. настройки\
+            <input type='checkbox' id='chbox' name='chbox' onclick='showMe()'>\
+            <span class='checkmark'></span>\
+        </label>");
+    wm.addParameter(&checkbox);
+
+    WiFiManagerParameter div_start("<div id='advanced' style='display:none'>");
+    wm.addParameter(&div_start);
+    
+    // Сервер http запроса 
 
     WiFiManagerParameter param_waterius_host( "whost", "Адрес сервера (включает отправку)",  sett.waterius_host, WATERIUS_HOST_LEN-1);
     wm.addParameter( &param_waterius_host );
-    WiFiManagerParameter param_waterius_key( "wkey", "Уникальный ключ",  sett.waterius_key, WATERIUS_KEY_LEN-1);
-    wm.addParameter( &param_waterius_key );
-#endif
-#endif
 
-#ifdef SEND_BLYNK  // Настройки Blynk.сс
+
+    // Настройки Blynk.сс
 
     WiFiManagerParameter label_blynk("<h3>Blynk.cc</h3>");
     wm.addParameter( &label_blynk);
@@ -114,17 +122,16 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter( &param_blynk_key );
     WiFiManagerParameter param_blynk_email( "bemail", "Адрес эл. почты (включает ежедневные письма)",  sett.blynk_email, EMAIL_LEN-1);
     wm.addParameter( &param_blynk_email );
-    WiFiManagerParameter param_blynk_email_title( "btitle", "Заголовок",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
+    WiFiManagerParameter param_blynk_email_title( "btitle", "Тема письма",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
     wm.addParameter( &param_blynk_email_title );
-    WiFiManagerParameter param_blynk_email_template( "btemplate", "Тело письма",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
+    WiFiManagerParameter param_blynk_email_template( "btemplate", "Текст письма",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
     wm.addParameter( &param_blynk_email_template );
-#endif
 
-#ifdef SEND_MQTT  // Настройки MQTT
+    // Настройки MQTT
     
     WiFiManagerParameter label_mqtt("<h3>MQTT</h3>");
     wm.addParameter( &label_mqtt);
-    WiFiManagerParameter param_mqtt_host( "mhost", "Адрес сервера (включает отправку).<br/>Пример: broker.hivemq.com",  sett.mqtt_host, MQTT_HOST_LEN-1);
+    WiFiManagerParameter param_mqtt_host( "mhost", "Адрес сервера (включает отправку)<br/>Пример: broker.hivemq.com",  sett.mqtt_host, MQTT_HOST_LEN-1);
     wm.addParameter( &param_mqtt_host );
     LongParameter param_mqtt_port( "mport", "Порт",  sett.mqtt_port);
     wm.addParameter( &param_mqtt_port );
@@ -134,35 +141,36 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter( &param_mqtt_password );
     WiFiManagerParameter param_mqtt_topic( "mtopic", "Topic",  sett.mqtt_topic, MQTT_TOPIC_LEN-1);
     wm.addParameter( &param_mqtt_topic );
-#endif
-
+    
+    // конец доп. настроек
+    WiFiManagerParameter div_end("</div>");
+    wm.addParameter(&div_end);
+    
     // Счетчиков
-    WiFiManagerParameter label_cold_info("<p>Спустите унитаз 1-3 раза, пока надпись не сменится на &quotподключен&quot. Если статус &quotне подключен&quot, проверьте провод в разъёме.</p>");
+    WiFiManagerParameter cold_water("<h3>Холодная вода</h3>");
+    wm.addParameter(&cold_water);
+
+    WiFiManagerParameter label_cold_info("<p>Спустите унитаз 1-3 раза (или вылейте не меньше 4л), пока надпись не сменится на &laquoподключен&raquo. Если статус &laquoне подключен&raquo, проверьте провод в разъёме. Ватериус так определяет типа счётчика.</p>");
     wm.addParameter( &label_cold_info);
 
-    WiFiManagerParameter label_cold_state("<b><p class=\"bad\" id=\"state1bad\"></p><p class=\"good\" id=\"state1good\"></p></b>");
+    WiFiManagerParameter label_cold_state("<b><p class='bad' id='state1bad'></p><p class='good' id='state1good'></p></b>");
     wm.addParameter( &label_cold_state);
 
-    WiFiManagerParameter label_cold("<label class=\"cold\">Показания холодной воды (xxx.xx)</label>");
+    WiFiManagerParameter label_cold("<label class='cold'>Показания холодной воды (xxx.xx)</label>");
     wm.addParameter( &label_cold);
     FloatParameter param_channel1_start( "ch1", "",  cdata.channel1);
     wm.addParameter( &param_channel1_start);
 
-    WiFiManagerParameter label_hot_info("<p>Откройте кран горячей воды, пока надпись не сменится на &quotподключен&quot.</p>");
+    WiFiManagerParameter label_hot_info("<p>Откройте кран горячей воды, пока надпись не сменится на &laquoподключен&raquo.</p>");
     wm.addParameter( &label_hot_info);
     
-    WiFiManagerParameter label_hot_state("<b><p class=\"bad\" id=\"state0bad\"></p><p class=\"good\" id=\"state0good\"></p></b>");
+    WiFiManagerParameter label_hot_state("<b><p class='bad' id='state0bad'></p><p class='good' id='state0good'></p></b>");
     wm.addParameter( &label_hot_state );
 
-    WiFiManagerParameter label_hot("<label class=\"hot\">Показания горячей воды (xxx.xx)</label>");
+    WiFiManagerParameter label_hot("<label class='hot'>Показания горячей воды (xxx.xx)</label>");
     wm.addParameter( &label_hot);
     FloatParameter param_channel0_start( "ch0", "",  cdata.channel0);
     wm.addParameter( &param_channel0_start);
-
-    WiFiManagerParameter label_factor("<label>Автонастройка: <span id=\"factor\"></span> л. на импульс</label>"); //для визуального контроля л/имп
-    
-    wm.addParameter( &label_factor);
-    //LongParameter param_litres_per_imp( "factor", "",  sett.liters_per_impuls, 5, "type=\"number\"");
 
     //wm.addParameter( &param_litres_per_imp);
     WiFiManagerParameter javascript_callback("<script>\
@@ -180,7 +188,30 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 			};\
 			timerId = setTimeout(run, 2000);\
 		}, 2000);\
-	</script>");
+        function sTimer(t, elem) {\
+            var timer = t;\
+            var i = setInterval(function () {\
+                elem.textContent = timer;\
+                if (--timer < 0) {\
+                    clearInterval(i);\
+                    alert('Ватериус выключился. Начните настройку заново нажав долго кнопку.');\
+                }\
+            }, 1000);\
+        };\
+\
+        window.onload = function () {\
+            var t = 300;\
+            elem = document.querySelector('#timerId');\
+            sTimer(t, elem);\
+        };\
+\
+        function showMe() {\
+            var chbox = document.getElementById('chbox');\
+            var vis = 'none';\
+            if(chbox.checked) { vis = 'block'; }\
+            document.getElementById('advanced').style.display = vis;\
+        };\
+    </script>");
     wm.addParameter(&javascript_callback);
 
     wm.setConfigPortalTimeout(300);
@@ -196,13 +227,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     // Переписываем введенные пользователем значения в Конфигурацию
 
-#ifdef SEND_WATERIUS // JSON
     strncpy0(sett.waterius_email, param_waterius_email.getValue(), EMAIL_LEN);
-
-#ifndef ONLY_CLOUD_WATERIUS 
-    strncpy0(sett.waterius_key, param_waterius_key.getValue(), WATERIUS_KEY_LEN);
     strncpy0(sett.waterius_host, param_waterius_host.getValue(), WATERIUS_HOST_LEN);
-#endif
 
     // Генерируем ключ используя и введенную эл. почту
     if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0) {
@@ -210,23 +236,18 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
         WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, 
                                            sett.waterius_email);
     }
-#endif
 
-#ifdef SEND_BLYNK
     strncpy0(sett.blynk_key, param_blynk_key.getValue(), BLYNK_KEY_LEN);
     strncpy0(sett.blynk_host, param_blynk_host.getValue(), BLYNK_HOST_LEN);
     strncpy0(sett.blynk_email, param_blynk_email.getValue(), EMAIL_LEN);
     strncpy0(sett.blynk_email_title, param_blynk_email_title.getValue(), BLYNK_EMAIL_TITLE_LEN);
     strncpy0(sett.blynk_email_template, param_blynk_email_template.getValue(), BLYNK_EMAIL_TEMPLATE_LEN);
-#endif
 
-#ifdef SEND_MQTT
     strncpy0(sett.mqtt_host, param_mqtt_host.getValue(), MQTT_HOST_LEN);
     strncpy0(sett.mqtt_login, param_mqtt_login.getValue(), MQTT_LOGIN_LEN);
     strncpy0(sett.mqtt_password, param_mqtt_password.getValue(), MQTT_PASSWORD_LEN);
     strncpy0(sett.mqtt_topic, param_mqtt_topic.getValue(), MQTT_TOPIC_LEN);
     sett.mqtt_port = param_mqtt_port.getValue();    
-#endif
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();
