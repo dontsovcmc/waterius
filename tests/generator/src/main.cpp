@@ -17,13 +17,14 @@
 #define OUTPUT2_PIN 12
 
 
-#define RETRIES 100
+#define RETRIES 10000
 
 #define IMPULSE_MS_MIN 250+25
-#define IMPULSE_MS_MAX 5000
+#define IMPULSE_MS_MAX 3000
 
 #define WAIT_MS_MIN 750+75
-#define WAIT_MS_MAX 5000
+#define WAIT_MS_MAX 3000
+#define WAIT_BAD 120  //паузу меньше будем считать не импульсом (так считает ватериус)
 
 void WrapperStart();
 void ImpulseStart1();
@@ -64,10 +65,21 @@ void ImpulseStart1()
 void ImpulseStop1()
 {
 	TurnOff(OUTPUT1_PIN);
-	if (++count1 < RETRIES)
+
+	digitalWrite(LED_BUILTIN, HIGH);
+	if (random(1000) % 2)
 	{
-		digitalWrite(LED_BUILTIN, HIGH);
-		tImpulseOn1.restartDelayed(WAIT_MS_MIN + random(WAIT_MS_MAX-WAIT_MS_MIN));
+		if (count1 < RETRIES)
+		{
+			tImpulseOn1.restartDelayed(random(WAIT_BAD));
+		}
+	}
+	else
+	{
+		if (++count1 < RETRIES)
+		{
+			tImpulseOn1.restartDelayed(WAIT_MS_MIN + random(WAIT_MS_MAX-WAIT_MS_MIN));
+		}
 	}
 }
 
