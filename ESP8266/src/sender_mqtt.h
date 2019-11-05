@@ -1,7 +1,6 @@
 #ifndef _SENDERMQTT_h
 #define _SENDERMQTT_h
 
-#ifdef SEND_MQTT
 
 #ifdef MQTT_SOCKET_TIMEOUT
 #undef MQTT_SOCKET_TIMEOUT
@@ -52,6 +51,7 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "version_esp").c_str(), String(FIRMWARE_VERSION).c_str());
         client.publish((topic + "voltage_low").c_str(), String(cdata.low_voltage).c_str());
         client.publish((topic + "voltage_diff").c_str(), String((float)(cdata.voltage_diff / 1000.0), 3).c_str());
+        client.publish((topic + "f").c_str(), String(sett.liters_per_impuls).c_str());
         client.disconnect();
         return true;
     }  else {
@@ -60,7 +60,5 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
 
     return false;
 }        
-
-#endif //#ifdef SEND_MQTT
 
 #endif

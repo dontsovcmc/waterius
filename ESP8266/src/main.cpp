@@ -123,21 +123,15 @@ void loop()
 
                 LOG_NOTICE("WIF", "Connected, IP: " << WiFi.localIP().toString());
 
-#ifdef SEND_BLYNK
                 if (send_blynk(sett, data, cdata)) {
                     LOG_NOTICE("BLK", "send ok");
                 }
-#endif  
-
-#ifdef SEND_MQTT
+                
                 if (send_mqtt(sett, data, cdata)) {
                     LOG_NOTICE("MQT", "send ok");
                 }
-#endif  
 
-#ifdef SEND_WATERIUS
                 UserClass::sendNewData(sett, data, cdata);
-#endif
 
                 //Сохраним текущие значения в памяти.
                 sett.impulses0_previous = data.impulses0;

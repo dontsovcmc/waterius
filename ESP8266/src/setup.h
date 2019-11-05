@@ -3,12 +3,17 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.9.3"
+#define FIRMWARE_VERSION "0.9.4"
   
 
 /*
 Версии прошивки для ESP
 
+0.9.4 - 2019.11.05 - убрал константы SEND_MQTT, SEND_BLYNK, ONLY_CLOUD_WATERIUS
+                   - добавил f - вес импульса в даннные mqtt, http
+                   - улучшен интерфейс настройки
+                   - 
+                   - 
 0.9.3 - 2019.10.27 - Исправил random
 0.9.2 - 2019.10.16 - Исправил поля в json (boot, version)
 0.9.1 - 2019.09.16 - Замеряю просадку напряжения.
@@ -35,29 +40,7 @@
 //#define DEBUG_ESP_HTTP_CLIENT
 //#define DEBUG_ESP_PORT Serial
 
-/*
-    Включить отправку данных на HTTP сервер
-*/
-#define SEND_WATERIUS
-
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
-
-/*
-    Включить отправку данных в приложение Blynk.cc
-*/
-#define SEND_BLYNK
-
-/*
-    Включить отправку данных в MQTT
-*/
-#define SEND_MQTT
-
-#ifdef ONLY_CLOUD_WATERIUS 
-#undef SEND_BLYNK
-#pragma message("SEND_BLYNK off")
-#undef SEND_MQTT
-#pragma message("SEND_MQTT off")
-#endif
 
 #define MQTT_DEFAULT_TOPIC_PREFIX "waterius/"  // Проверка: mosquitto_sub -h test.mosquitto.org -t "waterius/#" -v
 #define MQTT_DEFAULT_PORT 1883
