@@ -48,6 +48,10 @@ password_file <полный путь>/pass.txt
 Подписываемся на топики:
 `mosquitto_sub -h 192.168.1.5 -t "waterius/#" -u "test" -P "test" -v`
 
+Для broker.hivemq.com:
+`mosquitto_sub -h broker.hivemq.com -t "waterius/#" -v`
+(Внимание! этой командой мы подпишемся на все ватериусы, поэтому брокер только для тестирования.)
+
 После запуска Ватериуса видим данные:
 ```
 waterius/6901727/ch0 0.00
@@ -57,12 +61,12 @@ waterius/6901727/delta1 0
 waterius/6901727/voltage 2.95
 waterius/6901727/resets 0
 waterius/6901727/good 1
-waterius/6901727/boot 8
+waterius/6901727/boot 1
 waterius/6901727/imp0 0
 waterius/6901727/imp1 0
-waterius/6901727/version 5
-waterius/6901727/version_esp 0.7
+waterius/6901727/version 11
+waterius/6901727/version_esp 0.9.4
 waterius/6901727/voltage_diff 0.020
 waterius/6901727/voltage_low 0
-
+waterius/6901727/f 10
 ```
