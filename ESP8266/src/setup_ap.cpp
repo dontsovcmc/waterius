@@ -19,9 +19,6 @@ extern MasterI2C masterI2C;
 
 SlaveData runtime_data;
 
-const char STATE_BAD[]  = "\"Не подключен\"";
-const char STATE_CONNECTED[]  = "\"Подключен\"";
-const char STATE_NULL[]  = "\"\"";
 
 #define IMPULS_LIMIT_1 3  // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
 
@@ -32,20 +29,20 @@ uint8_t get_factor() {
 void update_data(String &message)
 {
     if (masterI2C.getSlaveData(runtime_data)) {
-        String state0good(STATE_NULL);
-        String state0bad(STATE_BAD);
-        String state1good(STATE_NULL);
-        String state1bad(STATE_BAD);
+        String state0good(FPSTR(S_STATE_NULL));
+        String state0bad(FPSTR(S_STATE_BAD));
+        String state1good(FPSTR(S_STATE_NULL));
+        String state1bad(FPSTR(S_STATE_BAD));
         uint32_t delta0 = runtime_data.impulses0 - data.impulses0;
         uint32_t delta1 = runtime_data.impulses1 - data.impulses1;
         
         if (delta0 > 0) {
-            state0good = STATE_CONNECTED;
-            state0bad = STATE_NULL;
+            state0good = FPSTR(S_STATE_CONNECTED);
+            state0bad = FPSTR(S_STATE_NULL);
         }
         if (delta1 > 0) {
-            state1good = STATE_CONNECTED;
-            state1bad = STATE_NULL;
+            state1good = FPSTR(S_STATE_CONNECTED);
+            state1bad = FPSTR(S_STATE_NULL);
         }
 
         message = "{\"state0good\": ";
@@ -68,17 +65,15 @@ void update_data(String &message)
 WiFiManager wm;
 
 void handleStates(){
-  Serial.println("[HTTP] states route");
   String message;
   message.reserve(200);
   update_data(message);
-  wm.server->send(200, "text/plain", message);
+  wm.server->send(200, FPSTR(HTTP_TEXT_PLAIN), message);
 }
 
 void bindServerCallback(){
-  wm.server->on("/states", handleStates);
+  wm.server->on(FPSTR(S_STATES), handleStates);
 }
-
 
 
 void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata) 
@@ -87,7 +82,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
 
-    LOG_NOTICE( "AP", "User requested captive portal" );
+    LOG_NOTICE(FPSTR(S_AP), FPSTR(S_CAPTIVE_PORTAL));
     
     // Настройки HTTP 
 
@@ -175,13 +170,13 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.setConfigPortalTimeout(300);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
     
-    LOG_NOTICE( "AP", "start config portal" );
+    LOG_NOTICE(FPSTR(S_AP), FPSTR(S_START_CONFIG_PORTAL));
 
     // Запуск веб сервера на 192.168.4.1
     wm.startConfigPortal( AP_NAME );
 
     // Успешно подключились к Wi-Fi, можно засыпать
-    LOG_NOTICE( "AP", "Connected to wifi. Save settings, go to sleep" );
+    LOG_NOTICE(FPSTR(S_AP), FPSTR(S_CONNECTED_TO_WIFI));
 
     // Переписываем введенные пользователем значения в Конфигурацию
 
@@ -190,7 +185,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     // Генерируем ключ используя и введенную эл. почту
     if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0) {
-        LOG_NOTICE("CFG", "Generate waterius key");
+        LOG_NOTICE(FPSTR(S_CFG), FPSTR(S_GENERATE_WATERIUS_KEY));
         WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, 
                                            sett.waterius_email);
     }
@@ -212,7 +207,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.channel1_start = param_channel1_start.getValue();
 
     sett.liters_per_impuls = get_factor(); //param_litres_per_imp.getValue();
-    LOG_NOTICE( "AP", "factor=" << sett.liters_per_impuls );
+    LOG_NOTICE(FPSTR(S_AP), "factor=" << sett.liters_per_impuls );
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = data.impulses0;
@@ -222,8 +217,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.impulses0_previous = sett.impulses0_start;
     sett.impulses1_previous = sett.impulses1_start;
 
-    LOG_NOTICE( "AP", "impulses0=" << sett.impulses0_start );
-    LOG_NOTICE( "AP", "impulses1=" << sett.impulses1_start );
+    LOG_NOTICE(FPSTR(S_AP), "impulses0=" << sett.impulses0_start );
+    LOG_NOTICE(FPSTR(S_AP), "impulses1=" << sett.impulses1_start );
 
     sett.crc = FAKE_CRC; // todo: сделать нормальный crc16
     storeConfig(sett);

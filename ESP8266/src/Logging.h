@@ -12,6 +12,19 @@ template<class T> inline Print &operator <<( Print &obj, T arg ) {
 }
 #define endl "\r\n"
 
+const char S_ESP[]                  PROGMEM = "ESP";
+const char S_CFG[]                  PROGMEM = "CFG";
+const char S_AP[]                   PROGMEM = "AP";
+const char S_STATE_BAD[]            PROGMEM = "\"Не подключен\"";
+const char S_STATE_CONNECTED[]      PROGMEM = "\"Подключен\"";
+const char S_STATE_NULL[]           PROGMEM = "\"\"";
+
+const char HTTP_TEXT_PLAIN[]        PROGMEM = "text/plain";
+const char S_STATES[]               PROGMEM = "/states";
+const char S_CAPTIVE_PORTAL[]       PROGMEM = "User requested captive portal";
+const char S_GENERATE_WATERIUS_KEY[] PROGMEM = "Generate waterius key";
+const char S_START_CONFIG_PORTAL[]  PROGMEM = "start config portal";
+const char S_CONNECTED_TO_WIFI[]    PROGMEM = "Connected to wifi. Save settings, go to sleep";
 
 /* Generate and print the trailing log timestamp.
 		1 = (1234), showing time in seconds since boot. Generates lightweight inline code.

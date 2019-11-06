@@ -28,7 +28,7 @@ void setup()
     memset(&cdata, 0, sizeof(cdata));
     memset(&data, 0, sizeof(data)); // На всякий случай
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
-    LOG_NOTICE("ESP", "Booted");
+    LOG_NOTICE(FPSTR(S_ESP), "Booted");
     masterI2C.begin();    //Включаем i2c master
 }
 
@@ -38,16 +38,16 @@ void setup()
 */
 void calculate_values(const Settings &sett, const SlaveData &data, CalculatedData &cdata)
 {
-    LOG_NOTICE("ESP", "new impulses=" << data.impulses0 << " " << data.impulses1);
+    LOG_NOTICE(FPSTR(S_ESP), "new impulses=" << data.impulses0 << " " << data.impulses1);
 
     if (sett.liters_per_impuls > 0) {
         cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.liters_per_impuls;
         cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.liters_per_impuls;
-        LOG_NOTICE("ESP", "new value0=" << cdata.channel0 << " value1=" << cdata.channel1);
+        LOG_NOTICE(FPSTR(S_ESP), "new value0=" << cdata.channel0 << " value1=" << cdata.channel1);
         
         cdata.delta0  = (data.impulses0 - sett.impulses0_previous)*sett.liters_per_impuls;
         cdata.delta1 = (data.impulses1 - sett.impulses1_previous)*sett.liters_per_impuls;
-        LOG_NOTICE("ESP", "delta0=" << cdata.delta0 << " delta1=" << cdata.delta1);
+        LOG_NOTICE(FPSTR(S_ESP), "delta0=" << cdata.delta0 << " delta1=" << cdata.delta1);
     }
 }
 
@@ -79,7 +79,7 @@ void loop()
         //Загружаем конфигурацию из EEPROM
         bool success = loadConfig(sett);
         if (!success) {
-            LOG_ERROR("ESP", "error loading config");
+            LOG_ERROR(FPSTR(S_ESP), "error loading config");
         }
 
         //Вычисляем текущие показания
@@ -141,7 +141,7 @@ void loop()
         }
     }
 
-    LOG_NOTICE("ESP", "Going to sleep");
+    LOG_NOTICE(FPSTR(S_ESP), "Going to sleep");
     masterI2C.sendCmd('Z');        // "Можешь идти спать, attiny"
     LOG_END();
     
