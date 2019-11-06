@@ -28,7 +28,7 @@ void setup()
     memset(&cdata, 0, sizeof(cdata));
     memset(&data, 0, sizeof(data)); // На всякий случай
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
-    LOG_NOTICE(FPSTR(S_ESP), "Booted");
+    LOG_NOTICE(FPSTR(S_ESP), FPSTR(S_BOOTED));
     masterI2C.begin();    //Включаем i2c master
 }
 
@@ -79,7 +79,7 @@ void loop()
         //Загружаем конфигурацию из EEPROM
         bool success = loadConfig(sett);
         if (!success) {
-            LOG_ERROR(FPSTR(S_ESP), "error loading config");
+            LOG_ERROR(FPSTR(S_ESP), FPSTR(S_ERROR_LOAD_CFG));
         }
 
         //Вычисляем текущие показания
@@ -101,7 +101,7 @@ void loop()
         if (success) {
             if (mode == TRANSMIT_MODE) { 
                 //Проснулись для передачи показаний
-                LOG_NOTICE("WIF", "Starting");
+                LOG_NOTICE(FPSTR(S_WIF), FPSTR(S_STARTING));
 
                 //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                 WiFi.begin(); 
@@ -109,7 +109,7 @@ void loop()
                 //Ожидаем подключения к точке доступа
                 uint32_t start = millis();
                 while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
-                    LOG_NOTICE("WIF", "Status: " << WiFi.status());
+                    LOG_NOTICE(FPSTR(S_WIF), "Status: " << WiFi.status());
                     delay(200);
 
                     check_voltage(data, cdata);
@@ -121,14 +121,14 @@ void loop()
             if (WiFi.status() == WL_CONNECTED 
                 && masterI2C.getSlaveData(data)) { //тут надо достоверно прочитать i2c
 
-                LOG_NOTICE("WIF", "Connected, IP: " << WiFi.localIP().toString());
+                LOG_NOTICE(FPSTR(S_WIF), "Connected, IP: " << WiFi.localIP().toString());
 
                 if (send_blynk(sett, data, cdata)) {
-                    LOG_NOTICE("BLK", "send ok");
+                    LOG_NOTICE(FPSTR(S_BLK), FPSTR(S_SEND_OK));
                 }
                 
                 if (send_mqtt(sett, data, cdata)) {
-                    LOG_NOTICE("MQT", "send ok");
+                    LOG_NOTICE(FPSTR(S_MQT), FPSTR(S_SEND_OK));
                 }
 
                 UserClass::sendNewData(sett, data, cdata);
@@ -141,7 +141,7 @@ void loop()
         }
     }
 
-    LOG_NOTICE(FPSTR(S_ESP), "Going to sleep");
+    LOG_NOTICE(FPSTR(S_ESP), FPSTR(S_GOING_SLEEP));
     masterI2C.sendCmd('Z');        // "Можешь идти спать, attiny"
     LOG_END();
     

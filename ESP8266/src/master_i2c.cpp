@@ -17,12 +17,12 @@ bool MasterI2C::sendCmd(const char cmd ) {
 
     Wire.beginTransmission( I2C_SLAVE_ADDR );
     if (Wire.write(cmd) != 1){
-        LOG_ERROR("I2C", "write cmd failed");
+        LOG_ERROR(FPSTR(S_I2C), FPSTR(S_I2C_WR_FAILED));
         return false;
     }
     int err = Wire.endTransmission(true);
     if (err != 0) {
-        LOG_ERROR("I2C", "end error:" << err);
+        LOG_ERROR(FPSTR(S_I2C), "end error:" << err);
         return false;
     }    
     
@@ -33,7 +33,7 @@ bool MasterI2C::sendCmd(const char cmd ) {
 bool MasterI2C::getByte(uint8_t &value) {
 
     if (Wire.requestFrom( I2C_SLAVE_ADDR, 1 ) != 1) {
-        LOG_ERROR("I2C", "requestFrom failed");
+        LOG_ERROR(FPSTR(S_I2C), FPSTR(S_I2C_REQ_FAILED));
         return false;
     }
     value = Wire.read();
@@ -68,10 +68,10 @@ bool MasterI2C::getMode(uint8_t &mode) {
 
     mode = TRANSMIT_MODE;
     if (!sendCmd('M') || !getByte(mode)) {
-        LOG_ERROR("I2C", "get mode failed. Check i2c line.");
+        LOG_ERROR(FPSTR(S_I2C), FPSTR(S_I2C_FAILED));
         return false;
     }
-    LOG_NOTICE("I2C", "mode=" << mode);
+    LOG_NOTICE(FPSTR(S_I2C), "mode=" << mode);
     return true;
 }
 
@@ -96,17 +96,17 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
     data.diagnostic = good;
     
     if (good) {
-        LOG_NOTICE("I2C", "version: " << data.version);
-        LOG_NOTICE("I2C", "service: " << data.service);
-        LOG_NOTICE("I2C", "voltage: " << data.voltage);
-        LOG_NOTICE("I2C", "resets: " << data.resets);
-        LOG_NOTICE("I2C", "state0: " << data.state0);
-        LOG_NOTICE("I2C", "state1: " << data.state1);
-        LOG_NOTICE("I2C", "impulses0: " << data.impulses0);
-        LOG_NOTICE("I2C", "impulses1: " << data.impulses1);
+        LOG_NOTICE(FPSTR(S_I2C), "version: " << data.version);
+        LOG_NOTICE(FPSTR(S_I2C), "service: " << data.service);
+        LOG_NOTICE(FPSTR(S_I2C), "voltage: " << data.voltage);
+        LOG_NOTICE(FPSTR(S_I2C), "resets: " << data.resets);
+        LOG_NOTICE(FPSTR(S_I2C), "state0: " << data.state0);
+        LOG_NOTICE(FPSTR(S_I2C), "state1: " << data.state1);
+        LOG_NOTICE(FPSTR(S_I2C), "impulses0: " << data.impulses0);
+        LOG_NOTICE(FPSTR(S_I2C), "impulses1: " << data.impulses1);
 
     } else {
-        LOG_ERROR("I2C", "data failed");
+        LOG_ERROR(FPSTR(S_I2C), FPSTR(S_DATA_FAILED));
     }
     return good;
 }

@@ -17,10 +17,9 @@ BearSSL::WiFiClientSecure wifiTlsClient;
 WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url, const char *key, const char *email, const String &body)
 {
     constexpr char THIS_FUNC_DESCRIPTION[] = "Send JSON POST request";
-    constexpr char THIS_FUNC_SVC[] = "RQT";
-    LOG_NOTICE(THIS_FUNC_SVC, "-- START -- " << THIS_FUNC_DESCRIPTION);
-    LOG_INFO(THIS_FUNC_SVC, "URL:\t" << url);
-    LOG_INFO(THIS_FUNC_SVC, "Body:\t" << body);
+    LOG_NOTICE(FPSTR(S_RQT), "-- START -- " << THIS_FUNC_DESCRIPTION);
+    LOG_INFO(FPSTR(S_RQT), "URL:\t" << url);
+    LOG_INFO(FPSTR(S_RQT), "Body:\t" << body);
     
     // Set wc client
     WiFiClient *wc;
@@ -33,7 +32,7 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
         wifiTlsClient.setTrustAnchors(&certs);
 
         if (!setClock()) {  
-            LOG_WARNING(THIS_FUNC_SVC, "SetClock fail ???");
+            LOG_WARNING(FPSTR(S_RQT), "SetClock fail ???");
             return WateriusHttps::ResponseData();
         }
     } else {
@@ -48,14 +47,14 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     
     // Check input data
     if (url.substring(0, 4) != "http") {
-        LOG_WARNING(THIS_FUNC_SVC, "URL \"" << url << "\" has not 'http' ('https')");
+        LOG_WARNING(FPSTR(S_RQT), "URL \"" << url << "\" has not 'http' ('https')");
     }
     if (wc->available()) {
-        LOG_WARNING(THIS_FUNC_SVC, "Wi-Fi client is not available");
+        LOG_WARNING(FPSTR(S_RQT), "Wi-Fi client is not available");
     }
     
     
-    LOG_INFO(THIS_FUNC_SVC, "Begin client");
+    LOG_INFO(FPSTR(S_RQT), "Begin client");
     // Request
     bool responseResult = false;
     int responseCode = 0;
@@ -69,18 +68,18 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
             hc->addHeader("Waterius-Email", email);
         }
         responseCode = hc->POST(body);
-        LOG_INFO(THIS_FUNC_SVC, "Response code:\t" << responseCode);
+        LOG_INFO(FPSTR(S_RQT), "Response code:\t" << responseCode);
         responseBody = hc->getString();
-        LOG_INFO(THIS_FUNC_SVC, "Response body:\t" << responseBody);
+        LOG_INFO(FPSTR(S_RQT), "Response body:\t" << responseBody);
         hc->end();
         wc->stop();
         responseResult = true;
     } else {
-        LOG_ERROR(THIS_FUNC_SVC, "Cannot begin HTTP client");
+        LOG_ERROR(FPSTR(S_RQT), "Cannot begin HTTP client");
     }
 
-    LOG_INFO(THIS_FUNC_SVC, "Result:\t" << (responseResult ? "Success" : "Error"));
-    LOG_NOTICE(THIS_FUNC_SVC, "-- END --");
+    LOG_INFO(FPSTR(S_RQT), "Result:\t" << (responseResult ? "Success" : "Error"));
+    LOG_NOTICE(FPSTR(S_RQT), "-- END --");
     return WateriusHttps::ResponseData(responseResult, responseCode, responseBody);
 }
 

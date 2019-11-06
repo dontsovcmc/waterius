@@ -10,15 +10,14 @@
 bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, const CalculatedData &cdata)
 {
     constexpr char THIS_FUNC_DESCRIPTION[] = "Send new data";
-    constexpr char THIS_FUNC_SVC[] = "SND";
-    LOG_NOTICE(THIS_FUNC_SVC, "-- START -- " << THIS_FUNC_DESCRIPTION);
+    LOG_NOTICE(FPSTR(S_SND), "-- START -- " << THIS_FUNC_DESCRIPTION);
 
     if (strnlen(settings.waterius_key, WATERIUS_KEY_LEN) == 0) {
-        LOG_NOTICE(THIS_FUNC_SVC, "NO Waterius key. SKIP");
+        LOG_NOTICE(FPSTR(S_SND), FPSTR(S_SKIP));
         return false;
     };
     if (strnlen(settings.waterius_host, WATERIUS_HOST_LEN) == 0) {
-        LOG_NOTICE(THIS_FUNC_SVC, "NO Waterus host. SKIP");
+        LOG_NOTICE(FPSTR(S_SND), FPSTR(S_SKIP));
         return false;
     }
 
@@ -49,9 +48,9 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
         settings.waterius_host, settings.waterius_key, settings.waterius_email, jsonBody);
     bool send_result = responseData.isSuccess && responseData.code == 200;
 
-    LOG_INFO(THIS_FUNC_SVC, "Send HTTP code:\t" << responseData.code);
-    LOG_INFO(THIS_FUNC_SVC, "Send result:\t" << (send_result ? "Success" : "Error"));
-    LOG_NOTICE(THIS_FUNC_SVC, "-- END --");
+    LOG_INFO(FPSTR(S_SND), "Send HTTP code:\t" << responseData.code);
+    LOG_INFO(FPSTR(S_SND), "Send result:\t" << (send_result ? "Success" : "Error"));
+    LOG_NOTICE(FPSTR(S_SND), "-- END --");
 
     return send_result;
 }
