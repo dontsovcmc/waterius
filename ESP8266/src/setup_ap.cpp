@@ -91,11 +91,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     // Чекбокс доп. настроек
 
-    WiFiManagerParameter checkbox("<br><br>\
-        <label class='container'>Доп. настройки\
-            <input type='checkbox' id='chbox' name='chbox' onclick='showMe()'>\
-            <span class='checkmark'></span>\
-        </label>");
+    WiFiManagerParameter checkbox("<br><br><label class='cnt'>Доп. настройки<input type='checkbox' id='chbox' name='chbox' onclick='showMe()'><span class='mrk'></span></label>");
     wm.addParameter(&checkbox);
 
     WiFiManagerParameter div_start("<div id='advanced' style='display:none'>");
@@ -155,6 +151,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter( &label_cold);
     FloatParameter param_channel1_start( "ch1", "",  cdata.channel1);
     wm.addParameter( &param_channel1_start);
+
+    WiFiManagerParameter hot_water("<h3>Горячая вода</h3>");
+    wm.addParameter(&hot_water);
 
     WiFiManagerParameter label_hot_info("<p>Откройте кран горячей воды, пока надпись не сменится на &laquoподключен&raquo.</p>");
     wm.addParameter( &label_hot_info);
