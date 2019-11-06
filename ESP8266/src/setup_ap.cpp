@@ -19,9 +19,9 @@ extern MasterI2C masterI2C;
 
 SlaveData runtime_data;
 
-const char STATE_BAD[]  = "'Не подключен'";
-const char STATE_CONNECTED[]  = "'Подключен'";
-const char STATE_NULL[]  = "''";
+const char STATE_BAD[]  = "\"Не подключен\"";
+const char STATE_CONNECTED[]  = "\"Подключен\"";
+const char STATE_NULL[]  = "\"\"";
 
 #define IMPULS_LIMIT_1 3  // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
 
@@ -48,20 +48,20 @@ void update_data(String &message)
             state1bad = STATE_NULL;
         }
 
-        message = "{'state0good': ";
+        message = "{\"state0good\": ";
         message += state0good;
-        message += ", 'state0bad': ";
+        message += ", \"state0bad\": ";
         message += state0bad;
-        message += ", 'state1good': ";
+        message += ", \"state1good\": ";
         message += state1good;
-        message += ", 'state1bad': ";
+        message += ", \"state1bad\": ";
         message += state1bad;
-        message += ", 'factor': ";
+        message += ", \"factor\": ";
         message += String(get_factor());
         message += " }";
     }
     else {
-        message = "{'error': 'Ошибка'}";
+        message = "{\"error\": \"Ошибка\"}";
     }
 }
 
@@ -171,48 +171,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter( &label_hot);
     FloatParameter param_channel0_start( "ch0", "",  cdata.channel0);
     wm.addParameter( &param_channel0_start);
-
-    //wm.addParameter( &param_litres_per_imp);
-    WiFiManagerParameter javascript_callback("<script>\
-		let timerId = setTimeout(function run() {\
-			const xhr = new XMLHttpRequest();\
-			xhr.open('GET', '/states');xhr.timeout = 500;\
-			xhr.send();\
-			xhr.onreadystatechange = function (e) {\
-				if(xhr.readyState === 4 && xhr.status === 200) {\
-					var data = JSON.parse(xhr.responseText);\
-						Object.keys(data).forEach(function(key) {\
-						document.getElementById(key).innerHTML = data[key];\
-					})\
-				};\
-			};\
-			timerId = setTimeout(run, 2000);\
-		}, 2000);\
-        function sTimer(t, elem) {\
-            var timer = t;\
-            var i = setInterval(function () {\
-                elem.textContent = timer;\
-                if (--timer < 0) {\
-                    clearInterval(i);\
-                    alert('Ватериус выключился. Начните настройку заново нажав долго кнопку.');\
-                }\
-            }, 1000);\
-        };\
-\
-        window.onload = function () {\
-            var t = 300;\
-            elem = document.querySelector('#timerId');\
-            sTimer(t, elem);\
-        };\
-\
-        function showMe() {\
-            var chbox = document.getElementById('chbox');\
-            var vis = 'none';\
-            if(chbox.checked) { vis = 'block'; }\
-            document.getElementById('advanced').style.display = vis;\
-        };\
-    </script>");
-    wm.addParameter(&javascript_callback);
 
     wm.setConfigPortalTimeout(300);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
