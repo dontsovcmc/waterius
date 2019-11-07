@@ -23,6 +23,6 @@ Values saved in ATtiny EEPROM cycle buffer (~2 millions cycles). "Software ESD p
 
 *Lifetime*: estimated 4 year battery life
 
-*Limits*: 2 impulses per second (increased by constant in code)
+*Limits*: 1 impulse per second (increased by constant in code)
 
 *Inputs*: 2 water meters

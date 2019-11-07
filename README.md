@@ -1,17 +1,11 @@
 ### Aвтономное устройство для передачи показаний воды по Wi-Fi
-# Вотериус 0.9.1
+# Ватериус 0.9.4
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
 Самое простое в настройке устройство для передачи показаний воды! Достаточно спустить унитаз, чтобы Ватериус определил тип счётчика =) 
-([включение режима настройки](https://waterius.ru/manual)).
-
-### КУПИТЬ
-- плату|конструктор -> [Telegram](http://t-do.ru/Dontsovcmc)
-- готовый -> [waterius.ru](https://waterius.ru/sell)
-
-Поддержать морально: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
+([Инструкция](https://waterius.ru/manual)).
 
 ### Характеристики:
 - 2 счётчика воды (вам не нужно знать, какого типа выход: "сухой контакт" или "НАМУР")
@@ -38,6 +32,12 @@
 #### Статьи: 
 [Habrahabr.com (ru)](https://habr.com/post/418573/) | [Hackster.io (en)](https://www.hackster.io/dontsovcmc/waterius-4bfaba) | [Blynk forum (en-ru)](https://community.blynk.cc/t/autonomous-impulse-counter-for-water-meters-attiny85-esp-01)
 
+### КУПИТЬ
+- плату|конструктор -> [Telegram](http://t-do.ru/Dontsovcmc)
+- готовый -> [waterius.ru](https://waterius.ru/sell)
+
+Поддержать морально: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
+
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" width="360"/> <img src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" width="180"/>
 
 #### [Заводские и DIY аналоги](https://github.com/dontsovcmc/waterius/issues/10)
@@ -48,7 +48,7 @@
 - [Установка и настройка](https://github.com/dontsovcmc/waterius/blob/master/Setup.md) 
 
 ## Принцип работы
-Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в Х минут она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого все микросхемы засыпают.
+Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в Х минут она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого все ESP8266 засыпает, а Attiny85 продолжает считать-считать-считать...
 
 ## Схема
 <img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="600"/>
@@ -78,11 +78,11 @@
 - предложить код прошивки и пример веб сервера
 5. Радиоканал вместо Wi-Fi
 - сделать вместо ESP-01 плату с радиомодулем
-- сделать приемник с экраном и модулем (желательно автономный, но не критично)
+- сделать приемник с экраном и модулем
 Хорошо бы LoraWan. Платы в Мск вот [Yotster](https://electromicro.ru/market/nodemcu/yotster-lite/) или [на Авито](https://www.avito.ru/moskva/bytovaya_elektronika?s_trg=10&q=Lora), но можно и 433
-Вопрос: чтобы период передачи был одинаковый нужен кварц для МК. Иначе приемник автономным не сделать. Но может и не надо.
 6. ~~Поддержка НАМУР~~, спасибо Мише и его счетчику)
 7. ~~Поддержка MQTT~~, спасибо [popsodav](https://github.com/popsodav)
+8. NB-IoT версия
 
 # Ответственность
 
@@ -98,6 +98,7 @@
 - Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1).
 - [freenetwork](https://github.com/freenetwork) за конфигурацию для HomeAssistant
 - [grffio](https://github.com/grffio) за локальный вебсервер
+- [Игорю Вахромееву](vakhromeev.com) за наикрутейший редизайн настроек (>0.9.4)
 
 Форумам: 
 - https://electronix.ru
