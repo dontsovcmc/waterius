@@ -78,7 +78,6 @@ void bindServerCallback(){
 
 void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata) 
 {
-    wm.setClass("dummy1");
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
 
