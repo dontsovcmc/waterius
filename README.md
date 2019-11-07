@@ -98,7 +98,9 @@
 - Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1).
 - [freenetwork](https://github.com/freenetwork) за конфигурацию для HomeAssistant
 - [grffio](https://github.com/grffio) за локальный вебсервер
-- [Игорю Вахромееву](vakhromeev.com) за наикрутейший редизайн настроек (>0.9.4)
+- [Игорю Вахромееву](http://vakhromeev.com) за наикрутейший редизайн настроек (>0.9.4)
+- Пользователям, приславшим очепятки и предложения: Дмитрию (г. Москва), Сергею (г. Кострома), Александр (г. Санкт-Петербург), Сергей (г. Мурманск). 
+
 
 Форумам: 
 - https://electronix.ru
