@@ -91,7 +91,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     // Чекбокс доп. настроек
 
-    WiFiManagerParameter checkbox("<br><br><label class='cnt'>Доп. настройки<input type='checkbox' id='chbox' name='chbox' onclick='showMe()'><span class='mrk'></span></label>");
+    WiFiManagerParameter checkbox("<br><br><br><label class='cnt'>Дополнительные настройки<input type='checkbox' id='chbox' name='chbox' onclick='showMe()'><span class='mrk'></span></label>");
     wm.addParameter(&checkbox);
 
     WiFiManagerParameter div_start("<div id='advanced' style='display:none'>");
@@ -140,28 +140,28 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     // Счетчиков
     WiFiManagerParameter cold_water("<h3>Холодная вода</h3>");
     wm.addParameter(&cold_water);
-
-    WiFiManagerParameter label_cold_info("<p>Спустите унитаз 1-3 раза (или вылейте не меньше 4л), пока надпись не сменится на &laquoподключен&raquo. Если статус &laquoне подключен&raquo, проверьте провод в разъёме. Ватериус так определяет типа счётчика.</p>");
+            
+    WiFiManagerParameter label_cold_info("<p>Спустите унитаз 1&ndash;3 раза (или вылейте не&nbsp;меньше 4&nbsp;л.), пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;. Если статус &laquo;не&nbsp;подключен&raquo;, проверьте провод в&nbsp;разъёме. Ватериус так определяет тип счётчика</p>");
     wm.addParameter( &label_cold_info);
 
     WiFiManagerParameter label_cold_state("<b><p class='bad' id='state1bad'></p><p class='good' id='state1good'></p></b>");
     wm.addParameter( &label_cold_state);
 
-    WiFiManagerParameter label_cold("<label class='cold'>Показания холодной воды (xxx.xx)</label>");
+    WiFiManagerParameter label_cold("<label class='cold label'>Показания холодной воды</label>");
     wm.addParameter( &label_cold);
     FloatParameter param_channel1_start( "ch1", "",  cdata.channel1);
     wm.addParameter( &param_channel1_start);
 
     WiFiManagerParameter hot_water("<h3>Горячая вода</h3>");
     wm.addParameter(&hot_water);
-
-    WiFiManagerParameter label_hot_info("<p>Откройте кран горячей воды, пока надпись не сменится на &laquoподключен&raquo.</p>");
+            
+    WiFiManagerParameter label_hot_info("<p>Откройте кран горячей воды, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
     wm.addParameter( &label_hot_info);
     
     WiFiManagerParameter label_hot_state("<b><p class='bad' id='state0bad'></p><p class='good' id='state0good'></p></b>");
     wm.addParameter( &label_hot_state );
 
-    WiFiManagerParameter label_hot("<label class='hot'>Показания горячей воды (xxx.xx)</label>");
+    WiFiManagerParameter label_hot("<label class='hot label'>Показания горячей воды</label>");
     wm.addParameter( &label_hot);
     FloatParameter param_channel0_start( "ch0", "",  cdata.channel0);
     wm.addParameter( &param_channel0_start);
