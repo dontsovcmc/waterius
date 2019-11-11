@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.0.1">
+<eagle version="9.0.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -2521,41 +2521,6 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 </package>
 </packages>
 </library>
-<library name="Microchip_By_element14_Batch_1">
-<description>Developed by element14 :&lt;br&gt;
-element14 CAD Library consolidation.ulp
-at 30/07/2012 11:22:31</description>
-<packages>
-<package name="SOT95P237X112-3N">
-<smd name="1" x="-0.9398" y="-1.0414" dx="0.5588" dy="1.27" layer="1"/>
-<smd name="2" x="0.9398" y="-1.0414" dx="0.5588" dy="1.27" layer="1"/>
-<smd name="3" x="0" y="1.0414" dx="0.5588" dy="1.27" layer="1"/>
-<wire x1="-0.6858" y1="-0.7112" x2="-1.1938" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="-1.1938" y1="-0.7112" x2="-1.1938" y2="-1.3208" width="0.1524" layer="51"/>
-<wire x1="-1.1938" y1="-1.3208" x2="-0.6858" y2="-1.3208" width="0.1524" layer="51"/>
-<wire x1="-0.6858" y1="-1.3208" x2="-0.6858" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="1.1938" y1="-0.7112" x2="0.6858" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="0.6858" y1="-0.7112" x2="0.6858" y2="-1.3208" width="0.1524" layer="51"/>
-<wire x1="0.6858" y1="-1.3208" x2="1.1938" y2="-1.3208" width="0.1524" layer="51"/>
-<wire x1="1.1938" y1="-1.3208" x2="1.1938" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="-0.254" y1="0.7112" x2="0.254" y2="0.7112" width="0.1524" layer="51"/>
-<wire x1="0.254" y1="0.7112" x2="0.254" y2="1.3208" width="0.1524" layer="51"/>
-<wire x1="0.254" y1="1.3208" x2="-0.254" y2="1.3208" width="0.1524" layer="51"/>
-<wire x1="-0.254" y1="1.3208" x2="-0.254" y2="0.7112" width="0.1524" layer="51"/>
-<wire x1="-1.524" y1="-0.7112" x2="1.524" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="1.524" y1="-0.7112" x2="1.524" y2="0.7112" width="0.1524" layer="51"/>
-<wire x1="1.524" y1="0.7112" x2="-1.524" y2="0.7112" width="0.1524" layer="51"/>
-<wire x1="-1.524" y1="0.7112" x2="-1.524" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="-0.6096" y1="0.7112" x2="-1.524" y2="0.7112" width="0.1524" layer="21"/>
-<wire x1="-0.3302" y1="-0.7112" x2="0.3302" y2="-0.7112" width="0.1524" layer="21"/>
-<wire x1="1.524" y1="-0.254" x2="1.524" y2="0.7112" width="0.1524" layer="21"/>
-<wire x1="1.524" y1="0.7112" x2="0.6096" y2="0.7112" width="0.1524" layer="21"/>
-<wire x1="-1.524" y1="0.7112" x2="-1.524" y2="-0.254" width="0.1524" layer="21"/>
-<text x="-4.5212" y="2.159" size="2.0828" layer="25" ratio="10" rot="SR0">&gt;NAME</text>
-<text x="-5.461" y="-4.2418" size="2.0828" layer="27" ratio="10" rot="SR0">&gt;VALUE</text>
-</package>
-</packages>
-</library>
 <library name="switch-omron" urn="urn:adsk.eagle:library:377">
 <description>&lt;b&gt;Omron Switches&lt;/b&gt;&lt;p&gt;
 &lt;author&gt;Created by librarian@cadsoft.de&lt;/author&gt;</description>
@@ -2627,6 +2592,37 @@ at 30/07/2012 11:22:31</description>
 </packageinstances>
 </package3d>
 </packages3d>
+</library>
+<library name="MCP1700T-3002E_TT">
+<packages>
+<package name="SOT95P237X112-3N">
+<wire x1="-0.6858" y1="-0.7112" x2="-1.1938" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="-1.1938" y1="-0.7112" x2="-1.1938" y2="-1.3208" width="0.1524" layer="51"/>
+<wire x1="-1.1938" y1="-1.3208" x2="-0.6858" y2="-1.3208" width="0.1524" layer="51"/>
+<wire x1="-0.6858" y1="-1.3208" x2="-0.6858" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="1.1938" y1="-0.7112" x2="0.6858" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="0.6858" y1="-0.7112" x2="0.6858" y2="-1.3208" width="0.1524" layer="51"/>
+<wire x1="0.6858" y1="-1.3208" x2="1.1938" y2="-1.3208" width="0.1524" layer="51"/>
+<wire x1="1.1938" y1="-1.3208" x2="1.1938" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="-0.254" y1="0.7112" x2="0.254" y2="0.7112" width="0.1524" layer="51"/>
+<wire x1="0.254" y1="0.7112" x2="0.254" y2="1.3208" width="0.1524" layer="51"/>
+<wire x1="0.254" y1="1.3208" x2="-0.254" y2="1.3208" width="0.1524" layer="51"/>
+<wire x1="-0.254" y1="1.3208" x2="-0.254" y2="0.7112" width="0.1524" layer="51"/>
+<wire x1="-1.524" y1="-0.7112" x2="1.524" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="1.524" y1="-0.7112" x2="1.524" y2="0.7112" width="0.1524" layer="51"/>
+<wire x1="1.524" y1="0.7112" x2="-1.524" y2="0.7112" width="0.1524" layer="51"/>
+<wire x1="-1.524" y1="0.7112" x2="-1.524" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="-0.6096" y1="0.7112" x2="-1.524" y2="0.7112" width="0.1524" layer="21"/>
+<wire x1="1.524" y1="-0.254" x2="1.524" y2="0.7112" width="0.1524" layer="21"/>
+<wire x1="1.524" y1="0.7112" x2="0.6096" y2="0.7112" width="0.1524" layer="21"/>
+<wire x1="-1.524" y1="0.7112" x2="-1.524" y2="-0.254" width="0.1524" layer="21"/>
+<text x="-4.52653125" y="2.161540625" size="2.08525" layer="25" ratio="10" rot="SR0">&gt;NAME</text>
+<text x="-5.468509375" y="-4.24763125" size="2.085659375" layer="27" ratio="10" rot="SR0">&gt;VALUE</text>
+<smd name="1" x="-0.9398" y="-1.0414" dx="0.5588" dy="1.27" layer="1"/>
+<smd name="2" x="0.9398" y="-1.0414" dx="0.5588" dy="1.27" layer="1"/>
+<smd name="3" x="0" y="1.0414" dx="0.5588" dy="1.27" layer="1"/>
+</package>
+</packages>
 </library>
 </libraries>
 <attributes>
@@ -2890,12 +2886,13 @@ design rules under a new name.</description>
 <attribute name="NAME" x="4.3156" y="23.2152" size="1" layer="26" rot="MR180"/>
 <attribute name="SPICEPREFIX" value="C" x="5.1538" y="24.2566" size="1.778" layer="28" rot="MR180" display="off"/>
 </element>
-<element name="U$1" library="Microchip_By_element14_Batch_1" package="SOT95P237X112-3N" value="MCP1700T-3002E/TT" x="10.4394" y="27.3812" smashed="yes" rot="MR270">
-<attribute name="MPN" value="MCP1700T-3002E/TT" x="10.4394" y="27.3812" size="0.5" layer="28" rot="MR270" display="off"/>
-<attribute name="OC_FARNELL" value="1331482" x="10.4394" y="27.3812" size="0.5" layer="28" rot="MR270" display="off"/>
-<attribute name="OC_NEWARK" value="84R5176" x="10.4394" y="27.3812" size="0.5" layer="28" rot="MR270" display="off"/>
-<attribute name="PACKAGE" value="SOT23-3" x="10.4394" y="27.3812" size="0.5" layer="28" rot="MR270" display="off"/>
-<attribute name="SUPPLIER" value="Microchip" x="10.4394" y="27.3812" size="0.5" layer="28" rot="MR270" display="off"/>
+<element name="U$1" library="MCP1700T-3002E_TT" package="SOT95P237X112-3N" value="MCP1700T-3002E/TT" x="10.4394" y="27.3812" smashed="yes" rot="MR270">
+<attribute name="AVAILABILITY" value="Unavailable" x="10.4394" y="27.3812" size="1.778" layer="28" rot="MR270" display="off"/>
+<attribute name="DESCRIPTION" value=" MCP1700 Series 250 mA 3 V Fixed Output LDO Voltage Regulator - SOT-23 " x="10.4394" y="27.3812" size="1.778" layer="28" rot="MR270" display="off"/>
+<attribute name="MF" value="Microchip" x="10.4394" y="27.3812" size="1.778" layer="28" rot="MR270" display="off"/>
+<attribute name="MP" value="MCP1700T-3002E/TT" x="10.4394" y="27.3812" size="1.778" layer="28" rot="MR270" display="off"/>
+<attribute name="PACKAGE" value="SOT-23 Microchip" x="10.4394" y="27.3812" size="0.5" layer="28" rot="MR270" display="off"/>
+<attribute name="PRICE" value="None" x="10.4394" y="27.3812" size="1.778" layer="28" rot="MR270" display="off"/>
 </element>
 <element name="S1" library="switch-omron" library_urn="urn:adsk.eagle:library:377" package="B3F-31XX" package3d_urn="urn:adsk.eagle:package:27487/1" value="" x="4.064" y="30.4038" smashed="yes" rot="MR90">
 <attribute name="MF" value="" x="4.064" y="30.4038" size="1.778" layer="28" rot="MR90" display="off"/>

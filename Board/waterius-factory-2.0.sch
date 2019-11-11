@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.0.1">
+<eagle version="9.0.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -9105,80 +9105,6 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 </deviceset>
 </devicesets>
 </library>
-<library name="Microchip_By_element14_Batch_1">
-<description>Developed by element14 :&lt;br&gt;
-element14 CAD Library consolidation.ulp
-at 30/07/2012 11:22:31</description>
-<packages>
-<package name="SOT95P237X112-3N">
-<smd name="1" x="-0.9398" y="-1.0414" dx="0.5588" dy="1.27" layer="1"/>
-<smd name="2" x="0.9398" y="-1.0414" dx="0.5588" dy="1.27" layer="1"/>
-<smd name="3" x="0" y="1.0414" dx="0.5588" dy="1.27" layer="1"/>
-<wire x1="-0.6858" y1="-0.7112" x2="-1.1938" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="-1.1938" y1="-0.7112" x2="-1.1938" y2="-1.3208" width="0.1524" layer="51"/>
-<wire x1="-1.1938" y1="-1.3208" x2="-0.6858" y2="-1.3208" width="0.1524" layer="51"/>
-<wire x1="-0.6858" y1="-1.3208" x2="-0.6858" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="1.1938" y1="-0.7112" x2="0.6858" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="0.6858" y1="-0.7112" x2="0.6858" y2="-1.3208" width="0.1524" layer="51"/>
-<wire x1="0.6858" y1="-1.3208" x2="1.1938" y2="-1.3208" width="0.1524" layer="51"/>
-<wire x1="1.1938" y1="-1.3208" x2="1.1938" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="-0.254" y1="0.7112" x2="0.254" y2="0.7112" width="0.1524" layer="51"/>
-<wire x1="0.254" y1="0.7112" x2="0.254" y2="1.3208" width="0.1524" layer="51"/>
-<wire x1="0.254" y1="1.3208" x2="-0.254" y2="1.3208" width="0.1524" layer="51"/>
-<wire x1="-0.254" y1="1.3208" x2="-0.254" y2="0.7112" width="0.1524" layer="51"/>
-<wire x1="-1.524" y1="-0.7112" x2="1.524" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="1.524" y1="-0.7112" x2="1.524" y2="0.7112" width="0.1524" layer="51"/>
-<wire x1="1.524" y1="0.7112" x2="-1.524" y2="0.7112" width="0.1524" layer="51"/>
-<wire x1="-1.524" y1="0.7112" x2="-1.524" y2="-0.7112" width="0.1524" layer="51"/>
-<wire x1="-0.6096" y1="0.7112" x2="-1.524" y2="0.7112" width="0.1524" layer="21"/>
-<wire x1="-0.3302" y1="-0.7112" x2="0.3302" y2="-0.7112" width="0.1524" layer="21"/>
-<wire x1="1.524" y1="-0.254" x2="1.524" y2="0.7112" width="0.1524" layer="21"/>
-<wire x1="1.524" y1="0.7112" x2="0.6096" y2="0.7112" width="0.1524" layer="21"/>
-<wire x1="-1.524" y1="0.7112" x2="-1.524" y2="-0.254" width="0.1524" layer="21"/>
-<text x="-4.5212" y="2.159" size="2.0828" layer="25" ratio="10" rot="SR0">&gt;NAME</text>
-<text x="-5.461" y="-4.2418" size="2.0828" layer="27" ratio="10" rot="SR0">&gt;VALUE</text>
-</package>
-</packages>
-<symbols>
-<symbol name="MCP1700T-3002E/TT">
-<pin name="VIN" x="-17.78" y="0" length="middle" direction="in"/>
-<pin name="GND" x="-17.78" y="-5.08" length="middle" direction="pas"/>
-<pin name="VOUT" x="17.78" y="0" length="middle" direction="out" rot="R180"/>
-<wire x1="-12.7" y1="5.08" x2="-12.7" y2="-10.16" width="0.4064" layer="94"/>
-<wire x1="-12.7" y1="-10.16" x2="12.7" y2="-10.16" width="0.4064" layer="94"/>
-<wire x1="12.7" y1="-10.16" x2="12.7" y2="5.08" width="0.4064" layer="94"/>
-<wire x1="12.7" y1="5.08" x2="-12.7" y2="5.08" width="0.4064" layer="94"/>
-<text x="-4.7244" y="9.1186" size="2.0828" layer="95" ratio="10" rot="SR0">&gt;NAME</text>
-<text x="-5.7912" y="-14.097" size="2.0828" layer="96" ratio="10" rot="SR0">&gt;VALUE</text>
-</symbol>
-</symbols>
-<devicesets>
-<deviceset name="MCP1700T-3002E/TT">
-<description>Low Quiescent Current LDO</description>
-<gates>
-<gate name="A" symbol="MCP1700T-3002E/TT" x="0" y="0"/>
-</gates>
-<devices>
-<device name="" package="SOT95P237X112-3N">
-<connects>
-<connect gate="A" pin="GND" pad="1"/>
-<connect gate="A" pin="VIN" pad="3"/>
-<connect gate="A" pin="VOUT" pad="2"/>
-</connects>
-<technologies>
-<technology name="">
-<attribute name="MPN" value="MCP1700T-3002E/TT" constant="no"/>
-<attribute name="OC_FARNELL" value="1331482" constant="no"/>
-<attribute name="OC_NEWARK" value="84R5176" constant="no"/>
-<attribute name="PACKAGE" value="SOT23-3" constant="no"/>
-<attribute name="SUPPLIER" value="Microchip" constant="no"/>
-</technology>
-</technologies>
-</device>
-</devices>
-</deviceset>
-</devicesets>
-</library>
 <library name="supply1" urn="urn:adsk.eagle:library:371">
 <description>&lt;b&gt;Supply Symbols&lt;/b&gt;&lt;p&gt;
  GND, VCC, 0V, +5V, -5V, etc.&lt;p&gt;
@@ -9331,6 +9257,77 @@ at 30/07/2012 11:22:31</description>
 </deviceset>
 </devicesets>
 </library>
+<library name="MCP1700T-3002E_TT">
+<packages>
+<package name="SOT95P237X112-3N">
+<wire x1="-0.6858" y1="-0.7112" x2="-1.1938" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="-1.1938" y1="-0.7112" x2="-1.1938" y2="-1.3208" width="0.1524" layer="51"/>
+<wire x1="-1.1938" y1="-1.3208" x2="-0.6858" y2="-1.3208" width="0.1524" layer="51"/>
+<wire x1="-0.6858" y1="-1.3208" x2="-0.6858" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="1.1938" y1="-0.7112" x2="0.6858" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="0.6858" y1="-0.7112" x2="0.6858" y2="-1.3208" width="0.1524" layer="51"/>
+<wire x1="0.6858" y1="-1.3208" x2="1.1938" y2="-1.3208" width="0.1524" layer="51"/>
+<wire x1="1.1938" y1="-1.3208" x2="1.1938" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="-0.254" y1="0.7112" x2="0.254" y2="0.7112" width="0.1524" layer="51"/>
+<wire x1="0.254" y1="0.7112" x2="0.254" y2="1.3208" width="0.1524" layer="51"/>
+<wire x1="0.254" y1="1.3208" x2="-0.254" y2="1.3208" width="0.1524" layer="51"/>
+<wire x1="-0.254" y1="1.3208" x2="-0.254" y2="0.7112" width="0.1524" layer="51"/>
+<wire x1="-1.524" y1="-0.7112" x2="1.524" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="1.524" y1="-0.7112" x2="1.524" y2="0.7112" width="0.1524" layer="51"/>
+<wire x1="1.524" y1="0.7112" x2="-1.524" y2="0.7112" width="0.1524" layer="51"/>
+<wire x1="-1.524" y1="0.7112" x2="-1.524" y2="-0.7112" width="0.1524" layer="51"/>
+<wire x1="-0.6096" y1="0.7112" x2="-1.524" y2="0.7112" width="0.1524" layer="21"/>
+<wire x1="1.524" y1="-0.254" x2="1.524" y2="0.7112" width="0.1524" layer="21"/>
+<wire x1="1.524" y1="0.7112" x2="0.6096" y2="0.7112" width="0.1524" layer="21"/>
+<wire x1="-1.524" y1="0.7112" x2="-1.524" y2="-0.254" width="0.1524" layer="21"/>
+<text x="-4.52653125" y="2.161540625" size="2.08525" layer="25" ratio="10" rot="SR0">&gt;NAME</text>
+<text x="-5.468509375" y="-4.24763125" size="2.085659375" layer="27" ratio="10" rot="SR0">&gt;VALUE</text>
+<smd name="1" x="-0.9398" y="-1.0414" dx="0.5588" dy="1.27" layer="1"/>
+<smd name="2" x="0.9398" y="-1.0414" dx="0.5588" dy="1.27" layer="1"/>
+<smd name="3" x="0" y="1.0414" dx="0.5588" dy="1.27" layer="1"/>
+</package>
+</packages>
+<symbols>
+<symbol name="MCP1700T-3002E/TT">
+<wire x1="-12.7" y1="5.08" x2="-12.7" y2="-10.16" width="0.4064" layer="94"/>
+<wire x1="-12.7" y1="-10.16" x2="12.7" y2="-10.16" width="0.4064" layer="94"/>
+<wire x1="12.7" y1="-10.16" x2="12.7" y2="5.08" width="0.4064" layer="94"/>
+<wire x1="12.7" y1="5.08" x2="-12.7" y2="5.08" width="0.4064" layer="94"/>
+<text x="-4.732709375" y="9.134640625" size="2.086459375" layer="95" ratio="10" rot="SR0">&gt;NAME</text>
+<text x="-5.80071875" y="-14.1202" size="2.08621875" layer="96" ratio="10" rot="SR0">&gt;VALUE</text>
+<pin name="VIN" x="-17.78" y="0" length="middle" direction="in"/>
+<pin name="GND" x="-17.78" y="-5.08" length="middle" direction="pas"/>
+<pin name="VOUT" x="17.78" y="0" length="middle" direction="out" rot="R180"/>
+</symbol>
+</symbols>
+<devicesets>
+<deviceset name="MCP1700T-3002E/TT">
+<description>Low Quiescent Current LDO</description>
+<gates>
+<gate name="A" symbol="MCP1700T-3002E/TT" x="0" y="0"/>
+</gates>
+<devices>
+<device name="" package="SOT95P237X112-3N">
+<connects>
+<connect gate="A" pin="GND" pad="1"/>
+<connect gate="A" pin="VIN" pad="3"/>
+<connect gate="A" pin="VOUT" pad="2"/>
+</connects>
+<technologies>
+<technology name="">
+<attribute name="AVAILABILITY" value="Unavailable"/>
+<attribute name="DESCRIPTION" value=" MCP1700 Series 250 mA 3 V Fixed Output LDO Voltage Regulator - SOT-23 "/>
+<attribute name="MF" value="Microchip"/>
+<attribute name="MP" value="MCP1700T-3002E/TT"/>
+<attribute name="PACKAGE" value="SOT-23 Microchip"/>
+<attribute name="PRICE" value="None"/>
+</technology>
+</technologies>
+</device>
+</devices>
+</deviceset>
+</devicesets>
+</library>
 </libraries>
 <attributes>
 </attributes>
@@ -9371,7 +9368,7 @@ at 30/07/2012 11:22:31</description>
 <part name="R5" library="resistor" deviceset="R-EU_" device="R0805" value="3k3"/>
 <part name="C3" library="rcl" deviceset="C-EU" device="C0805" value="0.1uF"/>
 <part name="GND7" library="supply1" deviceset="GND" device=""/>
-<part name="U$1" library="Microchip_By_element14_Batch_1" deviceset="MCP1700T-3002E/TT" device=""/>
+<part name="U$1" library="MCP1700T-3002E_TT" deviceset="MCP1700T-3002E/TT" device=""/>
 <part name="S1" library="switch-omron" library_urn="urn:adsk.eagle:library:377" deviceset="31-XX" device="" package3d_urn="urn:adsk.eagle:package:27487/1"/>
 </parts>
 <sheets>
