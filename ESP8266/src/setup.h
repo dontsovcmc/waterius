@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.9.4"
+#define FIRMWARE_VERSION "0.9.5"
   
 
 /*
