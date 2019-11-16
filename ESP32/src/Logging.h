@@ -40,14 +40,9 @@ template<class T> inline Print &operator <<( Print &obj, T arg ) {
 // Default do no logging...
 #define LOG_BEGIN(baud) do {} while (0)
 #define LOG_END() do {} while (0)
-#define LOG_EMERGENCY(svc, content) do {} while (0)
-#define LOG_ALERT(svc, content)     do {} while (0)
-#define LOG_CRITICAL(svc, content)  do {} while (0)
-#define LOG_ERROR(svc, content)     do {} while (0)
-#define LOG_WARNING(svc, content)   do {} while (0)
-#define LOG_NOTICE(svc, content)    do {} while (0)
-#define LOG_INFO(svc, content)      do {} while (0)
-#define LOG_DEBUG(svc, content)	    do {} while (0)
+#define LOG_ERROR(content)     do {} while (0)
+#define LOG_INFO(content)      do {} while (0)
+#define LOG_DEBUG(content)	    do {} while (0)
 
 // Depending on log level, add code for logging
 #if LOGLEVEL >= 0
@@ -55,35 +50,15 @@ template<class T> inline Print &operator <<( Print &obj, T arg ) {
 	#define LOG_BEGIN(baud) do { Serial.begin( baud ); } while(0)
 	#undef LOG_END
 	#define LOG_END() do { Serial.flush(); Serial.end(); } while(0)
-	#undef LOG_EMERGENCY
-	#define LOG_EMERGENCY(svc, content)	do { LOG_FORMAT_TIME; Serial << "  EMERGENCY (" << svc << ") : " << content << endl; } while(0)
-	#if LOGLEVEL >=1 
-		#undef LOG_ALERT
-		#define LOG_ALERT(svc, content)	do { LOG_FORMAT_TIME; Serial << "  ALERT     (" << svc << ") : " << content << endl; } while(0)
-		#if LOGLEVEL >= 2
-			#undef LOG_CRITICAL
-			#define LOG_CRITICAL(svc, content) do { LOG_FORMAT_TIME; Serial << "  CRITICAL  (" << svc << ") : " << content << endl; } while(0)
-			#if LOGLEVEL >= 3
-				#undef LOG_ERROR
-				#define LOG_ERROR(svc, content) do { LOG_FORMAT_TIME; Serial << "  ERROR     (" << svc << ") : " << content << endl; } while(0)
-				#if LOGLEVEL >= 4
-					#undef LOG_WARNING
-					#define LOG_WARNING(svc, content) do { LOG_FORMAT_TIME; Serial << "  WARNING   (" << svc << ") : " << content << endl; } while(0)
-					#if LOGLEVEL >= 5
-						#undef LOG_NOTICE
-						#define LOG_NOTICE(svc, content) do { LOG_FORMAT_TIME; Serial << "  NOTICE    (" << svc << ") : " << content << endl; } while(0)
-						#if LOGLEVEL >= 6
-							#undef LOG_INFO
-							#define LOG_INFO(svc, content) do { LOG_FORMAT_TIME; Serial << "  INFO      (" << svc << ") : " << content << endl; } while(0)
-							#if LOGLEVEL >= 7
-								#define LOG_DEBUG(svc, content) do { LOG_FORMAT_TIME; Serial << "  DEBUG     (" << svc << ") : " << content << endl; } while(0)
-							#endif // LOGLEVEL >= 7
-						#endif // LOGLEVEL >= 6
-					#endif // LOGLEVEL >= 5
-				#endif // LOGLEVEL >= 4
-			#endif // LOGLEVEL >= 3
-		#endif // LOGLEVEL >= 2
-	#endif // LOGLEVEL >= 1
+		#undef LOG_ERROR
+		#define LOG_ERROR(content) do { LOG_FORMAT_TIME; Serial << "  ERROR:       " << content << endl; } while(0)
+		#if LOGLEVEL >= 1
+			#undef LOG_INFO
+			#define LOG_INFO(content) do { LOG_FORMAT_TIME; Serial << "  INFO:       " << content << endl; } while(0)
+			#if LOGLEVEL >= 2
+				#define LOG_DEBUG(svc, content) do { LOG_FORMAT_TIME; Serial << "  DEBUG:       " << content << endl; } while(0)
+			#endif // LOGLEVEL >= 2
+		#endif // LOGLEVEL >= 1
 #endif // LOGLEVEL >= 0
 
 #endif
