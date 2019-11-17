@@ -7,7 +7,7 @@
 #include <WiFiClient.h>
 #include "master_i2c.h"
 
-#define FAKE_CRC 0095
+#define FAKE_CRC 95
 
 /*
 Сохраняем конфигурацию в EEPROM
