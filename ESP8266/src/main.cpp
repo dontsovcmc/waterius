@@ -122,6 +122,9 @@ void loop()
                 && masterI2C.getSlaveData(data)) { //тут надо достоверно прочитать i2c
 
                 LOG_NOTICE(FPSTR(S_WIF), "Connected, IP: " << WiFi.localIP().toString());
+                
+                cdata.rssi = WiFi.RSSI();
+                LOG_DEBUG(FPSTR(S_WIF), "RSSI: " << cdata.rssi);
 
                 if (send_blynk(sett, data, cdata)) {
                     LOG_NOTICE(FPSTR(S_BLK), FPSTR(S_SEND_OK));

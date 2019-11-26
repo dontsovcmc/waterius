@@ -229,7 +229,7 @@ void loop() {
 
 		LOG_DEBUG(F("SETUP pressed"));
 		slaveI2C.begin(SETUP_MODE);	
-		wake_up_limit = SETUP_TIME_MSEC; //5 мин при настройке
+		wake_up_limit = SETUP_TIME_MSEC; //10 мин при настройке
 	} else {
 
 		LOG_DEBUG(F("wake up for transmitting"));

@@ -62,6 +62,7 @@ const char S_V4[] PROGMEM = "{V4}";
 const char S_V5[] PROGMEM = "{V5}";
 const char S_V6[] PROGMEM = "{V6}";
 const char S_V7[] PROGMEM = "{V7}";
+const char S_V8[] PROGMEM = "{V8}";
 
 
 

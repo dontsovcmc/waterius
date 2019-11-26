@@ -35,6 +35,7 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
         Blynk.virtualWrite(V4, cdata.delta1);
         Blynk.virtualWrite(V5, data.resets);
         Blynk.virtualWrite(V7, (float)(cdata.voltage_diff / 1000.0));
+        Blynk.virtualWrite(V8, cdata.rssi);
 
         WidgetLED battery_led(V6);
         cdata.low_voltage ? battery_led.on() : battery_led.off();
@@ -55,6 +56,7 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
             String v5(data.resets, DEC);
             String v6(cdata.low_voltage, DEC);
             String v7((float)(cdata.voltage_diff / 1000.0), 3);
+            String v8(cdata.rssi, DEC);
             
             msg.replace(FPSTR(S_V0), v0);
             msg.replace(FPSTR(S_V1), v1);
@@ -64,6 +66,7 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
             msg.replace(FPSTR(S_V5), v5);
             msg.replace(FPSTR(S_V6), v6);
             msg.replace(FPSTR(S_V7), v7);
+            msg.replace(FPSTR(S_V8), v8);
             
             title.replace(FPSTR(S_V0), v0);
             title.replace(FPSTR(S_V1), v1);
@@ -73,6 +76,7 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
             title.replace(FPSTR(S_V5), v5);
             title.replace(FPSTR(S_V6), v6);
             title.replace(FPSTR(S_V7), v7);
+            title.replace(FPSTR(S_V8), v8);
 
             Blynk.email(sett.blynk_email, title, msg);
 

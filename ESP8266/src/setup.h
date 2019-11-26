@@ -3,18 +3,17 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.9.5"
+#define FIRMWARE_VERSION "0.9.6"
   
 
 /*
 Версии прошивки для ESP
 
+0.9.6 - 2019.11.26 - Добавил RSSI, косметика.
 0.9.5 - 2019.11.15 - оптимизировал память WifiManager, иначе веб страница могла не догрузиться
 0.9.4 - 2019.11.05 - убрал константы SEND_MQTT, SEND_BLYNK, ONLY_CLOUD_WATERIUS
                    - добавил f - вес импульса в даннные mqtt, http
                    - улучшен интерфейс настройки
-                   - 
-                   - 
 0.9.3 - 2019.10.27 - Исправил random
 0.9.2 - 2019.10.16 - Исправил поля в json (boot, version)
 0.9.1 - 2019.09.16 - Замеряю просадку напряжения.
@@ -77,13 +76,14 @@
 
 
 struct CalculatedData {
-    float channel0;
-    float channel1;
+    float    channel0;
+    float    channel1;
     uint32_t delta0;
     uint32_t delta1;
 
     uint32_t voltage_diff;
-    bool  low_voltage;
+    bool     low_voltage;
+    int8_t   rssi;
 };
 
 /*

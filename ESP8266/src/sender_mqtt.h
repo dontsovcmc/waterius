@@ -52,6 +52,7 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "voltage_low").c_str(), String(cdata.low_voltage).c_str());
         client.publish((topic + "voltage_diff").c_str(), String((float)(cdata.voltage_diff / 1000.0), 3).c_str());
         client.publish((topic + "f").c_str(), String(sett.liters_per_impuls).c_str());
+        client.publish((topic + "rssi").c_str(), String(cdata.rssi).c_str());
         client.disconnect();
         return true;
     }  else {

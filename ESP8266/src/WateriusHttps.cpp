@@ -90,11 +90,13 @@ void WateriusHttps::generateSha256Token(char *token, const int token_len,
     constexpr char THIS_FUNC_DESCRIPTION[] = "Generate SHA256 token from email";
     constexpr char THIS_FUNC_SVC[] = "TKN";
     LOG_NOTICE(THIS_FUNC_SVC, "-- START -- " << THIS_FUNC_DESCRIPTION);
-    LOG_INFO(THIS_FUNC_SVC, "E-mail:\t" << email);
     
     auto x = BearSSL::HashSHA256();
-    x.add(email, strlen(email));
-
+    if (email != nullptr && strlen(email)) {
+        LOG_INFO(THIS_FUNC_SVC, "E-mail:\t" << email);
+        x.add(email, strlen(email));
+    }
+    
     randomSeed(micros());
     uint32_t salt = rand();
     LOG_INFO(THIS_FUNC_SVC, "salt:\t" << salt);

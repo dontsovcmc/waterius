@@ -26,6 +26,8 @@ uint8_t get_factor() {
     return (runtime_data.impulses1 - data.impulses1 <= IMPULS_LIMIT_1) ? 10 : 1;
 }
 
+#define SETUP_TIME_MSEC 600000UL //На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
+
 void update_data(String &message)
 {
     if (masterI2C.getSlaveData(runtime_data)) {
@@ -33,6 +35,7 @@ void update_data(String &message)
         String state0bad(FPSTR(S_STATE_BAD));
         String state1good(FPSTR(S_STATE_NULL));
         String state1bad(FPSTR(S_STATE_BAD));
+
         uint32_t delta0 = runtime_data.impulses0 - data.impulses0;
         uint32_t delta1 = runtime_data.impulses1 - data.impulses1;
         
@@ -53,8 +56,8 @@ void update_data(String &message)
         message += state1good;
         message += ", \"state1bad\": ";
         message += state1bad;
-        message += ", \"factor\": ";
-        message += String(get_factor());
+        message += ", \"elapsed\": ";
+        message += String((uint32_t)(SETUP_TIME_MSEC - millis())/1000.0);
         message += " }";
     }
     else {

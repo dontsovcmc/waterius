@@ -94,7 +94,7 @@ bool loadConfig(struct Settings &sett)
         String email_title = "Новые показания {DEVICE_NAME}";
         strncpy0(sett.blynk_email_title, email_title.c_str(), BLYNK_EMAIL_TITLE_LEN);
 
-        String email_template = "Показания:<br>Холодная: {V1}м³<br>Горячая: {V0}м³<hr>Расход за сутки:<br>Холодная: {V4}л<br>Горячая: {V3}л<hr>Напряжение: {V2}В<br>Перезагрузок: {V5}";
+        String email_template = "Показания:<br>Холодная: {V1}м³(+{V4}л)<br>Горячая: {V0}м³ (+{V3}л)<hr>Питание: {V2}В<br>Resets: {V5}";
         strncpy0(sett.blynk_email_template, email_template.c_str(), BLYNK_EMAIL_TEMPLATE_LEN);
 
         //strncpy0(sett.mqtt_host, MQTT_DEFAULT_HOST, MQTT_HOST_LEN);
