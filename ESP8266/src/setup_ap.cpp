@@ -58,6 +58,7 @@ void update_data(String &message)
         message += state1bad;
         message += ", \"elapsed\": ";
         message += String((uint32_t)(SETUP_TIME_MSEC - millis())/1000.0);
+        message += ", \"error\": \"\"";
         message += " }";
     }
     else {
@@ -68,14 +69,25 @@ void update_data(String &message)
 WiFiManager wm;
 
 void handleStates(){
+  LOG_INFO(FPSTR(S_AP), "/states request");
   String message;
   message.reserve(200);
   update_data(message);
   wm.server->send(200, FPSTR(HTTP_TEXT_PLAIN), message);
 }
 
+void handleNetworks() {
+  LOG_INFO(FPSTR(S_AP), "/networks request");
+  String message;
+  message.reserve(2000);
+  wm.WiFi_scanNetworks(wm.server->hasArg(F("refresh")),false); //wifiscan, force if arg refresh
+  wm.getScanItemOut(message);  
+  wm.server->send(200, FPSTR(HTTP_TEXT_PLAIN), message);
+}
+
 void bindServerCallback(){
   wm.server->on(FPSTR(S_STATES), handleStates);
+  wm.server->on("/networks", handleNetworks);
 }
 
 
