@@ -28,7 +28,7 @@ void setup()
     memset(&cdata, 0, sizeof(cdata));
     memset(&data, 0, sizeof(data)); // На всякий случай
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
-    LOG_NOTICE(FPSTR(S_ESP), FPSTR(S_BOOTED));
+    LOG_INFO(FPSTR(S_ESP), F("Booted"));
     masterI2C.begin();    //Включаем i2c master
 }
 
@@ -38,16 +38,16 @@ void setup()
 */
 void calculate_values(const Settings &sett, const SlaveData &data, CalculatedData &cdata)
 {
-    LOG_NOTICE(FPSTR(S_ESP), "new impulses=" << data.impulses0 << " " << data.impulses1);
+    LOG_INFO(FPSTR(S_ESP), F("new impulses=") << data.impulses0 << " " << data.impulses1);
 
     if (sett.liters_per_impuls > 0) {
         cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.liters_per_impuls;
         cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.liters_per_impuls;
-        LOG_NOTICE(FPSTR(S_ESP), "new value0=" << cdata.channel0 << " value1=" << cdata.channel1);
+        LOG_INFO(FPSTR(S_ESP), F("new value0=") << cdata.channel0 << F(" value1=") << cdata.channel1);
         
         cdata.delta0  = (data.impulses0 - sett.impulses0_previous)*sett.liters_per_impuls;
         cdata.delta1 = (data.impulses1 - sett.impulses1_previous)*sett.liters_per_impuls;
-        LOG_NOTICE(FPSTR(S_ESP), "delta0=" << cdata.delta0 << " delta1=" << cdata.delta1);
+        LOG_INFO(FPSTR(S_ESP), F("delta0=") << cdata.delta0 << F(" delta1=") << cdata.delta1);
     }
 }
 
@@ -79,7 +79,7 @@ void loop()
         //Загружаем конфигурацию из EEPROM
         bool success = loadConfig(sett);
         if (!success) {
-            LOG_ERROR(FPSTR(S_ESP), FPSTR(S_ERROR_LOAD_CFG));
+            LOG_ERROR(FPSTR(S_ESP), F("Error loading config"));
         }
 
         //Вычисляем текущие показания
@@ -101,7 +101,7 @@ void loop()
         if (success) {
             if (mode == TRANSMIT_MODE) { 
                 //Проснулись для передачи показаний
-                LOG_NOTICE(FPSTR(S_WIF), FPSTR(S_STARTING));
+                LOG_INFO(FPSTR(S_WIF), F("Starting"));
 
                 //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                 WiFi.begin(); 
@@ -109,7 +109,7 @@ void loop()
                 //Ожидаем подключения к точке доступа
                 uint32_t start = millis();
                 while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
-                    LOG_NOTICE(FPSTR(S_WIF), "Status: " << WiFi.status());
+                    LOG_INFO(FPSTR(S_WIF), F("Status: ") << WiFi.status());
                     delay(200);
 
                     check_voltage(data, cdata);
@@ -121,17 +121,17 @@ void loop()
             if (WiFi.status() == WL_CONNECTED 
                 && masterI2C.getSlaveData(data)) { //тут надо достоверно прочитать i2c
 
-                LOG_NOTICE(FPSTR(S_WIF), "Connected, IP: " << WiFi.localIP().toString());
+                LOG_INFO(FPSTR(S_WIF), F("Connected, IP: ") << WiFi.localIP().toString());
                 
                 cdata.rssi = WiFi.RSSI();
-                LOG_DEBUG(FPSTR(S_WIF), "RSSI: " << cdata.rssi);
+                LOG_DEBUG(FPSTR(S_WIF), F("RSSI: ") << cdata.rssi);
 
                 if (send_blynk(sett, data, cdata)) {
-                    LOG_NOTICE(FPSTR(S_BLK), FPSTR(S_SEND_OK));
+                    LOG_INFO(FPSTR(S_BLK), F("Send OK"));
                 }
                 
                 if (send_mqtt(sett, data, cdata)) {
-                    LOG_NOTICE(FPSTR(S_MQT), FPSTR(S_SEND_OK));
+                    LOG_INFO(FPSTR(S_MQT), F("Send OK"));
                 }
 
                 UserClass::sendNewData(sett, data, cdata);
@@ -144,7 +144,8 @@ void loop()
         }
     }
 
-    LOG_NOTICE(FPSTR(S_ESP), FPSTR(S_GOING_SLEEP));
+    LOG_INFO(FPSTR(S_ESP), F("Going to sleep"));
+    
     masterI2C.sendCmd('Z');        // "Можешь идти спать, attiny"
     LOG_END();
     

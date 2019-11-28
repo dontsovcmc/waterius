@@ -19,7 +19,7 @@
 bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
     if (strnlen(sett.mqtt_host, MQTT_HOST_LEN) == 0) {
-        LOG_NOTICE(FPSTR(S_MQT), FPSTR(S_SKIP));
+        LOG_INFO(FPSTR(S_MQT), F("SKIP"));
         return false;
     }
 
@@ -56,7 +56,7 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.disconnect();
         return true;
     }  else {
-        LOG_ERROR(FPSTR(S_MQT), FPSTR(S_CONNECT_ERROR));
+        LOG_ERROR(FPSTR(S_MQT), F("Connect error"));
     } 
 
     return false;

@@ -11,7 +11,7 @@ bool setClock(const char* ntp_server)
 {
 	configTime(0, 0, ntp_server);
 
-	LOG_NOTICE("NTP", "Waiting for NTP time sync: ");
+	LOG_INFO(F("NTP"), F("Waiting for NTP time sync: "));
 	uint32_t start = millis();
 	time_t now = time(nullptr);
 	
@@ -32,7 +32,7 @@ bool setClock()
 		time_t now = time(nullptr);
 		struct tm timeinfo;
 		gmtime_r(&now, &timeinfo);
-		LOG_NOTICE("NTP", "Current time: " << asctime(&timeinfo));
+		LOG_INFO(F("NTP"), F("Current time: ") << asctime(&timeinfo));
 		return true;
 	}
 	return false;

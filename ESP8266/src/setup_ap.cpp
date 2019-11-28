@@ -26,68 +26,68 @@ uint8_t get_factor() {
     return (runtime_data.impulses1 - data.impulses1 <= IMPULS_LIMIT_1) ? 10 : 1;
 }
 
-#define SETUP_TIME_MSEC 600000UL //На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
+#define SETUP_TIME_SEC 600UL //На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
 
 void update_data(String &message)
 {
     if (masterI2C.getSlaveData(runtime_data)) {
-        String state0good(FPSTR(S_STATE_NULL));
-        String state0bad(FPSTR(S_STATE_BAD));
-        String state1good(FPSTR(S_STATE_NULL));
-        String state1bad(FPSTR(S_STATE_BAD));
+        String state0good(F("\"\""));
+        String state0bad(F("\"Не подключен\""));
+        String state1good(F("\"\""));
+        String state1bad(F("\"Не подключен\""));
 
         uint32_t delta0 = runtime_data.impulses0 - data.impulses0;
         uint32_t delta1 = runtime_data.impulses1 - data.impulses1;
         
         if (delta0 > 0) {
-            state0good = FPSTR(S_STATE_CONNECTED);
-            state0bad = FPSTR(S_STATE_NULL);
+            state0good = F("\"Подключен\"");
+            state0bad = F("\"\"");
         }
         if (delta1 > 0) {
-            state1good = FPSTR(S_STATE_CONNECTED);
-            state1bad = FPSTR(S_STATE_NULL);
+            state1good = F("\"Подключен\"");
+            state1bad = F("\"\"");
         }
 
-        message = "{\"state0good\": ";
+        message = F("{\"state0good\": ");
         message += state0good;
-        message += ", \"state0bad\": ";
+        message += F(", \"state0bad\": ");
         message += state0bad;
-        message += ", \"state1good\": ";
+        message += F(", \"state1good\": ");
         message += state1good;
-        message += ", \"state1bad\": ";
+        message += F(", \"state1bad\": ");
         message += state1bad;
-        message += ", \"elapsed\": ";
-        message += String((uint32_t)(SETUP_TIME_MSEC - millis())/1000.0);
-        message += ", \"error\": \"\"";
-        message += " }";
+        message += F(", \"elapsed\": ");
+        message += String((uint32_t)(SETUP_TIME_SEC - millis()/1000.0));
+        message += F(", \"error\": \"\"");
+        message += F(" }");
     }
     else {
-        message = "{\"error\": \"Ошибка\"}";
+        message = F("{\"error\": \"Ошибка связи с МК\"}");
     }
 }
 
 WiFiManager wm;
 
 void handleStates(){
-  LOG_INFO(FPSTR(S_AP), "/states request");
+  LOG_INFO(FPSTR(S_AP), F("/states request"));
   String message;
   message.reserve(200);
   update_data(message);
-  wm.server->send(200, FPSTR(HTTP_TEXT_PLAIN), message);
+  wm.server->send(200, F("text/plain"), message);
 }
 
 void handleNetworks() {
-  LOG_INFO(FPSTR(S_AP), "/networks request");
+  LOG_INFO(FPSTR(S_AP), F("/networks request"));
   String message;
   message.reserve(2000);
   wm.WiFi_scanNetworks(wm.server->hasArg(F("refresh")),false); //wifiscan, force if arg refresh
   wm.getScanItemOut(message);  
-  wm.server->send(200, FPSTR(HTTP_TEXT_PLAIN), message);
+  wm.server->send(200, F("text/plain"), message);
 }
 
 void bindServerCallback(){
-  wm.server->on(FPSTR(S_STATES), handleStates);
-  wm.server->on("/networks", handleNetworks);
+  wm.server->on(F("/states"), handleStates);
+  wm.server->on(F("/networks"), handleNetworks);
 }
 
 
@@ -96,7 +96,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
 
-    LOG_NOTICE(FPSTR(S_AP), FPSTR(S_CAPTIVE_PORTAL));
+    LOG_INFO(FPSTR(S_AP), F("User requested captive portal"));
     
     // Настройки HTTP 
 
@@ -105,7 +105,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     // Чекбокс доп. настроек
 
-    WiFiManagerParameter checkbox("<br><br><br><label class='cnt'>Дополнительные настройки<input type='checkbox' id='chbox' name='chbox' onclick='showMe()'><span class='mrk'></span></label>");
+    WiFiManagerParameter checkbox("<br><br><br><label class='cnt'>Дополнительные настройки<input type='checkbox' id='chbox' name='chbox' onclick='advSett()'><span class='mrk'></span></label>");
     wm.addParameter(&checkbox);
 
     WiFiManagerParameter div_start("<div id='advanced' style='display:none'>");
@@ -180,16 +180,16 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     FloatParameter param_channel0_start( "ch0", "",  cdata.channel0);
     wm.addParameter( &param_channel0_start);
 
-    wm.setConfigPortalTimeout(300);
+    wm.setConfigPortalTimeout(SETUP_TIME_SEC);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
     
-    LOG_NOTICE(FPSTR(S_AP), FPSTR(S_START_CONFIG_PORTAL));
+    LOG_INFO(FPSTR(S_AP), F("Start ConfigPortal"));
 
     // Запуск веб сервера на 192.168.4.1
     wm.startConfigPortal( AP_NAME );
 
     // Успешно подключились к Wi-Fi, можно засыпать
-    LOG_NOTICE(FPSTR(S_AP), FPSTR(S_CONNECTED_TO_WIFI));
+    LOG_INFO(FPSTR(S_AP), F("Connected to wifi. Save settings, go to sleep"));
 
     // Переписываем введенные пользователем значения в Конфигурацию
 
@@ -198,7 +198,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     // Генерируем ключ используя и введенную эл. почту
     if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0) {
-        LOG_NOTICE(FPSTR(S_CFG), FPSTR(S_GENERATE_WATERIUS_KEY));
+        LOG_INFO(FPSTR(S_CFG), F("Generate waterius key"));
         WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, 
                                            sett.waterius_email);
     }
@@ -220,7 +220,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.channel1_start = param_channel1_start.getValue();
 
     sett.liters_per_impuls = get_factor(); //param_litres_per_imp.getValue();
-    LOG_NOTICE(FPSTR(S_AP), "factor=" << sett.liters_per_impuls );
+    LOG_INFO(FPSTR(S_AP), "factor=" << sett.liters_per_impuls );
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = data.impulses0;
@@ -230,8 +230,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.impulses0_previous = sett.impulses0_start;
     sett.impulses1_previous = sett.impulses1_start;
 
-    LOG_NOTICE(FPSTR(S_AP), "impulses0=" << sett.impulses0_start );
-    LOG_NOTICE(FPSTR(S_AP), "impulses1=" << sett.impulses1_start );
+    LOG_INFO(FPSTR(S_AP), "impulses0=" << sett.impulses0_start );
+    LOG_INFO(FPSTR(S_AP), "impulses1=" << sett.impulses1_start );
 
     sett.crc = FAKE_CRC; // todo: сделать нормальный crc16
     storeConfig(sett);
