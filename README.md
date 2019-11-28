@@ -1,5 +1,5 @@
 ### Aвтономное устройство для передачи показаний воды по Wi-Fi
-# Ватериус 0.9.5
+# Ватериус 0.9.6
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
@@ -17,8 +17,12 @@
 [Список поддерживаемых счётчиков](https://github.com/dontsovcmc/waterius/issues/65)
 
 ## Передача показаний в упр. компании
-Автоматическая передача будет реализована через сайт [waterius.ru](http://waterius.ru).
-Напишите, куда вам требуется их отослать [тут](https://github.com/dontsovcmc/waterius/issues/64)
+Автоматическая передача показаний неофиц. реализована через сайт [waterius.ru](http://waterius.ru).
+* mos.ru
+* УК «Комфорт Лыткарино»
+* г. Мурманск и Мурманская область
+
+Попросите добавить свой город [тут](https://github.com/dontsovcmc/waterius/issues/64) и я добавлю
 
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru">waterius.ru</a>
