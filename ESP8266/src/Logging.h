@@ -68,6 +68,7 @@ const char S_RQT[]                  PROGMEM = "RQT";
 			#undef LOG_INFO
 			#define LOG_INFO(svc, content) do { LOG_FORMAT_TIME; Serial << "  INFO      (" << svc << ") : " << content << endl; } while(0)
 			#if LOGLEVEL >= 3
+				#undef LOG_DEBUG
 				#define LOG_DEBUG(svc, content) do { LOG_FORMAT_TIME; Serial << "  DEBUG     (" << svc << ") : " << content << endl; } while(0)
 			#endif // LOGLEVEL >= 3
 		#endif // LOGLEVEL >= 2
