@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.0.0">
+<eagle version="9.0.1">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -9364,7 +9364,7 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <part name="GND4" library="supply1" deviceset="GND" device=""/>
 <part name="GND5" library="supply1" deviceset="GND" device=""/>
 <part name="RST" library="pinhead" deviceset="PINHD-1X1" device="" value="RST"/>
-<part name="IC1" library="atmel" deviceset="TINY13" device="SU" technology="-20"/>
+<part name="IC1" library="atmel" deviceset="TINY13" device="SU" technology="-20" value="TINY85-20SU"/>
 <part name="R5" library="resistor" deviceset="R-EU_" device="R0805" value="3k3"/>
 <part name="C3" library="rcl" deviceset="C-EU" device="C0805" value="0.1uF"/>
 <part name="GND7" library="supply1" deviceset="GND" device=""/>

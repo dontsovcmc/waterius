@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.0.0">
+<eagle version="9.0.1">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -2873,7 +2873,7 @@ design rules under a new name.</description>
 <element name="RST" library="pinhead" package="1X01" value="RST" x="1.7256" y="24.2376" smashed="yes" rot="MR0">
 <attribute name="NAME" x="2.9702" y="25.6092" size="1" layer="26" ratio="10" rot="MR0"/>
 </element>
-<element name="IC1" library="atmel" package="8S2" value="TINY13-20SU" x="4.6614" y="18.6184" smashed="yes" rot="MR90">
+<element name="IC1" library="atmel" package="8S2" value="TINY85-20SU" x="4.6614" y="18.6184" smashed="yes" rot="MR90">
 <attribute name="MF" value="" x="4.6614" y="18.6184" size="1.778" layer="28" rot="MR90" display="off"/>
 <attribute name="MPN" value="ATTINY13-20SU" x="4.6614" y="18.6184" size="1.778" layer="28" rot="MR90" display="off"/>
 <attribute name="OC_FARNELL" value="9171568" x="4.6614" y="18.6184" size="1.778" layer="28" rot="MR90" display="off"/>
