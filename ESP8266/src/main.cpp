@@ -51,8 +51,8 @@ void calculate_values(const Settings &sett, const SlaveData &data, CalculatedDat
     }
 }
 
-#define LOW_BATTERY_DIFF_MV 15  //надо еще учесть качество замеров (компаратора у attiny)
-#define ALERT_POWER_DIFF_MV 40
+#define LOW_BATTERY_DIFF_MV 50  //надо еще учесть качество замеров (компаратора у attiny)
+#define ALERT_POWER_DIFF_MV 100
 
 bool check_voltage(SlaveData &data, CalculatedData &cdata)
 {   
