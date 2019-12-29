@@ -44,7 +44,10 @@ void update_data(String &message)
             state0bad = F("\"\"");
         }
         if (delta1 > 0) {
-            state1good = F("\"Подключен\"");
+            state1good = F("\"Подключен");
+            state1good += F(" (");
+            state1good += String(get_factor());
+            state1good += F(" л/имп)\"");
             state1bad = F("\"\"");
         }
 
@@ -223,8 +226,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(FPSTR(S_AP), "factor=" << sett.liters_per_impuls );
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
-    sett.impulses0_start = data.impulses0;
-    sett.impulses1_start = data.impulses1;
+    sett.impulses0_start = runtime_data.impulses0;
+    sett.impulses1_start = runtime_data.impulses1;
 
     // Предыдущие показания счетчиков. Вносим текущие значения.
     sett.impulses0_previous = sett.impulses0_start;
