@@ -45,9 +45,6 @@ void update_data(String &message)
         }
         if (delta1 > 0) {
             state1good = F("\"Подключен");
-            state1good += F(" (");
-            state1good += String(get_factor());
-            state1good += F(" л/имп)\"");
             state1bad = F("\"\"");
         }
 
@@ -62,10 +59,12 @@ void update_data(String &message)
         message += F(", \"elapsed\": ");
         message += String((uint32_t)(SETUP_TIME_SEC - millis()/1000.0));
         message += F(", \"error\": \"\"");
+        message += F(", \"factor\": ");
+        message += String(get_factor());
         message += F(" }");
     }
     else {
-        message = F("{\"error\": \"Ошибка связи с МК\"}");
+        message = F("{\"error\": \"Ошибка связи с МК\", \"factor\": 10}");
     }
 }
 
