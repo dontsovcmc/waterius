@@ -37,8 +37,8 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         topic += '/';
     
     if (client.connect(clientId.c_str(), login, pass)) {
-        client.publish((topic + "ch0").c_str(), String(cdata.channel0).c_str());
-        client.publish((topic + "ch1").c_str(), String(cdata.channel1).c_str());
+        client.publish((topic + "ch0").c_str(), String((float)cdata.channel0,3).c_str());
+        client.publish((topic + "ch1").c_str(), String((float)cdata.channel1,3).c_str());
         client.publish((topic + "delta0").c_str(), String(cdata.delta0).c_str());
         client.publish((topic + "delta1").c_str(), String(cdata.delta1).c_str());
         client.publish((topic + "voltage").c_str(), String((float)(data.voltage / 1000.0), 3).c_str());
