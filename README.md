@@ -1,5 +1,5 @@
 ### Aвтономное устройство для передачи показаний воды по Wi-Fi
-# Ватериус 0.9.9
+# Ватериус 0.9.10
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
@@ -8,9 +8,11 @@ Wi-Fi приставка для импульсных счётчиков воды
 
 ## Передача показаний в упр. компании
 Автоматическая передача показаний реализована через сайт [waterius.ru](http://waterius.ru).
-* mos.ru
+* Приложение от mos.ru ([android](https://play.google.com/store/apps/details?id=ru.altarix.mos.pgu&hl=ru))
 * УК «Комфорт Лыткарино»
-* г. Мурманск и Мурманская область
+* г. Мурманск и Мурманская область ([mrivc.ru](http://www.mrivc.ru/))
+* г. Ростов-на-Дону ([южныйокруг.рф](https://южныйокруг.рф))
+* г. Санкт-Петербург ([kvartplata.info](https://kvartplata.info))
 
 Оставить заявку на отправку в ваш город можно [тут](https://github.com/dontsovcmc/waterius/issues/64). Стучитесь в личку, бывают вопросы и требуются данные для теста.
 
@@ -53,15 +55,17 @@ Wi-Fi приставка для импульсных счётчиков воды
 - [Установка и настройка](https://github.com/dontsovcmc/waterius/blob/master/Setup.md) 
 
 ## Принцип работы
-Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в Х минут она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого все ESP8266 засыпает, а Attiny85 продолжает считать-считать-считать...
+Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в сутки она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого ESP8266 засыпает, а Attiny85 продолжает считать-считать-считать...
 
 ## Схема
 <img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="600"/>
 
-2-я версия заводской платы:
+Заводская плата:
 
 <img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" width="400"/>
 <img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_top.jpg" width="400"/>
+
+В репозитории ещё есть однослойная для ЛУТа.
 
 # Помочь проекту
 
@@ -105,7 +109,7 @@ Wi-Fi приставка для импульсных счётчиков воды
 - [grffio](https://github.com/grffio) за локальный вебсервер
 - [Игорю Вахромееву](http://vakhromeev.com) за наикрутейший редизайн настроек (>0.9.4)
 - Сергею А. (г. Мурманск) за подробную инструкцию по [настройке Domoticz и NodeRed](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
-- Пользователям, приславшим очепятки и предложения: Дмитрию (г. Москва), Сергею (г. Кострома), Александру (г. Санкт-Петербург), Сергею (г. Мурманск), Антону (г. Красноярск)
+- Пользователям, приславшим очепятки и предложения: Дмитрию (г. Москва), Сергею (г. Кострома), Александру (г. Санкт-Петербург), Сергею (г. Мурманск), Антону (г. Красноярск), [sintech](https://github.com/sintech)
 
 
 Форумам: 
@@ -117,10 +121,6 @@ Wi-Fi приставка для импульсных счётчиков воды
 
 Чат: <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
-`#waterius`: [Instagram](https://www.instagram.com/explore/tags/waterius/)
+Связь: [Facebook](https://www.facebook.com/waterius), [VK](https://vk.com/waterius1), [Instagram](https://www.instagram.com/waterius.ru/)
 
-Группа [Facebook](https://www.facebook.com/waterius) 
-
-Найденные ошибки [сюда](https://github.com/dontsovcmc/waterius/issues)
-
-Связь: [Telegram](https://t.me/Dontsovcmc), [Facebook](https://facebook.com/dontsovev)
+Найденные ошибки [в issues](https://github.com/dontsovcmc/waterius/issues)

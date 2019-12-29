@@ -32,19 +32,19 @@ void update_data(String &message)
 {
     if (masterI2C.getSlaveData(runtime_data)) {
         String state0good(F("\"\""));
-        String state0bad(F("\"Не подключен\""));
+        String state0bad(F("\"Не подключён\""));
         String state1good(F("\"\""));
-        String state1bad(F("\"Не подключен\""));
+        String state1bad(F("\"Не подключён\""));
 
         uint32_t delta0 = runtime_data.impulses0 - data.impulses0;
         uint32_t delta1 = runtime_data.impulses1 - data.impulses1;
         
         if (delta0 > 0) {
-            state0good = F("\"Подключен\"");
+            state0good = F("\"Подключён\"");
             state0bad = F("\"\"");
         }
         if (delta1 > 0) {
-            state1good = F("\"Подключен");
+            state1good = F("\"Подключён\"");
             state1bad = F("\"\"");
         }
 
@@ -61,7 +61,7 @@ void update_data(String &message)
         message += F(", \"error\": \"\"");
         message += F(", \"factor\": ");
         message += String(get_factor());
-        message += F(" }");
+        message += F("}");
     }
     else {
         message = F("{\"error\": \"Ошибка связи с МК\", \"factor\": 10}");
@@ -149,6 +149,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter param_mqtt_topic( "mtopic", "Topic",  sett.mqtt_topic, MQTT_TOPIC_LEN-1);
     wm.addParameter( &param_mqtt_topic );
     
+    WiFiManagerParameter label_factor("<p><b>Вес импульса (авто): <a id='factor'></a> л/имп</b></p>");
+    wm.addParameter( &label_factor);
+
     // конец доп. настроек
     WiFiManagerParameter div_end("</div>");
     wm.addParameter(&div_end);
@@ -157,7 +160,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter cold_water("<h3>Холодная вода</h3>");
     wm.addParameter(&cold_water);
             
-    WiFiManagerParameter label_cold_info("<p>Спустите унитаз 1&ndash;3 раза (или вылейте не&nbsp;меньше 4&nbsp;л.), пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;. Если статус &laquo;не&nbsp;подключен&raquo;, проверьте провод в&nbsp;разъёме. Ватериус так определяет тип счётчика</p>");
+    WiFiManagerParameter label_cold_info("<p>Спустите унитаз 1&ndash;3 раза (или вылейте не&nbsp;меньше 4&nbsp;л.), пока надпись не&nbsp;сменится на&nbsp;&laquo;подключён&raquo;. Если статус &laquo;не&nbsp;подключён&raquo;, проверьте провод в&nbsp;разъёме. Ватериус так определяет тип счётчика.</p>");
     wm.addParameter( &label_cold_info);
 
     WiFiManagerParameter label_cold_state("<b><p class='bad' id='state1bad'></p><p class='good' id='state1good'></p></b>");
