@@ -71,27 +71,37 @@ Wi-Fi приставка для импульсных счётчиков воды
 
 Если вы хотели бы помочь, проекту, то вот список дел:
 
-0. Прикрутить дешевую китайскую камеру к ESP
-(надо что-то сделать тем, у кого нет проводов у счётчиков)
-1. ~~Поддержка HTTPS~~, спасибо [marvel-m9y](https://github.com/marvel-m9y)
-2. Поддержка датчика протечек
-- На Reset пине attiny85 сделал [OloloevReal](https://github.com/OloloevReal), вот [схема](https://github.com/dontsovcmc/waterius/issues/51)
-- Можно взять МК с большим количеством пинов. Для [Attiny84](https://github.com/dontsovcmc/waterius/issues/41#issuecomment-439402464) 1 строчка кода 
-3. Переход на ESP32
-- разобраться, как считать импульсы на сопроцессоре
-- портировать код
-- начертить плату, придумать корпус (распаячная коробка?)
-- расширить функционал
-4. OTA обновления для ESP8266-01 1Мб
+0. Видео установки/настройки Ватериуса (можно сразу в [FB](https://www.facebook.com/waterius), [VK](https://vk.com/waterius1))
+1. Туториал как скомпилировать и прошить Ватериус (Arduino IDE)
+2. Добавить график потребления (временные метки) (доработка i2c и буфера, пишите расскажу)
+3. OTA обновления для ESP8266-01 1Мб
 - ~~разобраться как они работают~~ OTA влезет на 1Мб, если убрать HTTPS. Можно перепаять память на 4Мб.
 - предложить код прошивки и пример веб сервера
-5. Радиоканал вместо Wi-Fi
-- сделать вместо ESP-01 плату с радиомодулем
-- сделать приемник с экраном и модулем
-Хорошо бы LoraWan. Платы в Мск вот [Yotster](https://electromicro.ru/market/nodemcu/yotster-lite/) или [на Авито](https://www.avito.ru/moskva/bytovaya_elektronika?s_trg=10&q=Lora), но можно и 433
-6. ~~Поддержка НАМУР~~, спасибо Мише и его счетчику)
-7. ~~Поддержка MQTT~~, спасибо [popsodav](https://github.com/popsodav)
-8. NB-IoT версия
+4. фичеризм: Добавить температуру/давление ([issue](https://github.com/dontsovcmc/waterius/issues/53))
+5. Поддержка датчика протечек (лучше в ESP32 сразу)
+- На Reset пине attiny85 сделал [OloloevReal](https://github.com/OloloevReal), вот [схема](https://github.com/dontsovcmc/waterius/issues/51)
+- Можно взять МК с большим количеством пинов. Для [Attiny84](https://github.com/dontsovcmc/waterius/issues/41#issuecomment-439402464) 1 строчка кода 
+6. ~~Поддержка HTTPS~~, спасибо [marvel-m9y](https://github.com/marvel-m9y)
+7. ~~Поддержка НАМУР~~, спасибо Мише и его счетчику)
+8. ~~Поддержка MQTT~~, спасибо [popsodav](https://github.com/popsodav)
+
+## Новые модификации
+0. Помочь с платой для Ватериуса с камерой (есть прототип, пишите) ([issue](https://github.com/dontsovcmc/waterius/issues/38))
+
+1. Переход на ESP32 ([issue](https://github.com/dontsovcmc/waterius/issues/39), [Waterius32](https://github.com/OloloevReal/Waterius32) от OloloevReal)
+~~- разобраться, как считать импульсы на сопроцессоре~~
+~~- портировать код~~
+~~- начертить плату, придумать корпус (распаячная коробка?)~~
+~~- расширить функционал~~
+
+2. Поддержка Теплосчётчиков (нужна? в новых ЖК стоят) ([issue](https://github.com/dontsovcmc/waterius/issues/81))
+
+~~2. Радиоканал 433 вместо Wi-Fi~~ лучше NB-IoT
+~~- сделать вместо ESP-01 плату с радиомодулем~~ 
+~~- сделать приемник с экраном и модулем~~ 
+~~Хорошо бы LoraWan. Платы в Мск вот [Yotster](https://electromicro.ru/market/nodemcu/yotster-lite/) или [на Авито](https://www.avito.ru/moskva/bytovaya_elektronika?s_trg=10&q=Lora)~~
+
+3. ~~NB-IoT версия~~ ([issue](https://github.com/dontsovcmc/waterius/issues/84), [Waterius32](https://github.com/OloloevReal/Waterius32) от OloloevReal)
 
 # Ответственность
 
@@ -101,7 +111,7 @@ Wi-Fi приставка для импульсных счётчиков воды
 
 # Благодарности
 - [marvel-m9y](https://github.com/marvel-m9y) за поддержку HTTPS
-- [OloloevReal](https://github.com/OloloevReal) за датчик протечки
+- [OloloevReal](https://github.com/OloloevReal) за датчик протечки, работу по ESP32
 - [popsodav](https://github.com/popsodav) за MQTT
 - Ивану Коваленко и Иван Ганжа за консультации по электротехнике
 - Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1).
