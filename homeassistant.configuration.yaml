@@ -11,28 +11,28 @@ sensor:
   # waterius на кухне
   - platform: mqtt
     name: "Kitchen Cold Water"
-    state_topic: "waterius/kitchen/ch0"
-    value_template: "{{ value }}"
-    unit_of_measurement: "м3"
-    icon: mdi:water
-
-  - platform: mqtt
-    name: "Kitchen Hot Water"
     state_topic: "waterius/kitchen/ch1"
     value_template: "{{ value }}"
     unit_of_measurement: "м3"
     icon: mdi:water
 
   - platform: mqtt
+    name: "Kitchen Hot Water"
+    state_topic: "waterius/kitchen/ch0"
+    value_template: "{{ value }}"
+    unit_of_measurement: "м3"
+    icon: mdi:water
+
+  - platform: mqtt
     name: "Kitchen Cold Day"
-    state_topic: "waterius/kitchen/delta0"
+    state_topic: "waterius/kitchen/delta1"
     value_template: "{{ value }}"
     unit_of_measurement: "литр"
     icon: mdi:delta
 
   - platform: mqtt
     name: "Kitchen Hot Day"
-    state_topic: "waterius/kitchen/delta1"
+    state_topic: "waterius/kitchen/delta0"
     value_template: "{{ value }}"
     unit_of_measurement: "литр"
     icon: mdi:delta
@@ -48,28 +48,28 @@ sensor:
 
   - platform: mqtt
     name: "Bathroom Cold Water"
-    state_topic: "waterius/bathroom/ch0"
-    value_template: "{{ value }}"
-    unit_of_measurement: "м3"
-    icon: mdi:water
-
-  - platform: mqtt
-    name: "Bathroom Hot Water"
     state_topic: "waterius/bathroom/ch1"
     value_template: "{{ value }}"
     unit_of_measurement: "м3"
     icon: mdi:water
 
   - platform: mqtt
+    name: "Bathroom Hot Water"
+    state_topic: "waterius/bathroom/ch0"
+    value_template: "{{ value }}"
+    unit_of_measurement: "м3"
+    icon: mdi:water
+
+  - platform: mqtt
     name: "Bathroom Cold Day"
-    state_topic: "waterius/bathroom/delta0"
+    state_topic: "waterius/bathroom/delta1"
     value_template: "{{ value }}"
     unit_of_measurement: "литр"
     icon: mdi:delta
 
   - platform: mqtt
     name: "Bathroom Hot Day"
-    state_topic: "waterius/bathroom/delta1"
+    state_topic: "waterius/bathroom/delta0"
     value_template: "{{ value }}"
     unit_of_measurement: "литр"
     icon: mdi:delta
