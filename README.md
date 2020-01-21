@@ -4,17 +4,7 @@
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
-Wi-Fi приставка для импульсных счётчиков воды. Простое [подключение](https://waterius.ru/manual).
-
-## Передача показаний в упр. компании
-Автоматическая передача показаний реализована через сайт [waterius.ru](http://waterius.ru).
-* Приложение от mos.ru ([android](https://play.google.com/store/apps/details?id=ru.altarix.mos.pgu&hl=ru))
-* УК «Комфорт Лыткарино»
-* г. Мурманск и Мурманская область ([mrivc.ru](http://www.mrivc.ru/))
-* г. Ростов-на-Дону ([южныйокруг.рф](https://южныйокруг.рф))
-* г. Санкт-Петербург ([kvartplata.info](https://kvartplata.info))
-
-Оставить заявку на отправку в ваш город можно [тут](https://github.com/dontsovcmc/waterius/issues/64). Стучитесь в личку, бывают вопросы и требуются данные для теста.
+WiFi передача показаний воды. Приставка для импульсных счётчиков воды. Простое [подключение](https://waterius.ru/manual).
 
 ### Характеристики:
 - 2 счётчика воды (вам не нужно знать, какого типа выход: "сухой контакт" или "НАМУР")
@@ -24,7 +14,6 @@ Wi-Fi приставка для импульсных счётчиков воды
 - детектор низкого заряда (экспериментально)
 
 [Список поддерживаемых счётчиков](https://github.com/dontsovcmc/waterius/issues/65)
-
 
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru">waterius.ru</a>
@@ -36,6 +25,16 @@ Wi-Fi приставка для импульсных счётчиков воды
 * там, куда сами запрограммируете
   * [httpwaterius](https://github.com/grffio/httpwaterius) - web сервер с простым UI от [grffio](https://github.com/grffio)
 
+## Передача показаний в упр. компании
+Автоматическая передача показаний реализована через сайт [waterius.ru](http://waterius.ru).
+* Приложение от mos.ru ([android](https://play.google.com/store/apps/details?id=ru.altarix.mos.pgu&hl=ru))
+* УК «Комфорт Лыткарино»
+* г. Мурманск и Мурманская область ([mrivc.ru](http://www.mrivc.ru/))
+* г. Ростов-на-Дону ([южныйокруг.рф](https://южныйокруг.рф))
+* г. Санкт-Петербург ([kvartplata.info](https://kvartplata.info))
+
+Оставить заявку на отправку в ваш город можно [тут](https://github.com/dontsovcmc/waterius/issues/64). Стучитесь в личку, бывают вопросы и требуются данные для теста.
+
 #### Статьи: 
 [Habrahabr.com (ru)](https://habr.com/post/418573/) | [Hackster.io (en)](https://www.hackster.io/dontsovcmc/waterius-4bfaba) | [Blynk forum (en-ru)](https://community.blynk.cc/t/autonomous-impulse-counter-for-water-meters-attiny85-esp-01)
 
@@ -44,6 +43,10 @@ Wi-Fi приставка для импульсных счётчиков воды
 - готовый -> [waterius.ru](https://waterius.ru/sell)
 
 Поддержать морально: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
+
+### Кто использует Ватериус
+Напишите, пожалуйста, отзывы: <a href="https://vk.com/topic-183491011_40049475" target="_black">VK</a> и <a href="https://www.facebook.com/waterius/reviews/" target="_black">FB</a>. Они очень важны для новых посетителей, кто не знаком с гитхабом. Спасибо!
+
 
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" width="360"/> <img src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" width="180"/>
 
