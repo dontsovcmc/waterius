@@ -57,6 +57,8 @@ WiFi передача показаний воды. Приставка для и�
 - [Прошивка Attiny85 и ESP](https://github.com/dontsovcmc/waterius/blob/master/Firmware.md) 
 - [Установка и настройка](https://github.com/dontsovcmc/waterius/blob/master/Setup.md) 
 
+Задавайте вопросы в Телеграм чате: [waterius_forum](https://t.me/waterius_forum)
+
 ## Принцип работы
 Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в сутки она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого ESP8266 засыпает, а Attiny85 продолжает считать-считать-считать...
 
@@ -137,5 +139,7 @@ WiFi передача показаний воды. Приставка для и�
 Чат: <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
 Связь: [Facebook](https://www.facebook.com/waterius), [VK](https://vk.com/waterius1), [Instagram](https://www.instagram.com/waterius.ru/)
+
+Задавайте вопросы в Телеграм чате: [waterius_forum](https://t.me/waterius_forum)
 
 Найденные ошибки [в issues](https://github.com/dontsovcmc/waterius/issues)
