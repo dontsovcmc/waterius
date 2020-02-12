@@ -44,7 +44,9 @@ WiFi передача показаний воды. Приставка для и�
 
 Поддержать морально: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
 
-### Кто использует Ватериус
+Купить импульсные счетчики: https://decast.com/contacts/buy
+
+### Отзывы
 Напишите, пожалуйста, отзывы: <a href="https://vk.com/topic-183491011_40049475" target="_black">VK</a> и <a href="https://www.facebook.com/waterius/reviews/" target="_black">FB</a>. Они очень важны для новых посетителей, кто не знаком с гитхабом. Спасибо!
 
 
@@ -135,8 +137,6 @@ WiFi передача показаний воды. Приставка для и�
 - https://easyelectronics.ru
 
 ## Контакты
-
-Чат: <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
 Связь: [Facebook](https://www.facebook.com/waterius), [VK](https://vk.com/waterius1), [Instagram](https://www.instagram.com/waterius.ru/)
 
