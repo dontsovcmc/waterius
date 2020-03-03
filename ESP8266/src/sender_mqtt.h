@@ -37,22 +37,22 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         topic += '/';
     
     if (client.connect(clientId.c_str(), login, pass)) {
-        client.publish((topic + "ch0").c_str(), String((float)cdata.channel0,3).c_str());
-        client.publish((topic + "ch1").c_str(), String((float)cdata.channel1,3).c_str());
-        client.publish((topic + "delta0").c_str(), String(cdata.delta0).c_str());
-        client.publish((topic + "delta1").c_str(), String(cdata.delta1).c_str());
-        client.publish((topic + "voltage").c_str(), String((float)(data.voltage / 1000.0), 3).c_str());
-        client.publish((topic + "resets").c_str(), String(data.resets).c_str());
-        client.publish((topic + "boot").c_str(), String(data.service).c_str());
-        client.publish((topic + "good").c_str(), String(data.diagnostic).c_str());
-        client.publish((topic + "imp0").c_str(), String(data.impulses0).c_str());
-        client.publish((topic + "imp1").c_str(), String(data.impulses1).c_str());
-        client.publish((topic + "version").c_str(), String(data.version).c_str());
-        client.publish((topic + "version_esp").c_str(), String(FIRMWARE_VERSION).c_str());
-        client.publish((topic + "voltage_low").c_str(), String(cdata.low_voltage).c_str());
-        client.publish((topic + "voltage_diff").c_str(), String((float)(cdata.voltage_diff / 1000.0), 3).c_str());
-        client.publish((topic + "f").c_str(), String(sett.liters_per_impuls).c_str());
-        client.publish((topic + "rssi").c_str(), String(cdata.rssi).c_str());
+        client.publish((topic + "ch0").c_str(), String((float)cdata.channel0,3).c_str(), true);
+        client.publish((topic + "ch1").c_str(), String((float)cdata.channel1,3).c_str(), true);
+        client.publish((topic + "delta0").c_str(), String(cdata.delta0).c_str(), true);
+        client.publish((topic + "delta1").c_str(), String(cdata.delta1).c_str(), true);
+        client.publish((topic + "voltage").c_str(), String((float)(data.voltage / 1000.0), 3).c_str(), true);
+        client.publish((topic + "resets").c_str(), String(data.resets).c_str(), true);
+        client.publish((topic + "boot").c_str(), String(data.service).c_str(), true);
+        client.publish((topic + "good").c_str(), String(data.diagnostic).c_str(), true);
+        client.publish((topic + "imp0").c_str(), String(data.impulses0).c_str(), true);
+        client.publish((topic + "imp1").c_str(), String(data.impulses1).c_str(), true);
+        client.publish((topic + "version").c_str(), String(data.version).c_str(), true);
+        client.publish((topic + "version_esp").c_str(), String(FIRMWARE_VERSION).c_str(), true);
+        client.publish((topic + "voltage_low").c_str(), String(cdata.low_voltage).c_str(), true);
+        client.publish((topic + "voltage_diff").c_str(), String((float)(cdata.voltage_diff / 1000.0), 3).c_str(), true);
+        client.publish((topic + "f").c_str(), String(sett.liters_per_impuls).c_str(), true);
+        client.publish((topic + "rssi").c_str(), String(cdata.rssi).c_str(), true);
         client.disconnect();
         return true;
     }  else {
