@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.0.0">
+<eagle version="9.0.1">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -9729,15 +9729,24 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <instance part="C4" gate="G$1" x="45.72" y="86.36"/>
 <instance part="C2" gate="G$1" x="55.88" y="86.36"/>
 <instance part="+3V" gate="VCC" x="45.72" y="104.14"/>
-<instance part="R1" gate="G$1" x="96.52" y="106.68"/>
-<instance part="GND1" gate="1" x="106.68" y="88.9" smashed="yes">
-<attribute name="VALUE" x="104.14" y="93.98" size="1.778" layer="96"/>
+<instance part="R1" gate="G$1" x="96.52" y="104.14" smashed="yes">
+<attribute name="NAME" x="92.71" y="105.6386" size="1.778" layer="95"/>
+<attribute name="VALUE" x="97.79" y="105.918" size="1.778" layer="96"/>
+</instance>
+<instance part="GND1" gate="1" x="111.76" y="96.52" smashed="yes">
+<attribute name="VALUE" x="111.76" y="99.06" size="1.778" layer="96"/>
 </instance>
 <instance part="GND2" gate="1" x="38.1" y="73.66"/>
 <instance part="+3V2" gate="VCC" x="-10.16" y="58.42"/>
 <instance part="LOG" gate="G$1" x="-33.02" y="48.26" rot="R90"/>
-<instance part="R3" gate="G$1" x="96.52" y="93.98"/>
-<instance part="R2" gate="G$1" x="96.52" y="86.36"/>
+<instance part="R3" gate="G$1" x="96.52" y="99.06" smashed="yes">
+<attribute name="NAME" x="92.71" y="100.5586" size="1.778" layer="95"/>
+<attribute name="VALUE" x="97.79" y="100.838" size="1.778" layer="96"/>
+</instance>
+<instance part="R2" gate="G$1" x="96.52" y="93.98" smashed="yes">
+<attribute name="NAME" x="92.71" y="95.4786" size="1.778" layer="95"/>
+<attribute name="VALUE" x="97.79" y="95.758" size="1.778" layer="96"/>
+</instance>
 <instance part="R9" gate="G$1" x="-10.16" y="45.72" rot="R90"/>
 <instance part="R6" gate="G$1" x="27.94" y="45.72" rot="R90"/>
 <instance part="R7" gate="G$1" x="35.56" y="45.72" rot="R90"/>
@@ -9820,20 +9829,19 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 </net>
 <net name="GND1" class="0">
 <segment>
-<wire x1="91.44" y1="93.98" x2="88.9" y2="93.98" width="0.1524" layer="91"/>
-<junction x="88.9" y="93.98"/>
-<wire x1="88.9" y1="93.98" x2="88.9" y2="91.44" width="0.1524" layer="91"/>
-<label x="88.9" y="91.44" size="1.778" layer="95"/>
+<wire x1="91.44" y1="99.06" x2="81.28" y2="99.06" width="0.1524" layer="91"/>
+<label x="81.28" y="86.36" size="1.778" layer="95"/>
 <pinref part="R3" gate="G$1" pin="1"/>
-<pinref part="X2" gate="G$1" pin="P2.2"/>
-<wire x1="73.66" y1="93.98" x2="88.9" y2="93.98" width="0.1524" layer="91"/>
-<pinref part="X2" gate="G$1" pin="P4.2"/>
-<wire x1="73.66" y1="104.14" x2="88.9" y2="104.14" width="0.1524" layer="91"/>
-<wire x1="88.9" y1="104.14" x2="88.9" y2="93.98" width="0.1524" layer="91"/>
-<pinref part="X2" gate="G$1" pin="P4.1"/>
-<wire x1="68.58" y1="104.14" x2="73.66" y2="104.14" width="0.1524" layer="91"/>
-<pinref part="X2" gate="G$1" pin="P2.1"/>
-<wire x1="68.58" y1="93.98" x2="73.66" y2="93.98" width="0.1524" layer="91"/>
+<pinref part="X2" gate="G$1" pin="P3.2"/>
+<pinref part="X2" gate="G$1" pin="P3.1"/>
+<wire x1="73.66" y1="99.06" x2="68.58" y2="99.06" width="0.1524" layer="91"/>
+<wire x1="73.66" y1="99.06" x2="81.28" y2="99.06" width="0.1524" layer="91"/>
+<pinref part="X2" gate="G$1" pin="P1.1"/>
+<pinref part="X2" gate="G$1" pin="P1.2"/>
+<wire x1="73.66" y1="88.9" x2="68.58" y2="88.9" width="0.1524" layer="91"/>
+<wire x1="81.28" y1="99.06" x2="81.28" y2="88.9" width="0.1524" layer="91"/>
+<wire x1="81.28" y1="88.9" x2="73.66" y2="88.9" width="0.1524" layer="91"/>
+<junction x="81.28" y="99.06"/>
 </segment>
 <segment>
 <label x="43.18" y="17.78" size="1.778" layer="95"/>
@@ -9841,32 +9849,19 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <pinref part="S1" gate="1" pin="S"/>
 </segment>
 </net>
-<net name="N$7" class="0">
-<segment>
-<pinref part="R1" gate="G$1" pin="1"/>
-<wire x1="91.44" y1="106.68" x2="83.82" y2="106.68" width="0.1524" layer="91"/>
-<pinref part="X2" gate="G$1" pin="P3.2"/>
-<wire x1="83.82" y1="106.68" x2="83.82" y2="99.06" width="0.1524" layer="91"/>
-<wire x1="83.82" y1="99.06" x2="73.66" y2="99.06" width="0.1524" layer="91"/>
-<pinref part="X2" gate="G$1" pin="P3.1"/>
-<wire x1="73.66" y1="99.06" x2="68.58" y2="99.06" width="0.1524" layer="91"/>
-</segment>
-</net>
 <net name="N$8" class="0">
 <segment>
-<wire x1="83.82" y1="88.9" x2="83.82" y2="86.36" width="0.1524" layer="91"/>
-<wire x1="83.82" y1="86.36" x2="91.44" y2="86.36" width="0.1524" layer="91"/>
 <pinref part="R2" gate="G$1" pin="1"/>
-<pinref part="X2" gate="G$1" pin="P1.2"/>
-<wire x1="83.82" y1="88.9" x2="73.66" y2="88.9" width="0.1524" layer="91"/>
-<pinref part="X2" gate="G$1" pin="P1.1"/>
-<wire x1="73.66" y1="88.9" x2="68.58" y2="88.9" width="0.1524" layer="91"/>
+<pinref part="X2" gate="G$1" pin="P2.2"/>
+<pinref part="X2" gate="G$1" pin="P2.1"/>
+<wire x1="68.58" y1="93.98" x2="73.66" y2="93.98" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="93.98" x2="73.66" y2="93.98" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="IN1" class="0">
 <segment>
 <pinref part="R1" gate="G$1" pin="2"/>
-<wire x1="101.6" y1="106.68" x2="109.22" y2="106.68" width="0.1524" layer="91"/>
+<wire x1="101.6" y1="104.14" x2="109.22" y2="104.14" width="0.1524" layer="91"/>
 <label x="106.68" y="106.68" size="1.778" layer="95"/>
 </segment>
 <segment>
@@ -9877,8 +9872,8 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 </net>
 <net name="IN2" class="0">
 <segment>
-<wire x1="101.6" y1="86.36" x2="109.22" y2="86.36" width="0.1524" layer="91"/>
-<label x="106.68" y="83.82" size="1.778" layer="95"/>
+<wire x1="101.6" y1="93.98" x2="109.22" y2="93.98" width="0.1524" layer="91"/>
+<label x="106.68" y="91.44" size="1.778" layer="95"/>
 <pinref part="R2" gate="G$1" pin="2"/>
 </segment>
 <segment>
@@ -9889,8 +9884,7 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 </net>
 <net name="GND" class="0">
 <segment>
-<wire x1="101.6" y1="93.98" x2="106.68" y2="93.98" width="0.1524" layer="91"/>
-<wire x1="106.68" y1="93.98" x2="106.68" y2="91.44" width="0.1524" layer="91"/>
+<wire x1="101.6" y1="99.06" x2="111.76" y2="99.06" width="0.1524" layer="91"/>
 <pinref part="GND1" gate="1" pin="GND"/>
 <pinref part="R3" gate="G$1" pin="2"/>
 </segment>
@@ -10034,6 +10028,15 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <junction x="76.2" y="20.32"/>
 <pinref part="RST" gate="G$1" pin="1"/>
 <wire x1="60.96" y1="20.32" x2="76.2" y2="20.32" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$10" class="0">
+<segment>
+<pinref part="X2" gate="G$1" pin="P4.2"/>
+<pinref part="X2" gate="G$1" pin="P4.1"/>
+<wire x1="68.58" y1="104.14" x2="73.66" y2="104.14" width="0.1524" layer="91"/>
+<pinref part="R1" gate="G$1" pin="1"/>
+<wire x1="73.66" y1="104.14" x2="91.44" y2="104.14" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
