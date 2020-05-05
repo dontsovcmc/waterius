@@ -89,7 +89,7 @@ void loop()
             //Запускаем точку доступа с вебсервером
             WiFi.mode(WIFI_AP_STA);
             setup_ap(sett, data, cdata);
-
+            
             success = false; // ESP падает после настройки при https, поэтому идём спать. 
                              // в будущем, когда вылечим, ESP будет выходить на связь сразу после настройки
                              // пока не хватает памяти для HTTPS и падение в момент создании объекта
@@ -139,6 +139,9 @@ void loop()
                 //Сохраним текущие значения в памяти.
                 sett.impulses0_previous = data.impulses0;
                 sett.impulses1_previous = data.impulses1;
+                //Перешлем время на сервер при след. включении
+                sett.wake_time = millis();
+
                 storeConfig(sett);
             }
         }

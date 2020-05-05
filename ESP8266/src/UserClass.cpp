@@ -42,6 +42,8 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["voltage_diff"] =  cdata.voltage_diff;
     root["f"] =             settings.liters_per_impuls;
     root["rssi"] =          cdata.rssi;
+    root["waketime"] =      settings.wake_time;
+    root["setuptime"] =     settings.setup_time;
 
     serializeJson(root, jsonBody);
     LOG_INFO(FPSTR(S_SND), "JSON size:\t" << jsonBody.length());

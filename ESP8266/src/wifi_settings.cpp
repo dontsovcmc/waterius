@@ -28,6 +28,7 @@ void storeConfig(const Settings &sett)
     {
         LOG_INFO("CFG", "Config stored OK");
     }
+    EEPROM.end();
 }
 
 
@@ -36,6 +37,7 @@ bool loadConfig(struct Settings &sett)
 {
     EEPROM.begin(sizeof(sett));  //  4 до 4096 байт. с адреса 0x7b000.
     EEPROM.get(0, sett);
+    EEPROM.end();
 
     if (sett.crc == FAKE_CRC)  // todo: сделать нормальный crc16
     {
@@ -105,7 +107,7 @@ bool loadConfig(struct Settings &sett)
 
         sett.liters_per_impuls = LITRES_PER_IMPULS_DEFAULT;
 
-//Можно задать константы при компиляции, чтобы Вотериус сразу заработал
+//Можно задать константы при компиляции, чтобы Ватериус сразу заработал
 
 #ifdef BLYNK_KEY    
         #pragma message(VAR_NAME_VALUE(BLYNK_KEY))

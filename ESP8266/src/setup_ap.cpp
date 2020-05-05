@@ -238,6 +238,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(FPSTR(S_AP), "impulses0=" << sett.impulses0_start );
     LOG_INFO(FPSTR(S_AP), "impulses1=" << sett.impulses1_start );
 
+    sett.setup_time = millis();
+    
     sett.crc = FAKE_CRC; // todo: сделать нормальный crc16
     storeConfig(sett);
 }
