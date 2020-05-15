@@ -93,14 +93,10 @@ bool EEPROMStorage<T>::get_block(const uint8_t block, T &element)
 template<class T>
 uint8_t EEPROMStorage<T>::crc_8(const unsigned char *input_str, size_t num_bytes) {
 
-	size_t a;
-	uint8_t crc;
-	const unsigned char *ptr;
+	uint8_t crc = CRC_START_8;
+	const unsigned char *ptr = input_str;
 
-	crc = CRC_START_8;
-	ptr = input_str;
-
-	if (ptr != NULL) for (a = 0; a < num_bytes; a++) {
+	if (ptr != NULL) for (size_t a = 0; a < num_bytes; a++) {
 		crc = sht75_crc_table[(*ptr++) ^ crc];
 	}
 

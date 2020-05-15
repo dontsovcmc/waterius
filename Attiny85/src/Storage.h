@@ -24,7 +24,7 @@ class EEPROMStorage
 	*/
 
 public: 
-	EEPROMStorage(const uint8_t _blocks, const uint8_t _start_addr = 0);
+	explicit EEPROMStorage(const uint8_t _blocks, const uint8_t _start_addr = 0);
 	void add(const T &element);
 	bool get(T &element);
 	bool get_block(const uint8_t block, T &element);

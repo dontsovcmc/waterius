@@ -30,11 +30,15 @@ struct Counter
     uint8_t _pin;   // дискретный вход
     uint8_t _apin;  // номер аналогового входа
 
+    uint16_t adc;  // уровень входа
     uint8_t state; // состояние входа
 
-    Counter(uint8_t pin, uint8_t apin = 0)  
-      : _pin(pin)
+    explicit Counter(uint8_t pin, uint8_t apin = 0)  
+      : _checks(-1)
+      , _pin(pin)
       , _apin(apin)
+      , adc(0)
+      , state(CounterState_e::OPEN)
     {
        DDRB &= ~_BV(pin);      // INPUT
     }
@@ -64,8 +68,8 @@ struct Counter
     {
         //bool value = digRead();
         //state = value2state(value ? 1024 : 0);
-        uint16_t value = aRead();
-        state = value2state(value);
+        adc = aRead();
+        state = value2state(adc);
         return state == CounterState_e::CLOSE || state == CounterState_e::NAMUR_CLOSE;
     }
 

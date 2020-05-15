@@ -54,6 +54,9 @@ void SlaveI2C::receiveEvent( int howMany ) {
 		case 'M':  // Разбудили ESP для настройки или передачи данных?
 			txBuffer[0] = setup_mode;
 			break;
+		case 'T':  // После настройки ESP перезагрузим, поэтому меняем режим на передачу данных
+			setup_mode = TRANSMIT_MODE;
+			break;
 	}
 	lastCommand = command;
 }

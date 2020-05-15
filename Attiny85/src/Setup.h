@@ -47,9 +47,14 @@ struct Data {
     uint32_t value1;
 };
 
-struct CounterState {
+struct CounterState { // не добавляем в Data, т.к. та в буфере кольцевом
     uint8_t  state0;  // состояние входа
-    uint8_t  state1;  // не добавляем в Data, т.к. та в буфере кольцевом
+    uint8_t  state1;  
+};
+
+struct CounterADC {
+    uint16_t adc0;    // уровень входа
+    uint16_t adc1;
 };
 
 struct Header {
@@ -89,7 +94,8 @@ struct Header {
 
     CounterState  states;
     Data          data;
-};
+    CounterADC    adc;   
+};  //20 байт
 
 
 /*

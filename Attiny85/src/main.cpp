@@ -20,6 +20,9 @@
 Версии прошивок 
 FIRMWARE_VER
 
+12 - 2020.05.15 - dontsovcmc
+	1. Добавил команду T для переключения режима пробуждения
+
 11 - 2019.10.20 - dontsovcmc
     1. Обновил алгоритм подсчёта импульсов.
 	   Теперь импульс: 1 раз замыкание + 3 раза разомкнуто. Период 250мс +- 10%.
@@ -47,7 +50,7 @@ FIRMWARE_VER
 #define INPUT0_ADC  2
 #define INPUT1_ADC  3
 
-#define FIRMWARE_VER     11    // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER     12    // Версия прошивки. Передается в ESP и на сервер в данных.
 
 #define ESP_POWER_PIN    1     // пин включения ESP8266. 
 #define BUTTON_PIN       2     // пин кнопки: (на линии SCL)
@@ -67,7 +70,9 @@ static ESPPowerPin esp(ESP_POWER_PIN);
 // Данные
 struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 
 					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
-				       {0, 0} };
+				       {0, 0},
+					   {0, 0}
+					 };
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
 //Кольцовой нужен для того, чтобы превысить лимит записи памяти в 100 000 раз
@@ -115,13 +120,11 @@ inline void counting() {
 
 	if (counter.is_impuls()) {
 		info.data.value0++;
-		info.states.state0 = counter.state;  // обновляем значения входов для вебсервера
 		storage.add(info.data);
 	}
 #ifndef DEBUG
 	if (counter2.is_impuls()) {
 		info.data.value1++;
-		info.states.state1 = counter2.state;
 		storage.add(info.data);
 	}
 #endif
@@ -215,6 +218,10 @@ void loop() {
 	power_all_enable();   // power everything back on
 
 	storage.get(info.data);     // Берем из хранилища текущие значения импульсов
+	info.states.state0 = counter.state;  
+	info.states.state1 = counter2.state;
+	info.adc.adc0 = counter.adc;
+	info.adc.adc1 = counter2.adc;
 	
 	DEBUG_CONNECT(9600);
 	LOG_INFO(F("Data:"));

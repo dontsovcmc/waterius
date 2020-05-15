@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 #define I2C_SLAVE_ADDRESS 10
-#define TX_BUFFER_SIZE 20
+#define TX_BUFFER_SIZE 24
 
 #define SETUP_MODE 1
 #define TRANSMIT_MODE 2

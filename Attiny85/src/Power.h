@@ -16,7 +16,7 @@ uint16_t readVcc();
 */
 struct ESPPowerPin 
 {
-	ESPPowerPin(const uint8_t);
+	explicit ESPPowerPin(const uint8_t);
 
 	//Пин подачи питания на ESP
 	uint8_t power_pin;

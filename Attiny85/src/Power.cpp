@@ -10,6 +10,7 @@
 ESPPowerPin::ESPPowerPin(const uint8_t p)
 	: power_pin(p)
 	, power_on(false)
+	, wake_up_timestamp(0)
 {
 	pinMode(power_pin, INPUT);
 }
