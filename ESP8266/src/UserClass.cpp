@@ -44,6 +44,8 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["rssi"] =          cdata.rssi;
     root["waketime"] =      settings.wake_time;
     root["setuptime"] =     settings.setup_time;
+    root["adc0"] =          data.adc0;
+    root["adc1"] =          data.adc1;
 
     serializeJson(root, jsonBody);
     LOG_INFO(FPSTR(S_SND), "JSON size:\t" << jsonBody.length());
@@ -51,11 +53,9 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     // Try to send
     WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(
         settings.waterius_host, settings.waterius_key, settings.waterius_email, jsonBody);
-    bool send_result = responseData.isSuccess && responseData.code == 200;
 
     LOG_INFO(FPSTR(S_SND), "Send HTTP code:\t" << responseData.code);
-    LOG_INFO(FPSTR(S_SND), "Send result:\t" << (send_result ? "Success" : "Error"));
     LOG_INFO(FPSTR(S_SND), "-- END --");
 
-    return send_result;
+    return responseData.code == 200;
 }

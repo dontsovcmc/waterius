@@ -32,7 +32,7 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
         wifiTlsClient.setTrustAnchors(&certs);
 
         if (!setClock()) {  
-            LOG_ERROR(FPSTR(S_RQT), "SetClock fail ???");
+            LOG_ERROR(FPSTR(S_RQT), "SetClock FAILED");
             return WateriusHttps::ResponseData();
         }
     } else {
@@ -56,7 +56,6 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     
     LOG_INFO(FPSTR(S_RQT), F("Begin client"));
     // Request
-    bool responseResult = false;
     int responseCode = 0;
     String responseBody;
     if (hc->begin(*wc, url)) {
@@ -73,14 +72,12 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
         LOG_INFO(FPSTR(S_RQT), F("Response body:\t") << responseBody);
         hc->end();
         wc->stop();
-        responseResult = true;
     } else {
         LOG_ERROR(FPSTR(S_RQT), F("Cannot begin HTTP client"));
     }
 
-    LOG_INFO(FPSTR(S_RQT), F("Result:\t") << (responseResult ? "Success" : "Error"));
     LOG_INFO(FPSTR(S_RQT), F("-- END --"));
-    return WateriusHttps::ResponseData(responseResult, responseCode, responseBody);
+    return WateriusHttps::ResponseData(responseCode, responseBody);
 }
 
 

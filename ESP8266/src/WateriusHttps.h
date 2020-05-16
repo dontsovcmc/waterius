@@ -11,12 +11,11 @@ class WateriusHttps
      **/
     struct ResponseData
     {
-        const bool isSuccess{false};
         const int code{0};
         const String body{};
 
         ResponseData() {}
-        ResponseData(bool isSuccess, int code, String body) : isSuccess{isSuccess}, code{code}, body{body} {}
+        ResponseData(int code, String body) : code{code}, body{body} {}
     };
 
     /**

@@ -1,5 +1,4 @@
 
-
 #include "Logging.h"
 #include <user_interface.h>
 #include <ESP8266WiFi.h>
@@ -75,7 +74,6 @@ void loop()
 
 	// спрашиваем у Attiny85 повод пробуждения и данные
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data)) {
-        
         //Загружаем конфигурацию из EEPROM
         bool success = loadConfig(sett);
         if (!success) {
@@ -90,36 +88,51 @@ void loop()
             WiFi.mode(WIFI_AP_STA);
             setup_ap(sett, data, cdata);
             
-            success = false; // ESP падает после настройки при https, поэтому идём спать. 
-                             // в будущем, когда вылечим, ESP будет выходить на связь сразу после настройки
-                             // пока не хватает памяти для HTTPS и падение в момент создании объекта
-            //WiFi.mode(WIFI_OFF);
-            //delay(500);
-            //mode = TRANSMIT_MODE;
+            //Необходимо протестировать WiFi, чтобы роутер не блокировал повторное подключение.
+            //
+            //masterI2C.sendCmd('T'); //Передаем в Attiny, что режим "Передача". 
+            //                        //ESP перезагрузится и передаст данные 
+            //LOG_END();
+            //WiFi.forceSleepBegin();
+            //delay(100);
+            //ESP.restart();
+
+            success = false;
         }
         
         if (success) {
             if (mode == TRANSMIT_MODE) { 
                 //Проснулись для передачи показаний
-                LOG_INFO(FPSTR(S_WIF), F("Starting"));
-
-                //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
-                WiFi.begin(); 
+                LOG_INFO(FPSTR(S_WIF), F("Starting Wi-fi"));
                 
-                //Ожидаем подключения к точке доступа
-                uint32_t start = millis();
-                while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
-                    LOG_INFO(FPSTR(S_WIF), F("Status: ") << WiFi.status());
-                    delay(200);
+                if (sett.ip != 0) {
+                    success = WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, IPAddress(8,8,8,8));
+                    if (success) {
+                        LOG_INFO(FPSTR(S_WIF), F("Static IP OK"));
+                    } else {
+                        LOG_ERROR(FPSTR(S_WIF), F("Static IP FAILED"));
+                    }
+                }
 
-                    check_voltage(data, cdata);
+                if (success) {
+                    //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
+                    WiFi.begin(); 
+
+                    //Ожидаем подключения к точке доступа
+                    uint32_t start = millis();
+                    while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
+                        LOG_INFO(FPSTR(S_WIF), F("Status: ") << WiFi.status());
+                        delay(300);
+
+                        check_voltage(data, cdata);
+                        //В будущем добавим success, означающее, что напряжение не критично изменяется, можно продолжать
+                        //иначе есть риск ошибки ESP и стирания конфигурации
+                    }
                 }
             }
-
-            //В будущем добавим success, означающее, что напряжение не критично изменяется, можно продолжать
-            //иначе есть риск ошибки ESP и стирания конфигурации
-            if (WiFi.status() == WL_CONNECTED 
-                && masterI2C.getSlaveData(data)) { //тут надо достоверно прочитать i2c
+            
+            if (success 
+                && WiFi.status() == WL_CONNECTED) {
 
                 LOG_INFO(FPSTR(S_WIF), F("Connected, IP: ") << WiFi.localIP().toString());
                 
@@ -144,7 +157,7 @@ void loop()
 
                 storeConfig(sett);
             }
-        }
+        } 
     }
 
     LOG_INFO(FPSTR(S_ESP), F("Going to sleep"));
@@ -152,6 +165,5 @@ void loop()
     masterI2C.sendCmd('Z');        // "Можешь идти спать, attiny"
     LOG_END();
     
-    twi_stop();
     ESP.deepSleep(0, RF_DEFAULT);  // Спим до следущего включения EN
 }

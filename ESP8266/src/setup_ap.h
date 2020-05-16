@@ -46,6 +46,25 @@ public:
     }
 };
 
+class IPAddressParameter : public WiFiManagerParameter {
+public:
+
+    IPAddressParameter(const char *id, const char *placeholder, IPAddress address)
+        : WiFiManagerParameter("")
+    {
+        String val("0.0.0.0");  //иначе (IP Unset) и не проходит проверка pattern
+        if (address.isSet())
+            val = address.toString();
+        init(id, placeholder, val.c_str(), 16, "minlength=\"7\" maxlength=\"15\" size=\"15\" pattern=\"^((\\d{1,2}|1\\d\\d|2[0-4]\\d|25[0-5])\\.){3}(\\d{1,2}|1\\d\\d|2[0-4]\\d|25[0-5])$\"", WFM_LABEL_BEFORE);
+    }
+
+    IPAddress getValue() {
+        IPAddress ip;
+        ip.fromString(WiFiManagerParameter::getValue());
+        return ip;
+    }
+};
+
 
 #endif
 

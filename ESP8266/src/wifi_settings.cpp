@@ -31,7 +31,6 @@ void storeConfig(const Settings &sett)
     EEPROM.end();
 }
 
-
 /* Загружаем конфигурацию в EEPROM. true - успех. */
 bool loadConfig(struct Settings &sett) 
 {
@@ -41,7 +40,7 @@ bool loadConfig(struct Settings &sett)
 
     if (sett.crc == FAKE_CRC)  // todo: сделать нормальный crc16
     {
-        LOG_INFO(FPSTR(S_CFG), F("CRC ok"));
+        LOG_INFO(FPSTR(S_CFG), F("Configuration CRC ok"));
 
         // Для безопасной работы с буферами,  в библиотеках может не быть проверок
         sett.waterius_host[WATERIUS_HOST_LEN-1] = '\0';
@@ -72,6 +71,16 @@ bool loadConfig(struct Settings &sett)
         LOG_INFO(FPSTR(S_CFG), F("login=") << sett.mqtt_login << F(" pass=") << sett.mqtt_password);
         LOG_INFO(FPSTR(S_CFG), F("topic=") << sett.mqtt_topic);        
         
+        LOG_INFO(FPSTR(S_CFG), F("--- Network ---- "));
+        if (sett.ip) {
+            LOG_INFO(FPSTR(S_CFG), F("DHCP turn off"));
+        } else {
+            LOG_INFO(FPSTR(S_CFG), F("DHCP is on"));
+        }
+        LOG_INFO(FPSTR(S_CFG), F("static_ip=") << IPAddress(sett.ip).toString());
+        LOG_INFO(FPSTR(S_CFG), F("gateway=") << IPAddress(sett.gateway).toString());
+        LOG_INFO(FPSTR(S_CFG), F("mask=") << IPAddress(sett.mask).toString());
+
         // Всегда одно и тоже будет
         LOG_INFO(FPSTR(S_CFG), F("--- Counters ---- "));
         LOG_INFO(FPSTR(S_CFG), F("channel0_start=") << sett.channel0_start << F(", impulses0_start=") << sett.impulses0_start << F(", factor=") << sett.liters_per_impuls );
@@ -81,7 +90,7 @@ bool loadConfig(struct Settings &sett)
 
     } else {    
         // Конфигурация не была сохранена в EEPROM, инициализируем с нуля
-        LOG_INFO(FPSTR(S_CFG), F("CRC failed=") << sett.crc );
+        LOG_INFO(FPSTR(S_CFG), F("Configuration CRC failed=") << sett.crc );
         
         // Заполняем нулями всю конфигурацию
         memset(&sett, 0, sizeof(sett));
@@ -104,6 +113,9 @@ bool loadConfig(struct Settings &sett)
 
         strncpy0(sett.mqtt_topic, defaultTopic.c_str(), MQTT_TOPIC_LEN);
         sett.mqtt_port = MQTT_DEFAULT_PORT;
+        
+        sett.gateway = IPAddress(192,168,0,1);
+        sett.mask = IPAddress(255,255,255,0);
 
         sett.liters_per_impuls = LITRES_PER_IMPULS_DEFAULT;
 

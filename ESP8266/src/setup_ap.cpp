@@ -112,7 +112,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     WiFiManagerParameter div_start("<div id='advanced' style='display:none'>");
     wm.addParameter(&div_start);
-    
+
     // Сервер http запроса 
 
     WiFiManagerParameter param_waterius_host( "whost", "Адрес сервера (включает отправку)",  sett.waterius_host, WATERIUS_HOST_LEN-1);
@@ -149,6 +149,24 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter param_mqtt_topic( "mtopic", "Topic",  sett.mqtt_topic, MQTT_TOPIC_LEN-1);
     wm.addParameter( &param_mqtt_topic );
     
+    // Статический ip
+    
+    WiFiManagerParameter label_network("<h3>Сетевые настройки</h3>");
+    wm.addParameter( &label_network);
+    
+    String mac("<label class=\"label\">MAC: ");
+    mac += WiFi.macAddress();
+    mac += "</label>";
+    WiFiManagerParameter label_mac(mac.c_str());
+    wm.addParameter( &label_mac );
+
+    IPAddressParameter param_ip("ip", "Статический ip<br/>(DHCP, если равен 0.0.0.0)",  sett.ip);
+    wm.addParameter( &param_ip );
+    IPAddressParameter param_gw("gw", "Шлюз",  sett.gateway);
+    wm.addParameter( &param_gw );
+    IPAddressParameter param_mask("sn", "Маска подсети",  sett.mask);
+    wm.addParameter( &param_mask );
+
     WiFiManagerParameter label_factor("<p><b>Вес импульса (авто): <a id='factor'></a> л/имп</b></p>");
     wm.addParameter( &label_factor);
 
@@ -218,7 +236,11 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     strncpy0(sett.mqtt_login, param_mqtt_login.getValue(), MQTT_LOGIN_LEN);
     strncpy0(sett.mqtt_password, param_mqtt_password.getValue(), MQTT_PASSWORD_LEN);
     strncpy0(sett.mqtt_topic, param_mqtt_topic.getValue(), MQTT_TOPIC_LEN);
-    sett.mqtt_port = param_mqtt_port.getValue();    
+    sett.mqtt_port = param_mqtt_port.getValue();   
+
+    sett.ip = param_ip.getValue();
+    sett.gateway = param_gw.getValue();
+    sett.mask = param_mask.getValue();
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();
