@@ -2,8 +2,6 @@
 
 //https://github.com/lammertb/libcrc/blob/600316a01924fd5bb9d47d535db5b8f3987db178/src/crc8.c
 
-#define		CRC_START_8		0x00
-
 static uint8_t sht75_crc_table[] = {
 
 	0,   49,  98,  83,  196, 245, 166, 151, 185, 136, 219, 234, 125, 76,  31,  46,
@@ -23,6 +21,22 @@ static uint8_t sht75_crc_table[] = {
 	193, 240, 163, 146, 5,   52,  103, 86,  120, 73,  26,  43,  188, 141, 222, 239,
 	130, 179, 224, 209, 70,  119, 36,  21,  59,  10,  89,  104, 255, 206, 157, 172
 };
+
+
+uint8_t crc_8(unsigned char *input_str, size_t num_bytes) {
+
+	uint8_t crc = 0;
+	unsigned char *ptr = input_str;
+
+	if (ptr != NULL) {
+		for (size_t a = 0; a < num_bytes; a++) {
+			crc = sht75_crc_table[(*ptr) ^ crc];
+			ptr++;
+		}
+	}
+
+	return crc;
+}
 
 template<class T>
 EEPROMStorage<T>::EEPROMStorage(const uint8_t _blocks, const uint8_t _start_addr)
@@ -88,19 +102,6 @@ bool EEPROMStorage<T>::get_block(const uint8_t block, T &element)
 		return true;
 	}
 	return false;
-}
-
-template<class T>
-uint8_t EEPROMStorage<T>::crc_8(const unsigned char *input_str, size_t num_bytes) {
-
-	uint8_t crc = CRC_START_8;
-	const unsigned char *ptr = input_str;
-
-	if (ptr != NULL) for (size_t a = 0; a < num_bytes; a++) {
-		crc = sht75_crc_table[(*ptr++) ^ crc];
-	}
-
-	return crc;
 }
 
 template<class T>

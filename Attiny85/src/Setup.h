@@ -52,11 +52,6 @@ struct CounterState { // не добавляем в Data, т.к. та в буф�
     uint8_t  state1;  
 };
 
-struct CounterADC {
-    uint16_t adc0;    // уровень входа
-    uint16_t adc1;
-};
-
 struct Header {
 
     /*
@@ -94,9 +89,16 @@ struct Header {
 
     CounterState  states;
     Data          data;
-    CounterADC    adc;   
-};  //20 байт
+    uint16_t      adc0;    // уровень входа
+    uint16_t      adc1; 
+    // HEADER_DATA_SIZE
 
+    uint8_t       crc;
+    uint8_t       reserved2;
+};  //22 байт
+
+#define HEADER_DATA_SIZE 22
+#define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
 
 /*
 	define для логирования. Не менять.

@@ -67,8 +67,8 @@
 
 #define I2C_SLAVE_ADDR 10  // i2c адрес Attiny85
 
-#define VER_5 5
-#define CURRENT_VERSION VER_5
+#define VER_6 6
+#define CURRENT_VERSION VER_6
 
 #define EMAIL_LEN 32
 
@@ -173,12 +173,19 @@ struct Settings
     За сколько времени настроили ватериус
     */
     uint32_t setup_time;
+    
+    /*
+    Статический адрес
+    */
+    uint32_t ip;
+    uint32_t gateway;
+    uint32_t mask;
 
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t  reserved2[248];
+    uint8_t  reserved2[236];
 
     /*
     Контрольная сумма, чтобы гарантировать корректность чтения настроек

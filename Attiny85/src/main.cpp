@@ -22,6 +22,9 @@ FIRMWARE_VER
 
 12 - 2020.05.15 - dontsovcmc
 	1. Добавил команду T для переключения режима пробуждения
+	2. Добавил отправку аналогового уровня замыкания входа в ЕСП
+	3. Исправил инициализацию входов. Кажется после перезагрузки +1 импульс
+	4. Добавил crc при отправки данных
 
 11 - 2019.10.20 - dontsovcmc
     1. Обновил алгоритм подсчёта импульсов.
@@ -71,7 +74,8 @@ static ESPPowerPin esp(ESP_POWER_PIN);
 struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 
 					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
 				       {0, 0},
-					   {0, 0}
+					   0, 0,
+					   0, 0
 					 };
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
@@ -119,12 +123,16 @@ inline void counting() {
     adc_enable();       //после подачи питания на adc
 
 	if (counter.is_impuls()) {
-		info.data.value0++;
+		info.data.value0++;	
+		info.states.state0 = counter.state;  
+		info.adc0 = counter.adc;
 		storage.add(info.data);
 	}
 #ifndef DEBUG
 	if (counter2.is_impuls()) {
 		info.data.value1++;
+		info.states.state1 = counter2.state;
+		info.adc1 = counter2.adc;
 		storage.add(info.data);
 	}
 #endif
@@ -218,11 +226,7 @@ void loop() {
 	power_all_enable();   // power everything back on
 
 	storage.get(info.data);     // Берем из хранилища текущие значения импульсов
-	info.states.state0 = counter.state;  
-	info.states.state1 = counter2.state;
-	info.adc.adc0 = counter.adc;
-	info.adc.adc1 = counter2.adc;
-	
+
 	DEBUG_CONNECT(9600);
 	LOG_INFO(F("Data:"));
 	LOG_INFO(info.data.value0);
@@ -252,8 +256,8 @@ void loop() {
 		info.voltage = readVcc();   // Текущее напряжение
 
 		counting();
-
 		delayMicroseconds(65000);
+
 		if (wait_button_release() > LONG_PRESS_MSEC) {
 			break; // принудительно выключаем
 		}

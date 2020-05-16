@@ -4,7 +4,6 @@
 #include <Arduino.h>
 
 #define I2C_SLAVE_ADDRESS 10
-#define TX_BUFFER_SIZE 24
 
 #define SETUP_MODE 1
 #define TRANSMIT_MODE 2
@@ -17,9 +16,7 @@ class SlaveI2C
 	 static uint8_t txBufferPos;
 	 static uint8_t setup_mode;
 
-	 static uint8_t lastCommand;
 	 static bool masterSentSleep;
-	 static bool masterAckOurData;
 
 	 static void requestEvent();
 	 static void newCommand();

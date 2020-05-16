@@ -30,15 +30,15 @@ struct Counter
     uint8_t _pin;   // дискретный вход
     uint8_t _apin;  // номер аналогового входа
 
-    uint16_t adc;  // уровень входа
-    uint8_t state; // состояние входа
+    uint16_t adc;   // уровень замкнутого входа
+    uint8_t  state; // состояние входа
 
     explicit Counter(uint8_t pin, uint8_t apin = 0)  
       : _checks(-1)
       , _pin(pin)
       , _apin(apin)
       , adc(0)
-      , state(CounterState_e::OPEN)
+      , state(CounterState_e::CLOSE)
     {
        DDRB &= ~_BV(pin);      // INPUT
     }
@@ -64,21 +64,22 @@ struct Counter
         return ret;
     }
     
-    bool is_close()
+    bool is_close(uint16_t a)
     {
-        //bool value = digRead();
-        //state = value2state(value ? 1024 : 0);
-        adc = aRead();
-        state = value2state(adc);
+        state = value2state(a);
         return state == CounterState_e::CLOSE || state == CounterState_e::NAMUR_CLOSE;
     }
 
     bool is_impuls()
     { 
-        //Детектируем импульс когда он заканчивается.
-        //Дребезг проверяем 
-        if (is_close()) {
+        //Детектируем импульс когда он заканчивается!
+        //По сути софтовая проверка дребега
+
+        //bool value = digRead();
+        uint16_t a = aRead();
+        if (is_close(a)) {
             _checks = TRIES;
+            adc = a;
         }
         else {
             if (_checks >= 0) {
