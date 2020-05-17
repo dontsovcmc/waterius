@@ -48,10 +48,10 @@ FIRMWARE_VER
 	
 */
 
-#define INPUT0_PIN  4          //Вход 1, Blynk: V0, горячая вода
-#define INPUT1_PIN  3          //Вход 2, Blynk: V1, холодная вода (или лог)
-#define INPUT0_ADC  2
-#define INPUT1_ADC  3
+#define INPUT0_PIN  4          //Вход 1, Blynk: V0, горячая вода PB4
+#define INPUT1_PIN  3          //Вход 2, Blynk: V1, холодная вода (или лог) PB3
+#define INPUT0_ADC  2          //ADC2
+#define INPUT1_ADC  3          //ADC3
 
 #define FIRMWARE_VER     12    // Версия прошивки. Передается в ESP и на сервер в данных.
 
