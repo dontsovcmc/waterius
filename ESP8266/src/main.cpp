@@ -23,9 +23,9 @@ CalculatedData cdata; //вычисляемые данные
 */
 void setup()
 {
-    WiFi.mode(WIFI_OFF);
+    WiFi.mode(WIFI_OFF);  //TODO  а нужна ли?
     memset(&cdata, 0, sizeof(cdata));
-    memset(&data, 0, sizeof(data)); // На всякий случай
+    memset(&data, 0, sizeof(data));
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(FPSTR(S_ESP), F("Booted"));
     masterI2C.begin();    //Включаем i2c master
@@ -132,7 +132,8 @@ void loop()
             }
             
             if (success 
-                && WiFi.status() == WL_CONNECTED) {
+                && WiFi.status() == WL_CONNECTED
+                && masterI2C.getSlaveData(data)) {  //т.к. в check_voltage не проверяем crc
 
                 LOG_INFO(FPSTR(S_WIF), F("Connected, IP: ") << WiFi.localIP().toString());
                 

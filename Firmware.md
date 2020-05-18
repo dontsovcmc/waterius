@@ -88,7 +88,7 @@ upload_flags =
 Если нет curl, то открываем ссылку и копируем файл в папку Avrdude.
 4. Ставим драйвер программатора [USBAsp](http://www.myrobot.ru/downloads/driver-usbasp-v-2.0-usb-isp-windows-7-8-10-xp.php) и подключаем его с attiny85.
 5. `avrdude.exe -p t85 -c Usbasp -B 4 -P usb  -U efuse:w:0xFF:m -U hfuse:w:0xDF:m -U lfuse:w:0x62:m`
-6. `avrdude.exe -p t85 -c Usbasp -B 4 -P usb -U flash:w:"<путь_до_репозитория>\waterius\Attiny85\.pioenvs\attiny85\firmware.hex":a`
+6. `avrdude.exe -p t85 -c Usbasp -B 4 -P usb -U flash:w:"D:\firmware.hex":a`, ге D:\firmware.hex - путь до файла. У вас свой.
 
 
 ### Прошивка ESP8266
