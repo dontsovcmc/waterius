@@ -81,7 +81,7 @@ upload_flags =
 [На странице releases](https://github.com/dontsovcmc/waterius/releases)
 
 ### Прошивка attiny85 с помощью Avrdude & Usbasp
-1. Скачивем Avrdude: http://www.avislab.com/blog/wp-content/uploads/2012/12/avrdude.zip
+1. Скачивем Avrdude: http://download.savannah.gnu.org/releases/avrdude/avrdude-6.2-mingw32.zip
 2. Распаковываем архив, заходим в папку. Открываем консоль: shift+правкая кнопка мыши - Открыть окно команд
 3. Скачивем прошивку attiny85:
 `curl https://raw.githubusercontent.com/dontsovcmc/waterius_firmware/master/0.5/attiny85.hex --output ./attiny85.hex`
@@ -104,6 +104,7 @@ C:\Users\Админ\AppData\Local\Programs\Python\Python38-32\Scripts
 3. Скачивем [прошивку ESP8266](https://github.com/dontsovcmc/waterius/releases) файл esp8266.bin
 4. Подключаем USB-TTL с ESP8266 замкнув GPIO0 на GND
 5. `python -m esptool --baud 115200 --port COM7 write_flash --flash_freq 40m --flash_size 1MB --flash_mode qio --verify 0x0 esp8266.bin`
+
 COM7 замените на свой порт
 
 <details>
