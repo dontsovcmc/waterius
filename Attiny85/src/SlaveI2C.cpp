@@ -40,7 +40,7 @@ void SlaveI2C::newCommand() {
 /* Depending on the received command from master, set up the content of the txbuffer so he can get his data */
 void SlaveI2C::receiveEvent(int howMany) {
 	uint8_t command = Wire.read(); // Get instructions from master
-
+	
 	newCommand();
 	switch (command) {
 		case 'B':  // данные

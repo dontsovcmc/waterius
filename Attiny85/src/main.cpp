@@ -20,6 +20,9 @@
 Версии прошивок 
 FIRMWARE_VER
 
+13 - 2020.06.09 - dontsovcmc
+	1. изменил формулу crc
+	
 12 - 2020.05.15 - dontsovcmc
 	1. Добавил команду T для переключения режима пробуждения
 	2. Добавил отправку аналогового уровня замыкания входа в ЕСП
@@ -53,7 +56,7 @@ FIRMWARE_VER
 #define INPUT0_ADC  2          //ADC2
 #define INPUT1_ADC  3          //ADC3
 
-#define FIRMWARE_VER     12    // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER     13    // Версия прошивки. Передается в ESP и на сервер в данных.
 
 #define ESP_POWER_PIN    1     // пин включения ESP8266. 
 #define BUTTON_PIN       2     // пин кнопки: (на линии SCL)
@@ -194,9 +197,9 @@ unsigned long wait_button_release() {
 	return millis() - press_time;
 }
 
+
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop() {
-	
 	power_all_disable();  // Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
 
 	set_sleep_mode( SLEEP_MODE_PWR_DOWN );  // Режим сна
@@ -268,5 +271,7 @@ void loop() {
 
 	if (!slaveI2C.masterGoingToSleep()) {
 		LOG_ERROR(F("ESP wake up fail"));
+	} else {
+		LOG_INFO(F("Sleep received"));
 	}
 }
