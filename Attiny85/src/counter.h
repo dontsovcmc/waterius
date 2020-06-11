@@ -26,47 +26,53 @@ enum CounterState_e
     OPEN
 };
 
+// http://easyelectronics.ru/avr-uchebnyj-kurs-ustrojstvo-i-rabota-portov-vvoda-vyvoda.html
 struct Counter 
 {
     int8_t _checks; // -1 <= _checks <= TRIES
     
     uint8_t _pin;   // дискретный вход
-    uint8_t _apin;  // номер аналогового входа
-
+    uint8_t _apin;  // аналоговый вход
+    uint8_t _bit;
+	volatile uint8_t *_port;
+	
     uint16_t adc;   // уровень замкнутого входа
     uint8_t  state; // состояние входа
 
-    explicit Counter(uint8_t pin, uint8_t apin = 0)  
+    explicit Counter(uint8_t pin, uint8_t apin)  
       : _checks(-1)
       , _pin(pin)
       , _apin(apin)
+      , _bit(0)
+      , _port(0)
       , adc(0)
       , state(CounterState_e::CLOSE)
     {
-       DDRB &= ~_BV(pin);      // INPUT
+        _bit = digitalPinToBitMask(pin);
+        uint8_t port = digitalPinToPort(pin);  //TODO
+        volatile uint8_t *_ddr = portModeRegister(port);    //DDRB
+        _port = portOutputRegister(port);  //PORTB
+
+        //DDRB &= ~_BV(pin);      // INPUT
+		*_ddr &= ~_bit;
+		*_port &= ~_bit;
     }
 
     inline uint16_t aRead() 
     {
-        PORTB |= _BV(_pin);      // INPUT_PULLUP
-        uint16_t ret = analogRead(_apin); // в TinyCore там работа с битами, оптимально
-        PORTB &= ~_BV(_pin);     // INPUT
+        //PORTB |= _BV(_pin);      // INPUT_PULLUP
+        //*_ddr &= ~_bit;
+		*_port |= _bit;
+
+        uint16_t ret = analogRead(_apin); // в TinyCore оптимально
+        
+        //PORTB &= ~_BV(_pin);     // INPUT
+        //*_ddr &= ~_bit;
+		*_port &= ~_bit;  
+
         return ret;
     }
 
-    inline bool digBit() 
-    {
-        return bit_is_set(PINB, _pin);
-    }
-
-    inline bool digRead() 
-    {
-        PORTB |= _BV(_pin);  // INPUT_PULLUP
-        bool ret = digBit();
-        PORTB &= ~_BV(_pin); // INPUT
-        return ret;
-    }
-    
     bool is_close(uint16_t a)
     {
         state = value2state(a);
@@ -107,6 +113,64 @@ struct Counter
         } else {
             return CounterState_e::OPEN;
         }
+    }
+};
+
+struct Button 
+{
+    uint8_t _bit;
+	volatile uint8_t *_port;
+    volatile uint8_t *_inp;
+
+    explicit Button(uint8_t pin)  
+      : _bit(0)
+      , _port(0)
+      , _inp(0)
+    {
+        _bit = digitalPinToBitMask(pin);
+        uint8_t port = digitalPinToPort(pin);  //TODO
+        volatile uint8_t *_ddr = portModeRegister(port);    //DDRB
+        _port = portOutputRegister(port);  //PORTB
+        _inp = portInputRegister(port);   //PINB
+
+        //DDRB &= ~_BV(pin);      // INPUT
+		*_ddr &= ~_bit;
+		*_port &= ~_bit;
+    }
+
+    inline bool digRead() 
+    {
+        //PORTB |= _BV(_pin);      // INPUT_PULLUP  зачем кнопке pull_up, она уже подтянута TODO
+        //*_ddr &= ~_bit;
+		*_port |= _bit;
+
+        bool ret = *_inp & _bit;  //return bit_is_set(PINB, _pin);
+
+        //PORTB &= ~_BV(_pin);     // INPUT
+        //*_ddr &= ~_bit;
+		*_port &= ~_bit;
+
+        return ret;
+    }
+
+    // Проверка нажатия кнопки 
+    bool button_pressed() {
+
+        if (digRead() == LOW)
+        {	//защита от дребезга
+            delayMicroseconds(20000);  //нельзя delay, т.к. power_off
+            return digRead() == LOW;
+        }
+        return false;
+    }
+
+    // Замеряем сколько времени нажата кнопка в мс
+    unsigned long wait_button_release() {
+
+        unsigned long press_time = millis();
+        while(button_pressed())
+            ;  
+        return millis() - press_time;
     }
 };
 

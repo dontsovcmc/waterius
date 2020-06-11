@@ -4,22 +4,28 @@
 #include <Arduino.h>
 
 /* 
-	Включение логирования с TinySerial: 
+	Включение логирования
 	3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
 	При логировании не работает счетчик2 на 3-м пине (Вход 2).
 
-	Для логирования раскомментируйте LOG_LEVEL_DEBUG
+    #define LOG_ON
 */
-// #define LOG_LEVEL_ERROR
-// #define LOG_LEVEL_INFO
-// #define LOG_LEVEL_DEBUG
 
-#if defined (LOG_LEVEL_DEBUG) || defined (LOG_LEVEL_INFO) || defined (LOG_LEVEL_ERROR)
+
+#define LOG_BEGIN(x)
+#define LOG(x)
+
+#ifdef LOG_ON
 #include "TinyDebugSerial.h"
+    class TinyDebugSerial;
+    extern TinyDebugSerial mySerial;
+    #undef LOG_BEGIN
+    #define LOG_BEGIN(x)  mySerial.begin(x)
+    #undef LOG
+    #define LOG(x) mySerial.print(millis()); mySerial.print(F(" : ")); mySerial.println(x);
 #endif
 
 //#define TEST_WATERIUS   // Тестирование счетчика при помощи Arduino
-
 
 /*
 	Период отправки данных на сервер, мин
@@ -41,6 +47,11 @@
 */
 #define SETUP_TIME_MSEC  600000UL 
 
+/*
+    время долгого нажатия кнопки, милисекунд 
+*/
+#define LONG_PRESS_MSEC  3000   
+       
 
 struct Data {
     uint32_t value0;
@@ -99,38 +110,5 @@ struct Header {
 
 #define HEADER_DATA_SIZE 22
 #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
-
-/*
-	define для логирования. Не менять.
-*/
-#define LOG_DEBUG(x)
-#define LOG_INFO(x)  
-#define LOG_ERROR(x) 
-#define DEBUG_CONNECT(x)  
-
-
-#if defined (LOG_LEVEL_DEBUG) || defined (LOG_LEVEL_INFO) || defined (LOG_LEVEL_ERROR)
-    #define DEBUG
-    class TinyDebugSerial;
-    extern TinyDebugSerial mySerial;
-    #undef DEBUG_CONNECT
-    #define DEBUG_CONNECT(x)  mySerial.begin(x)
-    #define PRINT_NOW(x) mySerial.print(millis()); mySerial.print(x);
-#endif
-
-#ifdef LOG_LEVEL_DEBUG
-    #undef LOG_DEBUG
-    #define LOG_DEBUG(x) { PRINT_NOW(F(" [D]: ")); mySerial.println(x); }
-    #define LOG_LEVEL_INFO
-#endif
-#ifdef LOG_LEVEL_INFO
-    #undef LOG_INFO
-    #define LOG_INFO(x) { PRINT_NOW(F(" [I]: ")); mySerial.println(x); }
-    #define LOG_LEVEL_ERROR
-#endif
-#ifdef LOG_LEVEL_ERROR
-    #undef LOG_ERROR
-    #define LOG_ERROR(x) { PRINT_NOW(F(" [E]: ")); mySerial.println(x); }
-#endif
 
 #endif

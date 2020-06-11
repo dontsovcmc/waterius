@@ -11,18 +11,19 @@
 #include <avr/sleep.h>
 #include <avr/power.h>  
 
-// Для логирования раскомментируйте LOG_LEVEL_DEBUG в Setup.h
-#ifdef DEBUG
+// Для логирования раскомментируйте LOG_ON в Setup.h
+#ifdef LOG_ON
 	TinyDebugSerial mySerial;
 #endif
 
+#define FIRMWARE_VER 13    // Версия прошивки. Передается в ESP и на сервер в данных.
+  
 /*
 Версии прошивок 
-FIRMWARE_VER
 
 13 - 2020.06.09 - dontsovcmc
 	1. изменил формулу crc
-	
+
 12 - 2020.05.15 - dontsovcmc
 	1. Добавил команду T для переключения режима пробуждения
 	2. Добавил отправку аналогового уровня замыкания входа в ЕСП
@@ -51,27 +52,18 @@ FIRMWARE_VER
 	
 */
 
-#define INPUT0_PIN  4          //Вход 1, Blynk: V0, горячая вода PB4
-#define INPUT1_PIN  3          //Вход 2, Blynk: V1, холодная вода (или лог) PB3
-#define INPUT0_ADC  2          //ADC2
-#define INPUT1_ADC  3          //ADC3
-
-#define FIRMWARE_VER     13    // Версия прошивки. Передается в ESP и на сервер в данных.
-
-#define ESP_POWER_PIN    1     // пин включения ESP8266. 
-#define BUTTON_PIN       2     // пин кнопки: (на линии SCL)
-                               // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
-							   // Короткое: ESP передает показания
-#define LONG_PRESS_MSEC  3000  // время долгого нажатия кнопки, милисекунд  
-                               
-
 // Счетчики импульсов
-static Counter counter(INPUT0_PIN, INPUT0_ADC);
-static Counter counter2(INPUT1_PIN, INPUT1_ADC);
-static Counter button(BUTTON_PIN);
+static Counter counter(4, A2);   //PB4  ADC2  Вход 1, Blynk: V0, горячая вода
+
+static Counter counter2(3, A3);  //PB3  ADC3  Вход 2, Blynk: V1, холодная вода (или лог)
+
+static Button button(2);   // PB2 включение ESP8266
+						   // пин кнопки: (на линии SCL)
+                           // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
+						   // Короткое: ESP передает показания 
 
 // Класс для подачи питания на ESP и нажатия кнопки
-static ESPPowerPin esp(ESP_POWER_PIN);
+static ESPPowerPin esp(1);
 
 // Данные
 struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 
@@ -131,7 +123,7 @@ inline void counting() {
 		info.adc0 = counter.adc;
 		storage.add(info.data);
 	}
-#ifndef DEBUG
+#ifndef LOG_ON
 	if (counter2.is_impuls()) {
 		info.data.value1++;
 		info.states.state1 = counter2.state;
@@ -156,8 +148,6 @@ void setup() {
 	resetWatchdog(); 
 	//adc_disable(); //выключаем ADC. Теперь в цикле вкл/выкл, тут не нужен.
 
-	pinMode(BUTTON_PIN, INPUT); //кнопка на корпусе
-
 	if (storage.get(info.data)) { //не первая загрузка
 		info.resets = EEPROM.read(storage.size());
 		info.resets++;
@@ -166,37 +156,16 @@ void setup() {
 		EEPROM.write(storage.size(), 0);
 	}
 
-	DEBUG_CONNECT(9600); 
-	LOG_DEBUG(F("==== START ===="));
-	LOG_DEBUG(F("MCUSR"));
-	LOG_DEBUG(info.service);
-	LOG_DEBUG(F("RESET"));
-	LOG_DEBUG(info.resets);
-	LOG_INFO(F("Data:"));
-	LOG_INFO(info.data.value0);
-	LOG_INFO(info.data.value1);
+	LOG_BEGIN(9600); 
+	LOG(F("==== START ===="));
+	LOG(F("MCUSR"));
+	LOG(info.service);
+	LOG(F("RESET"));
+	LOG(info.resets);
+	LOG(F("Data:"));
+	LOG(info.data.value0);
+	LOG(info.data.value1);
 }
-
-// Проверка нажатия кнопки 
-bool button_pressed() {
-
-	if (button.digBit() == LOW)
-	{	//защита от дребезга
-		delayMicroseconds(20000);  //нельзя delay, т.к. power_off
-		return button.digBit() == LOW;
-	}
-	return false;
-}
-
-// Замеряем сколько времени нажата кнопка в мс
-unsigned long wait_button_release() {
-
-	unsigned long press_time = millis();
-	while(button_pressed())
-		;  
-	return millis() - press_time;
-}
-
 
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop() {
@@ -208,12 +177,12 @@ void loop() {
 
 	// Цикл опроса входов
 	// Выход по прошествию WAKE_EVERY_MIN минут или по нажатию кнопки
-	for (unsigned int i = 0; i < ONE_MINUTE && !button_pressed(); ++i)  {
+	for (unsigned int i = 0; i < ONE_MINUTE && !button.button_pressed(); ++i)  {
 		wdt_count = WAKE_EVERY_MIN; 
 		while ( wdt_count > 0 ) {
 			noInterrupts();
 
-			if (button_pressed()) { 
+			if (button.button_pressed()) { 
 				interrupts();  // Пользователь нажал кнопку
 				break;
 			} else 	{
@@ -230,29 +199,29 @@ void loop() {
 
 	storage.get(info.data);     // Берем из хранилища текущие значения импульсов
 
-	DEBUG_CONNECT(9600);
-	LOG_INFO(F("Data:"));
-	LOG_INFO(info.data.value0);
-	LOG_INFO(info.data.value1);
+	LOG_BEGIN(9600);
+	LOG(F("Data:"));
+	LOG(info.data.value0);
+	LOG(info.data.value1);
 
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит 
 	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания 
 	unsigned long wake_up_limit;
-	if (wait_button_release() > LONG_PRESS_MSEC) {
+	if (button.wait_button_release() > LONG_PRESS_MSEC) {
 
-		LOG_DEBUG(F("SETUP pressed"));
+		LOG(F("SETUP pressed"));
 		slaveI2C.begin(SETUP_MODE);	
 		wake_up_limit = SETUP_TIME_MSEC; //10 мин при настройке
 	} else {
 
-		LOG_DEBUG(F("wake up for transmitting"));
+		LOG(F("wake up for transmitting"));
 		slaveI2C.begin(TRANSMIT_MODE);
 		wake_up_limit = WAIT_ESP_MSEC; //15 секунд при передаче данных
 	}
 
 	esp.power(true);
-	LOG_DEBUG(F("ESP turn on"));
+	LOG(F("ESP turn on"));
 	
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit)) {
 
@@ -261,7 +230,7 @@ void loop() {
 		counting();
 		delayMicroseconds(65000);
 
-		if (wait_button_release() > LONG_PRESS_MSEC) {
+		if (button.wait_button_release() > LONG_PRESS_MSEC) {
 			break; // принудительно выключаем
 		}
 	}
@@ -270,8 +239,8 @@ void loop() {
 	slaveI2C.end();			// выключаем i2c slave.
 
 	if (!slaveI2C.masterGoingToSleep()) {
-		LOG_ERROR(F("ESP wake up fail"));
+		LOG(F("ESP wake up fail"));
 	} else {
-		LOG_INFO(F("Sleep received"));
+		LOG(F("Sleep received"));
 	}
 }
