@@ -173,18 +173,20 @@ class WateriusAttiny_13:
 
         raise Exception('некорректный CRC')
 
-    def impuls(self, index):
-        if index == 0:
-            pin = self.counter0_pin
-        elif index == 1:
-            pin = self.counter1_pin
+    def impulse(self):
 
-        log.info('ESP: impulse on {}, pin {}'.format(index, pin))
+        for pin in [self.counter0_pin, self.counter1_pin]:
+            self.api.pinMode(pin, OUTPUT)
+            self.api.digitalWrite(pin, LOW)
+            log.info('ESP: impulse on  pin {}'.format(pin))
 
-        self.api.pinMode(pin, OUTPUT)
-        self.api.digitalWrite(pin, LOW)
         self.api.delay(500)
-        self.api.digitalWrite(pin, HIGH)
+
+        for pin in [self.counter0_pin, self.counter1_pin]:
+            self.api.digitalWrite(pin, HIGH)
+
         self.api.delay(1000)
-        self.api.pinMode(pin, INPUT)
+
+        for pin in [self.counter0_pin, self.counter1_pin]:
+            self.api.pinMode(pin, INPUT)
 

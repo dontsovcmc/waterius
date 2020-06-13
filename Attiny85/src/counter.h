@@ -26,7 +26,7 @@ enum CounterState_e
     OPEN
 };
 
-struct Counter 
+struct CounterB 
 {
     int8_t _checks; // -1 <= _checks <= TRIES
     
@@ -36,7 +36,7 @@ struct Counter
     uint16_t adc;   // уровень замкнутого входа
     uint8_t  state; // состояние входа
 
-    explicit Counter(uint8_t pin, uint8_t apin = 0)  
+    explicit CounterB(uint8_t pin, uint8_t apin = 0)  
       : _checks(-1)
       , _pin(pin)
       , _apin(apin)
@@ -54,19 +54,6 @@ struct Counter
         return ret;
     }
 
-    inline bool digBit() 
-    {
-        return bit_is_set(PINB, _pin);
-    }
-
-    inline bool digRead() 
-    {
-        PORTB |= _BV(_pin);  // INPUT_PULLUP
-        bool ret = digBit();
-        PORTB &= ~_BV(_pin); // INPUT
-        return ret;
-    }
-    
     bool is_close(uint16_t a)
     {
         state = value2state(a);
@@ -78,7 +65,6 @@ struct Counter
         //Детектируем импульс когда он заканчивается!
         //По сути софтовая проверка дребега
 
-        //bool value = digRead();
         uint16_t a = aRead();
         if (is_close(a)) {
             _checks = TRIES;
@@ -109,5 +95,43 @@ struct Counter
         }
     }
 };
+
+
+struct ButtonB 
+{
+    uint8_t _pin;   // дискретный вход
+
+    explicit ButtonB(uint8_t pin, uint8_t apin = 0)  
+      : _pin(pin)
+    {
+       DDRB &= ~_BV(pin);      // INPUT
+    }
+
+    inline bool digBit() 
+    {
+        return bit_is_set(PINB, _pin);
+    }
+
+    // Проверка нажатия кнопки 
+    bool pressed() {
+
+        if (digBit() == LOW)
+        {	//защита от дребезга
+            delayMicroseconds(20000);  //нельзя delay, т.к. power_off
+            return digBit() == LOW;
+        }
+        return false;
+    }
+
+    // Замеряем сколько времени нажата кнопка в мс
+    unsigned long wait_release() {
+
+        unsigned long press_time = millis();
+        while(pressed())
+            ;  
+        return millis() - press_time;
+    }
+};
+
 
 #endif

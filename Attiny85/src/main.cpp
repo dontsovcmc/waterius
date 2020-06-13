@@ -57,10 +57,10 @@
                                
 
 // Счетчики импульсов
-static Counter counter(4, 2);  //Вход 1, Blynk: V0, горячая вода PB4 ADC2
-static Counter counter2(3, 3); //Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
+static CounterB counter(4, 2);  // Вход 1, Blynk: V0, горячая вода PB4 ADC2
+static CounterB counter2(3, 3); // Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
 
-static Counter button(2);	   // пин кнопки: (на линии SCL)
+static ButtonB button(2);	   // PB2 кнопка (на линии SCL)
                                // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
 							   // Короткое: ESP передает показания
 
@@ -170,26 +170,6 @@ void setup() {
 }
 
 
-// Проверка нажатия кнопки 
-bool button_pressed() {
-
-	if (button.digBit() == LOW)
-	{	//защита от дребезга
-		delayMicroseconds(20000);  //нельзя delay, т.к. power_off
-		return button.digBit() == LOW;
-	}
-	return false;
-}
-
-// Замеряем сколько времени нажата кнопка в мс
-unsigned long wait_button_release() {
-
-	unsigned long press_time = millis();
-	while(button_pressed())
-		;  
-	return millis() - press_time;
-}
-
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop() {
 	power_all_disable();  // Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
@@ -200,12 +180,12 @@ void loop() {
 
 	// Цикл опроса входов
 	// Выход по прошествию WAKE_EVERY_MIN минут или по нажатию кнопки
-	for (unsigned int i = 0; i < ONE_MINUTE && !button_pressed(); ++i)  {
+	for (unsigned int i = 0; i < ONE_MINUTE && !button.pressed(); ++i)  {
 		wdt_count = WAKE_EVERY_MIN; 
 		while ( wdt_count > 0 ) {
 			noInterrupts();
 
-			if (button_pressed()) { 
+			if (button.pressed()) { 
 				interrupts();  // Пользователь нажал кнопку
 				break;
 			} else 	{
@@ -231,7 +211,7 @@ void loop() {
 	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания 
 	unsigned long wake_up_limit;
-	if (wait_button_release() > LONG_PRESS_MSEC) {
+	if (button.wait_release() > LONG_PRESS_MSEC) {
 
 		LOG(F("SETUP pressed"));
 		slaveI2C.begin(SETUP_MODE);	
@@ -253,7 +233,7 @@ void loop() {
 		counting();
 		delayMicroseconds(65000);
 
-		if (wait_button_release() > LONG_PRESS_MSEC) {
+		if (button.wait_release() > LONG_PRESS_MSEC) {
 			break; // принудительно выключаем
 		}
 	}

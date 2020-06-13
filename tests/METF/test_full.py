@@ -57,7 +57,7 @@ class TestGetHeader(unittest.TestCase):
 
             log.info('ESP -- impulses --- ')
 
-            self.w.impuls(0)
+            self.w.impulse()
 
             self.w.wake_up()
 
@@ -102,7 +102,7 @@ class TestGetHeader(unittest.TestCase):
 
             impulses = 10
             for i in range(0, impulses):
-                self.w.impuls(0)
+                self.w.impulse()
 
             self.w.send_sleep()
 
@@ -127,6 +127,7 @@ class TestGetHeader(unittest.TestCase):
             log.info('ESP: impules1={}'.format(header2.impulses1))
 
             assert header2.impulses0 == header.impulses0 + impulses
+            assert header2.impulses1 == header.impulses1 + impulses
 
         finally:
             self.w.manual_turn_off()
