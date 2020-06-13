@@ -3,9 +3,9 @@
 // https://gist.github.com/brimston3/83cdeda8f7d2cf55717b83f0d32f9b5e
 // https://www.onlinegdb.com/online_c++_compiler
 // Dallas CRC x8+x5+x4+1
-uint8_t crc_8(unsigned char *b, uint8_t num_bytes) {
+uint8_t crc_8(unsigned char *b, size_t num_bytes) {
     uint8_t i, crc = 0;
-    for (uint8_t a = 0; a < num_bytes; a++) {
+    for (size_t a = 0; a < num_bytes; a++) {
         i = (*(b+a) ^ crc) & 0xff;
         crc = 0;
         if (i & 1)

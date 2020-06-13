@@ -1,3 +1,5 @@
+venv
+venv_*
 ESP8266/platformio.ini
 Attiny85/platformio.ini
 key
