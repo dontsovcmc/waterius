@@ -52,18 +52,20 @@
 	
 */
 
+#define BUTTON_PIN       2     
+#define LONG_PRESS_MSEC  3000  // время долгого нажатия кнопки, милисекунд  
+                               
+
 // Счетчики импульсов
-static Counter counter(4, A2);   //PB4  ADC2  Вход 1, Blynk: V0, горячая вода
+static Counter counter(4, 2);  //Вход 1, Blynk: V0, горячая вода PB4 ADC2
+static Counter counter2(3, 3); //Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
 
-static Counter counter2(3, A3);  //PB3  ADC3  Вход 2, Blynk: V1, холодная вода (или лог)
-
-static Button button(2);   // PB2 включение ESP8266
-						   // пин кнопки: (на линии SCL)
-                           // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
-						   // Короткое: ESP передает показания 
+static Counter button(2);	   // пин кнопки: (на линии SCL)
+                               // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
+							   // Короткое: ESP передает показания
 
 // Класс для подачи питания на ESP и нажатия кнопки
-static ESPPowerPin esp(1);
+static ESPPowerPin esp(1); 
 
 // Данные
 struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 
@@ -167,6 +169,27 @@ void setup() {
 	LOG(info.data.value1);
 }
 
+
+// Проверка нажатия кнопки 
+bool button_pressed() {
+
+	if (button.digBit() == LOW)
+	{	//защита от дребезга
+		delayMicroseconds(20000);  //нельзя delay, т.к. power_off
+		return button.digBit() == LOW;
+	}
+	return false;
+}
+
+// Замеряем сколько времени нажата кнопка в мс
+unsigned long wait_button_release() {
+
+	unsigned long press_time = millis();
+	while(button_pressed())
+		;  
+	return millis() - press_time;
+}
+
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop() {
 	power_all_disable();  // Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
@@ -177,12 +200,12 @@ void loop() {
 
 	// Цикл опроса входов
 	// Выход по прошествию WAKE_EVERY_MIN минут или по нажатию кнопки
-	for (unsigned int i = 0; i < ONE_MINUTE && !button.button_pressed(); ++i)  {
+	for (unsigned int i = 0; i < ONE_MINUTE && !button_pressed(); ++i)  {
 		wdt_count = WAKE_EVERY_MIN; 
 		while ( wdt_count > 0 ) {
 			noInterrupts();
 
-			if (button.button_pressed()) { 
+			if (button_pressed()) { 
 				interrupts();  // Пользователь нажал кнопку
 				break;
 			} else 	{
@@ -208,7 +231,7 @@ void loop() {
 	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания 
 	unsigned long wake_up_limit;
-	if (button.wait_button_release() > LONG_PRESS_MSEC) {
+	if (wait_button_release() > LONG_PRESS_MSEC) {
 
 		LOG(F("SETUP pressed"));
 		slaveI2C.begin(SETUP_MODE);	
@@ -230,7 +253,7 @@ void loop() {
 		counting();
 		delayMicroseconds(65000);
 
-		if (button.wait_button_release() > LONG_PRESS_MSEC) {
+		if (wait_button_release() > LONG_PRESS_MSEC) {
 			break; // принудительно выключаем
 		}
 	}
