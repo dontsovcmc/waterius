@@ -6,8 +6,8 @@
 
 /*
 в Platformio 
-ARDUINO_AVR_ATTINYX5 = attiny85 
-ARDUINO_AVR_ATTINYX4 = attiny84 
+#define ARDUINO_AVR_ATTINYX5   // attiny85 
+#define ARDUINO_AVR_ATTINYX4   // attiny84 
 */
 
 #ifdef ARDUINO_AVR_ATTINYX5
