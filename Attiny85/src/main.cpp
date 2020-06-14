@@ -51,29 +51,73 @@
 	   Даже при отсутствии связи ESP раньше в таймауты уйдет и пришлет "спим".
 	
 */
-
-#define BUTTON_PIN       2     
-#define LONG_PRESS_MSEC  3000  // время долгого нажатия кнопки, милисекунд  
-                               
+     
 
 // Счетчики импульсов
+
+#ifdef WATERIUS_2C
+// Waterius Classic: https://github.com/dontsovcmc/waterius
+//
+//                                +-\/-+
+//       RESET   (D  5/A0)  PB5  1|    |8  VCC
+//  *Counter1*   (D  3/A3)  PB3  2|    |7  PB2  (D  2/ A1)         SCL   *Button*
+//  *Counter0*   (D  4/A2)  PB4  3|    |6  PB1  (D  1)      MISO         *Power ESP*
+//                          GND  4|    |5  PB0  (D  0)      MOSI   SDA   
+//                                +----+
+//
+// https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x5.md
+
 static CounterB counter(4, 2);  // Вход 1, Blynk: V0, горячая вода PB4 ADC2
 static CounterB counter2(3, 3); // Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
 
 static ButtonB button(2);	   // PB2 кнопка (на линии SCL)
                                // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
 							   // Короткое: ESP передает показания
-
-// Класс для подачи питания на ESP и нажатия кнопки
-static ESPPowerPin esp(1); 
+static ESPPowerPin esp(1);  // Питание на ESP 
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 
+struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_2C, 
 					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
 				       {0, 0},
 					   0, 0,
 					   0, 0
 					 };
+#endif
+
+#ifdef WATERIUS_4C2W
+
+#define WDTCR WDTCSR
+// Waterius 4C2W: https://github.com/badenbaden/Waterius-Attiny84-ESP12F
+//
+//                                 +-\/-+
+//                           VCC  1|    |14  GND
+//  *Power ESP*   (D  0)     PB0  2|    |13  PA0  (D  10/A0)        *Counter0* 
+//  *Button*      (D  1)     PB1  3|    |12  PA1  (D  9/ A1)        *Counter1* 
+//       RESET    (D 11)     PB3  4|    |11  PA2  (D  8/ A2)        *Counter2* 
+//  *Alarm*       (D  2)     PB2  5|    |10  PA3  (D  7/ A3)        *Counter3* 
+//  *WaterLeak2*  (D  3/A7)  PA7  6|    |9   PA4  (D  6/ A4)   SCK  SCL
+//  SDA  MOSI     (D  4/A6)  PA6  7|    |8   PA5  (D  5/ A5)   MISO *WaterLeak2*
+//                                 +----+
+//
+// https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x4.md
+
+
+static CounterA counter(0, 0);
+static CounterA counter2(1, 1);
+static ButtonB button(1);
+static ESPPowerPin esp(0);      // Питание на ESP
+
+// Данные
+struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_4C2W, 
+					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
+				       {0, 0},
+					   0, 0,
+					   0, 0
+					 }; 
+#endif
+
+
+
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
 //Кольцовой нужен для того, чтобы превысить лимит записи памяти в 100 000 раз

@@ -99,12 +99,12 @@ class WateriusAttiny_13:
         self.api.digitalWrite(self.button_pin, HIGH)
         self.api.pinMode(self.button_pin, INPUT)
 
-    def wake_up(self):
+    def wake_up(self, wait_wakeup_sec=2.0):
 
         if self.api.digitalRead(self.power_pin) == LOW:
             self.push_button(500)
 
-        assert self.api.wait_digital(self.power_pin, HIGH, 2.0), 'ESP: wake up error'
+        assert self.api.wait_digital(self.power_pin, HIGH, wait_wakeup_sec), 'ESP: wake up error'
 
     def wait_off(self):
         log.info('ESP: wait power pin LOW')

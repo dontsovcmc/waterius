@@ -96,6 +96,79 @@ struct CounterB
     }
 };
 
+#ifdef WATERIUS_4C2W
+
+struct CounterA
+{
+    int8_t _checks; // -1 <= _checks <= TRIES
+    
+    uint8_t _pin;   // дискретный вход
+    uint8_t _apin;  // номер аналогового входа
+
+    uint16_t adc;   // уровень замкнутого входа
+    uint8_t  state; // состояние входа
+
+    explicit CounterA(uint8_t pin, uint8_t apin = 0)  
+      : _checks(-1)
+      , _pin(pin)
+      , _apin(apin)
+      , adc(0)
+      , state(CounterState_e::CLOSE)
+    {
+       DDRA &= ~_BV(pin);      // INPUT
+    }
+
+    inline uint16_t aRead() 
+    {
+        PORTA |= _BV(_pin);      // INPUT_PULLUP
+        uint16_t ret = analogRead(_apin); // в TinyCore там работа с битами, оптимально
+        PORTA &= ~_BV(_pin);     // INPUT
+        return ret;
+    }
+
+    bool is_close(uint16_t a)  //TODO external
+    {
+        state = value2state(a);
+        return state == CounterState_e::CLOSE || state == CounterState_e::NAMUR_CLOSE;
+    }
+
+    bool is_impuls()
+    { 
+        //Детектируем импульс когда он заканчивается!
+        //По сути софтовая проверка дребега
+
+        uint16_t a = aRead();
+        if (is_close(a)) {
+            _checks = TRIES;
+            adc = a;
+        }
+        else {
+            if (_checks >= 0) {
+                _checks--;
+            }
+            if (_checks == 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Возвращаем текущее состояние входа
+    inline enum CounterState_e value2state(uint16_t value)   //TODO external
+    {
+        if (value < LIMIT_CLOSED) {
+            return CounterState_e::CLOSE;
+        } else if (value < LIMIT_NAMUR_CLOSED) {
+            return CounterState_e::NAMUR_CLOSE;
+        } else if (value < LIMIT_NAMUR_OPEN) {
+            return CounterState_e::NAMUR_OPEN;
+        } else {
+            return CounterState_e::OPEN;
+        }
+    }
+};
+
+#endif  //WATERIUS_4C2W т.к. PORTA DDRA нет в attiny85
 
 struct ButtonB 
 {
@@ -109,7 +182,15 @@ struct ButtonB
 
     inline bool digBit() 
     {
+#ifdef WATERIUS_4C2W
+        PORTB |= _BV(_pin);      // INPUT_PULLUP
+#endif
+
         return bit_is_set(PINB, _pin);
+        
+#ifdef WATERIUS_4C2W
+        PORTB &= ~_BV(_pin);     // INPUT
+#endif
     }
 
     // Проверка нажатия кнопки 

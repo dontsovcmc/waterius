@@ -7,6 +7,8 @@ from waterius import WateriusAttiny_13
 
 ESP_HOST = '192.168.3.46'
 
+MANUAL_PRESS_BUTTON = 10.0
+
 
 class TestGetHeader(unittest.TestCase):
 
@@ -20,7 +22,7 @@ class TestGetHeader(unittest.TestCase):
     def test_header(self):
         try:
             # имитируем нажатие кнопки, ждем HIGH
-            self.w.wake_up()
+            self.w.wake_up(MANUAL_PRESS_BUTTON)
 
             assert self.w.get_mode() == self.w.TRANSMIT_MODE
 

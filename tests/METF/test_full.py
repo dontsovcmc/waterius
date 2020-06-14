@@ -100,7 +100,7 @@ class TestGetHeader(unittest.TestCase):
 
             log.info('ESP -- impulses --- ')
 
-            impulses = 10
+            impulses = 5
             for i in range(0, impulses):
                 self.w.impulse()
 

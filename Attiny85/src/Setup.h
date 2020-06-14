@@ -3,6 +3,24 @@
 
 #include <Arduino.h>
 
+
+/*
+в Platformio 
+ARDUINO_AVR_ATTINYX5 = attiny85 
+ARDUINO_AVR_ATTINYX4 = attiny84 
+*/
+
+#ifdef ARDUINO_AVR_ATTINYX5
+#define WATERIUS_2C 0    // attiny85 - 2 счетчика импульсов
+#else
+#ifdef ARDUINO_AVR_ATTINYX4
+#define WATERIUS_4C2W 1  // attiny84 - 4 счетчика импульсов
+#else
+#error "Please, #define ARDUINO_AVR_ATTINYX5 for Attiny85 or ARDUINO_AVR_ATTINYX4 for Attiny84"
+#endif
+#endif 
+
+
 /* 
 	Включение логирования
 	3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
@@ -10,7 +28,6 @@
 
     #define LOG_ON
 */
-
 
 #define LOG_BEGIN(x)
 #define LOG(x)
@@ -94,9 +111,9 @@ struct Header {
     uint8_t       resets;
 
     /*
-    Резерв. Для 16битности.
+    Модификация
     */
-    uint8_t       reserved;
+    uint8_t       model;
 
     CounterState  states;
     Data          data;
