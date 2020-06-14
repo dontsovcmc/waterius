@@ -174,7 +174,7 @@ struct ButtonB
 {
     uint8_t _pin;   // дискретный вход
 
-    explicit ButtonB(uint8_t pin, uint8_t apin = 0)  
+    explicit ButtonB(uint8_t pin)  
       : _pin(pin)
     {
        DDRB &= ~_BV(pin);      // INPUT
@@ -182,15 +182,9 @@ struct ButtonB
 
     inline bool digBit() 
     {
-#ifdef WATERIUS_4C2W
-        PORTB |= _BV(_pin);      // INPUT_PULLUP
-#endif
-
+        PORTB |= _BV(_pin);      // INPUT_PULLUP  //TODO WATERIUS_4C2W может в конструктор и не менять?
         return bit_is_set(PINB, _pin);
-        
-#ifdef WATERIUS_4C2W
         PORTB &= ~_BV(_pin);     // INPUT
-#endif
     }
 
     // Проверка нажатия кнопки 
