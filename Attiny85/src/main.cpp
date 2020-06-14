@@ -104,6 +104,12 @@ struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_2C,
 
 static CounterA counter(0, 0);
 static CounterA counter2(1, 1);
+static CounterA counter3(2, 2);
+static CounterA counter4(3, 3);
+
+static CounterA counter5(5, 5); //only for setup input pin
+static CounterA counter7(7, 7); //only for setup input pin
+
 static ButtonB button(1);
 static ESPPowerPin esp(0);      // Питание на ESP
 

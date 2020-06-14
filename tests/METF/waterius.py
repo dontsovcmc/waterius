@@ -7,6 +7,10 @@ from metf_python_client.boards.wemos import D0, D1, D2, D3, D4, D5
 from metf_python_client.utils import DataStruct
 
 
+WATERIUS_CLASSIC = 0
+WATERIUS_4C2W = 1
+
+
 def dallas_crc8(buf, size):
     # https://crccalc.com/
     # https://gist.github.com/brimston3/83cdeda8f7d2cf55717b83f0d32f9b5e
@@ -144,7 +148,7 @@ class WateriusAttiny_13:
             ('service',   'B'),
             ('voltage',   'L'),
             ('resets',    'B'),
-            ('reserved',  'B'),
+            ('model',     'B'),
             ('state0',    'B'),
             ('state1',    'B'),
             ('impulses0', 'L'),
