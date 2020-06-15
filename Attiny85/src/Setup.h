@@ -33,13 +33,27 @@
 #define LOG(x)
 
 #ifdef LOG_ON
-#include "TinyDebugSerial.h"
+
+#undef LOG_BEGIN
+#undef LOG
+
+#ifdef WATERIUS_2C
+    #include "TinyDebugSerial.h"
     class TinyDebugSerial;
     extern TinyDebugSerial mySerial;
-    #undef LOG_BEGIN
+
     #define LOG_BEGIN(x)  mySerial.begin(x)
-    #undef LOG
     #define LOG(x) mySerial.print(millis()); mySerial.print(F(" : ")); mySerial.println(x);
+
+#endif 
+#ifdef WATERIUS_4C2W
+    class TinySoftwareSerial;
+    extern TinySoftwareSerial Serial;
+
+    #define LOG_BEGIN(x)  Serial.begin(x); ACSR &=~(1<<ACIE); ACSR |=~(1<<ACD);  //only TX
+    #define LOG(x) Serial.print(millis()); Serial.print(F(" : ")); Serial.println(x);
+#endif 
+
 #endif
 
 //#define TEST_WATERIUS   // Тестирование счетчика при помощи Arduino

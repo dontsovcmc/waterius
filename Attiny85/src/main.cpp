@@ -13,8 +13,11 @@
 
 // Для логирования раскомментируйте LOG_ON в Setup.h
 #ifdef LOG_ON
-	TinyDebugSerial mySerial;
+	#ifdef WATERIUS_2C
+		TinyDebugSerial mySerial;
+	#endif
 #endif
+
 
 #define FIRMWARE_VER 13    // Версия прошивки. Передается в ESP и на сервер в данных.
   
@@ -28,7 +31,7 @@
 	1. Добавил команду T для переключения режима пробуждения
 	2. Добавил отправку аналогового уровня замыкания входа в ЕСП
 	3. Исправил инициализацию входов. Кажется после перезагрузки +1 импульс
-	4. Добавил crc при отправки данных
+	4. Добавил crc при отправке данных
 
 11 - 2019.10.20 - dontsovcmc
     1. Обновил алгоритм подсчёта импульсов.
@@ -214,6 +217,8 @@ void setup() {
 	LOG(info.service);
 	LOG(F("RESET"));
 	LOG(info.resets);
+	LOG(F("EEPROM used:"));
+	LOG(storage.size() + 1);
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);

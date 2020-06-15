@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from metf_python_client import log, METFClient, LOW, HIGH, INPUT, OUTPUT, INPUT_PULLUP, str2hex, hex2str
+from metf_python_client import log, LOW, HIGH, INPUT, OUTPUT, INPUT_PULLUP
 
 #from ESPTestFramework.boards.nodemcu import D0, D1, D2, D3, D4, D5
 from metf_python_client.boards.wemos import D0, D1, D2, D3, D4, D5
@@ -69,7 +69,7 @@ def waterius12_crc(buf, size):
     return crc
 
 
-class WateriusAttiny_13:
+class Waterius(object):
 
     ATTINY_VER = 13
 
@@ -177,20 +177,200 @@ class WateriusAttiny_13:
 
         raise Exception('некорректный CRC')
 
-    def impulse(self):
+    def impulse(self, pins=[]):
 
-        for pin in [self.counter0_pin, self.counter1_pin]:
+        for pin in pins:
             self.api.pinMode(pin, OUTPUT)
             self.api.digitalWrite(pin, LOW)
             log.info('ESP: impulse on  pin {}'.format(pin))
 
         self.api.delay(500)
 
-        for pin in [self.counter0_pin, self.counter1_pin]:
+        for pin in pins:
             self.api.digitalWrite(pin, HIGH)
 
         self.api.delay(1000)
 
-        for pin in [self.counter0_pin, self.counter1_pin]:
+        for pin in pins:
             self.api.pinMode(pin, INPUT)
 
+
+class WateriusClassic(Waterius):
+
+    model = WATERIUS_CLASSIC
+
+    def __init__(self, api):
+        Waterius.__init__(self, api)
+
+        self.counter0_pin = D5
+        self.counter1_pin = D0
+        self.button_pin = D1
+        self.power_pin = D2
+        self.sda = D3
+        self.sdl = D4
+
+    def init(self):
+        self.api.pinMode(self.sda, INPUT_PULLUP)
+        self.api.pinMode(self.sdl, INPUT_PULLUP)
+        self.api.pinMode(self.power_pin, INPUT)
+        self.api.pinMode(self.counter0_pin, INPUT)
+        self.api.pinMode(self.counter1_pin, INPUT)
+
+    def push_button(self, msec):
+        log.info('ESP: PUSH BUTTON for {} msec'.format(msec))
+        self.api.pinMode(self.button_pin, OUTPUT)
+        self.api.digitalWrite(self.button_pin, LOW)
+        self.api.delay(msec)
+        self.api.digitalWrite(self.button_pin, HIGH)
+        self.api.pinMode(self.button_pin, INPUT)
+
+    def wake_up(self, wait_wakeup_sec=2.0):
+
+        if self.api.digitalRead(self.power_pin) == LOW:
+            self.push_button(500)
+
+        assert self.api.wait_digital(self.power_pin, HIGH, wait_wakeup_sec), 'ESP: wake up error'
+
+    def wait_off(self):
+        log.info('ESP: wait power pin LOW')
+        assert self.api.wait_digital(self.power_pin, LOW, 2.0)
+        self.api.delay(20)
+
+    def manual_turn_off(self):
+        self.api.pinMode(self.power_pin, INPUT)
+        if self.api.digitalRead(self.power_pin) == HIGH:
+            log.info('--------------')
+            log.info('ESP: manual turn off')
+            self.push_button(4000)
+        else:
+            log.info('ESP: Already off')
+
+    def get_header(self):
+        fields = [  # name, type
+            ('version',   'B'),  # unsigned char
+            ('service',   'B'),
+            ('voltage',   'L'),
+            ('resets',    'B'),
+            ('model',     'B'),
+            ('state0',    'B'),
+            ('state1',    'B'),
+            ('impulses0', 'L'),
+            ('impulses1', 'L'),
+            ('adc0',      'H'),  # unsigned short
+            ('adc1',      'H'),
+            ('crc',       'B'),
+            ('reserved1', 'B')
+        ]
+
+        header_len = DataStruct.calcsize(fields)
+        crc_shift = DataStruct.calcsize(fields, 'crc')
+
+        log.info('ESP: get header')
+
+        ret = self.api.i2c_ask(self.ADDR, 'B', header_len)
+
+        header = DataStruct(fields, ret)
+
+        if header.version < 13:
+            if header.crc == waterius12_crc(ret, crc_shift):
+                return header
+        else:
+            if header.crc == dallas_crc8(ret, crc_shift):
+                return header
+
+        raise Exception('некорректный CRC')
+
+    def impulse(self, pins=[]):
+        super(WateriusClassic, self).impulse([self.counter0_pin, self.counter1_pin])
+
+
+class Waterius4C2W(Waterius):
+
+    model = WATERIUS_4C2W
+
+    def __init__(self, api):
+        Waterius.__init__(self, api)
+
+        self.counter0_pin = D5
+        self.counter1_pin = D0
+        self.button_pin = D1
+        self.power_pin = D2
+        self.sda = D3
+        self.sdl = D4
+
+    def init(self):
+        self.api.pinMode(self.sda, INPUT_PULLUP)
+        self.api.pinMode(self.sdl, INPUT_PULLUP)
+        self.api.pinMode(self.power_pin, INPUT)
+        self.api.pinMode(self.counter0_pin, INPUT)
+        self.api.pinMode(self.counter1_pin, INPUT)
+
+    def push_button(self, msec):
+        log.info('ESP: PUSH BUTTON for {} msec'.format(msec))
+        self.api.pinMode(self.button_pin, OUTPUT)
+        self.api.digitalWrite(self.button_pin, LOW)
+        self.api.delay(msec)
+        self.api.digitalWrite(self.button_pin, HIGH)
+        self.api.pinMode(self.button_pin, INPUT)
+
+    def wake_up(self, wait_wakeup_sec=2.0):
+
+        if self.api.digitalRead(self.power_pin) == LOW:
+            self.push_button(500)
+
+        assert self.api.wait_digital(self.power_pin, HIGH, wait_wakeup_sec), 'ESP: wake up error'
+
+    def wait_off(self):
+        log.info('ESP: wait power pin LOW')
+        assert self.api.wait_digital(self.power_pin, LOW, 2.0)
+        self.api.delay(20)
+
+    def manual_turn_off(self):
+        self.api.pinMode(self.power_pin, INPUT)
+        if self.api.digitalRead(self.power_pin) == HIGH:
+            log.info('--------------')
+            log.info('ESP: manual turn off')
+            self.push_button(4000)
+        else:
+            log.info('ESP: Already off')
+
+    def get_header(self):
+        fields = [  # name, type
+            ('version',   'B'),  # unsigned char
+            ('service',   'B'),
+            ('voltage',   'L'),
+            ('resets',    'B'),
+            ('model',     'B'),
+            ('state0',    'B'),
+            ('state1',    'B'),
+            ('impulses0', 'L'),
+            ('impulses1', 'L'),
+            ('adc0',      'H'),  # unsigned short
+            ('adc1',      'H'),
+            ('crc',       'B'),
+            ('reserved1', 'B')
+        ]
+
+        header_len = DataStruct.calcsize(fields)
+        crc_shift = DataStruct.calcsize(fields, 'crc')
+
+        log.info('ESP: get header')
+
+        ret = self.api.i2c_ask(self.ADDR, 'B', header_len)
+
+        header = DataStruct(fields, ret)
+
+        for f in fields:
+            log.info('{}: {}'.format(f[0], getattr(header, f[0])))
+
+        if header.version < 13:
+            if header.crc == waterius12_crc(ret, crc_shift):
+                return header
+        else:
+            if header.crc == dallas_crc8(ret, crc_shift):
+                return header
+
+        raise Exception('некорректный CRC')
+
+    def impulse(self, pins=[]):
+        super(Waterius4C2W, self).impulse([self.counter0_pin, self.counter1_pin])

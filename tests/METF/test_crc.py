@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 import unittest
-from metf_python_client import log, METFClient, LOW, HIGH, INPUT, OUTPUT, INPUT_PULLUP, str2hex, hex2str
+from metf_python_client import str2hex
 
-from waterius import dallas_crc8, WateriusAttiny_13
+from waterius import dallas_crc8
 
 
 ESP_HOST = '192.168.3.46'
 
 
-class TestCrc8(unittest.TestCase):
+class TestDallasCRC8(unittest.TestCase):
 
     def test_crc(self):
         self.assertEqual(str2hex('EB'), chr(dallas_crc8(str2hex('3132'), 2)))
