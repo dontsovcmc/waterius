@@ -70,8 +70,8 @@
 //
 // https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x5.md
 
-static CounterB counter(4, 2);  // Вход 1, Blynk: V0, горячая вода PB4 ADC2
-static CounterB counter2(3, 3); // Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
+static CounterB counter0(4, 2);  // Вход 1, Blynk: V0, горячая вода PB4 ADC2
+static CounterB counter1(3, 3); // Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
 
 static ButtonB button(2);	   // PB2 кнопка (на линии SCL)
                                // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
@@ -105,10 +105,10 @@ struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_2C,
 // https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x4.md
 
 
-static CounterA counter(0, 0);
-static CounterA counter2(1, 1);
-static CounterA counter3(2, 2);
-static CounterA counter4(3, 3);
+static CounterA counter0(0, 0);
+static CounterA counter1(1, 1);
+static CounterA counter2(2, 2);
+static CounterA counter3(3, 3);
 
 static CounterA counter5(5, 5); //only for setup input pin
 static CounterA counter7(7, 7); //only for setup input pin
@@ -172,17 +172,32 @@ inline void counting() {
     power_adc_enable(); //т.к. мы обесточили всё а нам нужен компаратор
     adc_enable();       //после подачи питания на adc
 
-	if (counter.is_impuls()) {
-		info.data.value0++;	
-		info.states.state0 = counter.state;  
-		info.adc0 = counter.adc;
+	if (counter0.is_impuls()) {
+		info.data.value0++;	  //нужен т.к. при пробуждении запрашиваем данные
+		info.states.state0 = counter0.state;
+		info.adc.adc0 = counter0.adc;
 		storage.add(info.data);
 	}
 #ifndef LOG_ON
-	if (counter2.is_impuls()) {
+	if (counter1.is_impuls()) {
 		info.data.value1++;
-		info.states.state1 = counter2.state;
-		info.adc1 = counter2.adc;
+		info.states.state1 = counter1.state;
+		info.adc.adc1 = counter1.adc;
+		storage.add(info.data);
+	}
+#endif
+
+#ifdef WATERIUS_4C2W
+	if (counter2.is_impuls()) {
+		info.data.value2++;
+		info.states.state2 = counter2.state;
+		info.adc.adc2 = counter2.adc;
+		storage.add(info.data);
+	}
+	if (counter3.is_impuls()) {
+		info.data.value3++;
+		info.states.state3 = counter3.state;
+		info.adc.adc3 = counter3.adc;
 		storage.add(info.data);
 	}
 #endif
@@ -222,6 +237,10 @@ void setup() {
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
+#ifdef WATERIUS_4C2W
+	LOG(info.data.value2);
+	LOG(info.data.value3);
+#endif
 }
 
 
@@ -261,7 +280,10 @@ void loop() {
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
-
+#ifdef WATERIUS_4C2W
+	LOG(info.data.value2);
+	LOG(info.data.value3);
+#endif
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит 
 	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания 

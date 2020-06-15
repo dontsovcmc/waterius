@@ -130,7 +130,7 @@ class Waterius(object):
     def start_i2c(self):
         self.api.i2c_begin(self.sda, self.sdl)
         self.api.i2c_setClock(100000)
-        self.api.i2c_setClockStretchLimit(1500)
+        self.api.i2c_setClockStretchLimit(2000)
 
     def stop_i2c(self):
         self.api.i2c_flush()
@@ -349,10 +349,16 @@ class Waterius4C2W(Waterius):
             ('model',     'B'),
             ('state0',    'B'),
             ('state1',    'B'),
+            ('state2',    'B'),
+            ('state3',    'B'),
             ('impulses0', 'L'),
             ('impulses1', 'L'),
+            ('impulses2', 'L'),
+            ('impulses3', 'L'),
             ('adc0',      'H'),  # unsigned short
             ('adc1',      'H'),
+            ('adc2',      'H'),
+            ('adc3',      'H'),
             ('crc',       'B'),
             ('reserved1', 'B')
         ]
@@ -386,8 +392,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Waterius test framework by METF', add_help=False)
     parser.add_argument('--help', action='store_true', help='Print help')
     parser.add_argument('-h', '--host', default='192.168.3.46', help='ESP METF host')
-    parser.add_argument('--board', default='2w', help='Waterius 2w or 4w')
+    parser.add_argument('--board', default='2c', help='Waterius 2c or 4c')
     parser.add_argument('--i2c', action='store_true', help='Setup i2c in ESP')
+    parser.add_argument('--mode', action='store_true', help='Send mode command')
     parser.add_argument('--sleep', action='store_true', help='Send sleep command')
     parser.add_argument('--header', action='store_true', help='Send get header command')
     parser.add_argument('--wakeup', action='store_true', help='Imitation of button press')
@@ -401,9 +408,9 @@ if __name__ == '__main__':
 
     api = METFClient(args.host)
 
-    if args.board == '2w':
+    if args.board == '2c':
         w = WateriusClassic(api)
-    elif args.board == '4w':
+    elif args.board == '4c':
         w = Waterius4C2W(api)
 
     if args.i2c:
@@ -411,6 +418,9 @@ if __name__ == '__main__':
 
     if args.wakeup:
         w.wake_up()
+
+    if args.mode:
+        w.get_mode()
 
     if args.header:
         w.get_header()

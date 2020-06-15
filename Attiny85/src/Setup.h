@@ -84,6 +84,7 @@
 #define LONG_PRESS_MSEC  3000   
        
 
+#ifdef WATERIUS_2C
 struct Data {
     uint32_t value0;
     uint32_t value1;
@@ -91,8 +92,37 @@ struct Data {
 
 struct CounterState { // не добавляем в Data, т.к. та в буфере кольцевом
     uint8_t  state0;  // состояние входа
-    uint8_t  state1;  
+    uint8_t  state1; 
 };
+
+struct ADCLevel {
+    uint16_t      adc0;
+    uint16_t      adc1; 
+};
+#endif
+
+#ifdef WATERIUS_4C2W
+struct Data {
+    uint32_t value0;
+    uint32_t value1;
+    uint32_t value2;
+    uint32_t value3;
+};
+
+struct CounterState { // не добавляем в Data, т.к. та в буфере кольцевом
+    uint8_t state0;  // состояние входа
+    uint8_t state1; 
+    uint8_t state2;
+    uint8_t state3;
+};
+
+struct ADCLevel {
+    uint16_t adc0;
+    uint16_t adc1; 
+    uint16_t adc2; 
+    uint16_t adc3; 
+};
+#endif
 
 struct Header {
 
@@ -126,20 +156,29 @@ struct Header {
 
     /*
     Модификация
+    0 - Классический. 2 счетчика
+    1 - 4C2W. 4 счетчика
     */
     uint8_t       model;
 
-    CounterState  states;
+    CounterState  states;  //TODO убрать
     Data          data;
-    uint16_t      adc0;    // уровень входа
-    uint16_t      adc1; 
+    ADCLevel      adc;
+
     // HEADER_DATA_SIZE
 
     uint8_t       crc;
     uint8_t       reserved2;
 };  //22 байт
 
-#define HEADER_DATA_SIZE 22
-#define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
+#ifdef WATERIUS_2C
+    #define HEADER_DATA_SIZE 22
+#else
+#ifdef WATERIUS_4C2W
+    #define HEADER_DATA_SIZE 36
+#endif
+#endif
+
+ #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
 
 #endif
