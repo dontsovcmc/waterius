@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-from metf_python_client import log, LOW, HIGH, INPUT, OUTPUT, INPUT_PULLUP
+from __future__ import unicode_literals
+import os
+import sys
+import argparse
 
+from metf_python_client import METFClient, log, LOW, HIGH, INPUT, OUTPUT, INPUT_PULLUP
 #from ESPTestFramework.boards.nodemcu import D0, D1, D2, D3, D4, D5
 from metf_python_client.boards.wemos import D0, D1, D2, D3, D4, D5
-
 from metf_python_client.utils import DataStruct
 
 
@@ -271,6 +274,9 @@ class WateriusClassic(Waterius):
 
         header = DataStruct(fields, ret)
 
+        for f in fields:
+            log.info('{}: {}'.format(f[0], getattr(header, f[0])))
+
         if header.version < 13:
             if header.crc == waterius12_crc(ret, crc_shift):
                 return header
@@ -374,3 +380,45 @@ class Waterius4C2W(Waterius):
 
     def impulse(self, pins=[]):
         super(Waterius4C2W, self).impulse([self.counter0_pin, self.counter1_pin])
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Waterius test framework by METF', add_help=False)
+    parser.add_argument('--help', action='store_true', help='Print help')
+    parser.add_argument('-h', '--host', default='192.168.3.46', help='ESP METF host')
+    parser.add_argument('--board', default='2w', help='Waterius 2w or 4w')
+    parser.add_argument('--i2c', action='store_true', help='Setup i2c in ESP')
+    parser.add_argument('--sleep', action='store_true', help='Send sleep command')
+    parser.add_argument('--header', action='store_true', help='Send get header command')
+    parser.add_argument('--wakeup', action='store_true', help='Imitation of button press')
+    parser.add_argument('--impulse', default=0, help='Send impulse')
+
+    args = parser.parse_args()
+
+    if args.help:
+        print parser.format_help()
+        sys.exit(1)
+
+    api = METFClient(args.host)
+
+    if args.board == '2w':
+        w = WateriusClassic(api)
+    elif args.board == '4w':
+        w = Waterius4C2W(api)
+
+    if args.i2c:
+        w.start_i2c()
+
+    if args.wakeup:
+        w.wake_up()
+
+    if args.header:
+        w.get_header()
+
+    if args.sleep:
+        w.send_sleep()
+        w.wait_off()
+
+    if args.impulse > 0:
+        for i in range(0, args.impulse):
+            w.impulse()
