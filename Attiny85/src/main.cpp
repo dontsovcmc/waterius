@@ -12,10 +12,8 @@
 #include <avr/power.h>  
 
 // Для логирования раскомментируйте LOG_ON в Setup.h
-#ifdef LOG_ON
-	#ifdef WATERIUS_2C
-		TinyDebugSerial mySerial;
-	#endif
+#if defined(LOG_ON) && defined(WATERIUS_2C) 
+	TinyDebugSerial mySerial;
 #endif
 
 
@@ -24,8 +22,10 @@
 /*
 Версии прошивок 
 
-13 - 2020.06.09 - dontsovcmc
+13 - 2020.06.17 - dontsovcmc
 	1. изменил формулу crc
+	2. поддержка версии на 4 счетчика (attiny84)
+	   -D BUILD_WATERIUS_4C2W
 
 12 - 2020.05.15 - dontsovcmc
 	1. Добавил команду T для переключения режима пробуждения
@@ -82,7 +82,7 @@ static ESPPowerPin esp(1);  // Питание на ESP
 struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_2C, 
 					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
 				       {0, 0},
-					   0, 0,
+					   {0, 0},
 					   0, 0
 					 };
 #endif
@@ -118,9 +118,9 @@ static ESPPowerPin esp(0);      // Питание на ESP
 
 // Данные
 struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_4C2W, 
-					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
-				       {0, 0},
-					   0, 0,
+					   {CounterState_e::CLOSE, CounterState_e::CLOSE, CounterState_e::CLOSE, CounterState_e::CLOSE},
+				       {0, 0, 0, 0},
+					   {0, 0, 0, 0},
 					   0, 0
 					 }; 
 #endif

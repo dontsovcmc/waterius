@@ -5,19 +5,15 @@
 
 
 /*
-в Platformio 
-#define ARDUINO_AVR_ATTINYX5   // attiny85 
-#define ARDUINO_AVR_ATTINYX4   // attiny84 
+#define BUILD_WATERIUS_4C2W 1
 */
 
-#ifdef ARDUINO_AVR_ATTINYX5
-#define WATERIUS_2C 0    // attiny85 - 2 счетчика импульсов
-#else
-#ifdef ARDUINO_AVR_ATTINYX4
+#ifdef BUILD_WATERIUS_4C2W
 #define WATERIUS_4C2W 1  // attiny84 - 4 счетчика импульсов
+#pragma message "model WATERIUS_4C2W"
 #else
-#error "Please, #define ARDUINO_AVR_ATTINYX5 for Attiny85 or ARDUINO_AVR_ATTINYX4 for Attiny84"
-#endif
+#define WATERIUS_2C 0    // attiny85 - 2 счетчика импульсов
+#pragma message "model WATERIUS_2C"
 #endif 
 
 
