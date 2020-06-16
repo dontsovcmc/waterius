@@ -7,8 +7,13 @@
 Номера пинов линии i2c.
 В зависимости от модификации ESP8266 может быть разным
 */
-#define SDA_PIN 0
-#define SCL_PIN 2
+#ifdef BUILD_WATERIUS_4C2W
+    #define SDA_PIN 4
+    #define SCL_PIN 5
+#else
+    #define SDA_PIN 0
+    #define SCL_PIN 2
+#endif
 
 //attiny85
 #define SETUP_MODE 1

@@ -3,11 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.9.13"
+#define FIRMWARE_VERSION "0.10.0"
   
 
 /*
 Версии прошивки для ESP
+
+0.10.0 - 2020.06.16 - Поддержка версии 4C2W (на attiny85)
 
 0.9.13 - 2020.05.16 - проверка crc в данных от attiny
                       добавлен статический ip, gateway, mask
