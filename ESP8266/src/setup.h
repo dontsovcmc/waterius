@@ -74,7 +74,7 @@
 #define VER_6 6
 #define CURRENT_VERSION VER_6
 
-#define EMAIL_LEN 32
+#define EMAIL_LEN 40
 
 #define WATERIUS_KEY_LEN  34
 #define WATERIUS_HOST_LEN 64
@@ -94,8 +94,13 @@
 struct CalculatedData {
     float    channel0;
     float    channel1;
+    float    channel2;
+    float    channel3;
+
     uint32_t delta0;
     uint32_t delta1;
+    uint32_t delta2;
+    uint32_t delta3;
 
     uint32_t voltage_diff;
     bool     low_voltage;
@@ -148,6 +153,8 @@ struct Settings
     */
     float    channel0_start;
     float    channel1_start;
+    float    channel2_start;
+    float    channel3_start;
 
     /*
     Кол-во литров на 1 импульс
@@ -160,6 +167,8 @@ struct Settings
     */
     uint32_t impulses0_start;
     uint32_t impulses1_start;
+    uint32_t impulses2_start;
+    uint32_t impulses3_start;
 
     /*
     Не понятно, как получить от Blynk прирост показаний, 
@@ -167,6 +176,8 @@ struct Settings
     */
     uint32_t impulses0_previous;
     uint32_t impulses1_previous;
+    uint32_t impulses2_previous;
+    uint32_t impulses3_previous;
 
     /*
     Время последнего пробуждения
@@ -189,7 +200,7 @@ struct Settings
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t  reserved2[236];
+    uint8_t  reserved2[196];
 
     /*
     Контрольная сумма, чтобы гарантировать корректность чтения настроек

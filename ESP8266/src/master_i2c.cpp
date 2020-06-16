@@ -132,14 +132,23 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
 
     if (data.version >= 5) {
         good &= getByte(data.resets, crc);
-        good &= getByte(data.reserved, crc);
+        good &= getByte(data.model, crc);
     }
     if (data.version >= 8) {
         good &= getByte(data.state0, crc);
         good &= getByte(data.state1, crc);
     }
+    if (data.model == WATERIUS_4C2W) {
+        good &= getByte(data.state2, crc);
+        good &= getByte(data.state3, crc);
+    }
+
     good &= getUint(data.impulses0, crc);
     good &= getUint(data.impulses1, crc);
+    if (data.model == WATERIUS_4C2W) {
+        good &= getUint(data.impulses2, crc);
+        good &= getUint(data.impulses3, crc);
+    }
 
     if (data.version < 12) {
         data.diagnostic = good ? WATERIUS_OK : WATERIUS_NO_LINK;
@@ -147,6 +156,10 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
     else {
         good &= getUint16(data.adc0, crc);
         good &= getUint16(data.adc1, crc);
+        if (data.model == WATERIUS_4C2W) {
+            good &= getUint16(data.adc2, crc);
+            good &= getUint16(data.adc3, crc);
+        }
 
         good &= getByte(data.crc, dummy);
 
@@ -163,12 +176,19 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
             LOG_INFO(FPSTR(S_I2C), F("service: ") << data.service);
             LOG_INFO(FPSTR(S_I2C), F("voltage: ") << data.voltage);
             LOG_INFO(FPSTR(S_I2C), F("resets: ") << data.resets);
+            LOG_INFO(FPSTR(S_I2C), F("MODEL: ") << data.model);
             LOG_INFO(FPSTR(S_I2C), F("state0: ") << data.state0);
             LOG_INFO(FPSTR(S_I2C), F("state1: ") << data.state1);
+            LOG_INFO(FPSTR(S_I2C), F("state2: ") << data.state2);
+            LOG_INFO(FPSTR(S_I2C), F("state3: ") << data.state3);
             LOG_INFO(FPSTR(S_I2C), F("impulses0: ") << data.impulses0);
             LOG_INFO(FPSTR(S_I2C), F("impulses1: ") << data.impulses1);
+            LOG_INFO(FPSTR(S_I2C), F("impulses2: ") << data.impulses2);
+            LOG_INFO(FPSTR(S_I2C), F("impulses3: ") << data.impulses3);
             LOG_INFO(FPSTR(S_I2C), F("adc0: ") << data.adc0);
             LOG_INFO(FPSTR(S_I2C), F("adc1: ") << data.adc1);
+            LOG_INFO(FPSTR(S_I2C), F("adc2: ") << data.adc2);
+            LOG_INFO(FPSTR(S_I2C), F("adc3: ") << data.adc3);
             LOG_INFO(FPSTR(S_I2C), F("CRC ok"));
         break;
         case WATERIUS_NO_LINK:

@@ -42,11 +42,15 @@ void calculate_values(const Settings &sett, const SlaveData &data, CalculatedDat
     if (sett.liters_per_impuls > 0) {
         cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.liters_per_impuls;
         cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.liters_per_impuls;
-        LOG_INFO(FPSTR(S_ESP), F("new value0=") << cdata.channel0 << F(" value1=") << cdata.channel1);
+        cdata.channel2 = sett.channel2_start + (data.impulses2 - sett.impulses2_start) / 1000.0 * sett.liters_per_impuls;
+        cdata.channel3 = sett.channel3_start + (data.impulses3 - sett.impulses3_start) / 1000.0 * sett.liters_per_impuls;
+        LOG_INFO(FPSTR(S_ESP), F("new value0=") << cdata.channel0 << F(" value1=") << cdata.channel1 << F(" value2=") << cdata.channel2 << F(" value3=") << cdata.channel3);
         
         cdata.delta0  = (data.impulses0 - sett.impulses0_previous)*sett.liters_per_impuls;
         cdata.delta1 = (data.impulses1 - sett.impulses1_previous)*sett.liters_per_impuls;
-        LOG_INFO(FPSTR(S_ESP), F("delta0=") << cdata.delta0 << F(" delta1=") << cdata.delta1);
+        cdata.delta2  = (data.impulses2 - sett.impulses2_previous)*sett.liters_per_impuls;
+        cdata.delta3 = (data.impulses3 - sett.impulses3_previous)*sett.liters_per_impuls;
+        LOG_INFO(FPSTR(S_ESP), F("delta0=") << cdata.delta0 << F(" delta1=") << cdata.delta1 << F(" delta2=") << cdata.delta2 << F(" delta3=") << cdata.delta3);
     }
 }
 
@@ -153,6 +157,8 @@ void loop()
                 //Сохраним текущие значения в памяти.
                 sett.impulses0_previous = data.impulses0;
                 sett.impulses1_previous = data.impulses1;
+                sett.impulses2_previous = data.impulses2;
+                sett.impulses3_previous = data.impulses3;
                 //Перешлем время на сервер при след. включении
                 sett.wake_time = millis();
 

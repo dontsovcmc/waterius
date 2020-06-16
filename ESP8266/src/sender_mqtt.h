@@ -43,6 +43,7 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "delta1").c_str(), String(cdata.delta1).c_str(), true);
         client.publish((topic + "voltage").c_str(), String((float)(data.voltage / 1000.0), 3).c_str(), true);
         client.publish((topic + "resets").c_str(), String(data.resets).c_str(), true);
+        client.publish((topic + "model").c_str(), String(data.model).c_str(), true);
         client.publish((topic + "boot").c_str(), String(data.service).c_str(), true);
         client.publish((topic + "good").c_str(), String(data.diagnostic).c_str(), true);
         client.publish((topic + "imp0").c_str(), String(data.impulses0).c_str(), true);
@@ -57,6 +58,18 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "setuptime").c_str(), String(sett.setup_time).c_str(), true);
         client.publish((topic + "adc0").c_str(), String(data.adc0).c_str(), true);
         client.publish((topic + "adc1").c_str(), String(data.adc1).c_str(), true);
+
+        if (data.model == WATERIUS_4C2W) {
+            client.publish((topic + "ch2").c_str(), String((float)cdata.channel2,3).c_str(), true);
+            client.publish((topic + "ch3").c_str(), String((float)cdata.channel3,3).c_str(), true);
+            client.publish((topic + "delta2").c_str(), String(cdata.delta2).c_str(), true);
+            client.publish((topic + "delta3").c_str(), String(cdata.delta3).c_str(), true);
+            client.publish((topic + "imp2").c_str(), String(data.impulses2).c_str(), true);
+            client.publish((topic + "imp3").c_str(), String(data.impulses3).c_str(), true);
+            client.publish((topic + "adc2").c_str(), String(data.adc2).c_str(), true);
+            client.publish((topic + "adc3").c_str(), String(data.adc3).c_str(), true);
+        }
+
         client.disconnect();
         return true;
     }  else {

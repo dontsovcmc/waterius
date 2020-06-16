@@ -203,6 +203,40 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     FloatParameter param_channel0_start( "ch0", "",  cdata.channel0);
     wm.addParameter( &param_channel0_start);
 
+
+    
+    FloatParameter param_channel3_start( "ch3", "",  cdata.channel3);
+    FloatParameter param_channel2_start( "ch2", "",  cdata.channel2);
+
+    if (data.model == WATERIUS_4C2W) 
+    {
+        WiFiManagerParameter cold2_water("<h3>Холодная вода 2</h3>");
+        wm.addParameter(&cold2_water);
+                
+        WiFiManagerParameter label_cold2_info("<p>Откройте кран холодной воды, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
+        wm.addParameter( &label_cold2_info);
+
+        WiFiManagerParameter label_cold2_state("<b><p class='bad' id='state3bad'></p><p class='good' id='state3good'></p></b>");
+        wm.addParameter( &label_cold2_state);
+
+        WiFiManagerParameter label_cold2("<label class='cold label'>Показания холодной воды</label>");
+        wm.addParameter( &label_cold2);
+        wm.addParameter( &param_channel3_start);
+
+        WiFiManagerParameter hot_water2("<h3>Горячая вода 2</h3>");
+        wm.addParameter(&hot_water2);
+                
+        WiFiManagerParameter label_hot2_info("<p>Откройте кран горячей воды, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
+        wm.addParameter( &label_hot2_info);
+        
+        WiFiManagerParameter label_hot2_state("<b><p class='bad' id='state2bad'></p><p class='good' id='state2good'></p></b>");
+        wm.addParameter( &label_hot2_state );
+
+        WiFiManagerParameter label_hot2("<label class='hot label'>Показания горячей воды</label>");
+        wm.addParameter( &label_hot2);
+        wm.addParameter( &param_channel2_start);
+    }
+    
     wm.setConfigPortalTimeout(SETUP_TIME_SEC);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
     
@@ -245,6 +279,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();
     sett.channel1_start = param_channel1_start.getValue();
+    sett.channel2_start = param_channel2_start.getValue();
+    sett.channel3_start = param_channel3_start.getValue();
 
     sett.liters_per_impuls = get_factor(); //param_litres_per_imp.getValue();
     LOG_INFO(FPSTR(S_AP), "factor=" << sett.liters_per_impuls );
@@ -252,13 +288,19 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = runtime_data.impulses0;
     sett.impulses1_start = runtime_data.impulses1;
+    sett.impulses2_start = runtime_data.impulses2;
+    sett.impulses3_start = runtime_data.impulses3;
 
     // Предыдущие показания счетчиков. Вносим текущие значения.
     sett.impulses0_previous = sett.impulses0_start;
     sett.impulses1_previous = sett.impulses1_start;
+    sett.impulses2_previous = sett.impulses2_start;
+    sett.impulses3_previous = sett.impulses3_start;
 
     LOG_INFO(FPSTR(S_AP), "impulses0=" << sett.impulses0_start );
     LOG_INFO(FPSTR(S_AP), "impulses1=" << sett.impulses1_start );
+    LOG_INFO(FPSTR(S_AP), "impulses2=" << sett.impulses2_start );
+    LOG_INFO(FPSTR(S_AP), "impulses3=" << sett.impulses3_start );
 
     sett.setup_time = millis();
     
