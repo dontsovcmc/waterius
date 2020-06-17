@@ -178,14 +178,16 @@ struct ButtonB
       : _pin(pin)
     {
        DDRB &= ~_BV(pin);      // INPUT
+       PORTB &= ~_BV(_pin);     // INPUT
+
+#if defined(WATERIUS_4C2W)
+       PORTB |= _BV(_pin);      // INPUT_PULLUP
+#endif
     }
 
     inline bool digBit() 
     {
-        PORTB |= _BV(_pin);      // INPUT_PULLUP  //TODO WATERIUS_4C2W может в конструктор и не менять?
-        bool ret = bit_is_set(PINB, _pin);
-        PORTB &= ~_BV(_pin);     // INPUT
-        return ret;
+        return bit_is_set(PINB, _pin);
     }
 
     // Проверка нажатия кнопки 

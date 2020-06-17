@@ -1,5 +1,5 @@
-#ifndef _POWERSAVE_h
-#define _POWERSAVE_h
+#ifndef _WATERIUS_POWER_h
+#define _WATERIUS_POWER_h
 
 #include <Arduino.h>
 

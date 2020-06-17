@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 import os
 import sys
+import time
 import argparse
 
 from metf_python_client import METFClient, log, LOW, HIGH, INPUT, OUTPUT, INPUT_PULLUP
@@ -151,22 +152,25 @@ class Waterius(object):
 
         raise Exception('некорректный CRC')
 
-    def impulse(self, pins=[]):
+    def impulse(self, pins=[], **kwargs):
+
+        width = kwargs.get('width', 400)
+        pause = kwargs.get('pause', 800)
 
         for pin in pins:
             self.api.pinMode(pin, OUTPUT)
-            self.api.digitalWrite(pin, LOW)
-            log.info('ESP: impulse on  pin {}'.format(pin))
+            self.api.digitalWrite(pin, HIGH)
+            log.info('ESP: impulse on pin {}'.format(pin))
 
-        self.api.delay(500)
+        self.api.delay(width)
 
         for pin in pins:
-            self.api.digitalWrite(pin, HIGH)
-
-        self.api.delay(1000)
+            self.api.digitalWrite(pin, LOW)
 
         for pin in pins:
             self.api.pinMode(pin, INPUT)
+
+        self.api.delay(pause)
 
 
 class WateriusClassic(Waterius):
@@ -340,8 +344,8 @@ class Waterius4C2W(Waterius):
 
         raise Exception('некорректный CRC')
 
-    def impulse(self, pins=[]):
-        super(Waterius4C2W, self).impulse([self.counter0_pin, self.counter1_pin])
+    def impulse(self, pins=[], **kwargs):
+        super(Waterius4C2W, self).impulse([self.counter0_pin, self.counter1_pin], **kwargs)
 
 
 if __name__ == '__main__':
@@ -354,7 +358,8 @@ if __name__ == '__main__':
     parser.add_argument('--sleep', action='store_true', help='Send sleep command')
     parser.add_argument('--header', action='store_true', help='Send get header command')
     parser.add_argument('--wakeup', action='store_true', help='Imitation of button press')
-    parser.add_argument('--impulse', default=0, help='Send impulse')
+    parser.add_argument('--impulse', type=int, default=0, help='Send impulse')
+    parser.add_argument('--imitation', action='store_true', help='Imitation of waterius ESP turn on for transmitting')
 
     args = parser.parse_args()
 
@@ -387,4 +392,19 @@ if __name__ == '__main__':
 
     if args.impulse > 0:
         for i in range(0, args.impulse):
+            log.info('Impulse {} of {}'.format(i, args.impulse))
             w.impulse()
+
+    if args.imitation:
+        log.info('Imitation of turn on Wi-Fi')
+        w.wake_up()
+        w.start_i2c()
+        w.get_mode()
+
+        t = time.time()
+        while time.time() - t < 10.0:
+            w.get_header()
+            time.sleep(0.2)
+
+        w.send_sleep()
+        w.wait_off()

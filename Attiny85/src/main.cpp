@@ -55,10 +55,9 @@
 	
 */
      
-
 // Счетчики импульсов
 
-#ifdef WATERIUS_2C
+#if defined(WATERIUS_2C)
 // Waterius Classic: https://github.com/dontsovcmc/waterius
 //
 //                                +-\/-+
@@ -71,9 +70,9 @@
 // https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x5.md
 
 static CounterB counter0(4, 2);  // Вход 1, Blynk: V0, горячая вода PB4 ADC2
-static CounterB counter1(3, 3); // Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
+static CounterB counter1(3, 3);  // Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
 
-static ButtonB button(2);	   // PB2 кнопка (на линии SCL)
+static ButtonB  button(2);	   // PB2 кнопка (на линии SCL)
                                // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
 							   // Короткое: ESP передает показания
 static ESPPowerPin esp(1);  // Питание на ESP 
@@ -124,8 +123,6 @@ struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_4C2W,
 					   0, 0
 					 }; 
 #endif
-
-
 
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки

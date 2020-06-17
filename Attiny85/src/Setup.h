@@ -1,8 +1,7 @@
-#ifndef _SETUP_h
-#define _SETUP_h
+#ifndef _WATERIUS_SETUP_h
+#define _WATERIUS_SETUP_h
 
 #include <Arduino.h>
-
 
 /*
 #define BUILD_WATERIUS_4C2W 1
@@ -10,10 +9,8 @@
 
 #ifdef BUILD_WATERIUS_4C2W
 #define WATERIUS_4C2W 1  // attiny84 - 4 счетчика импульсов
-#pragma message "model WATERIUS_4C2W"
 #else
 #define WATERIUS_2C 0    // attiny85 - 2 счетчика импульсов
-#pragma message "model WATERIUS_2C"
 #endif 
 
 
@@ -25,31 +22,24 @@
     #define LOG_ON
 */
 
-#define LOG_BEGIN(x)
-#define LOG(x)
+#ifndef LOG_ON
+    #define LOG_BEGIN(x)
+    #define LOG(x)
+#else
+    #undef LOG_BEGIN
+    #undef LOG
 
-#ifdef LOG_ON
-
-#undef LOG_BEGIN
-#undef LOG
-
-#ifdef WATERIUS_2C
-    #include "TinyDebugSerial.h"
-    class TinyDebugSerial;
-    extern TinyDebugSerial mySerial;
-
-    #define LOG_BEGIN(x)  mySerial.begin(x)
-    #define LOG(x) mySerial.print(millis()); mySerial.print(F(" : ")); mySerial.println(x);
-
-#endif 
-#ifdef WATERIUS_4C2W
-    class TinySoftwareSerial;
-    extern TinySoftwareSerial Serial;
-
-    #define LOG_BEGIN(x)  Serial.begin(x); ACSR &=~(1<<ACIE); ACSR |=~(1<<ACD);  //only TX
-    #define LOG(x) Serial.print(millis()); Serial.print(F(" : ")); Serial.println(x);
-#endif 
-
+    // TinyDebugSerial на PB3 только в attiny85, 1MHz
+    #if defined(WATERIUS_2C)
+        #include "TinyDebugSerial.h"
+        #define LOG_BEGIN(x)  mySerial.begin(x)
+        #define LOG(x) mySerial.print(millis()); mySerial.print(F(" : ")); mySerial.println(x);
+    #endif 
+    #if defined(WATERIUS_4C2W)
+    // TinySoftwareSerial на PB3 attiny84, 1MHz
+        #define LOG_BEGIN(x)  Serial.begin(x); ACSR &=~(1<<ACIE); ACSR |=~(1<<ACD);  //only TX
+        #define LOG(x) Serial.print(millis()); Serial.print(F(" : ")); Serial.println(x);
+    #endif 
 #endif
 
 //#define TEST_WATERIUS   // Тестирование счетчика при помощи Arduino
@@ -80,7 +70,7 @@
 #define LONG_PRESS_MSEC  3000   
        
 
-#ifdef WATERIUS_2C
+#if defined(WATERIUS_2C)
 struct Data {
     uint32_t value0;
     uint32_t value1;
@@ -97,7 +87,7 @@ struct ADCLevel {
 };
 #endif
 
-#ifdef WATERIUS_4C2W
+#if defined(WATERIUS_4C2W)
 struct Data {
     uint32_t value0;
     uint32_t value1;
@@ -167,12 +157,10 @@ struct Header {
     uint8_t       reserved2;
 };  //22 байт
 
-#ifdef WATERIUS_2C
+#if defined(WATERIUS_2C)
     #define HEADER_DATA_SIZE 22
 #else
-#ifdef WATERIUS_4C2W
     #define HEADER_DATA_SIZE 36
-#endif
 #endif
 
  #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
