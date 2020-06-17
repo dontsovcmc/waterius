@@ -84,35 +84,6 @@ class Waterius(object):
     def __init__(self, api):
         self.api = api
 
-        self.counter0_pin = D5
-        self.counter1_pin = D0
-        self.button_pin = D1
-        self.power_pin = D2
-        self.sda = D3
-        self.sdl = D4
-
-    def init(self):
-        self.api.pinMode(self.sda, INPUT_PULLUP)
-        self.api.pinMode(self.sdl, INPUT_PULLUP)
-        self.api.pinMode(self.power_pin, INPUT)
-        self.api.pinMode(self.counter0_pin, INPUT)
-        self.api.pinMode(self.counter1_pin, INPUT)
-
-    def push_button(self, msec):
-        log.info('ESP: PUSH BUTTON for {} msec'.format(msec))
-        self.api.pinMode(self.button_pin, OUTPUT)
-        self.api.digitalWrite(self.button_pin, LOW)
-        self.api.delay(msec)
-        self.api.digitalWrite(self.button_pin, HIGH)
-        self.api.pinMode(self.button_pin, INPUT)
-
-    def wake_up(self, wait_wakeup_sec=2.0):
-
-        if self.api.digitalRead(self.power_pin) == LOW:
-            self.push_button(500)
-
-        assert self.api.wait_digital(self.power_pin, HIGH, wait_wakeup_sec), 'ESP: wake up error'
-
     def wait_off(self):
         log.info('ESP: wait power pin LOW')
         assert self.api.wait_digital(self.power_pin, LOW, 2.0)
@@ -277,6 +248,9 @@ class WateriusClassic(Waterius):
         for f in fields:
             log.info('{}: {}'.format(f[0], getattr(header, f[0])))
 
+        if header.version < 12:
+            return header
+
         if header.version < 13:
             if header.crc == waterius12_crc(ret, crc_shift):
                 return header
@@ -299,7 +273,7 @@ class Waterius4C2W(Waterius):
 
         self.counter0_pin = D5
         self.counter1_pin = D0
-        self.button_pin = D1
+        #self.button_pin = D1
         self.power_pin = D2
         self.sda = D3
         self.sdl = D4
@@ -311,20 +285,8 @@ class Waterius4C2W(Waterius):
         self.api.pinMode(self.counter0_pin, INPUT)
         self.api.pinMode(self.counter1_pin, INPUT)
 
-    def push_button(self, msec):
-        log.info('ESP: PUSH BUTTON for {} msec'.format(msec))
-        self.api.pinMode(self.button_pin, OUTPUT)
-        self.api.digitalWrite(self.button_pin, LOW)
-        self.api.delay(msec)
-        self.api.digitalWrite(self.button_pin, HIGH)
-        self.api.pinMode(self.button_pin, INPUT)
-
     def wake_up(self, wait_wakeup_sec=2.0):
-
-        if self.api.digitalRead(self.power_pin) == LOW:
-            self.push_button(500)
-
-        assert self.api.wait_digital(self.power_pin, HIGH, wait_wakeup_sec), 'ESP: wake up error'
+        log.warn("don't support wake_up")
 
     def wait_off(self):
         log.info('ESP: wait power pin LOW')
@@ -332,13 +294,7 @@ class Waterius4C2W(Waterius):
         self.api.delay(20)
 
     def manual_turn_off(self):
-        self.api.pinMode(self.power_pin, INPUT)
-        if self.api.digitalRead(self.power_pin) == HIGH:
-            log.info('--------------')
-            log.info('ESP: manual turn off')
-            self.push_button(4000)
-        else:
-            log.info('ESP: Already off')
+        log.warn("don't support manual_turn_off")
 
     def get_header(self):
         fields = [  # name, type

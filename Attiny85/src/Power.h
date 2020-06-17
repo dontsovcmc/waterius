@@ -19,10 +19,7 @@ struct ESPPowerPin
 	explicit ESPPowerPin(const uint8_t);
 
 	//Пин подачи питания на ESP
-	uint8_t power_pin;
-
-	//Wi-Fi включен
-	bool power_on;  		         
+	uint8_t power_pin;		         
 
 	//Время включения Wi-Fi 
 	unsigned long wake_up_timestamp; 
