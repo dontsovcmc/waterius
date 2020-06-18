@@ -154,7 +154,7 @@ class Waterius(object):
 
     def impulse(self, pins=[], **kwargs):
 
-        width = kwargs.get('width', 400)
+        width = kwargs.get('width', 300)
         pause = kwargs.get('pause', 800)
 
         for pin in pins:

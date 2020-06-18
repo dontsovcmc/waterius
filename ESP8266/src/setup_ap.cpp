@@ -35,9 +35,15 @@ void update_data(String &message)
         String state0bad(F("\"Не подключён\""));
         String state1good(F("\"\""));
         String state1bad(F("\"Не подключён\""));
+        String state2good(F("\"\""));
+        String state2bad(F("\"Не подключён\""));
+        String state3good(F("\"\""));
+        String state3bad(F("\"Не подключён\""));
 
         uint32_t delta0 = runtime_data.impulses0 - data.impulses0;
         uint32_t delta1 = runtime_data.impulses1 - data.impulses1;
+        uint32_t delta2 = runtime_data.impulses2 - data.impulses2;
+        uint32_t delta3 = runtime_data.impulses3 - data.impulses3;
         
         if (delta0 > 0) {
             state0good = F("\"Подключён\"");
@@ -46,6 +52,14 @@ void update_data(String &message)
         if (delta1 > 0) {
             state1good = F("\"Подключён\"");
             state1bad = F("\"\"");
+        }
+        if (delta2 > 0) {
+            state2good = F("\"Подключён\"");
+            state2bad = F("\"\"");
+        }
+        if (delta3 > 0) {
+            state3good = F("\"Подключён\"");
+            state3bad = F("\"\"");
         }
 
         message = F("{\"state0good\": ");
@@ -56,6 +70,14 @@ void update_data(String &message)
         message += state1good;
         message += F(", \"state1bad\": ");
         message += state1bad;
+        message += F(", \"state2good\": ");
+        message += state2good;
+        message += F(", \"state2bad\": ");
+        message += state2bad;
+        message += F(", \"state3good\": ");
+        message += state3good;
+        message += F(", \"state3bad\": ");
+        message += state3bad;
         message += F(", \"elapsed\": ");
         message += String((uint32_t)(SETUP_TIME_SEC - millis()/1000.0));
         message += F(", \"error\": \"\"");
@@ -73,7 +95,7 @@ WiFiManager wm;
 void handleStates(){
   LOG_INFO(FPSTR(S_AP), F("/states request"));
   String message;
-  message.reserve(200);
+  message.reserve(300);
   update_data(message);
   wm.server->send(200, F("text/plain"), message);
 }
@@ -219,7 +241,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
         WiFiManagerParameter label_cold2_state("<b><p class='bad' id='state3bad'></p><p class='good' id='state3good'></p></b>");
         wm.addParameter( &label_cold2_state);
 
-        WiFiManagerParameter label_cold2("<label class='cold label'>Показания холодной воды</label>");
+        WiFiManagerParameter label_cold2("<label class='cold label'>Показания холодной воды 2</label>");
         wm.addParameter( &label_cold2);
         wm.addParameter( &param_channel3_start);
 
@@ -232,7 +254,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
         WiFiManagerParameter label_hot2_state("<b><p class='bad' id='state2bad'></p><p class='good' id='state2good'></p></b>");
         wm.addParameter( &label_hot2_state );
 
-        WiFiManagerParameter label_hot2("<label class='hot label'>Показания горячей воды</label>");
+        WiFiManagerParameter label_hot2("<label class='hot label'>Показания горячей воды 2</label>");
         wm.addParameter( &label_hot2);
         wm.addParameter( &param_channel2_start);
     }
