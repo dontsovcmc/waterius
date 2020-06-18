@@ -9,6 +9,7 @@
 #include "sender_blynk.h"
 #include "sender_mqtt.h"
 #include "UserClass.h"
+#include "voltage.h"
 #include "utils.h"
 #include "cert.h"
 
@@ -54,23 +55,6 @@ void calculate_values(const Settings &sett, const SlaveData &data, CalculatedDat
     }
 }
 
-#define LOW_BATTERY_DIFF_MV 50  //надо еще учесть качество замеров (компаратора у attiny)
-#define ALERT_POWER_DIFF_MV 100
-
-bool check_voltage(SlaveData &data, CalculatedData &cdata)
-{   
-    uint32_t prev = data.voltage;
-	if (masterI2C.getSlaveData(data)) {
-        uint32_t diff = abs(prev - data.voltage);
-        if (diff > cdata.voltage_diff) {
-            cdata.voltage_diff = diff;
-        }
-        
-        cdata.low_voltage = cdata.voltage_diff >= LOW_BATTERY_DIFF_MV;
-        return cdata.voltage_diff < ALERT_POWER_DIFF_MV;
-	}
-    return true; //пропустим если ошибка i2c
-}
 
 void loop()
 {
@@ -121,13 +105,16 @@ void loop()
                 if (success) {
                     //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                     WiFi.begin(); 
-
+                    
+                    if (data.model == WATERIUS_4C2W) {
+                        data.voltage = measure_voltage();
+                    }
                     //Ожидаем подключения к точке доступа
                     uint32_t start = millis();
                     while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
                         LOG_INFO(FPSTR(S_WIF), F("Status: ") << WiFi.status());
                         delay(300);
-
+                    
                         check_voltage(data, cdata);
                         //В будущем добавим success, означающее, что напряжение не критично изменяется, можно продолжать
                         //иначе есть риск ошибки ESP и стирания конфигурации

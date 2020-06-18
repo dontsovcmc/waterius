@@ -226,35 +226,34 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter( &param_channel0_start);
 
 
-    
-    FloatParameter param_channel3_start( "ch3", "",  cdata.channel3);
-    FloatParameter param_channel2_start( "ch2", "",  cdata.channel2);
-
+    WiFiManagerParameter cold2_water("<h3>Холодная вода 2</h3>");
+    WiFiManagerParameter label_cold2_info("<p>Откройте кран холодной воды, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
+    WiFiManagerParameter label_cold2_state("<b><p class='bad' id='state3bad'></p><p class='good' id='state3good'></p></b>");
+    WiFiManagerParameter label_cold2("<label class='cold label'>Показания холодной воды 2</label>");
+    WiFiManagerParameter hot_water2("<h3>Горячая вода 2</h3>");
+    FloatParameter       param_channel2_start( "ch2", "",  cdata.channel2);
+    WiFiManagerParameter label_hot2_info("<p>Откройте кран горячей воды, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
+    WiFiManagerParameter label_hot2_state("<b><p class='bad' id='state2bad'></p><p class='good' id='state2good'></p></b>");
+    WiFiManagerParameter label_hot2("<label class='hot label'>Показания горячей воды 2</label>");                     
+    FloatParameter       param_channel3_start( "ch3", "",  cdata.channel3);
+   
     if (data.model == WATERIUS_4C2W) 
     {
-        WiFiManagerParameter cold2_water("<h3>Холодная вода 2</h3>");
         wm.addParameter(&cold2_water);
                 
-        WiFiManagerParameter label_cold2_info("<p>Откройте кран холодной воды, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
         wm.addParameter( &label_cold2_info);
 
-        WiFiManagerParameter label_cold2_state("<b><p class='bad' id='state3bad'></p><p class='good' id='state3good'></p></b>");
         wm.addParameter( &label_cold2_state);
 
-        WiFiManagerParameter label_cold2("<label class='cold label'>Показания холодной воды 2</label>");
         wm.addParameter( &label_cold2);
         wm.addParameter( &param_channel3_start);
 
-        WiFiManagerParameter hot_water2("<h3>Горячая вода 2</h3>");
         wm.addParameter(&hot_water2);
                 
-        WiFiManagerParameter label_hot2_info("<p>Откройте кран горячей воды, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
         wm.addParameter( &label_hot2_info);
         
-        WiFiManagerParameter label_hot2_state("<b><p class='bad' id='state2bad'></p><p class='good' id='state2good'></p></b>");
         wm.addParameter( &label_hot2_state );
 
-        WiFiManagerParameter label_hot2("<label class='hot label'>Показания горячей воды 2</label>");
         wm.addParameter( &label_hot2);
         wm.addParameter( &param_channel2_start);
     }
