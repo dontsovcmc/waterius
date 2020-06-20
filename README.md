@@ -1,5 +1,5 @@
 ### Aвтономное устройство для передачи показаний воды по Wi-Fi
-# Ватериус 0.9.13
+# Ватериус 0.10.0
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
@@ -49,6 +49,9 @@ WiFi передача показаний воды. Приставка для и�
 Поддержать морально: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
 
 Купить импульсные счетчики: https://decast.com/contacts/buy
+
+### Модицикации
+Версия 0.10.0 поддерживает [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F)
 
 ### Отзывы
 Напишите, пожалуйста, отзывы: <a href="https://vk.com/topic-183491011_40049475" target="_black">VK</a> и <a href="https://www.facebook.com/waterius/reviews/" target="_black">FB</a>. Они очень важны для новых посетителей, кто не знаком с гитхабом. Спасибо!
@@ -117,7 +120,7 @@ ESP32 с камерой ([issue](https://github.com/dontsovcmc/waterius/issues/3
 
 3. ~~NB-IoT версия~~ ([issue](https://github.com/dontsovcmc/waterius/issues/84), [Waterius32](https://github.com/OloloevReal/Waterius32) от OloloevReal)
 
-4. Помочь с прошивкой: поддержка датчиков протечки, 4 счетчика: [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) от badenbaden
+4. Помочь с прошивкой: поддержка датчиков протечки: [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) от badenbaden
 
 5. OTA обновления
 - ~~разобраться как они работают~~ OTA не влезет в 1Мб ESP8266-01 =(. Можно перепаять память на 4Мб.
