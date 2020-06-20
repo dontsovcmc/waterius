@@ -1,11 +1,7 @@
 ### Aвтономное устройство для передачи показаний воды по Wi-Fi
-<<<<<<< HEAD
+
 # Ватериус 0.10.0
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
-=======
-# Ватериус 0.9.13
-<a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="http://hits.dwyl.com/dontsovcmc/waterius" target="_blank"><img src="http://hits.dwyl.com/dontsovcmc/waterius.svg"></a> 
->>>>>>> 3ede83c0e7f58adb65b5899157a3ad1b1aeea887
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
