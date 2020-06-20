@@ -1,12 +1,17 @@
 ### Aвтономное устройство для передачи показаний воды по Wi-Fi
+<<<<<<< HEAD
 # Ватериус 0.10.0
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="https://gitter.im/waterius" target="_blank"><img src="https://badges.gitter.im/gitterHQ/gitter.png" data-canonical-src="https://badges.gitter.im/gitterHQ/gitter.png"/></a>
+=======
+# Ватериус 0.9.13
+<a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a> <a href="http://hits.dwyl.com/dontsovcmc/waterius" target="_blank"><img src="http://hits.dwyl.com/dontsovcmc/waterius.svg"></a> 
+>>>>>>> 3ede83c0e7f58adb65b5899157a3ad1b1aeea887
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
 WiFi передача показаний воды. Приставка для импульсных счётчиков воды. Простое [подключение](https://waterius.ru/manual).
 
-### Характеристики:
+### Характеристики
 - 2 счётчика воды (вам не нужно знать, какого типа выход: "сухой контакт" или "НАМУР")
 - передача по Wi-Fi раз в сутки
 - питание 3 АА батарейки (~4 года работы)
@@ -14,6 +19,11 @@ WiFi передача показаний воды. Приставка для и�
 - детектор низкого заряда (экспериментально)
 
 [Список поддерживаемых счётчиков](https://github.com/dontsovcmc/waterius/issues/65)
+
+### Известные ошибки
+- Иногда (?) не подключается к Ростелекомовским роутерам: Sercomm rv6699, Innbox e70. Если у вас такие, напишите, о вашем опыте в теме: [Проблемы с роутерами](https://github.com/dontsovcmc/waterius/issues/131)
+
+- [bug](https://github.com/dontsovcmc/waterius/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
 
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru">waterius.ru</a>
@@ -55,7 +65,6 @@ WiFi передача показаний воды. Приставка для и�
 
 ### Отзывы
 Напишите, пожалуйста, отзывы: <a href="https://vk.com/topic-183491011_40049475" target="_black">VK</a> и <a href="https://www.facebook.com/waterius/reviews/" target="_black">FB</a>. Они очень важны для новых посетителей, кто не знаком с гитхабом. Спасибо!
-
 
 <img src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" width="360"/> <img src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" width="180"/>
 
