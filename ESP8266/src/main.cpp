@@ -108,7 +108,7 @@ void loop()
                     
 #ifdef BUILD_WATERIUS_4C2W                    
                     if (data.model == WATERIUS_4C2W) {
-                        data.voltage = measure_voltage();  # чтобы посчитать diff
+                        data.voltage = measure_voltage();  // чтобы посчитать diff
                     }
 #endif
                     //Ожидаем подключения к точке доступа
