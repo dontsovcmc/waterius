@@ -106,9 +106,11 @@ void loop()
                     //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                     WiFi.begin(); 
                     
+#ifdef BUILD_WATERIUS_4C2W                    
                     if (data.model == WATERIUS_4C2W) {
-                        data.voltage = measure_voltage();
+                        data.voltage = measure_voltage();  # чтобы посчитать diff
                     }
+#endif
                     //Ожидаем подключения к точке доступа
                     uint32_t start = millis();
                     while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
