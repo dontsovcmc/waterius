@@ -4,19 +4,19 @@ matrix:
   - name: "Attiny85 firmware"
     python: "2.7"
     env: 
-      - PLATFORMIO_CI_SRC=./Attiny85/src 
+      - PLATFORMIO_CI_SRC=./Attiny85
       - CFG_PATH=./Attiny85
-  - name: "ESP8266 firmware"
+  - name: "Attiny85 firmware LOG_ON"
+    python: "2.7"
+    env: 
+      - PLATFORMIO_CI_SRC=./Attiny85
+      - CFG_PATH=./Attiny85
+      - LOG_ON=1
+  - name: "ESP8266 firmwares (CLASSIC & 4C2W)"
     python: "2.7"
     env: 
       - PLATFORMIO_CI_SRC=./ESP8266 
       - CFG_PATH=./ESP8266
-  - name: "ESP8266 firmware ONLY_CLOUD_WATERIUS"
-    python: "2.7"
-    env: 
-      - PLATFORMIO_CI_SRC=./ESP8266 
-      - CFG_PATH=./ESP8266
-      - ONLY_CLOUD_WATERIUS=1
 git:
   depth: 3
   submodules: false
