@@ -7,6 +7,7 @@
 #include "SlaveI2C.h"
 #include "Storage.h"
 #include "counter.h"
+#include "waterleak.h"
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include <avr/power.h>  
@@ -17,7 +18,7 @@
 #endif
 
 
-#define FIRMWARE_VER 13    // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 14    // Версия прошивки. Передается в ESP и на сервер в данных.
   
 /*
 Версии прошивок 
@@ -91,16 +92,16 @@ struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_2C,
 #define WDTCR WDTCSR
 // Waterius 4C2W: https://github.com/badenbaden/Waterius-Attiny84-ESP12F
 //
-//                                 +-\/-+
-//                           VCC  1|    |14  GND
-//  *Power ESP*   (D  0)     PB0  2|    |13  PA0  (D  10/A0)        *Counter0* 
-//  *Button*      (D  1)     PB1  3|    |12  PA1  (D  9/ A1)        *Counter1* 
-//       RESET    (D 11)     PB3  4|    |11  PA2  (D  8/ A2)        *Counter2* 
-//  *Alarm*       (D  2)     PB2  5|    |10  PA3  (D  7/ A3)        *Counter3* 
-//  *WaterLeak2*  (D  3/A7)  PA7  6|    |9   PA4  (D  6/ A4)   SCK  SCL
-//  SDA  MOSI     (D  4/A6)  PA6  7|    |8   PA5  (D  5/ A5)   MISO *WaterLeak2*
-//                                 +----+
-//
+//                             +-\/-+
+//                       VCC  1|    |14  GND
+//  *Power ESP*          PB0  2|    |13  PA0  (A0)   *Counter0* 
+//  *Button*             PB1  3|    |12  PA1  (A1)   *Counter1* 
+//       RESET           PB3  4|    |11  PA2  (A2)   *Counter2* 
+//  *Alarm*              PB2  5|    |10  PA3  (A3)   *Counter3* 
+//  *WaterLeak1*  (A7)   PA7  6|    |9   PA4  (A4)   SCK  SCL
+//  SDA  MOSI     (A6)   PA6  7|    |8   PA5  (A5)   MISO *WaterLeak1*
+//                             +----+
+// 
 // https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x4.md
 
 
@@ -108,12 +109,13 @@ static CounterA counter0(0, 0);
 static CounterA counter1(1, 1);
 static CounterA counter2(2, 2);
 static CounterA counter3(3, 3);
-
-static CounterA counter5(5, 5); //only for setup input pin
-static CounterA counter7(7, 7); //only for setup input pin
+ 
+static LeakPowerB leak_power(2);
+static WaterLeakA waterleak1(5, 5);
+static WaterLeakA waterleak2(7, 7);
 
 static ButtonB button(1);
-static ESPPowerPin esp(0);      // Питание на ESP
+static ESPPowerPin esp(0);      // Питание на ESP 
 
 // Данные
 struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_4C2W, 
@@ -122,6 +124,9 @@ struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_4C2W,
 					   {0, 0, 0, 0},
 					   0, 0
 					 }; 
+
+struct LeakHeader leak = { WaterLeak_e::NORMAL, WaterLeak_e::NORMAL, 0, 0, 0, 0};
+
 #endif
 
 
@@ -197,6 +202,13 @@ inline void counting() {
 		info.adc.adc3 = counter3.adc;
 		storage.add(info.data);
 	}
+	
+	if ((wdt_count & LEAK_CHECK_PERIOD) == 0) {
+		leak_power.power(true);
+		waterleak1.update();
+		waterleak2.update();
+		leak_power.power(false);
+	}
 #endif
 
 	adc_disable();
@@ -234,9 +246,30 @@ void setup() {
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
+	
 #ifdef WATERIUS_4C2W
 	LOG(info.data.value2);
 	LOG(info.data.value3);
+#endif
+}
+
+bool need_wake_up() {
+#if defined(WATERIUS_2C)
+
+	return button.pressed();
+
+#else
+	if ((wdt_count & LEAK_CHECK_PERIOD) == 0) {
+		if (!waterleak1.is_ok() || !waterleak2.is_ok()) {
+			if (!slaveI2C.alarm_sent) {
+				return true;  // просыпаемся
+			}
+		} else {
+			slaveI2C.alarm_sent = false;
+		} 
+	}
+	
+	return button.pressed();
 #endif
 }
 
@@ -251,12 +284,12 @@ void loop() {
 
 	// Цикл опроса входов
 	// Выход по прошествию WAKE_EVERY_MIN минут или по нажатию кнопки
-	for (unsigned int i = 0; i < ONE_MINUTE && !button.pressed(); ++i)  {
-		wdt_count = WAKE_EVERY_MIN; 
+	for (unsigned int i = 0; i < ONE_MINUTE && !need_wake_up(); ++i)  {
+		wdt_count = WAKE_EVERY_MIN;
 		while ( wdt_count > 0 ) {
 			noInterrupts();
 
-			if (button.pressed()) { 
+			if (need_wake_up()) { 
 				interrupts();  // Пользователь нажал кнопку
 				break;
 			} else 	{
@@ -277,9 +310,15 @@ void loop() {
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
+
 #ifdef WATERIUS_4C2W
 	LOG(info.data.value2);
 	LOG(info.data.value3);
+
+	leak.state1 = waterleak1.state;
+	leak.state2 = waterleak2.state;
+	leak.adc1 = waterleak1.adc;
+	leak.adc2 = waterleak2.adc;
 #endif
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит 
 	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)

@@ -88,6 +88,9 @@ struct ADCLevel {
 #endif
 
 #if defined(WATERIUS_4C2W)
+
+#define LEAK_CHECK_PERIOD 31   //8 сек, т.к. 8 * 4 раза в сек - 1 = 32
+
 struct Data {
     uint32_t value0;
     uint32_t value1;
@@ -161,6 +164,21 @@ struct Header {
     #define HEADER_DATA_SIZE 22
 #else
     #define HEADER_DATA_SIZE 36
+
+    struct LeakHeader
+    {
+        uint8_t       state1;
+        uint8_t       state2;
+        uint16_t      adc1;
+        uint16_t      adc2;
+
+        //LEAK_HEADER_SIZE
+
+        uint8_t       crc;
+        uint8_t       reserved2;
+    }; //8 байт
+    #define LEAK_HEADER_SIZE 6
+    #define LEAK_HEADER_SIZE_CRC 8
 #endif
 
  #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2

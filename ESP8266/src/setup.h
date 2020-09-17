@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.10.0"
+#define FIRMWARE_VERSION "0.10.1"
   
 
 /*
@@ -107,6 +107,13 @@ struct CalculatedData {
     uint32_t voltage_diff;
     bool     low_voltage;
     int8_t   rssi;
+};
+
+enum WaterLeak_e
+{
+    BREAK,      //обрыв линии, нет датчика
+    NORMAL,    //норма
+    WATER     //вода
 };
 
 /*

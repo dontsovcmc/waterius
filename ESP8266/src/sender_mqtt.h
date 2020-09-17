@@ -14,6 +14,7 @@
 
 #include "master_i2c.h"
 #include "Logging.h"
+#include "utils.h"
 
 
 bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData &cdata)
@@ -68,6 +69,12 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
             client.publish((topic + "imp3").c_str(), String(data.impulses3).c_str(), true);
             client.publish((topic + "adc2").c_str(), String(data.adc2).c_str(), true);
             client.publish((topic + "adc3").c_str(), String(data.adc3).c_str(), true);
+
+            client.publish((topic + "adcwl1").c_str(), String(data.adcwl1).c_str(), true);
+            client.publish((topic + "adcwl2").c_str(), String(data.adcwl2).c_str(), true);
+
+            client.publish((topic + "waterleak1").c_str(), wl_state((WaterLeak_e)data.statewl1).c_str(), true);
+            client.publish((topic + "waterleak2").c_str(), wl_state((WaterLeak_e)data.statewl2).c_str(), true);
         }
 
         client.disconnect();

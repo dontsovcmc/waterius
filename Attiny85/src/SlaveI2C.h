@@ -23,6 +23,9 @@ class SlaveI2C
 	 static void receiveEvent( int howMany );
 
  public:
+#ifdef WATERIUS_4C2W
+	 static bool alarm_sent;
+#endif
 	 void begin(const uint8_t);
 	 static void end();
 	 bool masterGoingToSleep();

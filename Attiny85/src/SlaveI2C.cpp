@@ -6,12 +6,18 @@
 #include <Wire.h>
 
 extern struct Header info;
+extern struct LeakHeader leak;
+
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
 uint8_t SlaveI2C::txBuffer[TX_BUFFER_SIZE];
 uint8_t SlaveI2C::setup_mode = TRANSMIT_MODE;
 bool SlaveI2C::masterSentSleep = false;
+
+#ifdef WATERIUS_4C2W
+bool SlaveI2C::alarm_sent = false;
+#endif
 
 void SlaveI2C::begin(const uint8_t mode) {
 
@@ -56,6 +62,15 @@ void SlaveI2C::receiveEvent(int howMany) {
 		case 'T':  // После настройки ESP перезагрузим, поэтому меняем режим на передачу данных
 			setup_mode = TRANSMIT_MODE;
 			break;
+#ifdef WATERIUS_4C2W
+		case 'A':
+			alarm_sent = true;
+			break;
+		case 'L':  // данные датчиков протечки
+			leak.crc = crc_8((unsigned char*)&leak, LEAK_HEADER_SIZE);
+			memcpy(txBuffer, &leak, LEAK_HEADER_SIZE_CRC);
+			break;
+#endif
 	}
 }
 

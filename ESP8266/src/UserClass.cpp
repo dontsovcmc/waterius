@@ -2,9 +2,10 @@
 #include "WateriusHttps.h"
 #include "Logging.h"
 #include <ArduinoJson.h>
+#include "utils.h"
 
 
-#define JSON_BUFFER_SIZE 500
+#define JSON_BUFFER_SIZE 600
 
 
 bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, const CalculatedData &cdata)
@@ -57,6 +58,10 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
         root["imp3"] =          data.impulses3;
         root["adc2"] =          data.adc2;
         root["adc3"] =          data.adc3;
+        root["waterleak1"] =    wl_state((WaterLeak_e)data.statewl1);
+        root["waterleak2"] =    wl_state((WaterLeak_e)data.statewl2);
+        root["adcwl1"] =        data.adcwl1;
+        root["adcwl2"] =        data.adcwl2;
     }
 
     serializeJson(root, jsonBody);

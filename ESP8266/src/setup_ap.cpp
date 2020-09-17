@@ -189,6 +189,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     IPAddressParameter param_mask("sn", "Маска подсети",  sett.mask);
     wm.addParameter( &param_mask );
 
+    //WiFiManagerParameter label_factorcb("<p><label for='fcb'>Вес импульса:</label><select name='fcb' id='fcb'><option value='auto' selected>Авто</option><option value='1'>1 л/имп</option><option value='10'>10 л/имп</option><option value='100'>100 л/имп</option></select></p>");
+    //wm.addParameter( &label_factorcb);
+
     WiFiManagerParameter label_factor("<p><b>Вес импульса (авто): <a id='factor'></a> л/имп</b></p>");
     wm.addParameter( &label_factor);
 

@@ -37,3 +37,18 @@ bool setClock()
 	}
 	return false;
 }
+
+String wl_state(WaterLeak_e state)
+{
+    switch (state) 
+    {
+        case WaterLeak_e::BREAK:
+            return String("break");
+        case WaterLeak_e::NORMAL:
+            return String("normal");
+        case WaterLeak_e::WATER:
+            return String("water");
+        default:
+            return String("?");
+    }
+}

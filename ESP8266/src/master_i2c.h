@@ -44,6 +44,8 @@ struct SlaveData {
     uint8_t  state1;      //           вход 1
     uint8_t  state2;      //           вход 2
     uint8_t  state3;      //           вход 3
+    uint8_t  statewl1;
+    uint8_t  statewl2;
     uint32_t impulses0;   //Импульсов, канал 0
     uint32_t impulses1;   //           канал 1
     uint32_t impulses2;   //           канал 2
@@ -52,6 +54,8 @@ struct SlaveData {
     uint16_t adc1;        //           канал 1
     uint16_t adc2;        //           канал 2
     uint16_t adc3;        //           канал 3
+    uint16_t adcwl1;
+    uint16_t adcwl2;
     // HEADER_DATA_SIZE
 
     uint8_t  crc;         //Всегда в конце структуры данных

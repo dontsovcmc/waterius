@@ -128,6 +128,7 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
 
     good &= getByte(data.resets, crc);
     good &= getByte(data.model, crc);
+    
     good &= getByte(data.state0, crc);
     good &= getByte(data.state1, crc);
     if (data.model == WATERIUS_4C2W) {
@@ -151,6 +152,22 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
 
     good &= getByte(data.crc, dummy);
 
+    if (good && (data.crc == crc)) {
+        if (data.model == WATERIUS_4C2W) {
+            LOG_INFO(FPSTR(S_I2C), F("Send L"));
+            sendCmd('L');
+            crc = 0;
+            good &= getByte(data.statewl1, crc);
+            good &= getByte(data.statewl2, crc);
+            good &= getUint16(data.adcwl1, crc);
+            good &= getUint16(data.adcwl2, crc);
+            good &= getByte(data.crc, dummy);
+            
+            LOG_INFO(FPSTR(S_I2C), F("data.crc=") << data.crc << F(" crc=") << crc);
+        }
+    }
+
+
     if (good) {
         data.diagnostic = (data.crc == crc) ? WATERIUS_OK : WATERIUS_BAD_CRC;
     }
@@ -164,18 +181,15 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
             LOG_INFO(FPSTR(S_I2C), F("voltage: ") << data.voltage);
             LOG_INFO(FPSTR(S_I2C), F("resets: ") << data.resets);
             LOG_INFO(FPSTR(S_I2C), F("MODEL: ") << data.model);
-            LOG_INFO(FPSTR(S_I2C), F("state0: ") << data.state0);
-            LOG_INFO(FPSTR(S_I2C), F("state1: ") << data.state1);
-            LOG_INFO(FPSTR(S_I2C), F("state2: ") << data.state2);
-            LOG_INFO(FPSTR(S_I2C), F("state3: ") << data.state3);
-            LOG_INFO(FPSTR(S_I2C), F("impulses0: ") << data.impulses0);
-            LOG_INFO(FPSTR(S_I2C), F("impulses1: ") << data.impulses1);
-            LOG_INFO(FPSTR(S_I2C), F("impulses2: ") << data.impulses2);
-            LOG_INFO(FPSTR(S_I2C), F("impulses3: ") << data.impulses3);
-            LOG_INFO(FPSTR(S_I2C), F("adc0: ") << data.adc0);
-            LOG_INFO(FPSTR(S_I2C), F("adc1: ") << data.adc1);
-            LOG_INFO(FPSTR(S_I2C), F("adc2: ") << data.adc2);
-            LOG_INFO(FPSTR(S_I2C), F("adc3: ") << data.adc3);
+
+            LOG_INFO(FPSTR(S_I2C), F("0: imp: ") << data.impulses0 << F(" state: ") << data.state0 << F(" adc: ") << data.adc0);
+            LOG_INFO(FPSTR(S_I2C), F("1: imp: ") << data.impulses1 << F(" state: ") << data.state1 << F(" adc: ") << data.adc1);
+            LOG_INFO(FPSTR(S_I2C), F("2: imp: ") << data.impulses2 << F(" state: ") << data.state2 << F(" adc: ") << data.adc2);
+            LOG_INFO(FPSTR(S_I2C), F("3: imp: ") << data.impulses3 << F(" state: ") << data.state3 << F(" adc: ") << data.adc3);
+
+            LOG_INFO(FPSTR(S_I2C), F("WaterLeak 1: state: ") << data.statewl1 << " adc: " << data.adcwl1);
+            LOG_INFO(FPSTR(S_I2C), F("WaterLeak 2: state: ") << data.statewl2 << " adc: " << data.adcwl2);
+
             LOG_INFO(FPSTR(S_I2C), F("CRC ok"));
         break;
         case WATERIUS_NO_LINK:

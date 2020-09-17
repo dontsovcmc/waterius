@@ -133,15 +133,24 @@ void loop()
                 cdata.rssi = WiFi.RSSI();
                 LOG_DEBUG(FPSTR(S_WIF), F("RSSI: ") << cdata.rssi);
 
+                success = false;
                 if (send_blynk(sett, data, cdata)) {
+                    success |= true;
                     LOG_INFO(FPSTR(S_BLK), F("Send OK"));
                 }
                 
                 if (send_mqtt(sett, data, cdata)) {
+                    success |= true;
                     LOG_INFO(FPSTR(S_MQT), F("Send OK"));
                 }
 
-                UserClass::sendNewData(sett, data, cdata);
+                if (UserClass::sendNewData(sett, data, cdata)) {
+                    success |= true;
+                }
+                
+                if (success) {
+                    masterI2C.sendCmd('A');  //Отправили данные 
+                }
 
                 //Сохраним текущие значения в памяти.
                 sett.impulses0_previous = data.impulses0;

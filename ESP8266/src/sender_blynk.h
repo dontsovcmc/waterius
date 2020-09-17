@@ -13,6 +13,27 @@
 #include "master_i2c.h"
 #include "Logging.h"
 
+String notify_water(uint8_t state, uint8_t channel, uint8_t pin)
+{
+    WidgetLED water_led(pin);
+
+    //Every device can send only 1 notification every 5 seconds;
+
+    switch (state) {
+        case WaterLeak_e::WATER:
+            water_led.on();
+            return String("Протечка воды. Канал #" + String(channel) + "; ");
+        case WaterLeak_e::BREAK:
+            water_led.on();
+            return String("Обрыв датчика. Канал #" + String(channel) + "; ");
+            break;
+        case WaterLeak_e::NORMAL:
+            water_led.off();
+            break;
+    }
+    return String();
+}
+
 bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
     if (strnlen(sett.blynk_key, BLYNK_KEY_LEN) == 0) {
@@ -39,6 +60,15 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
 
         WidgetLED battery_led(V6);
         cdata.low_voltage ? battery_led.on() : battery_led.off();
+
+        //Оповестить, если протечка/обрыв
+        String msg;
+        msg += notify_water(data.statewl1, 1, V9);
+        msg += notify_water(data.statewl2, 2, V10);
+        
+        if (msg.length()) {
+            Blynk.notify(msg);
+        }
 
         LOG_INFO(FPSTR(S_BLK), F("virtualWrite OK"));
         
