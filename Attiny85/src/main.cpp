@@ -203,7 +203,8 @@ inline void counting() {
 		storage.add(info.data);
 	}
 	
-	if ((wdt_count & LEAK_CHECK_PERIOD) == 0) {
+	// wdt_count == 0 при передаче данных
+	if ((wdt_count & LEAK_CHECK_PERIOD) == 0 && wdt_count > 0) {
 		leak_power.power(true);
 		waterleak1.update();
 		waterleak2.update();
