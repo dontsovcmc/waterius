@@ -12,24 +12,24 @@
 class SlaveI2C
 {
  protected:
-	 static uint8_t txBuffer[TX_BUFFER_SIZE];
-	 static uint8_t txBufferPos;
+	static uint8_t txBuffer[TX_BUFFER_SIZE];
+	static uint8_t txBufferPos;
 
-	 static bool masterSentSleep;
+	static bool masterSentSleep;
 
-	 static void requestEvent();
-	 static void newCommand();
-	 static void receiveEvent( int howMany );
+	static void requestEvent();
+	static void newCommand();
+	static void receiveEvent( int howMany );
 
  public:
-	 static uint8_t setup_mode;
+	static uint8_t setup_mode;
 	 
 #ifdef WATERIUS_4C2W
-	 static bool alarm_sent;
+	static bool alarm_sent;
 #endif
-	 void begin(const uint8_t);
-	 static void end();
-	 bool masterGoingToSleep();
+	void begin(const uint8_t);
+	static void end();
+	bool masterGoingToSleep();
 };
 
 

@@ -164,10 +164,29 @@ void resetWatchdog() {
 	wdt_reset(); // pat the dog
 } 
 
+#ifdef WATERIUS_4C2W
+// Обновляем статус датчиков протечки
+// force - даже тех, которые отключены были при настройке
+void check_waterleak(bool force)
+{
+	leak_power.power(true);
+	if (force || waterleak1.is_work()) {
+		waterleak1.update();
+	}
+	if (force || waterleak2.is_work()) {
+		waterleak2.update();
+	}
+	leak_power.power(false);
+}
+#endif
+
 // Проверяем входы на замыкание. 
 // Замыкание засчитывается только при повторной проверке.
+#ifdef WATERIUS_4C2W
+inline void counting(bool force) {
+#else
 inline void counting() {
-
+#endif
     power_adc_enable(); //т.к. мы обесточили всё а нам нужен компаратор
     adc_enable();       //после подачи питания на adc
 
@@ -199,24 +218,15 @@ inline void counting() {
 		info.adc.adc3 = counter3.adc;
 		storage.add(info.data);
 	}
-	
-	// не опрашиваем датчики при передаче данных
-	// т.к. wdt_count == 0 
-	if ((wdt_count & LEAK_CHECK_PERIOD) == 0 && wdt_count > 0) {
-		leak_power.power(true);
-		if (waterleak1.is_work()) {
-			waterleak1.update();
-		}
-		if (waterleak2.is_work()) {
-			waterleak2.update();
-		}
-		leak_power.power(false);
+	if ((wdt_count & LEAK_CHECK_PERIOD) == 0) {
+
+		// Проверяем только включенные датчики
+		check_waterleak(force);
 	}
 #endif
 
 	adc_disable();
     power_adc_disable();
-
 }
 
 // Загрузка настроек из EEPROM
@@ -248,23 +258,21 @@ void save_settings(uint16_t shift)
 
 // Требуется пробуждение
 bool need_wake_up() {
-#if defined(WATERIUS_2C)
 
-	return button.pressed();
-
-#else
+#ifdef WATERIUS_4C2W
 	if ((wdt_count & LEAK_CHECK_PERIOD) == 0) {
+
 		if (!waterleak1.is_ok() || !waterleak2.is_ok()) {
-			if (!slaveI2C.alarm_sent) {
-				return true;  // просыпаемся
-			}
-		} else {
+			LOG(F("alarm_sent = false"));
 			slaveI2C.alarm_sent = false;
-		} 
+		}
+		if (!slaveI2C.alarm_sent) {
+			return true;  // просыпаемся
+		}
 	}
-	
-	return button.pressed();
 #endif
+
+	return button.pressed();
 }
 
 
@@ -317,17 +325,22 @@ void loop() {
 
 	// Цикл опроса входов
 	// Выход по прошествию WAKE_EVERY_MIN минут или по нажатию кнопки
-	for (unsigned int i = 0; i < ONE_MINUTE && !need_wake_up(); ++i)  {
+	bool wake_up = false;
+	for (unsigned int i = 0; i < ONE_MINUTE && !wake_up; ++i)  {
 		wdt_count = WAKE_EVERY_MIN;
 		while ( wdt_count > 0 ) {
 			noInterrupts();
-
-			if (need_wake_up()) { 
+			
+			wake_up = need_wake_up();
+			if (wake_up) { 
 				interrupts();  // Пользователь нажал кнопку
 				break;
 			} else 	{
+#ifdef WATERIUS_4C2W
+				counting(false);
+#else				
 				counting(); //Опрос входов. Тут т.к. https://github.com/dontsovcmc/waterius/issues/76
-
+#endif
 				interrupts();
 				sleep_mode();  // Спим (WDTCR)
 			}
@@ -378,7 +391,11 @@ void loop() {
 
 		info.voltage = readVcc();   // Текущее напряжение
 
+#ifdef WATERIUS_4C2W
+		counting(SlaveI2C::setup_mode == SETUP_MODE);
+#else
 		counting();
+#endif
 		delayMicroseconds(65000);
 
 		if (button.wait_release() > LONG_PRESS_MSEC) {
@@ -395,30 +412,11 @@ void loop() {
 		LOG(F("Sleep received"));
 
 #ifdef WATERIUS_4C2W
-	if (SlaveI2C::setup_mode == SETUP_MODE) {
-
-		power_adc_enable();
-    	adc_enable();
-
-		leak_power.power(true);
-		waterleak1.update();
-		waterleak2.update();
-		leak_power.power(false);
-
-		adc_disable();
-		power_adc_disable();
-
-		LOG(F("Waterleak 1: "));
-		LOG(waterleak1.state);
-		LOG(waterleak1.adc);
-		LOG(F("Waterleak 2: "));
-		LOG(waterleak2.state);
-		LOG(waterleak2.adc);
-
-		waterleak1.turn_off_if_break();
-		waterleak2.turn_off_if_break();
-		save_settings(storage.size());
-	}
+		if (SlaveI2C::setup_mode == SETUP_MODE) {
+			waterleak1.turn_off_if_break();
+			waterleak2.turn_off_if_break();
+			save_settings(storage.size());
+		}
 #endif
 	}
 }

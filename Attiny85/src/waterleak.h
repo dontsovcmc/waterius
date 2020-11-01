@@ -69,12 +69,15 @@ struct WaterLeakA
     uint16_t adc;   // уровень входа
     uint8_t  state; // состояние входа
 
+    bool state_changed;
+
     explicit WaterLeakA(uint8_t pin, uint8_t apin = 0)  
       : _checks(-1)
       , _pin(pin)
       , _apin(apin)
       , adc(0)
       , state(WaterLeak_e::OFF)
+      , state_changed(false)
     {
        DDRA &= ~_BV(pin);      // INPUT
     }
@@ -89,12 +92,18 @@ struct WaterLeakA
     void update()  //TODO external
     {
         adc = aRead();
+
+        state_changed = value2state(adc) != state;
+
+        LOG(F("state_changed"));
+        LOG(state_changed);
+
         state = value2state(adc);
     }
 
     inline bool is_ok() 
     {
-        return !is_work() || state == WaterLeak_e::NORMAL;
+        return !is_work() || !state_changed;
     }
 
     // Возвращаем текущее состояние входа
