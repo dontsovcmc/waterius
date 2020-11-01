@@ -164,7 +164,7 @@ struct Header {
     #define HEADER_DATA_SIZE 22
 #else
     #define HEADER_DATA_SIZE 36
-
+    
     struct LeakHeader
     {
         uint8_t       state1;

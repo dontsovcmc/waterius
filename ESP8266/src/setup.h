@@ -111,9 +111,10 @@ struct CalculatedData {
 
 enum WaterLeak_e
 {
-    BREAK,      //обрыв линии, нет датчика
-    NORMAL,    //норма
-    WATER     //вода
+    OFF,       // датчик не подключен
+    BREAK,     // обрыв линии
+    NORMAL,    // норма
+    WATER      // вода
 };
 
 /*

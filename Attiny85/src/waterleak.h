@@ -8,9 +8,10 @@
 
 enum WaterLeak_e
 {
+    OFF,        //не установлен. определяется при включении.
     BREAK,      //обрыв линии, нет датчика
-    NORMAL,    //норма
-    WATER     //вода
+    NORMAL,     //норма
+    WATER       //вода
 };
 
 struct LeakPowerB
@@ -73,7 +74,7 @@ struct WaterLeakA
       , _pin(pin)
       , _apin(apin)
       , adc(0)
-      , state(WaterLeak_e::NORMAL)
+      , state(WaterLeak_e::OFF)
     {
        DDRA &= ~_BV(pin);      // INPUT
     }
@@ -93,7 +94,7 @@ struct WaterLeakA
 
     inline bool is_ok() 
     {
-        return state == WaterLeak_e::NORMAL;
+        return !is_work() || state == WaterLeak_e::NORMAL;
     }
 
     // Возвращаем текущее состояние входа
@@ -105,6 +106,34 @@ struct WaterLeakA
             return WaterLeak_e::NORMAL;
         } else {
             return WaterLeak_e::BREAK;
+        }
+    }
+    
+    // Если в режиме настройки нет датчика, то считаем его выключеным
+    void turn_off_if_break()
+    {
+        LOG(F("turn_off_if_break (1): "));
+        LOG(state);
+        if (state == WaterLeak_e::BREAK) {
+            state = WaterLeak_e::OFF;
+        }
+    }
+
+    void set_work(bool is_work) 
+    {
+        if (is_work) {
+            state = WaterLeak_e::NORMAL;
+        } else {
+            state = WaterLeak_e::OFF;
+        }
+    }
+
+    inline bool is_work()
+    {
+        if (state == WaterLeak_e::OFF) {
+            return false;
+        } else {
+            return true;
         }
     }
 };

@@ -14,7 +14,6 @@ class SlaveI2C
  protected:
 	 static uint8_t txBuffer[TX_BUFFER_SIZE];
 	 static uint8_t txBufferPos;
-	 static uint8_t setup_mode;
 
 	 static bool masterSentSleep;
 
@@ -23,6 +22,8 @@ class SlaveI2C
 	 static void receiveEvent( int howMany );
 
  public:
+	 static uint8_t setup_mode;
+	 
 #ifdef WATERIUS_4C2W
 	 static bool alarm_sent;
 #endif

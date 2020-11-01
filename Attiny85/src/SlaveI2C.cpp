@@ -4,10 +4,14 @@
 #include <Arduino.h>
 #include "Storage.h"
 #include <Wire.h>
+#include "waterleak.h"
 
 extern struct Header info;
-extern struct LeakHeader leak;
 
+#ifdef WATERIUS_4C2W
+extern WaterLeakA waterleak1;
+extern WaterLeakA waterleak2;
+#endif
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -59,16 +63,21 @@ void SlaveI2C::receiveEvent(int howMany) {
 		case 'M':  // Разбудили ESP для настройки или передачи данных?
 			txBuffer[0] = setup_mode;
 			break;
-		case 'T':  // После настройки ESP перезагрузим, поэтому меняем режим на передачу данных
+		case 'T':  // Не используется. После настройки ESP перезагрузим, поэтому меняем режим на передачу данных
 			setup_mode = TRANSMIT_MODE;
 			break;
+
 #ifdef WATERIUS_4C2W
-		case 'A':
+		case 'A':  // Тревога была отправлена
 			alarm_sent = true;
 			break;
-		case 'L':  // данные датчиков протечки
-			leak.crc = crc_8((unsigned char*)&leak, LEAK_HEADER_SIZE);
-			memcpy(txBuffer, &leak, LEAK_HEADER_SIZE_CRC);
+		case 'L':  // Данные датчиков протечки
+			LeakHeader *data = (LeakHeader*)(&txBuffer[0]);
+			data->adc1 = waterleak1.adc;
+			data->adc2 = waterleak2.adc;
+			data->state1 = waterleak1.state;
+			data->state2 = waterleak2.state;
+			data->crc = crc_8((unsigned char*)data, LEAK_HEADER_SIZE);
 			break;
 #endif
 	}

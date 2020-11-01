@@ -27,6 +27,7 @@ String notify_water(uint8_t state, uint8_t channel, uint8_t pin)
             water_led.on();
             return String("Обрыв датчика. Канал #" + String(channel) + "; ");
             break;
+        case WaterLeak_e::OFF:
         case WaterLeak_e::NORMAL:
             water_led.off();
             break;

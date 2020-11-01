@@ -42,6 +42,8 @@ String wl_state(WaterLeak_e state)
 {
     switch (state) 
     {
+        case WaterLeak_e::OFF:
+            return String("off");
         case WaterLeak_e::BREAK:
             return String("break");
         case WaterLeak_e::NORMAL:
