@@ -101,9 +101,9 @@ struct WaterLeakA
         state = value2state(adc);
     }
 
-    inline bool is_ok() 
+    inline bool is_state_changed() 
     {
-        return !is_work() || !state_changed;
+        return is_work() && state_changed;
     }
 
     // Возвращаем текущее состояние входа
@@ -130,20 +130,12 @@ struct WaterLeakA
 
     void set_work(bool is_work) 
     {
-        if (is_work) {
-            state = WaterLeak_e::NORMAL;
-        } else {
-            state = WaterLeak_e::OFF;
-        }
+        state = (is_work) ? WaterLeak_e::NORMAL : state = WaterLeak_e::OFF;
     }
 
     inline bool is_work()
     {
-        if (state == WaterLeak_e::OFF) {
-            return false;
-        } else {
-            return true;
-        }
+        return state != WaterLeak_e::OFF;
     }
 };
 

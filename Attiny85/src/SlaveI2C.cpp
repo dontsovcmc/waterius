@@ -20,7 +20,7 @@ uint8_t SlaveI2C::setup_mode = TRANSMIT_MODE;
 bool SlaveI2C::masterSentSleep = false;
 
 #ifdef WATERIUS_4C2W
-bool SlaveI2C::alarm_sent = false;
+bool SlaveI2C::alarm_sent = true;
 #endif
 
 void SlaveI2C::begin(const uint8_t mode) {

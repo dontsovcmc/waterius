@@ -113,6 +113,7 @@ static CounterA counter3(3, 3);
 static LeakPowerB leak_power(2); // Питание на датчики протечек 
 WaterLeakA waterleak1(5, 5);
 WaterLeakA waterleak2(7, 7);
+static bool wl_changed = false;
 
 static ButtonB button(1);
 static ESPPowerPin esp(0);       // Питание на ESP 
@@ -169,6 +170,7 @@ void resetWatchdog() {
 // force - даже тех, которые отключены были при настройке
 void check_waterleak(bool force)
 {
+	LOG(F("check_waterleak"));
 	leak_power.power(true);
 	if (force || waterleak1.is_work()) {
 		waterleak1.update();
@@ -218,10 +220,14 @@ inline void counting() {
 		info.adc.adc3 = counter3.adc;
 		storage.add(info.data);
 	}
+	
 	if ((wdt_count & LEAK_CHECK_PERIOD) == 0) {
 
-		// Проверяем только включенные датчики
 		check_waterleak(force);
+		wl_changed = waterleak1.is_state_changed() || waterleak2.is_state_changed();
+		if (wl_changed) {
+			slaveI2C.alarm_sent = false;
+		}
 	}
 #endif
 
@@ -236,10 +242,11 @@ void load_settings(uint16_t shift)
 
 #ifdef WATERIUS_4C2W
 	uint8_t sett = EEPROM.read(shift+1);
-	LOG(F("Settings load: "));
-	LOG(sett);
 	waterleak1.set_work(sett & 0x01);
 	waterleak2.set_work(sett & 0x02);
+
+	LOG(F("Settings load: "));
+	LOG(sett);
 #endif
 }
 
@@ -250,9 +257,10 @@ void save_settings(uint16_t shift)
 
 #ifdef WATERIUS_4C2W
 	uint8_t sett = waterleak1.is_work() | (waterleak2.is_work() << 1);
+	EEPROM.write(shift+1, sett);
+
 	LOG(F("Settings save: "));
 	LOG(sett);
-	EEPROM.write(shift+1, sett);
 #endif
 }
 
@@ -260,19 +268,10 @@ void save_settings(uint16_t shift)
 bool need_wake_up() {
 
 #ifdef WATERIUS_4C2W
-	if ((wdt_count & LEAK_CHECK_PERIOD) == 0) {
-
-		if (!waterleak1.is_ok() || !waterleak2.is_ok()) {
-			LOG(F("alarm_sent = false"));
-			slaveI2C.alarm_sent = false;
-		}
-		if (!slaveI2C.alarm_sent) {
-			return true;  // просыпаемся
-		}
-	}
-#endif
-
+	return (wl_changed && !slaveI2C.alarm_sent) || button.pressed();
+#else
 	return button.pressed();
+#endif
 }
 
 
@@ -325,14 +324,12 @@ void loop() {
 
 	// Цикл опроса входов
 	// Выход по прошествию WAKE_EVERY_MIN минут или по нажатию кнопки
-	bool wake_up = false;
-	for (unsigned int i = 0; i < ONE_MINUTE && !wake_up; ++i)  {
+	for (unsigned int i = 0; i < ONE_MINUTE && !need_wake_up(); ++i)  {
 		wdt_count = WAKE_EVERY_MIN;
 		while ( wdt_count > 0 ) {
 			noInterrupts();
 			
-			wake_up = need_wake_up();
-			if (wake_up) { 
+			if (need_wake_up()) { 
 				interrupts();  // Пользователь нажал кнопку
 				break;
 			} else 	{
