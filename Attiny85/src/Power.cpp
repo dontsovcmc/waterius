@@ -19,24 +19,16 @@ void ESPPowerPin::power(const bool on)
 	if (on)
 	{
 		pinMode(power_pin, OUTPUT);
-#if defined(WATERIUS_2C) 
+		
 		digitalWrite(power_pin, HIGH);
-#endif
-#if defined(WATERIUS_4C2W)
-		digitalWrite(power_pin, LOW);
-#endif
 		wake_up_timestamp = millis();
 	}
 	else
 	{
 		delayMicroseconds(50000);   // чтобы заснул
 		
-#if defined(WATERIUS_2C) 
 		digitalWrite(power_pin, LOW);
-#endif
-#if defined(WATERIUS_4C2W)
-		digitalWrite(power_pin, HIGH);
-#endif
+
 		pinMode(power_pin, INPUT);  // снижаем потребление
 		wake_up_timestamp = 0;
 	}
@@ -60,15 +52,7 @@ uint16_t readVcc()
 	power_adc_enable();
 	adc_enable();
 
-	#if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-		ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-    #elif defined (__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
-        ADMUX = _BV(MUX5) | _BV(MUX0) ;
-	#elif defined (__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
-		ADMUX = _BV(MUX3) | _BV(MUX2);
-    #else
-        ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-    #endif 
+	ADMUX = _BV(MUX3) | _BV(MUX2);   // attiny85
     
     //delayMicroseconds(5);    // only needed if using sensors with source resistance > 10K
 	delay(2); // Wait for Vref to settle. See Table 17-4. Input Channel Selections

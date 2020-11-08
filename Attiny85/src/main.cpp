@@ -12,15 +12,17 @@
 #include <avr/power.h>  
 
 // Для логирования раскомментируйте LOG_ON в Setup.h
-#if defined(LOG_ON) && defined(WATERIUS_2C) 
+#if defined(LOG_ON)
 	TinyDebugSerial mySerial;
 #endif
 
 
-#define FIRMWARE_VER 13    // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 14    // Версия прошивки. Передается в ESP и на сервер в данных.
   
 /*
 Версии прошивок 
+14 - 2020.11.09 - dontsovcmc
+    1. поддержка attiny84 в отдельной ветке
 
 13 - 2020.06.17 - dontsovcmc
 	1. изменил формулу crc
@@ -57,7 +59,6 @@
      
 // Счетчики импульсов
 
-#if defined(WATERIUS_2C)
 // Waterius Classic: https://github.com/dontsovcmc/waterius
 //
 //                                +-\/-+
@@ -84,46 +85,6 @@ struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_2C,
 					   {0, 0},
 					   0, 0
 					 };
-#endif
-
-#ifdef WATERIUS_4C2W
-
-#define WDTCR WDTCSR
-// Waterius 4C2W: https://github.com/badenbaden/Waterius-Attiny84-ESP12F
-//
-//                                 +-\/-+
-//                           VCC  1|    |14  GND
-//  *Power ESP*   (D  0)     PB0  2|    |13  PA0  (D  10/A0)        *Counter0* 
-//  *Button*      (D  1)     PB1  3|    |12  PA1  (D  9/ A1)        *Counter1* 
-//       RESET    (D 11)     PB3  4|    |11  PA2  (D  8/ A2)        *Counter2* 
-//  *Alarm*       (D  2)     PB2  5|    |10  PA3  (D  7/ A3)        *Counter3* 
-//  *WaterLeak2*  (D  3/A7)  PA7  6|    |9   PA4  (D  6/ A4)   SCK  SCL
-//  SDA  MOSI     (D  4/A6)  PA6  7|    |8   PA5  (D  5/ A5)   MISO *WaterLeak2*
-//                                 +----+
-//
-// https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x4.md
-
-
-static CounterA counter0(0, 0);
-static CounterA counter1(1, 1);
-static CounterA counter2(2, 2);
-static CounterA counter3(3, 3);
-
-static CounterA counter5(5, 5); //only for setup input pin
-static CounterA counter7(7, 7); //only for setup input pin
-
-static ButtonB button(1);
-static ESPPowerPin esp(0);      // Питание на ESP
-
-// Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_4C2W, 
-					   {CounterState_e::CLOSE, CounterState_e::CLOSE, CounterState_e::CLOSE, CounterState_e::CLOSE},
-				       {0, 0, 0, 0},
-					   {0, 0, 0, 0},
-					   0, 0
-					 }; 
-#endif
-
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
 //Кольцовой нужен для того, чтобы превысить лимит записи памяти в 100 000 раз
@@ -150,14 +111,10 @@ void resetWatchdog() {
 	// Итак, пробуждаемся (проверяем входы) каждые 250 мс
 	// 1 минута примерно равна 240 пробуждениям
 	
-#ifdef TEST_WATERIUS
-	WDTCR = bit( WDIE ) | bit( WDP2 );      // bit( WDP0 )  32 ms
-											// bit( WDP2 ) 250 ms
-	#define ONE_MINUTE 240  
-#else
+	//WDTCR = bit( WDIE ) | bit( WDP2 );   // bit( WDP0 )  32 ms  Минута будет в 8 раз чаще
+										   // bit( WDP2 ) 250 ms
 	WDTCR = bit( WDIE ) | bit( WDP2 );     // 250 ms
 	#define ONE_MINUTE 240
-#endif
 									
 	wdt_reset(); // pat the dog
 } 
@@ -180,21 +137,6 @@ inline void counting() {
 		info.data.value1++;
 		info.states.state1 = counter1.state;
 		info.adc.adc1 = counter1.adc;
-		storage.add(info.data);
-	}
-#endif
-
-#ifdef WATERIUS_4C2W
-	if (counter2.is_impuls()) {
-		info.data.value2++;
-		info.states.state2 = counter2.state;
-		info.adc.adc2 = counter2.adc;
-		storage.add(info.data);
-	}
-	if (counter3.is_impuls()) {
-		info.data.value3++;
-		info.states.state3 = counter3.state;
-		info.adc.adc3 = counter3.adc;
 		storage.add(info.data);
 	}
 #endif
@@ -234,10 +176,6 @@ void setup() {
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
-#ifdef WATERIUS_4C2W
-	LOG(info.data.value2);
-	LOG(info.data.value3);
-#endif
 }
 
 
@@ -277,10 +215,7 @@ void loop() {
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
-#ifdef WATERIUS_4C2W
-	LOG(info.data.value2);
-	LOG(info.data.value3);
-#endif
+	
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит 
 	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания 

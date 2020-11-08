@@ -3,16 +3,7 @@
 
 #include <Arduino.h>
 
-/*
-#define BUILD_WATERIUS_4C2W 1
-*/
-
-#ifdef BUILD_WATERIUS_4C2W
-#define WATERIUS_4C2W 1  // attiny84 - 4 счетчика импульсов
-#else
 #define WATERIUS_2C 0    // attiny85 - 2 счетчика импульсов
-#endif 
-
 
 /* 
 	Включение логирования
@@ -30,28 +21,15 @@
     #undef LOG
 
     // TinyDebugSerial на PB3 только в attiny85, 1MHz
-    #if defined(WATERIUS_2C)
-        #include "TinyDebugSerial.h"
-        #define LOG_BEGIN(x)  mySerial.begin(x)
-        #define LOG(x) mySerial.print(millis()); mySerial.print(F(" : ")); mySerial.println(x);
-    #endif 
-    #if defined(WATERIUS_4C2W)
-    // TinySoftwareSerial на PB3 attiny84, 1MHz
-        #define LOG_BEGIN(x)  Serial.begin(x); ACSR &=~(1<<ACIE); ACSR |=~(1<<ACD);  //only TX
-        #define LOG(x) Serial.print(millis()); Serial.print(F(" : ")); Serial.println(x);
-    #endif 
+    #include "TinyDebugSerial.h"
+    #define LOG_BEGIN(x)  mySerial.begin(x)
+    #define LOG(x) mySerial.print(millis()); mySerial.print(F(" : ")); mySerial.println(x);
 #endif
-
-//#define TEST_WATERIUS   // Тестирование счетчика при помощи Arduino
 
 /*
 	Период отправки данных на сервер, мин
 */
-#ifdef TEST_WATERIUS
-#define WAKE_EVERY_MIN   10
-#else
 #define WAKE_EVERY_MIN   24 * 60U  // 1U 
-#endif
 
 /*
 	Аварийное отключение, если ESP зависнет и не пришлет команду "сон".
@@ -70,7 +48,6 @@
 #define LONG_PRESS_MSEC  3000   
        
 
-#if defined(WATERIUS_2C)
 struct Data {
     uint32_t value0;
     uint32_t value1;
@@ -85,30 +62,7 @@ struct ADCLevel {
     uint16_t      adc0;
     uint16_t      adc1; 
 };
-#endif
 
-#if defined(WATERIUS_4C2W)
-struct Data {
-    uint32_t value0;
-    uint32_t value1;
-    uint32_t value2;
-    uint32_t value3;
-};
-
-struct CounterState { // не добавляем в Data, т.к. та в буфере кольцевом
-    uint8_t state0;  // состояние входа
-    uint8_t state1; 
-    uint8_t state2;
-    uint8_t state3;
-};
-
-struct ADCLevel {
-    uint16_t adc0;
-    uint16_t adc1; 
-    uint16_t adc2; 
-    uint16_t adc3; 
-};
-#endif
 
 struct Header {
 
@@ -157,12 +111,8 @@ struct Header {
     uint8_t       reserved2;
 };  //22 байт
 
-#if defined(WATERIUS_2C)
-    #define HEADER_DATA_SIZE 22
-#else
-    #define HEADER_DATA_SIZE 36
-#endif
+#define HEADER_DATA_SIZE 22
 
- #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
+#define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
 
 #endif
