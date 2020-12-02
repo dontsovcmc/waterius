@@ -155,8 +155,6 @@ struct Settings
     */
     float    channel0_start;
     float    channel1_start;
-    float    channel2_start;
-    float    channel3_start;
 
     /*
     Кол-во литров на 1 импульс
@@ -169,8 +167,6 @@ struct Settings
     */
     uint32_t impulses0_start;
     uint32_t impulses1_start;
-    uint32_t impulses2_start;
-    uint32_t impulses3_start;
 
     /*
     Не понятно, как получить от Blynk прирост показаний, 
@@ -178,8 +174,6 @@ struct Settings
     */
     uint32_t impulses0_previous;
     uint32_t impulses1_previous;
-    uint32_t impulses2_previous;
-    uint32_t impulses3_previous;
 
     /*
     Время последнего пробуждения

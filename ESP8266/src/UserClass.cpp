@@ -47,18 +47,6 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["adc0"] =          data.adc0;
     root["adc1"] =          data.adc1;
 
-    if (data.model == WATERIUS_4C2W) {
-        root["model"] =         data.model;
-        root["delta2"] =        cdata.delta2;
-        root["delta3"] =        cdata.delta3;
-        root["ch2"] =           cdata.channel2;
-        root["ch3"] =           cdata.channel3;
-        root["imp2"] =          data.impulses2;
-        root["imp3"] =          data.impulses3;
-        root["adc2"] =          data.adc2;
-        root["adc3"] =          data.adc3;
-    }
-
     serializeJson(root, jsonBody);
     LOG_INFO(FPSTR(S_SND), "JSON size:\t" << jsonBody.length());
     

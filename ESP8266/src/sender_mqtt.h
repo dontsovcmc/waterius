@@ -59,17 +59,6 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "adc0").c_str(), String(data.adc0).c_str(), true);
         client.publish((topic + "adc1").c_str(), String(data.adc1).c_str(), true);
 
-        if (data.model == WATERIUS_4C2W) {
-            client.publish((topic + "ch2").c_str(), String((float)cdata.channel2,3).c_str(), true);
-            client.publish((topic + "ch3").c_str(), String((float)cdata.channel3,3).c_str(), true);
-            client.publish((topic + "delta2").c_str(), String(cdata.delta2).c_str(), true);
-            client.publish((topic + "delta3").c_str(), String(cdata.delta3).c_str(), true);
-            client.publish((topic + "imp2").c_str(), String(data.impulses2).c_str(), true);
-            client.publish((topic + "imp3").c_str(), String(data.impulses3).c_str(), true);
-            client.publish((topic + "adc2").c_str(), String(data.adc2).c_str(), true);
-            client.publish((topic + "adc3").c_str(), String(data.adc3).c_str(), true);
-        }
-
         client.disconnect();
         return true;
     }  else {
