@@ -5,6 +5,9 @@
 #include "string.h"
 #include "time.h"
 
+#include <ESP8266WiFi.h>
+#include "Logging.h"
+
 #define NTP_CONNECT_TIMEOUT 3000UL
 
 bool setClock(const char* ntp_server)
@@ -36,4 +39,25 @@ bool setClock()
 		return true;
 	}
 	return false;
+}
+
+
+void print_wifi_mode()
+{
+    //WiFi.setPhyMode(WIFI_PHY_MODE_11B = 1, WIFI_PHY_MODE_11G = 2, WIFI_PHY_MODE_11N = 3);
+    WiFiPhyMode_t m = WiFi.getPhyMode();
+	switch (m) {
+		case WIFI_PHY_MODE_11B: 
+			LOG_INFO(FPSTR(S_WIF), F("mode B"));
+			break;
+		case WIFI_PHY_MODE_11G: 
+			LOG_INFO(FPSTR(S_WIF), F("mode G"));
+			break;
+		case WIFI_PHY_MODE_11N: 
+			LOG_INFO(FPSTR(S_WIF), F("mode N"));
+			break;
+		default:
+			LOG_INFO(FPSTR(S_WIF), F("mode ") << (int)m);
+		break;
+	}
 }

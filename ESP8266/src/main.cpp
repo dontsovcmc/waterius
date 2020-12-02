@@ -25,6 +25,7 @@ CalculatedData cdata; //вычисляемые данные
 void setup()
 {
     WiFi.mode(WIFI_OFF);  //TODO  а нужна ли?
+
     memset(&cdata, 0, sizeof(cdata));
     memset(&data, 0, sizeof(data));
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
@@ -101,7 +102,7 @@ void loop()
                 if (success) {
                     //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                     WiFi.begin(); 
-                    
+
                     //Ожидаем подключения к точке доступа
                     uint32_t start = millis();
                     while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
@@ -118,7 +119,8 @@ void loop()
             if (success 
                 && WiFi.status() == WL_CONNECTED
                 && masterI2C.getSlaveData(data)) {  //т.к. в check_voltage не проверяем crc
-
+                
+                print_wifi_mode();
                 LOG_INFO(FPSTR(S_WIF), F("Connected, IP: ") << WiFi.localIP().toString());
                 
                 cdata.rssi = WiFi.RSSI();

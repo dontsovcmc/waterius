@@ -16,4 +16,6 @@ inline void strncpy0(char *dest, const char *src, const size_t len)
 
 bool setClock();
 
+void print_wifi_mode();
+
 #endif
