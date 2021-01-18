@@ -29,19 +29,9 @@
   * в Domoticz [инструкция](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
 * там, куда сами запрограммируете
   * [httpwaterius](https://github.com/grffio/httpwaterius) - web сервер с простым UI от [grffio](https://github.com/grffio)
+* передать в управляющую компанию [waterius.ru](http://waterius.ru).
 
-### Передача показаний в упр. компании
-Через сайт [waterius.ru](http://waterius.ru).
-
-### [КУПИТЬ](https://waterius.ru)
-
-Поддержать морально: <a href="https://www.buymeacoffee.com/vostnod" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/white_img.png" alt="Buy Me A Coffee"></a>
-
-
-### Модицикации
-Версия 0.10.0 поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками. Датчик протечки пока не реализован в прошивке.
-
-[Waterius на ESP32 с NB-IoT](https://github.com/OloloevReal/Waterius32) от OloloevReal
+### [Купить Ватериус и счётчики воды](https://waterius.ru)
 
 ### Отзывы
 <a href="https://vk.com/topic-183491011_40049475" target="_black">VK</a> и <a href="https://www.facebook.com/waterius/reviews/" target="_black">FB</a>. Напишите о своем использовании Ватериуса! Спасибо!
@@ -94,6 +84,11 @@
 Датчик протечек:
 - На пине reset сделал [OloloevReal](https://github.com/OloloevReal), вот [схема](https://github.com/dontsovcmc/waterius/issues/51)
 - На [Waterius-Attiny84-ESP12F](https://github.com/dontsovcmc/waterius/issues/41#issuecomment-439402464) сделан (но не запрограммирован) тут [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F), спасибо [badenbaden]
+
+### Модицикации
+Версия 0.10.0 поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками. Датчик протечки пока не реализован в прошивке.
+
+[Waterius на ESP32 с NB-IoT](https://github.com/OloloevReal/Waterius32) от OloloevReal
 
 # Ответственность
 
