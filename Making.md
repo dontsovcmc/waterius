@@ -1,8 +1,6 @@
 
 Вопросы по изготовлению задавайте тут: [issues](https://github.com/dontsovcmc/waterius/issues)
 
-Изготовление [1й версии платы тут](https://github.com/dontsovcmc/waterius/blob/7da3e404141a7a6a08e866adb6f25db93653b12a/Making.md)
-
 ## Компоненты
 
 | # | Наименование | Кол-во | Примечание | Магазин |   
@@ -30,10 +28,13 @@
 
 Вот так выглядит заводская плата с напаенными элеметами:
 
-<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_top.jpg" width="400"/>
-<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" width="400"/>
+<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board3_top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board3_top.jpg" width="400"/>
+<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board3_bottom.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board3_bottom.jpg" width="400"/>
 
 По фотографии удобно паять.
+
+[1я версия платы](https://github.com/dontsovcmc/waterius/blob/7da3e404141a7a6a08e866adb6f25db93653b12a/Making.md)
+
 
 # Изготовление
 
