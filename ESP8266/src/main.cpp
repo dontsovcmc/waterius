@@ -41,13 +41,13 @@ void calculate_values(const Settings &sett, const SlaveData &data, CalculatedDat
 {
     LOG_INFO(FPSTR(S_ESP), F("new impulses=") << data.impulses0 << " " << data.impulses1);
 
-    if (sett.liters_per_impuls > 0) {
-        cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.liters_per_impuls;
-        cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.liters_per_impuls;
+    if ((sett.liters_per_impuls_cold > 0) && (sett.liters_per_impuls_hot > 0)) {
+        cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.liters_per_impuls_hot;
+        cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.liters_per_impuls_cold;
         LOG_INFO(FPSTR(S_ESP), F("new value0=") << cdata.channel0 << F(" value1=") << cdata.channel1 << F(" value2=") << cdata.channel2 << F(" value3=") << cdata.channel3);
         
-        cdata.delta0  = (data.impulses0 - sett.impulses0_previous)*sett.liters_per_impuls;
-        cdata.delta1 = (data.impulses1 - sett.impulses1_previous)*sett.liters_per_impuls;
+        cdata.delta0  = (data.impulses0 - sett.impulses0_previous)*sett.liters_per_impuls_hot;
+        cdata.delta1 = (data.impulses1 - sett.impulses1_previous)*sett.liters_per_impuls_cold;
         LOG_INFO(FPSTR(S_ESP), F("delta0=") << cdata.delta0 << F(" delta1=") << cdata.delta1 << F(" delta2=") << cdata.delta2 << F(" delta3=") << cdata.delta3);
     }
 }
@@ -55,8 +55,7 @@ void calculate_values(const Settings &sett, const SlaveData &data, CalculatedDat
 
 void loop()
 {
-    uint8_t mode = TRANSMIT_MODE;
-
+    uint8_t mode = SETUP_MODE;//TRANSMIT_MODE;
 	// спрашиваем у Attiny85 повод пробуждения и данные
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data)) {
         //Загружаем конфигурацию из EEPROM
@@ -84,7 +83,6 @@ void loop()
 
             success = false;
         }
-        
         if (success) {
             if (mode == TRANSMIT_MODE) { 
                 //Проснулись для передачи показаний
@@ -146,6 +144,7 @@ void loop()
             }
         } 
     }
+    masterI2C.setWakeUpPer(sett.wakeup_per_min);//"Разбуди меня через..."
 
     LOG_INFO(FPSTR(S_ESP), F("Going to sleep"));
     

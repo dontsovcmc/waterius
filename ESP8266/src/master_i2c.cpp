@@ -44,7 +44,6 @@ void MasterI2C::begin() {
     Wire.setClockStretchLimit(2500L);  // Иначе связь с Attiny не надежная будут FF FF в хвосте посылки 
 }
 
-
 bool MasterI2C::sendCmd(const char cmd ) {
 
     Wire.beginTransmission( I2C_SLAVE_ADDR );
@@ -118,7 +117,6 @@ bool MasterI2C::getMode(uint8_t &mode) {
 bool MasterI2C::getSlaveData(SlaveData &data) {
 
     sendCmd('B');
-
     data.diagnostic = WATERIUS_NO_LINK;
 
     uint8_t dummy, crc = 0;
@@ -166,5 +164,39 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
 
     return data.diagnostic == WATERIUS_OK;
 }
+bool MasterI2C::sendData(uint8_t* buf, size_t size)
+{
+    uint8_t i;
+    Wire.beginTransmission( I2C_SLAVE_ADDR );
+    for(i=0;i<size;i++)
+    {
+        if (Wire.write(buf[i]) != 1){
+            LOG_ERROR(FPSTR(S_I2C), F("I2C transmitting fail."));
+            return false;
+        }
+    }
+    int err = Wire.endTransmission(true);
+    if (err != 0) {
+        LOG_ERROR(FPSTR(S_I2C), "end error:" << err);
+        return false;
+    }
+    return true;
+}
 
 
+bool MasterI2C::setWakeUpPer(uint16_t per)
+{
+    uint8_t txBuf[4];
+    
+    txBuf[0] = 'S';
+    txBuf[1]=(uint8_t)(per>>8);
+    txBuf[2]=(uint8_t)(per);
+    txBuf[3]=crc_8(&txBuf[1],2,0);
+    
+    if(!sendData(txBuf,4)){
+        LOG_ERROR(FPSTR(S_I2C), F("Wakeup period wasn't set. Check I2C line."));
+        return false;}
+
+    LOG_INFO(FPSTR(S_I2C), F("Wakeup period, min:") << per);
+    return true;
+}

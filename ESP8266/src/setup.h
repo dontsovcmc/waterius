@@ -92,8 +92,11 @@
 #define MQTT_PASSWORD_LEN 32
 #define MQTT_TOPIC_LEN 64
 
+#define DEFAULT_TRANSMIT_PER 1440
 
 struct CalculatedData {
+
+
     float    channel0;
     float    channel1;
     float    channel2;
@@ -107,6 +110,7 @@ struct CalculatedData {
     uint32_t voltage_diff;
     bool     low_voltage;
     int8_t   rssi;
+
 };
 
 /*
@@ -159,8 +163,12 @@ struct Settings
     /*
     Кол-во литров на 1 импульс
     */
-    uint16_t liters_per_impuls;
-
+    uint8_t liters_per_impuls_cold;
+    uint8_t liters_per_impuls_hot;
+    /*
+    Период отправки данных
+    */
+    uint16_t wakeup_per_min = DEFAULT_TRANSMIT_PER;
     /*
     Кол-во импульсов Attiny85 соответствующие показаниям счетчиков, 
     введенных пользователем при настройке
@@ -202,6 +210,6 @@ struct Settings
     Контрольная сумма, чтобы гарантировать корректность чтения настроек
     */
     uint16_t crc;
-}; //976 байт
+}; //978 байт
 
 #endif

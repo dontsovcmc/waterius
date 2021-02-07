@@ -20,10 +20,40 @@ extern MasterI2C masterI2C;
 SlaveData runtime_data;
 
 
-#define IMPULS_LIMIT_1 3  // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
+#define IMPULS_LIMIT_1  3  // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
 
-uint8_t get_factor() {
-    return (runtime_data.impulses1 - data.impulses1 <= IMPULS_LIMIT_1) ? 10 : 1;
+#define COLD_CHANNEL        0
+#define HOT_CHANNEL         1
+#define AUTO_IMPULSE_FACTOR 0
+#define AS_COLD_CHANNEL     7
+
+uint8_t get_factor(uint8_t channel, uint8_t coldFactor, uint8_t hotFactor) {
+
+    uint8_t calculatedValue;
+
+    if(channel == COLD_CHANNEL) {
+        if(coldFactor == AUTO_IMPULSE_FACTOR) {
+            //Автоматический расчет для холодной воды
+            LOG_INFO(FPSTR(S_CFG), "Automatically calculated value for coldFactor=" << coldFactor);
+            calculatedValue = (runtime_data.impulses1 - data.impulses1 <= IMPULS_LIMIT_1) ? 10 : 1;
+        } else {
+            LOG_INFO(FPSTR(S_CFG), "Calculated value for coldFactor=" << coldFactor);
+            calculatedValue = coldFactor;
+        }
+    } else {
+        if(hotFactor == AS_COLD_CHANNEL) {
+            //Вес для горячей воды такой же, как для холодной
+            LOG_INFO(FPSTR(S_CFG), "Calculated value for coldFactor=" << coldFactor);
+            calculatedValue = coldFactor;
+        } else if(hotFactor == AUTO_IMPULSE_FACTOR){
+            LOG_INFO(FPSTR(S_CFG), "Automatically calculated value for hotFactor=" << coldFactor);
+            calculatedValue = (runtime_data.impulses0 - data.impulses0 <= IMPULS_LIMIT_1) ? 10 : 1;
+        } else {
+            LOG_INFO(FPSTR(S_CFG), "Calculated value for hotFactor=" << hotFactor);
+            calculatedValue = hotFactor;
+        }
+    }
+    return calculatedValue;
 }
 
 #define SETUP_TIME_SEC 600UL //На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
@@ -59,8 +89,6 @@ void update_data(String &message)
         message += F(", \"elapsed\": ");
         message += String((uint32_t)(SETUP_TIME_SEC - millis()/1000.0));
         message += F(", \"error\": \"\"");
-        message += F(", \"factor\": ");
-        message += String(get_factor());
         message += F("}");
     }
     else {
@@ -118,6 +146,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter param_waterius_host( "whost", "Адрес сервера (включает отправку)",  sett.waterius_host, WATERIUS_HOST_LEN-1);
     wm.addParameter( &param_waterius_host );
 
+    ShortParameter param_wakeup_per("mperiod", "Период отправки показаний, мин.",  sett.wakeup_per_min);
+    wm.addParameter( &param_wakeup_per);
 
     // Настройки Blynk.сс
 
@@ -140,6 +170,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter( &label_mqtt);
     WiFiManagerParameter param_mqtt_host( "mhost", "Адрес сервера (включает отправку)<br/>Пример: broker.hivemq.com",  sett.mqtt_host, MQTT_HOST_LEN-1);
     wm.addParameter( &param_mqtt_host );
+
     LongParameter param_mqtt_port( "mport", "Порт",  sett.mqtt_port);
     wm.addParameter( &param_mqtt_port );
     WiFiManagerParameter param_mqtt_login( "mlogin", "Логин",  sett.mqtt_login, MQTT_LOGIN_LEN-1);
@@ -167,8 +198,21 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     IPAddressParameter param_mask("sn", "Маска подсети",  sett.mask);
     wm.addParameter( &param_mask );
 
-    WiFiManagerParameter label_factor("<p><b>Вес импульса (авто): <a id='factor'></a> л/имп</b></p>");
-    wm.addParameter( &label_factor);
+    WiFiManagerParameter label_factor_settings("<h3>Параметры счетчиков</h3>");
+    wm.addParameter( &label_factor_settings);
+
+    WiFiManagerParameter label_cold_factor("<b>Холодная вода л/имп<b>");
+    wm.addParameter( &label_cold_factor);
+    
+    DropdownParameter dropdown_cold_factor("factorCold",  "<option selected value='0'>Авто</option><option value='1'>1</option><option value='10'>10</option> <option value='100'>100</option>");
+    wm.addParameter(&dropdown_cold_factor);
+
+    WiFiManagerParameter label_hot_factor("<p><b>Горячая вода л/имп<b>");
+    wm.addParameter( &label_hot_factor);
+
+    DropdownParameter dropdown_hot_factor("factorHot",  "<option selected value='7'>Как у холодной</option><option value='0'>Авто</option><option value='1'>1</option><option value='10'>10</option> <option value='100'>100</option>");
+    wm.addParameter(&dropdown_hot_factor);
+  
 
     // конец доп. настроек
     WiFiManagerParameter div_end("</div>");
@@ -202,6 +246,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter( &label_hot);
     FloatParameter param_channel0_start( "ch0", "",  cdata.channel0);
     wm.addParameter( &param_channel0_start);
+
 
     wm.setConfigPortalTimeout(SETUP_TIME_SEC);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
@@ -241,13 +286,24 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.ip = param_ip.getValue();
     sett.gateway = param_gw.getValue();
     sett.mask = param_mask.getValue();
+    
+    //период отправки данных
+    sett.wakeup_per_min = param_wakeup_per.getValue();
+
+    //Веса импульсов
+    LOG_INFO(FPSTR(S_AP), "cold dropdown=" << dropdown_cold_factor.getValue());
+    LOG_INFO(FPSTR(S_AP), "hot dropdown=" << dropdown_hot_factor.getValue());
+    sett.liters_per_impuls_cold = get_factor(COLD_CHANNEL, dropdown_cold_factor.getValue(), 0);
+    sett.liters_per_impuls_hot = get_factor(HOT_CHANNEL, sett.liters_per_impuls_cold, dropdown_hot_factor.getValue());
+    //sett.liters_per_impuls_hot = dropdown_hot_factor.getValue();
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();
     sett.channel1_start = param_channel1_start.getValue();
 
-    sett.liters_per_impuls = get_factor(); //param_litres_per_imp.getValue();
-    LOG_INFO(FPSTR(S_AP), "factor=" << sett.liters_per_impuls );
+    //sett.liters_per_impuls_hot = 
+    LOG_INFO(FPSTR(S_AP), "factorCold=" << sett.liters_per_impuls_cold);
+    LOG_INFO(FPSTR(S_AP), "factorHot=" << sett.liters_per_impuls_hot);
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = runtime_data.impulses0;
