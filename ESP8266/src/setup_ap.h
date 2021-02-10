@@ -7,6 +7,11 @@
 
 #include <WiFiManager.h>    
 
+
+enum {
+    COLD_CHANNEL,
+    HOT_CHANNEL,
+} channel_t;
 /*
 Запускаем вебсервер для настройки подключения к Интернету и ввода текущих показаний
 */
@@ -29,7 +34,16 @@ public:
         return String(WiFiManagerParameter::getValue()).toInt();
     }
 };
-
+class ShortParameter : public WiFiManagerParameter {
+    public:
+    ShortParameter(const char *id,const char *placeholder, short value, const uint8_t length = 10)
+    : WiFiManagerParameter("") {
+        init(id, placeholder, String(value).c_str(), length, " type=\"number\"", WFM_LABEL_BEFORE);
+    }
+    short getValue(){
+        return String(WiFiManagerParameter::getValue()).toInt();
+    }
+};
 class FloatParameter : public WiFiManagerParameter {
 public:
 
@@ -45,7 +59,6 @@ public:
         return val.toFloat();
     }
 };
-
 class IPAddressParameter : public WiFiManagerParameter {
 public:
 
@@ -62,6 +75,18 @@ public:
         IPAddress ip;
         ip.fromString(WiFiManagerParameter::getValue());
         return ip;
+    }
+};
+
+
+class DropdownParameter : public WiFiManagerParameter {
+    public:
+    DropdownParameter(const char *id, const char* custom)
+    : WiFiManagerParameter(id, custom, true, String(0).c_str(), 10) {
+    }
+    uint8_t getValue(){
+        //return String(WiFiManagerParameter::getValue()).toInt();
+        return String(WiFiManagerParameter::getValue()).toInt();
     }
 };
 

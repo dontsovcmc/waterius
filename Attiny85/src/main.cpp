@@ -17,10 +17,16 @@
 #endif
 
 
-#define FIRMWARE_VER 14    // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 15    // Версия прошивки. Передается в ESP и на сервер в данных.
   
 /*
 Версии прошивок 
+
+15 - 2021.02.07 - kick2nick
+	Время пробуждения ESP изменено с 1 ч.(1440 мин.) на настриваемое значение
+	1. Добавил период пробуждения esp.
+	2. Добавил команду приема периода пробуждения по I2C.
+
 14 - 2020.11.09 - dontsovcmc
     1. поддержка attiny84 в отдельной ветке
 
@@ -54,7 +60,6 @@
 	1. Обновил фреймворк до Platformio Atmel AVR 1.12.5
 	2. Время аварийного отключения ESP 120сек. 
 	   Даже при отсутствии связи ESP раньше в таймауты уйдет и пришлет "спим".
-	
 */
      
 // Счетчики импульсов
@@ -95,6 +100,10 @@ static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
 SlaveI2C slaveI2C;
 
 volatile int wdt_count; // таймер может быть < 0 ?
+
+/*Период пробуждения ESP и отправки данных на сервер. Если питание отключалось,
+то следующее пробуждение через 5 мин. После пробуждения получим значение периода.*/
+uint16_t wakeup_period_min = WAKEUP_DEFAULT_PER_MIN;
 
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR( WDT_vect ) { 
@@ -145,7 +154,7 @@ inline void counting() {
     power_adc_disable();
 
 }
-
+//Запрос периода при инициализции. Также период может изменится после настройки.
 // Настройка. Вызывается однократно при запуске.
 void setup() {
 
@@ -165,6 +174,8 @@ void setup() {
 		EEPROM.write(storage.size(), 0);
 	}
 
+
+	
 	LOG_BEGIN(9600); 
 	LOG(F("==== START ===="));
 	LOG(F("MCUSR"));
@@ -176,6 +187,8 @@ void setup() {
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
+	LOG(F("Wakeup period:"));
+	LOG(wakeup_per_min);
 }
 
 
@@ -190,7 +203,7 @@ void loop() {
 	// Цикл опроса входов
 	// Выход по прошествию WAKE_EVERY_MIN минут или по нажатию кнопки
 	for (unsigned int i = 0; i < ONE_MINUTE && !button.pressed(); ++i)  {
-		wdt_count = WAKE_EVERY_MIN; 
+		wdt_count = wakeup_period_min;
 		while ( wdt_count > 0 ) {
 			noInterrupts();
 
@@ -223,7 +236,7 @@ void loop() {
 	if (button.wait_release() > LONG_PRESS_MSEC) {
 
 		LOG(F("SETUP pressed"));
-		slaveI2C.begin(SETUP_MODE);	
+		slaveI2C.begin(SETUP_MODE);
 		wake_up_limit = SETUP_TIME_MSEC; //10 мин при настройке
 	} else {
 

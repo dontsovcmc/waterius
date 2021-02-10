@@ -83,8 +83,8 @@ bool loadConfig(struct Settings &sett)
 
         // Всегда одно и тоже будет
         LOG_INFO(FPSTR(S_CFG), F("--- Counters ---- "));
-        LOG_INFO(FPSTR(S_CFG), F("channel0_start=") << sett.channel0_start << F(", impulses0_start=") << sett.impulses0_start << F(", factor=") << sett.liters_per_impuls );
-        LOG_INFO(FPSTR(S_CFG), F("channel1_start=") << sett.channel1_start << F(", impulses1_start=") << sett.impulses1_start);
+        LOG_INFO(FPSTR(S_CFG), F("channel0_start=") << sett.channel0_start << F(", impulses0_start=") << sett.impulses0_start << F(", factor_cold=") << sett.liters_per_impuls_cold);
+        LOG_INFO(FPSTR(S_CFG), F("channel1_start=") << sett.channel1_start << F(", impulses1_start=") << sett.impulses1_start << F(", factor_hot=") << sett.liters_per_impuls_hot);
         
         return true;
 
@@ -117,7 +117,8 @@ bool loadConfig(struct Settings &sett)
         sett.gateway = IPAddress(192,168,0,1);
         sett.mask = IPAddress(255,255,255,0);
 
-        sett.liters_per_impuls = LITRES_PER_IMPULS_DEFAULT;
+        sett.liters_per_impuls_cold = LITRES_PER_IMPULS_DEFAULT;
+        sett.liters_per_impuls_hot = LITRES_PER_IMPULS_DEFAULT;
 
 //Можно задать константы при компиляции, чтобы Ватериус сразу заработал
 

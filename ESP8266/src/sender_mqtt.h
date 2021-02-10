@@ -52,7 +52,8 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "version_esp").c_str(), String(FIRMWARE_VERSION).c_str(), true);
         client.publish((topic + "voltage_low").c_str(), String(cdata.low_voltage).c_str(), true);
         client.publish((topic + "voltage_diff").c_str(), String((float)(cdata.voltage_diff / 1000.0), 3).c_str(), true);
-        client.publish((topic + "f").c_str(), String(sett.liters_per_impuls).c_str(), true);
+        client.publish((topic + "fc").c_str(), String(sett.liters_per_impuls_cold).c_str(), true);
+        client.publish((topic + "fh").c_str(), String(sett.liters_per_impuls_hot).c_str(), true);
         client.publish((topic + "rssi").c_str(), String(cdata.rssi).c_str(), true);
         client.publish((topic + "waketime").c_str(), String(sett.wake_time).c_str(), true);
         client.publish((topic + "setuptime").c_str(), String(sett.setup_time).c_str(), true);

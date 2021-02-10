@@ -59,12 +59,14 @@ protected:
     bool getUint(uint32_t &value, uint8_t &crc);
     bool getUint16(uint16_t &value, uint8_t &crc);
     bool getByte(uint8_t &value, uint8_t &crc);
+    bool sendData(uint8_t* buf, size_t size);
 public:
     void begin();
     void end();
     bool sendCmd( const char cmd );
     bool getMode(uint8_t &mode);
     bool getSlaveData(SlaveData &data);
+    bool setWakeUpPer(uint16_t per);
 };
 
 
