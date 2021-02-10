@@ -57,7 +57,6 @@ uint8_t get_factor(uint8_t channel, uint8_t coldFactor, uint8_t hotFactor) {
 }
 
 #define SETUP_TIME_SEC 600UL //На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
-
 void update_data(String &message)
 {
     if (masterI2C.getSlaveData(runtime_data)) {
@@ -88,6 +87,10 @@ void update_data(String &message)
         message += state1bad;
         message += F(", \"elapsed\": ");
         message += String((uint32_t)(SETUP_TIME_SEC - millis()/1000.0));
+        message += F(", \"factor_cold_feedback\": ");
+        message += String(get_factor(COLD_CHANNEL, AUTO_IMPULSE_FACTOR, AUTO_IMPULSE_FACTOR));
+        message += F(", \"factor_hot_feedback\": ");
+        message += String(get_factor(HOT_CHANNEL, AUTO_IMPULSE_FACTOR, AUTO_IMPULSE_FACTOR));
         message += F(", \"error\": \"\"");
         message += F("}");
     }
@@ -97,7 +100,6 @@ void update_data(String &message)
 }
 
 WiFiManager wm;
-
 void handleStates(){
   LOG_INFO(FPSTR(S_AP), F("/states request"));
   String message;
@@ -201,18 +203,22 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label_factor_settings("<h3>Параметры счетчиков</h3>");
     wm.addParameter( &label_factor_settings);
 
-    WiFiManagerParameter label_cold_factor("<b>Холодная вода л/имп<b>");
+    WiFiManagerParameter label_cold_factor("<b>Холодная вода л/имп</b>");
     wm.addParameter( &label_cold_factor);
     
     DropdownParameter dropdown_cold_factor("factorCold",  "<option selected value='0'>Авто</option><option value='1'>1</option><option value='10'>10</option> <option value='100'>100</option>");
     wm.addParameter(&dropdown_cold_factor);
 
-    WiFiManagerParameter label_hot_factor("<p><b>Горячая вода л/имп<b>");
-    wm.addParameter( &label_hot_factor);
+    WiFiManagerParameter label_factor_cold_feedback("<p id='fc_fb_control'>Вес импульса: <a id='factor_cold_feedback'></a> л/имп");
+    wm.addParameter( &label_factor_cold_feedback);
 
+    WiFiManagerParameter label_hot_factor("<p><b>Горячая вода л/имп</b>");
+    wm.addParameter( &label_hot_factor);
     DropdownParameter dropdown_hot_factor("factorHot",  "<option selected value='7'>Как у холодной</option><option value='0'>Авто</option><option value='1'>1</option><option value='10'>10</option> <option value='100'>100</option>");
     wm.addParameter(&dropdown_hot_factor);
-  
+
+    WiFiManagerParameter label_factor_hot_feedback("<p id='fh_fb_control'>Вес импульса: <a id='factor_hot_feedback'></a> л/имп");
+    wm.addParameter( &label_factor_hot_feedback);
 
     // конец доп. настроек
     WiFiManagerParameter div_end("</div>");
