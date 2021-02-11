@@ -148,7 +148,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter param_waterius_host( "whost", "Адрес сервера (включает отправку)",  sett.waterius_host, WATERIUS_HOST_LEN-1);
     wm.addParameter( &param_waterius_host );
 
-    ShortParameter param_wakeup_per("mperiod", "Период отправки показаний, мин.",  sett.wakeup_per_min);
+    ShortParameter param_wakeup_per("mperiod", "Период отправки показаний, мин.",  data.wakeup_period_min);
     wm.addParameter( &param_wakeup_per);
 
     // Настройки Blynk.сс
@@ -294,7 +294,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.mask = param_mask.getValue();
     
     //период отправки данных
-    sett.wakeup_per_min = param_wakeup_per.getValue();
+    uint16_t wakeup_per_min = param_wakeup_per.getValue();
+    LOG_INFO(FPSTR(S_AP), "wakeup period, min=" << wakeup_per_min);
+
+    masterI2C.setWakeUpPeriod(wakeup_per_min); //"Разбуди меня через..."
 
     //Веса импульсов
     LOG_INFO(FPSTR(S_AP), "cold dropdown=" << dropdown_cold_factor.getValue());

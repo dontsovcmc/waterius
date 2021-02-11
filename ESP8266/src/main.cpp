@@ -144,8 +144,6 @@ void loop()
             }
         } 
     }
-    masterI2C.setWakeUpPer(sett.wakeup_per_min);//"Разбуди меня через..."
-
     LOG_INFO(FPSTR(S_ESP), F("Going to sleep"));
     
     masterI2C.sendCmd('Z');        // "Можешь идти спать, attiny"

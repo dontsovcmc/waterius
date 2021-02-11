@@ -34,7 +34,7 @@
     Период отправки данных на сервер, мин. 
     Используется если пользователь не сконфигурировал waterius или произошла ошибка контрольной суммы при приеме периода.
 */
-#define WAKEUP_DEFAULT_PER_MIN 5
+#define WAKEUP_DEFAULT_PER_MIN 1440
 /*
 	Аварийное отключение, если ESP зависнет и не пришлет команду "сон".
 */
@@ -108,6 +108,8 @@ struct Header {
     CounterState  states;  //TODO убрать
     Data          data;
     ADCLevel      adc;
+    
+    uint16_t      wakeup_period_min;
 
     // HEADER_DATA_SIZE
 
@@ -115,7 +117,7 @@ struct Header {
     uint8_t       reserved2;
 };  //22 байт
 
-#define HEADER_DATA_SIZE 22
+#define HEADER_DATA_SIZE 24
 
 #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
 
