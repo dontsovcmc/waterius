@@ -134,6 +134,8 @@ bool MasterI2C::getSlaveData(SlaveData &data) {
 
     if (data.version > 14) {
         good &= getUint16(data.wakeup_period_min, crc);
+    } else {
+        data.wakeup_period_min = 0;
     }
 
     good &= getByte(data.crc, dummy);

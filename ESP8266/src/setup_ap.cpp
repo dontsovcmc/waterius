@@ -13,7 +13,7 @@
 #include "master_i2c.h"
 #include "porting.h"
 
-#define AP_NAME "Waterius_" FIRMWARE_VERSION "_"
+#define AP_NAME "Waterius_" FIRMWARE_VERSION
 
 extern SlaveData data;
 extern MasterI2C masterI2C;
@@ -247,9 +247,12 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     // Запуск веб сервера на 192.168.4.1
     LOG_INFO(FPSTR(S_AP), F("chip id:") << getChipId());
     
-    String ap_name = AP_NAME + String(getChipId(), HEX).substring(0, 2);
+    /*
+    String ap_name = AP_NAME "_" + String(getChipId(), HEX).substring(0, 4);
     ap_name.toUpperCase();
     wm.startConfigPortal(ap_name.c_str());
+    */
+    wm.startConfigPortal(AP_NAME);
 
     // Успешно подключились к Wi-Fi, можно засыпать
     LOG_INFO(FPSTR(S_AP), F("Connected to wifi. Save settings, go to sleep"));
