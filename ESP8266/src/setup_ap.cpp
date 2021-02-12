@@ -22,38 +22,22 @@ SlaveData runtime_data;
 
 #define IMPULS_LIMIT_1  3  // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
 
-#define COLD_CHANNEL        0
-#define HOT_CHANNEL         1
 #define AUTO_IMPULSE_FACTOR 0
 #define AS_COLD_CHANNEL     7
 
-uint8_t get_factor(uint8_t channel, uint8_t coldFactor, uint8_t hotFactor) {
+uint8_t get_auto_factor(uint32_t runtime_impulses, uint32_t impulses)
+{
+    return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
+}
 
-    uint8_t calculatedValue;
+uint8_t get_factor(uint8_t combobox_factor, uint32_t runtime_impulses, uint32_t impulses, uint8_t cold_factor) {
 
-    if(channel == COLD_CHANNEL) {
-        if(coldFactor == AUTO_IMPULSE_FACTOR) {
-            //Автоматический расчет для холодной воды
-            LOG_INFO(FPSTR(S_CFG), "Automatically calculated value for coldFactor=" << coldFactor);
-            calculatedValue = (runtime_data.impulses1 - data.impulses1 <= IMPULS_LIMIT_1) ? 10 : 1;
-        } else {
-            LOG_INFO(FPSTR(S_CFG), "Calculated value for coldFactor=" << coldFactor);
-            calculatedValue = coldFactor;
-        }
-    } else {
-        if(hotFactor == AS_COLD_CHANNEL) {
-            //Вес для горячей воды такой же, как для холодной
-            LOG_INFO(FPSTR(S_CFG), "Calculated value for coldFactor=" << coldFactor);
-            calculatedValue = coldFactor;
-        } else if(hotFactor == AUTO_IMPULSE_FACTOR){
-            LOG_INFO(FPSTR(S_CFG), "Automatically calculated value for hotFactor=" << coldFactor);
-            calculatedValue = (runtime_data.impulses0 - data.impulses0 <= IMPULS_LIMIT_1) ? 10 : 1;
-        } else {
-            LOG_INFO(FPSTR(S_CFG), "Calculated value for hotFactor=" << hotFactor);
-            calculatedValue = hotFactor;
-        }
+    switch (combobox_factor) {
+        case AUTO_IMPULSE_FACTOR: return get_auto_factor(runtime_impulses, impulses); 
+        case AS_COLD_CHANNEL: return cold_factor;
+        default: 
+            return combobox_factor;  // 1, 10, 100
     }
-    return calculatedValue;
 }
 
 #define SETUP_TIME_SEC 600UL //На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
@@ -88,9 +72,9 @@ void update_data(String &message)
         message += F(", \"elapsed\": ");
         message += String((uint32_t)(SETUP_TIME_SEC - millis()/1000.0));
         message += F(", \"factor_cold_feedback\": ");
-        message += String(get_factor(COLD_CHANNEL, AUTO_IMPULSE_FACTOR, AUTO_IMPULSE_FACTOR));
+        message += String(get_auto_factor(runtime_data.impulses1, data.impulses1));
         message += F(", \"factor_hot_feedback\": ");
-        message += String(get_factor(HOT_CHANNEL, AUTO_IMPULSE_FACTOR, AUTO_IMPULSE_FACTOR));
+        message += String(get_auto_factor(runtime_data.impulses0, data.impulses0));
         message += F(", \"error\": \"\"");
         message += F("}");
     }
@@ -300,19 +284,22 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     masterI2C.setWakeUpPeriod(wakeup_per_min); //"Разбуди меня через..."
 
     //Веса импульсов
-    LOG_INFO(FPSTR(S_AP), "cold dropdown=" << dropdown_cold_factor.getValue());
     LOG_INFO(FPSTR(S_AP), "hot dropdown=" << dropdown_hot_factor.getValue());
-    sett.liters_per_impuls_cold = get_factor(COLD_CHANNEL, dropdown_cold_factor.getValue(), 0);
-    sett.liters_per_impuls_hot = get_factor(HOT_CHANNEL, sett.liters_per_impuls_cold, dropdown_hot_factor.getValue());
-    //sett.liters_per_impuls_hot = dropdown_hot_factor.getValue();
+    LOG_INFO(FPSTR(S_AP), "cold dropdown=" << dropdown_cold_factor.getValue());
+    
+    uint8_t combobox_factor = dropdown_cold_factor.getValue();
+    sett.liters_per_impuls_cold = get_factor(combobox_factor, runtime_data.impulses1, data.impulses1, 1);
+    
+    combobox_factor = dropdown_hot_factor.getValue();
+    sett.liters_per_impuls_hot = get_factor(combobox_factor, runtime_data.impulses0, data.impulses0, sett.liters_per_impuls_cold);
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();
     sett.channel1_start = param_channel1_start.getValue();
 
     //sett.liters_per_impuls_hot = 
-    LOG_INFO(FPSTR(S_AP), "factorCold=" << sett.liters_per_impuls_cold);
     LOG_INFO(FPSTR(S_AP), "factorHot=" << sett.liters_per_impuls_hot);
+    LOG_INFO(FPSTR(S_AP), "factorCold=" << sett.liters_per_impuls_cold);
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = runtime_data.impulses0;

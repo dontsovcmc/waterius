@@ -99,22 +99,15 @@
 #define DEFAULT_TRANSMIT_PERIOD 1440
 
 struct CalculatedData {
-
-
     float    channel0;
     float    channel1;
-    float    channel2;
-    float    channel3;
 
     uint32_t delta0;
     uint32_t delta1;
-    uint32_t delta2;
-    uint32_t delta3;
 
     uint32_t voltage_diff;
     bool     low_voltage;
     int8_t   rssi;
-
 };
 
 /*
