@@ -11,8 +11,9 @@
 #include "utils.h"
 #include "WateriusHttps.h"
 #include "master_i2c.h"
+#include "porting.h"
 
-#define AP_NAME "Waterius_" FIRMWARE_VERSION
+#define AP_NAME "Waterius_" FIRMWARE_VERSION "_"
 
 extern SlaveData data;
 extern MasterI2C masterI2C;
@@ -79,7 +80,7 @@ void update_data(String &message)
         message += F("}");
     }
     else {
-        message = F("{\"error\": \"Ошибка связи с МК\", \"factor\": 10}");
+        message = F("{\"error\": \"Ошибка связи с МК\", \"factor_cold_feedback\": 1, \"factor_hot_feedback\": 1}");
     }
 }
 
@@ -87,7 +88,7 @@ WiFiManager wm;
 void handleStates(){
   LOG_INFO(FPSTR(S_AP), F("/states request"));
   String message;
-  message.reserve(300);
+  message.reserve(300); //сейчас 200
   update_data(message);
   wm.server->send(200, F("text/plain"), message);
 }
@@ -244,7 +245,11 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(FPSTR(S_AP), F("Start ConfigPortal"));
 
     // Запуск веб сервера на 192.168.4.1
-    wm.startConfigPortal( AP_NAME );
+    LOG_INFO(FPSTR(S_AP), F("chip id:") << getChipId());
+    
+    String ap_name = AP_NAME + String(getChipId(), HEX).substring(0, 2);
+    ap_name.toUpperCase();
+    wm.startConfigPortal(ap_name.c_str());
 
     // Успешно подключились к Wi-Fi, можно засыпать
     LOG_INFO(FPSTR(S_AP), F("Connected to wifi. Save settings, go to sleep"));
