@@ -2,18 +2,18 @@ language: python
 matrix:
   include:
   - name: "Attiny85"
-    python: "2.7"
+    python: "3.9"
     env: 
       - PLATFORMIO_CI_SRC=./Attiny85
       - CFG_PATH=./Attiny85
   - name: "Attiny85 LOG_ON"
-    python: "2.7"
+    python: "3.9"
     env: 
       - PLATFORMIO_CI_SRC=./Attiny85
       - CFG_PATH=./Attiny85
       - LOG_ON=1
   - name: "ESP8266 (CLASSIC & 4C2W)"
-    python: "2.7"
+    python: "3.9"
     env: 
       - PLATFORMIO_CI_SRC=./ESP8266 
       - CFG_PATH=./ESP8266

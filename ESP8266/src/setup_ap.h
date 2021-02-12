@@ -7,11 +7,6 @@
 
 #include <WiFiManager.h>    
 
-
-enum {
-    COLD_CHANNEL,
-    HOT_CHANNEL,
-} channel_t;
 /*
 Запускаем вебсервер для настройки подключения к Интернету и ввода текущих показаний
 */

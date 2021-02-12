@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "WiFiClientSecureBearSSL.h"
 #include "setup.h"
+#include "porting.h"
 
 BearSSL::X509List certs;
 HTTPClient httpClient;
@@ -98,7 +99,7 @@ void WateriusHttps::generateSha256Token(char *token, const int token_len,
     LOG_INFO(THIS_FUNC_SVC, F("salt:\t") << salt);
     x.add(&salt, sizeof(salt));
 
-    salt = ESP.getChipId();
+    salt = getChipId();
     x.add(&salt, sizeof(salt));
     LOG_INFO(THIS_FUNC_SVC, F("chip id: ") << salt);
     

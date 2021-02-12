@@ -40,6 +40,8 @@ struct SlaveData {
     uint32_t impulses1;   //           канал 1
     uint16_t adc0;        //Уровень,   канал 0
     uint16_t adc1;        //           канал 1
+
+    uint16_t wakeup_period_min; //период передачи данных, мин
     // HEADER_DATA_SIZE
 
     uint8_t  crc;         //Всегда в конце структуры данных
@@ -66,7 +68,7 @@ public:
     bool sendCmd( const char cmd );
     bool getMode(uint8_t &mode);
     bool getSlaveData(SlaveData &data);
-    bool setWakeUpPer(uint16_t per);
+    bool setWakeUpPeriod(uint16_t per);
 };
 
 

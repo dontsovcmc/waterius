@@ -88,6 +88,7 @@ struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_2C,
 					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
 				       {0, 0},
 					   {0, 0},
+					   WAKEUP_DEFAULT_PER_MIN,
 					   0, 0
 					 };
 
@@ -100,10 +101,6 @@ static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
 SlaveI2C slaveI2C;
 
 volatile int wdt_count; // таймер может быть < 0 ?
-
-/*Период пробуждения ESP и отправки данных на сервер. Если питание отключалось,
-то следующее пробуждение через 5 мин. После пробуждения получим значение периода.*/
-uint16_t wakeup_period_min = WAKEUP_DEFAULT_PER_MIN;
 
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR( WDT_vect ) { 
@@ -188,7 +185,7 @@ void setup() {
 	LOG(info.data.value0);
 	LOG(info.data.value1);
 	LOG(F("Wakeup period:"));
-	LOG(wakeup_per_min);
+	LOG(info.wakeup_period_min);
 }
 
 
@@ -203,7 +200,7 @@ void loop() {
 	// Цикл опроса входов
 	// Выход по прошествию WAKE_EVERY_MIN минут или по нажатию кнопки
 	for (unsigned int i = 0; i < ONE_MINUTE && !button.pressed(); ++i)  {
-		wdt_count = wakeup_period_min;
+		wdt_count = info.wakeup_period_min;
 		while ( wdt_count > 0 ) {
 			noInterrupts();
 
