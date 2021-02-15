@@ -40,8 +40,8 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["email"] =         settings.waterius_email;
     root["voltage_low"] =   cdata.low_voltage;
     root["voltage_diff"] =  cdata.voltage_diff;
-    root["fc"] =            settings.liters_per_impuls_cold;
-    root["fh"] =            settings.liters_per_impuls_hot;
+    root["f0"] =            settings.factor0;
+    root["f1"] =            settings.factor1;
     root["rssi"] =          cdata.rssi;
     root["waketime"] =      settings.wake_time;
     root["setuptime"] =     settings.setup_time;

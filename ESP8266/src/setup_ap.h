@@ -76,9 +76,27 @@ public:
 
 class DropdownParameter : public WiFiManagerParameter {
     public:
-    DropdownParameter(const char *id, const char* custom)
-    : WiFiManagerParameter(id, custom, true, String(0).c_str(), 10) {
+    String options;
+    DropdownParameter(const char *id)
+    : WiFiManagerParameter(id, "", true, String(0).c_str(), 10) {
+        options.reserve(200);
     }
+
+    void add_option(const int value, const char *title, const int default_value)
+    {
+        options += "<option ";
+        if (value == default_value) {
+            options += "selected ";
+        }
+        options += "value=\'";
+        options += value;
+        options += '\'>';
+        options += title;
+        options += "</option>";
+
+        setCustomHtml(options.c_str());
+    }
+
     uint8_t getValue(){
         //return String(WiFiManagerParameter::getValue()).toInt();
         return String(WiFiManagerParameter::getValue()).toInt();

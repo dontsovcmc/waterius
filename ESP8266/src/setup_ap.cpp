@@ -23,9 +23,6 @@ SlaveData runtime_data;
 
 #define IMPULS_LIMIT_1  3  // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
 
-#define AUTO_IMPULSE_FACTOR 0
-#define AS_COLD_CHANNEL     7
-
 uint8_t get_auto_factor(uint32_t runtime_impulses, uint32_t impulses)
 {
     return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
@@ -191,7 +188,11 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label_cold_factor("<b>Холодная вода л/имп</b>");
     wm.addParameter( &label_cold_factor);
     
-    DropdownParameter dropdown_cold_factor("factorCold",  "<option selected value='0'>Авто</option><option value='1'>1</option><option value='10'>10</option> <option value='100'>100</option>");
+    DropdownParameter dropdown_cold_factor("factorCold");
+    dropdown_cold_factor.add_option(AUTO_IMPULSE_FACTOR, "Авто", sett.factor1);
+    dropdown_cold_factor.add_option(1, "1", sett.factor1);
+    dropdown_cold_factor.add_option(10, "10", sett.factor1);
+    dropdown_cold_factor.add_option(100, "100", sett.factor1);
     wm.addParameter(&dropdown_cold_factor);
 
     WiFiManagerParameter label_factor_cold_feedback("<p id='fc_fb_control'>Вес импульса: <a id='factor_cold_feedback'></a> л/имп");
@@ -199,7 +200,13 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     WiFiManagerParameter label_hot_factor("<p><b>Горячая вода л/имп</b>");
     wm.addParameter( &label_hot_factor);
-    DropdownParameter dropdown_hot_factor("factorHot",  "<option selected value='7'>Как у холодной</option><option value='0'>Авто</option><option value='1'>1</option><option value='10'>10</option> <option value='100'>100</option>");
+    
+    DropdownParameter dropdown_hot_factor("factorHot");
+    dropdown_hot_factor.add_option(AS_COLD_CHANNEL, "Как у холодной", sett.factor0);
+    dropdown_hot_factor.add_option(AUTO_IMPULSE_FACTOR, "Авто", sett.factor0);
+    dropdown_hot_factor.add_option(1, "1", sett.factor0);
+    dropdown_hot_factor.add_option(10, "10", sett.factor0);
+    dropdown_hot_factor.add_option(100, "100", sett.factor0);
     wm.addParameter(&dropdown_hot_factor);
 
     WiFiManagerParameter label_factor_hot_feedback("<p id='fh_fb_control'>Вес импульса: <a id='factor_hot_feedback'></a> л/имп");
@@ -296,18 +303,18 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(FPSTR(S_AP), "cold dropdown=" << dropdown_cold_factor.getValue());
     
     uint8_t combobox_factor = dropdown_cold_factor.getValue();
-    sett.liters_per_impuls_cold = get_factor(combobox_factor, runtime_data.impulses1, data.impulses1, 1);
+    sett.factor1 = get_factor(combobox_factor, runtime_data.impulses1, data.impulses1, 1);
     
     combobox_factor = dropdown_hot_factor.getValue();
-    sett.liters_per_impuls_hot = get_factor(combobox_factor, runtime_data.impulses0, data.impulses0, sett.liters_per_impuls_cold);
+    sett.factor0 = get_factor(combobox_factor, runtime_data.impulses0, data.impulses0, sett.factor1);
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();
     sett.channel1_start = param_channel1_start.getValue();
 
     //sett.liters_per_impuls_hot = 
-    LOG_INFO(FPSTR(S_AP), "factorHot=" << sett.liters_per_impuls_hot);
-    LOG_INFO(FPSTR(S_AP), "factorCold=" << sett.liters_per_impuls_cold);
+    LOG_INFO(FPSTR(S_AP), "factorHot=" << sett.factor0);
+    LOG_INFO(FPSTR(S_AP), "factorCold=" << sett.factor1);
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = runtime_data.impulses0;

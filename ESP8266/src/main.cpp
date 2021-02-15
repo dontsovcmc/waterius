@@ -41,13 +41,13 @@ void calculate_values(const Settings &sett, const SlaveData &data, CalculatedDat
 {
     LOG_INFO(FPSTR(S_ESP), F("new impulses=") << data.impulses0 << " " << data.impulses1);
 
-    if ((sett.liters_per_impuls_cold > 0) && (sett.liters_per_impuls_hot > 0)) {
-        cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.liters_per_impuls_hot;
-        cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.liters_per_impuls_cold;
+    if ((sett.factor1 > 0) && (sett.factor0 > 0)) {
+        cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.factor0;
+        cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.factor1;
         LOG_INFO(FPSTR(S_ESP), F("new value0=") << cdata.channel0 << F(" value1=") << cdata.channel1);
         
-        cdata.delta0  = (data.impulses0 - sett.impulses0_previous)*sett.liters_per_impuls_hot;
-        cdata.delta1 = (data.impulses1 - sett.impulses1_previous)*sett.liters_per_impuls_cold;
+        cdata.delta0  = (data.impulses0 - sett.impulses0_previous) * sett.factor0;
+        cdata.delta1 = (data.impulses1 - sett.impulses1_previous) * sett.factor1;
         LOG_INFO(FPSTR(S_ESP), F("delta0=") << cdata.delta0 << F(" delta1=") << cdata.delta1);
     }
 }
