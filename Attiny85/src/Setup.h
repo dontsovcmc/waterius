@@ -108,8 +108,6 @@ struct Header {
     CounterState  states;  //TODO убрать
     Data          data;
     ADCLevel      adc;
-    
-    uint16_t      wakeup_period_min;
 
     // HEADER_DATA_SIZE
 
@@ -117,7 +115,7 @@ struct Header {
     uint8_t       reserved2;
 };  //22 байт
 
-#define HEADER_DATA_SIZE 24
+#define HEADER_DATA_SIZE 22
 
 #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
 

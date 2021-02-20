@@ -98,6 +98,14 @@ void loop()
                 }
 
                 if (success) {
+
+                    if(!masterI2C.setWakeUpPeriod(sett.wakeup_per_min)){
+                        LOG_ERROR(FPSTR(S_I2C), F("Wakeup period wasn't set"));
+                    } //"Разбуди меня через..."
+                    else{
+                        LOG_INFO(FPSTR(S_I2C), F("Wakeup period, min:") << sett.wakeup_per_min);
+                    }
+
                     //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                     WiFi.begin(); 
 
