@@ -72,9 +72,6 @@
 
 #define SERVER_TIMEOUT 12000UL // Время ответа сервера, ms
 
-
-#define LITRES_PER_IMPULS_DEFAULT 10  // 10 литров на импульс
-
 #define I2C_SLAVE_ADDR 10  // i2c адрес Attiny85
 
 #define VER_6 6
@@ -97,6 +94,9 @@
 #define MQTT_TOPIC_LEN 64
 
 #define DEFAULT_TRANSMIT_PERIOD 1440
+
+#define AUTO_IMPULSE_FACTOR 2
+#define AS_COLD_CHANNEL     7
 
 struct CalculatedData {
     float    channel0;
@@ -160,8 +160,8 @@ struct Settings
     /*
     Кол-во литров на 1 импульс
     */
-    uint8_t liters_per_impuls_cold;
-    uint8_t liters_per_impuls_hot;
+    uint8_t factor0;
+    uint8_t factor1;
     
     /*
     Кол-во импульсов Attiny85 соответствующие показаниям счетчиков, 
