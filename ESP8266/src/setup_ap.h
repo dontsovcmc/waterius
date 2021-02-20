@@ -93,7 +93,8 @@ class DropdownParameter : public WiFiManagerParameter {
         options += "\'>";
         options += title;
         options += "</option>";
-        WiFiManagerParameter::setCustomHtml(options.c_str());
+        
+        setCustomHtml(options.c_str());
     }
 
     uint8_t getValue(){
