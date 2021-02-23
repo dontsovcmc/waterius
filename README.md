@@ -43,11 +43,10 @@
 #### [Заводские и DIY аналоги](https://github.com/dontsovcmc/waterius/issues/10)
 
 ## Изготовление
+Народная инструкция в Телеграм чате: [waterius_forum](https://t.me/waterius_forum)
 - [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
 - [Прошивка Attiny85 и ESP](https://github.com/dontsovcmc/waterius/blob/master/Firmware.md) 
 - [Установка и настройка](https://github.com/dontsovcmc/waterius/blob/master/Setup.md) 
-
-Задавайте вопросы в Телеграм чате: [waterius_forum](https://t.me/waterius_forum)
 
 ## Принцип работы
 Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в сутки она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого ESP8266 засыпает, а Attiny85 продолжает считать-считать-считать...
@@ -66,14 +65,8 @@
 В репозитории ещё есть однослойная для ЛУТа.
 
 # Помочь проекту
-
-- Ручной выбор веса импульса  [143](https://github.com/dontsovcmc/waterius/issues/143) 
-
-- Сделать период отправки изменяемым [144](https://github.com/dontsovcmc/waterius/issues/144) 
-
-- Реализовать датчик протечки в Waterius-Attiny84-ESP12F
 - Записать видео установки/настройки Ватериуса (можно сразу в [FB](https://www.facebook.com/waterius), [VK](https://vk.com/waterius1))
-- Дополнить Народную инструкцию как спаять, скомпилировать и прошить Ватериус в Arduino IDE. 
+
 - Отправка лога ESP в вебинтерфейс (JS код есть, спасибо Владимиру)
 - Добавить архив потребления (временные метки) (доработка i2c и буфера, пишите, расскажу)
 - OTA обновления: предложить код прошивки и пример веб сервера
