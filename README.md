@@ -7,8 +7,10 @@
 
 =======
 
-### Ищем программиста для доработки прошивок! [Откликнуться](https://t.me/dontsovcmc)
-Задачи: [143](https://github.com/dontsovcmc/waterius/issues/143) [144](https://github.com/dontsovcmc/waterius/issues/144) 
+### Программист найден. Скоро выйдет: 0.10.1
+[143](https://github.com/dontsovcmc/waterius/issues/143) Изменяемый период отправки
+
+[144](https://github.com/dontsovcmc/waterius/issues/144) Авто+ручная настройка веса импульса
 
 =======
 
@@ -86,7 +88,7 @@
 - На [Waterius-Attiny84-ESP12F](https://github.com/dontsovcmc/waterius/issues/41#issuecomment-439402464) сделан (но не запрограммирован) тут [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F), спасибо [badenbaden]
 
 ### Модицикации
-Версия 0.10.0 поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками. Датчик протечки пока не реализован в прошивке.
+Версия 0.10.0 поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками ([ветка attiny84](https://github.com/dontsovcmc/waterius/tree/attiny84).
 
 [Waterius на ESP32 с NB-IoT](https://github.com/OloloevReal/Waterius32) от OloloevReal
 
@@ -109,7 +111,8 @@
 - [sintech](https://github.com/sintech) за найденные и исправленные баги
 - [zinger76](https://github.com/zinger76) за ссылку на заказ платы и [3D модель крепления](https://github.com/dontsovcmc/waterius/blob/master/wall-mount/wall_mount.md) к стене
 - [badenbaden](https://github.com/badenbaden) за дельные комментарии по производству и новую версию!
-- Пользователям, приславшим очепятки и предложения: Дмитрию (г. Москва), Сергею (г. Кострома), Александру (г. Санкт-Петербург), Сергею (г. Мурманск), Антону (г. Красноярск)
+- [kick2nick](https://github.com/kick2nick) за доработки функционала.
+- Пользователям, приславшим очепятки и предложения: Дмитрию (г. Москва), Сергею (г. Кострома), Александру (г. Санкт-Петербург), Сергею (г. Мурманск), Антону (г. Красноярск) и др.
 
 Форумам: 
 - https://electronix.ru
