@@ -63,6 +63,7 @@ bool loadConfig(struct Settings &sett)
         LOG_INFO(FPSTR(S_CFG), F("--- Waterius.ru ---- "));
         LOG_INFO(FPSTR(S_CFG), F("email=") << sett.waterius_email);
         LOG_INFO(FPSTR(S_CFG), F("host=") << sett.waterius_host << F(" key=") << sett.waterius_key);
+        LOG_INFO(FPSTR(S_CFG), F("wakeup min=") << sett.wakeup_per_min);
         
         LOG_INFO(FPSTR(S_CFG), F("--- Blynk.cc ---- "));
         LOG_INFO(FPSTR(S_CFG), F("host=") << sett.blynk_host << F(" key=") << sett.blynk_key);
@@ -122,6 +123,8 @@ bool loadConfig(struct Settings &sett)
         sett.factor1 = AUTO_IMPULSE_FACTOR; 
         sett.factor0 = AS_COLD_CHANNEL;
 
+        sett.wakeup_per_min = DEFAULT_WAKEUP_PERIOD_MIN;
+        
 //Можно задать константы при компиляции, чтобы Ватериус сразу заработал
 
 #ifdef BLYNK_KEY    
