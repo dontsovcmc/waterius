@@ -47,6 +47,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["setuptime"] =     settings.setup_time;
     root["adc0"] =          data.adc0;
     root["adc1"] =          data.adc1;
+    root["period_min"] =    settings.wakeup_per_min;
 
     serializeJson(root, jsonBody);
     LOG_INFO(FPSTR(S_SND), "JSON size:\t" << jsonBody.length());

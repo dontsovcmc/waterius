@@ -59,7 +59,8 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "setuptime").c_str(), String(sett.setup_time).c_str(), true);
         client.publish((topic + "adc0").c_str(), String(data.adc0).c_str(), true);
         client.publish((topic + "adc1").c_str(), String(data.adc1).c_str(), true);
-
+        client.publish((topic + "period_min").c_str(), String(sett.wakeup_per_min).c_str(), true);
+        
         client.disconnect();
         return true;
     }  else {
