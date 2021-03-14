@@ -12,11 +12,6 @@
 #include <avr/sleep.h>
 #include <avr/power.h>  
 
-// Для логирования раскомментируйте LOG_ON в Setup.h
-#if defined(LOG_ON) && defined(WATERIUS_2C) 
-	TinyDebugSerial mySerial;
-#endif
-
 
 #define FIRMWARE_VER 14    // Версия прошивки. Передается в ESP и на сервер в данных.
   
@@ -58,37 +53,6 @@
      
 // Счетчики импульсов
 
-#if defined(WATERIUS_2C)
-// Waterius Classic: https://github.com/dontsovcmc/waterius
-//
-//                                +-\/-+
-//       RESET   (D  5/A0)  PB5  1|    |8  VCC
-//  *Counter1*   (D  3/A3)  PB3  2|    |7  PB2  (D  2/ A1)         SCL   *Button*
-//  *Counter0*   (D  4/A2)  PB4  3|    |6  PB1  (D  1)      MISO         *Power ESP*
-//                          GND  4|    |5  PB0  (D  0)      MOSI   SDA   
-//                                +----+
-//
-// https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x5.md
-
-static CounterB counter0(4, 2);  // Вход 1, Blynk: V0, горячая вода PB4 ADC2
-static CounterB counter1(3, 3);  // Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
-
-static ButtonB  button(2);	   // PB2 кнопка (на линии SCL)
-                               // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
-							   // Короткое: ESP передает показания
-static ESPPowerPin esp(1);  // Питание на ESP 
-
-// Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_2C, 
-					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
-				       {0, 0},
-					   {0, 0},
-					   0, 0
-					 };
-#endif
-
-#ifdef WATERIUS_4C2W
-
 #define WDTCR WDTCSR
 // Waterius 4C2W: https://github.com/badenbaden/Waterius-Attiny84-ESP12F
 //
@@ -125,7 +89,6 @@ struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_4C2W,
 					   {0, 0, 0, 0},
 					   0, 0
 					 }; 
-#endif
 
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
@@ -165,7 +128,6 @@ void resetWatchdog() {
 	wdt_reset(); // pat the dog
 } 
 
-#ifdef WATERIUS_4C2W
 // Обновляем статус датчиков протечки
 // force - даже тех, которые отключены были при настройке
 void check_waterleak(bool force)
@@ -180,15 +142,10 @@ void check_waterleak(bool force)
 	}
 	leak_power.power(false);
 }
-#endif
 
 // Проверяем входы на замыкание. 
 // Замыкание засчитывается только при повторной проверке.
-#ifdef WATERIUS_4C2W
 inline void counting(bool force) {
-#else
-inline void counting() {
-#endif
     power_adc_enable(); //т.к. мы обесточили всё а нам нужен компаратор
     adc_enable();       //после подачи питания на adc
 
@@ -198,16 +155,12 @@ inline void counting() {
 		info.adc.adc0 = counter0.adc;
 		storage.add(info.data);
 	}
-#ifndef LOG_ON
 	if (counter1.is_impuls()) {
 		info.data.value1++;
 		info.states.state1 = counter1.state;
 		info.adc.adc1 = counter1.adc;
 		storage.add(info.data);
 	}
-#endif
-
-#ifdef WATERIUS_4C2W
 	if (counter2.is_impuls()) {
 		info.data.value2++;
 		info.states.state2 = counter2.state;
@@ -229,7 +182,6 @@ inline void counting() {
 			slaveI2C.alarm_sent = false;
 		}
 	}
-#endif
 
 	adc_disable();
     power_adc_disable();
@@ -240,14 +192,13 @@ void load_settings(uint16_t shift)
 {
 	info.resets = EEPROM.read(shift);
 
-#ifdef WATERIUS_4C2W
 	uint8_t sett = EEPROM.read(shift+1);
 	waterleak1.set_work(sett & 0x01);
 	waterleak2.set_work(sett & 0x02);
 
 	LOG(F("Settings load: "));
 	LOG(sett);
-#endif
+
 }
 
 // Сохранение настроек в EEPROM
@@ -255,23 +206,16 @@ void save_settings(uint16_t shift)
 {
 	EEPROM.write(shift, info.resets);
 
-#ifdef WATERIUS_4C2W
 	uint8_t sett = waterleak1.is_work() | (waterleak2.is_work() << 1);
 	EEPROM.write(shift+1, sett);
 
 	LOG(F("Settings save: "));
 	LOG(sett);
-#endif
 }
 
 // Требуется пробуждение
 bool need_wake_up() {
-
-#ifdef WATERIUS_4C2W
 	return (wl_changed && !slaveI2C.alarm_sent) || button.pressed();
-#else
-	return button.pressed();
-#endif
 }
 
 
@@ -307,11 +251,8 @@ void setup() {
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
-	
-#ifdef WATERIUS_4C2W
 	LOG(info.data.value2);
 	LOG(info.data.value3);
-#endif
 }
 
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
@@ -333,11 +274,7 @@ void loop() {
 				interrupts();  // Пользователь нажал кнопку
 				break;
 			} else 	{
-#ifdef WATERIUS_4C2W
-				counting(false);
-#else				
-				counting(); //Опрос входов. Тут т.к. https://github.com/dontsovcmc/waterius/issues/76
-#endif
+				counting(false); //Опрос входов. Тут т.к. https://github.com/dontsovcmc/waterius/issues/76
 				interrupts();
 				sleep_mode();  // Спим (WDTCR)
 			}
@@ -354,7 +291,6 @@ void loop() {
 	LOG(info.data.value0);
 	LOG(info.data.value1);
 
-#ifdef WATERIUS_4C2W
 	LOG(info.data.value2);
 	LOG(info.data.value3);
 
@@ -364,7 +300,7 @@ void loop() {
 	LOG(F("Waterleak 2: "));
 	LOG(waterleak2.state);
 	LOG(waterleak2.adc);
-#endif
+
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит 
 	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания 
@@ -388,11 +324,7 @@ void loop() {
 
 		info.voltage = readVcc();   // Текущее напряжение
 
-#ifdef WATERIUS_4C2W
 		counting(SlaveI2C::setup_mode == SETUP_MODE);
-#else
-		counting();
-#endif
 		delayMicroseconds(65000);
 
 		if (button.wait_release() > LONG_PRESS_MSEC) {
@@ -407,13 +339,10 @@ void loop() {
 		LOG(F("ESP wake up fail"));
 	} else {
 		LOG(F("Sleep received"));
-
-#ifdef WATERIUS_4C2W
 		if (SlaveI2C::setup_mode == SETUP_MODE) {
 			waterleak1.turn_off_if_break();
 			waterleak2.turn_off_if_break();
 			save_settings(storage.size());
 		}
-#endif
 	}
 }

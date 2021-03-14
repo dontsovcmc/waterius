@@ -96,8 +96,6 @@ struct CounterB
     }
 };
 
-#ifdef WATERIUS_4C2W
-
 struct CounterA
 {
     int8_t _checks; // -1 <= _checks <= TRIES
@@ -167,8 +165,6 @@ struct CounterA
         }
     }
 };
-
-#endif  //WATERIUS_4C2W т.к. PORTA DDRA нет в attiny85
 
 struct ButtonB 
 {
