@@ -8,10 +8,8 @@
 
 extern struct Header info;
 
-#ifdef WATERIUS_4C2W
 extern WaterLeakA waterleak1;
 extern WaterLeakA waterleak2;
-#endif
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -19,9 +17,7 @@ uint8_t SlaveI2C::txBuffer[TX_BUFFER_SIZE];
 uint8_t SlaveI2C::setup_mode = TRANSMIT_MODE;
 bool SlaveI2C::masterSentSleep = false;
 
-#ifdef WATERIUS_4C2W
 bool SlaveI2C::alarm_sent = true;
-#endif
 
 void SlaveI2C::begin(const uint8_t mode) {
 
@@ -35,6 +31,9 @@ void SlaveI2C::begin(const uint8_t mode) {
 
 void SlaveI2C::end() {
 	Wire.end();
+	  //DDRA |= (1<<4) | (1<<6);
+	  DDRA &= ~(1<<4) & ~(1<<6);
+      PORTA &= ~(1<<4) & ~(1<<6);
 }
 
 void SlaveI2C::requestEvent() {
@@ -66,8 +65,6 @@ void SlaveI2C::receiveEvent(int howMany) {
 		case 'T':  // Не используется. После настройки ESP перезагрузим, поэтому меняем режим на передачу данных
 			setup_mode = TRANSMIT_MODE;
 			break;
-
-#ifdef WATERIUS_4C2W
 		case 'A':  // Тревога была отправлена
 			alarm_sent = true;
 			break;
@@ -79,7 +76,6 @@ void SlaveI2C::receiveEvent(int howMany) {
 			data->state2 = waterleak2.state;
 			data->crc = crc_8((unsigned char*)data, LEAK_HEADER_SIZE);
 			break;
-#endif
 	}
 }
 

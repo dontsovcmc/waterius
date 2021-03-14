@@ -19,24 +19,14 @@ void ESPPowerPin::power(const bool on)
 	if (on)
 	{
 		pinMode(power_pin, OUTPUT);
-#if defined(WATERIUS_2C) 
-		digitalWrite(power_pin, HIGH);
-#endif
-#if defined(WATERIUS_4C2W)
 		digitalWrite(power_pin, LOW);
-#endif
 		wake_up_timestamp = millis();
 	}
 	else
 	{
 		delayMicroseconds(50000);   // чтобы заснул
 		
-#if defined(WATERIUS_2C) 
-		digitalWrite(power_pin, LOW);
-#endif
-#if defined(WATERIUS_4C2W)
 		digitalWrite(power_pin, HIGH);
-#endif
 		pinMode(power_pin, INPUT);  // снижаем потребление
 		wake_up_timestamp = 0;
 	}

@@ -4,8 +4,6 @@
 #include <Arduino.h>
 #include "Setup.h"
 
-#ifdef WATERIUS_4C2W
-
 enum WaterLeak_e
 {
     OFF,        //не установлен. определяется при включении.
@@ -139,6 +137,4 @@ struct WaterLeakA
     }
 };
 
-#endif  //WATERIUS_4C2W т.к. PORTA DDRA нет в attiny85
-
-#endif
+#endif 

@@ -24,9 +24,7 @@ class SlaveI2C
  public:
 	static uint8_t setup_mode;
 	 
-#ifdef WATERIUS_4C2W
 	static bool alarm_sent;
-#endif
 	void begin(const uint8_t);
 	static void end();
 	bool masterGoingToSleep();
