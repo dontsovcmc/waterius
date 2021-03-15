@@ -213,7 +213,7 @@ platformio run --target upload
 * Blynk by Volodymyr Shymanskyy (0.6.1)
 * ArduinoJSON (6.12.0)
 * PubSubClient (2.7.0)
-* Установить вручную из zip [WiFiManager#waterius_release_099](https://github.com/dontsovcmc/WiFiManager/tree/waterius_release_099) 
+* Установить вручную из zip [WiFiManager#waterius_release_101](https://github.com/dontsovcmc/WiFiManager/tree/waterius_release_101) 
 Примечание: актуальные версии в [platformio.ini](https://github.com/dontsovcmc/waterius/blob/master/ESP8266/platformio.ini)
 
 #### ESP8266: Additional Boards Managers URLs:

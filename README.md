@@ -1,18 +1,11 @@
 ### Aвтономное устройство для передачи показаний импульсных счётчиков воды по Wi-Fi
 
-# Ватериус 0.10.0
+# Ватериус 0.10.1
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
-=======
-
-### Программист найден. Скоро выйдет: 0.10.1
-[143](https://github.com/dontsovcmc/waterius/issues/143) Изменяемый период отправки
-
-[144](https://github.com/dontsovcmc/waterius/issues/144) Авто+ручная настройка веса импульса
-
-=======
+[Прошивки HEX, BIN](https://github.com/dontsovcmc/waterius/releases)
 
 ### Характеристики
 - 2 счётчика воды [Список поддерживаемых счётчиков](https://github.com/dontsovcmc/waterius/issues/65)
@@ -21,10 +14,12 @@
 - не нужно знать, сколько литров на импульс (Ватериус сам определит 1 или 10л/имп)
 - не нужно знать, какого типа выход: "сухой контакт" или "НАМУР"
 - детектор низкого заряда (экспериментально)
+- настраиваемый период отправки (с 0.10.1)
+- Авто+ручная настройка веса импульса (с 0.10.1)
 
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru">waterius.ru</a>
-* в приложении [Blynk.cc](http://Blynk.cc) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8))
+* в приложении [Blynk.io](https://blynk.io) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8))
 * на вашем [HTTP/HTTPS сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B8-%D0%BF%D0%BE-http-%D1%81%D0%B2%D0%BE%D0%B9-%D1%81%D0%B5%D1%80%D0%B2%D0%B5%D1%80)
 * в MQTT клиенте [настройка](https://github.com/dontsovcmc/waterius/blob/master/Export.md#настройка-отправки-по-mqtt)
   * в HomeAssistant [конфигурация](https://github.com/dontsovcmc/waterius/blob/master/homeassistant.configuration.yaml), [обсуждение](https://github.com/dontsovcmc/waterius/issues/86)
@@ -68,8 +63,8 @@
 - Записать видео установки/настройки Ватериуса (можно сразу в [FB](https://www.facebook.com/waterius), [VK](https://vk.com/waterius1))
 
 - Отправка лога ESP в вебинтерфейс (JS код есть, спасибо Владимиру)
-- Добавить архив потребления (временные метки) (доработка i2c и буфера, пишите, расскажу)
 - OTA обновления: предложить код прошивки и пример веб сервера
+- Добавить архив потребления (временные метки) (доработка i2c и буфера, пишите, расскажу)
 
 Решены:
 - ~~Поддержка HTTPS~~, спасибо [marvel-m9y](https://github.com/marvel-m9y)
@@ -81,7 +76,7 @@
 - На [Waterius-Attiny84-ESP12F](https://github.com/dontsovcmc/waterius/issues/41#issuecomment-439402464) сделан (но не запрограммирован) тут [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F), спасибо [badenbaden]
 
 ### Модицикации
-Версия 0.10.0 поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками ([ветка attiny84](https://github.com/dontsovcmc/waterius/tree/attiny84).
+[ветка attiny84](https://github.com/dontsovcmc/waterius/tree/attiny84) поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками и 2мя датчиками протечек (требует тестирования).
 
 [Waterius на ESP32 с NB-IoT](https://github.com/OloloevReal/Waterius32) от OloloevReal
 
@@ -99,7 +94,7 @@
 - Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1).
 - [freenetwork](https://github.com/freenetwork) за конфигурацию для HomeAssistant
 - [grffio](https://github.com/grffio) за локальный вебсервер
-- [Игорю Вахромееву](http://vakhromeev.com) за наикрутейший редизайн настроек (>0.9.4)
+- [Игорю Вахромееву](http://vakhromeev.com) за наикрутейший редизайн настроек
 - Сергею А. (г. Мурманск) за подробную инструкцию по [настройке Domoticz и NodeRed](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
 - [sintech](https://github.com/sintech) за найденные и исправленные баги
 - [zinger76](https://github.com/zinger76) за ссылку на заказ платы и [3D модель крепления](https://github.com/dontsovcmc/waterius/blob/master/wall-mount/wall_mount.md) к стене
