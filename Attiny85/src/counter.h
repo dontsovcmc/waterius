@@ -175,10 +175,7 @@ struct ButtonB
     {
        DDRB &= ~_BV(pin);      // INPUT
        PORTB &= ~_BV(_pin);     // INPUT
-
-#if defined(WATERIUS_4C2W)
        PORTB |= _BV(_pin);      // INPUT_PULLUP
-#endif
     }
 
     inline bool digBit() 

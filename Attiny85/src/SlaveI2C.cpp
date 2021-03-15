@@ -31,9 +31,9 @@ void SlaveI2C::begin(const uint8_t mode) {
 
 void SlaveI2C::end() {
 	Wire.end();
-	  //DDRA |= (1<<4) | (1<<6);
-	  DDRA &= ~(1<<4) & ~(1<<6);
-      PORTA &= ~(1<<4) & ~(1<<6);
+	//отключение подтяжек, требуется, т.к. Wire.cpp теущей версии платформы не делает этого
+	DDRA &= ~(1<<4) & ~(1<<6); //SCL SDA to input
+    PORTA &= ~(1<<4) & ~(1<<6); //SCL SDA pull-up disable
 }
 
 void SlaveI2C::requestEvent() {
@@ -65,6 +65,7 @@ void SlaveI2C::receiveEvent(int howMany) {
 		case 'T':  // Не используется. После настройки ESP перезагрузим, поэтому меняем режим на передачу данных
 			setup_mode = TRANSMIT_MODE;
 			break;
+
 		case 'A':  // Тревога была отправлена
 			alarm_sent = true;
 			break;
