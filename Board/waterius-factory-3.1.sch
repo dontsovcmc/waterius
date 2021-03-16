@@ -3737,12 +3737,31 @@ Source: AVX .. aphvc.pdf</description>
 <text x="-2.54" y="-2.54" size="1.778" layer="96">&gt;VALUE</text>
 <pin name="GND" x="0" y="2.54" visible="off" length="short" direction="sup" rot="R270"/>
 </symbol>
+<symbol name="VCC" urn="urn:adsk.eagle:symbol:26928/1" library_version="1">
+<wire x1="1.27" y1="-1.905" x2="0" y2="0" width="0.254" layer="94"/>
+<wire x1="0" y1="0" x2="-1.27" y2="-1.905" width="0.254" layer="94"/>
+<text x="-2.54" y="-2.54" size="1.778" layer="96" rot="R90">&gt;VALUE</text>
+<pin name="VCC" x="0" y="-2.54" visible="off" length="short" direction="sup" rot="R90"/>
+</symbol>
 </symbols>
 <devicesets>
 <deviceset name="GND" prefix="GND">
 <description>&lt;b&gt;SUPPLY SYMBOL&lt;/b&gt;</description>
 <gates>
 <gate name="1" symbol="GND" x="0" y="0"/>
+</gates>
+<devices>
+<device name="">
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="VCC" urn="urn:adsk.eagle:component:26957/1" prefix="P+" library_version="1">
+<description>&lt;b&gt;SUPPLY SYMBOL&lt;/b&gt;</description>
+<gates>
+<gate name="VCC" symbol="VCC" x="0" y="0"/>
 </gates>
 <devices>
 <device name="">
@@ -8884,261 +8903,6 @@ Source: www.kingbright.com</description>
 </deviceset>
 </devicesets>
 </library>
-<library name="atmel">
-<description>&lt;b&gt;AVR Devices&lt;/b&gt;&lt;p&gt;
-Configurable logic, microcontrollers, nonvolatile memories&lt;p&gt;
-Based on the following sources:&lt;p&gt;
-&lt;ul&gt;
-&lt;li&gt;www.atmel.com
-&lt;li&gt;CD-ROM : Configurable Logic Microcontroller Nonvolatile Memory
-&lt;li&gt;CadSoft download site, www.cadsoft.de or www.cadsoftusa.com , file at90smcu_v400.zip
-&lt;li&gt;avr.lbr
-&lt;/ul&gt;
-&lt;author&gt;Revised by librarian@cadsoft.de&lt;/author&gt;</description>
-<packages>
-<package name="DIL08">
-<description>&lt;B&gt;Dual In Line&lt;/B&gt;</description>
-<wire x1="-5.08" y1="-0.635" x2="-5.08" y2="0.635" width="0.1524" layer="21" curve="180"/>
-<wire x1="-5.08" y1="-0.635" x2="-5.08" y2="-2.794" width="0.1524" layer="21"/>
-<wire x1="-5.08" y1="-2.794" x2="5.08" y2="-2.794" width="0.1524" layer="21"/>
-<wire x1="5.08" y1="-2.794" x2="5.08" y2="2.794" width="0.1524" layer="21"/>
-<wire x1="5.08" y1="2.794" x2="-5.08" y2="2.794" width="0.1524" layer="21"/>
-<wire x1="-5.08" y1="2.794" x2="-5.08" y2="0.635" width="0.1524" layer="21"/>
-<pad name="1" x="-3.81" y="-3.81" drill="0.8128" shape="long" rot="R90"/>
-<pad name="2" x="-1.27" y="-3.81" drill="0.8128" shape="long" rot="R90"/>
-<pad name="3" x="1.27" y="-3.81" drill="0.8128" shape="long" rot="R90"/>
-<pad name="4" x="3.81" y="-3.81" drill="0.8128" shape="long" rot="R90"/>
-<pad name="5" x="3.81" y="3.81" drill="0.8128" shape="long" rot="R90"/>
-<pad name="6" x="1.27" y="3.81" drill="0.8128" shape="long" rot="R90"/>
-<pad name="7" x="-1.27" y="3.81" drill="0.8128" shape="long" rot="R90"/>
-<pad name="8" x="-3.81" y="3.81" drill="0.8128" shape="long" rot="R90"/>
-<text x="-5.3594" y="-2.54" size="1.27" layer="25" ratio="10" rot="R90">&gt;NAME</text>
-<text x="-3.81" y="-0.9906" size="1.27" layer="27" ratio="10">&gt;VALUE</text>
-</package>
-<package name="8S1">
-<description>&lt;b&gt;8S1&lt;/b&gt; 8-lead (0.150" Wide Body)&lt;p&gt;
-Plastic Gull Wing Small Outline (JEDEC SOIC)&lt;br&gt;
-Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description>
-<wire x1="-2.425" y1="1.675" x2="-2.175" y2="1.925" width="0.1524" layer="51" curve="-90"/>
-<wire x1="2.175" y1="1.925" x2="2.425" y2="1.675" width="0.1524" layer="51" curve="-90"/>
-<wire x1="2.175" y1="-1.925" x2="2.425" y2="-1.675" width="0.1524" layer="51" curve="90"/>
-<wire x1="-2.425" y1="-1.675" x2="-2.175" y2="-1.925" width="0.1524" layer="51" curve="90"/>
-<wire x1="-1.59" y1="1.925" x2="-0.95" y2="1.925" width="0.1524" layer="51"/>
-<wire x1="-2.165" y1="1.925" x2="2.185" y2="1.925" width="0.1524" layer="51"/>
-<wire x1="0.95" y1="1.925" x2="1.59" y2="1.925" width="0.1524" layer="51"/>
-<wire x1="2.21" y1="1.925" x2="2.185" y2="1.925" width="0.1524" layer="21"/>
-<wire x1="2.2" y1="-1.925" x2="2.185" y2="-1.925" width="0.1524" layer="51"/>
-<wire x1="2.185" y1="-1.925" x2="2.155" y2="-1.925" width="0.1524" layer="51"/>
-<wire x1="1.59" y1="-1.925" x2="0.94" y2="-1.925" width="0.1524" layer="51"/>
-<wire x1="0.32" y1="-1.925" x2="-0.33" y2="-1.925" width="0.1524" layer="51"/>
-<wire x1="2.185" y1="-1.925" x2="-2.165" y2="-1.925" width="0.1524" layer="51"/>
-<wire x1="-2.425" y1="1.675" x2="-2.425" y2="-1.665" width="0.1524" layer="21"/>
-<wire x1="2.425" y1="-1.675" x2="2.425" y2="1.675" width="0.1524" layer="21"/>
-<circle x="-1.42" y="-1.115" radius="0.5" width="0.0508" layer="21"/>
-<smd name="1" x="-1.905" y="-2.654" dx="0.6" dy="1.6" layer="1"/>
-<smd name="2" x="-0.645" y="-2.654" dx="0.6" dy="1.6" layer="1"/>
-<smd name="3" x="0.625" y="-2.654" dx="0.6" dy="1.6" layer="1"/>
-<smd name="4" x="1.895" y="-2.654" dx="0.6" dy="1.6" layer="1"/>
-<smd name="8" x="-1.905" y="2.654" dx="0.6" dy="1.6" layer="1"/>
-<smd name="7" x="-0.635" y="2.654" dx="0.6" dy="1.6" layer="1"/>
-<smd name="6" x="0.635" y="2.654" dx="0.6" dy="1.6" layer="1"/>
-<smd name="5" x="1.905" y="2.654" dx="0.6" dy="1.6" layer="1"/>
-<text x="-2.8575" y="-2.159" size="1.27" layer="25" ratio="10" rot="R90">&gt;NAME</text>
-<text x="4.064" y="-2.159" size="1.27" layer="27" ratio="10" rot="R90">&gt;VALUE</text>
-<rectangle x1="-2.08" y1="1.975" x2="-1.73" y2="3.075" layer="51"/>
-<rectangle x1="-0.81" y1="1.975" x2="-0.46" y2="3.075" layer="51"/>
-<rectangle x1="0.46" y1="1.975" x2="0.81" y2="3.075" layer="51"/>
-<rectangle x1="1.73" y1="1.975" x2="2.08" y2="3.075" layer="51"/>
-<rectangle x1="1.72" y1="-3.075" x2="2.07" y2="-1.975" layer="51"/>
-<rectangle x1="0.45" y1="-3.075" x2="0.8" y2="-1.975" layer="51"/>
-<rectangle x1="-0.82" y1="-3.075" x2="-0.47" y2="-1.975" layer="51"/>
-<rectangle x1="-2.08" y1="-3.075" x2="-1.73" y2="-1.975" layer="51"/>
-</package>
-<package name="8S2">
-<description>&lt;b&gt;8S2&lt;/b&gt; 8-lead, 0.208 Body&lt;p&gt;
-Plastic Small Outline Package (EIAJ)&lt;br&gt;
-Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description>
-<wire x1="-2.6" y1="2.65" x2="-2.35" y2="2.9" width="0.1524" layer="21" curve="-90"/>
-<wire x1="2.35" y1="2.9" x2="2.6" y2="2.65" width="0.1524" layer="21" curve="-90"/>
-<wire x1="2.35" y1="-2.925" x2="2.6" y2="-2.675" width="0.1524" layer="21" curve="90"/>
-<wire x1="-2.6" y1="-2.675" x2="-2.35" y2="-2.925" width="0.1524" layer="21" curve="90"/>
-<wire x1="2.36" y1="-2.925" x2="-2.34" y2="-2.925" width="0.1524" layer="51"/>
-<wire x1="-2.34" y1="2.9" x2="2.36" y2="2.9" width="0.1524" layer="51"/>
-<wire x1="-2.21" y1="2.9" x2="-2.34" y2="2.9" width="0.1524" layer="21"/>
-<wire x1="-1.59" y1="2.9" x2="-0.95" y2="2.9" width="0.1524" layer="21"/>
-<wire x1="-0.32" y1="2.9" x2="0.32" y2="2.9" width="0.1524" layer="21"/>
-<wire x1="0.95" y1="2.9" x2="1.59" y2="2.9" width="0.1524" layer="21"/>
-<wire x1="2.21" y1="2.9" x2="2.36" y2="2.9" width="0.1524" layer="21"/>
-<wire x1="2.2" y1="-2.925" x2="2.33" y2="-2.925" width="0.1524" layer="21"/>
-<wire x1="1.59" y1="-2.925" x2="0.94" y2="-2.925" width="0.1524" layer="21"/>
-<wire x1="0.32" y1="-2.925" x2="-0.33" y2="-2.925" width="0.1524" layer="21"/>
-<wire x1="-0.95" y1="-2.925" x2="-1.59" y2="-2.925" width="0.1524" layer="21"/>
-<wire x1="-2.21" y1="-2.925" x2="-2.34" y2="-2.925" width="0.1524" layer="21"/>
-<wire x1="-2.6" y1="2.65" x2="-2.6" y2="-2.665" width="0.1524" layer="21"/>
-<wire x1="2.6" y1="-2.675" x2="2.6" y2="2.65" width="0.1524" layer="21"/>
-<circle x="-1.42" y="-1.115" radius="0.5" width="0.0508" layer="21"/>
-<smd name="1" x="-1.905" y="-3.404" dx="0.5" dy="1.4" layer="1"/>
-<smd name="2" x="-0.645" y="-3.404" dx="0.5" dy="1.4" layer="1"/>
-<smd name="3" x="0.625" y="-3.404" dx="0.5" dy="1.4" layer="1"/>
-<smd name="4" x="1.895" y="-3.404" dx="0.5" dy="1.4" layer="1"/>
-<smd name="8" x="-1.905" y="3.404" dx="0.5" dy="1.4" layer="1"/>
-<smd name="7" x="-0.635" y="3.404" dx="0.5" dy="1.4" layer="1"/>
-<smd name="6" x="0.635" y="3.404" dx="0.5" dy="1.4" layer="1"/>
-<smd name="5" x="1.905" y="3.404" dx="0.5" dy="1.4" layer="1"/>
-<text x="-2.8575" y="-2.159" size="1.27" layer="25" ratio="10" rot="R90">&gt;NAME</text>
-<text x="4.064" y="-2.159" size="1.27" layer="27" ratio="10" rot="R90">&gt;VALUE</text>
-<rectangle x1="-2.08" y1="2.95" x2="-1.73" y2="3.85" layer="51"/>
-<rectangle x1="-0.81" y1="2.95" x2="-0.46" y2="3.85" layer="51"/>
-<rectangle x1="0.46" y1="2.95" x2="0.81" y2="3.85" layer="51"/>
-<rectangle x1="1.73" y1="2.95" x2="2.08" y2="3.85" layer="51"/>
-<rectangle x1="1.72" y1="-3.85" x2="2.07" y2="-2.95" layer="51"/>
-<rectangle x1="0.45" y1="-3.85" x2="0.8" y2="-2.95" layer="51"/>
-<rectangle x1="-0.82" y1="-3.85" x2="-0.47" y2="-2.95" layer="51"/>
-<rectangle x1="-2.08" y1="-3.85" x2="-1.73" y2="-2.95" layer="51"/>
-</package>
-</packages>
-<symbols>
-<symbol name="TINY13">
-<wire x1="-17.78" y1="15.24" x2="25.4" y2="15.24" width="0.254" layer="94"/>
-<wire x1="25.4" y1="15.24" x2="25.4" y2="-7.62" width="0.254" layer="94"/>
-<wire x1="25.4" y1="-7.62" x2="-17.78" y2="-7.62" width="0.254" layer="94"/>
-<wire x1="-17.78" y1="-7.62" x2="-17.78" y2="15.24" width="0.254" layer="94"/>
-<text x="-17.78" y="16.51" size="1.778" layer="95">&gt;NAME</text>
-<text x="-17.78" y="-10.16" size="1.778" layer="96">&gt;VALUE</text>
-<pin name="PB5/PCINT5/!RESET!/ADC0/DW" x="-20.32" y="-2.54" length="short"/>
-<pin name="PB3/PCINT3/CLKI/ADC3" x="-20.32" y="2.54" length="short"/>
-<pin name="PB4/PCINT4/ADC2" x="-20.32" y="0" length="short"/>
-<pin name="PB0/PCINT0/AIN0/OC0A/MOSI" x="-20.32" y="10.16" length="short"/>
-<pin name="PB1/PCINT1/AIN1/OC0B/INT0/MISO" x="-20.32" y="7.62" length="short"/>
-<pin name="PB2/PCINT2/SCK/ADC1/T0" x="-20.32" y="5.08" length="short"/>
-<pin name="VCC" x="-20.32" y="12.7" length="short" direction="pwr"/>
-<pin name="GND" x="-20.32" y="-5.08" length="short" direction="pwr"/>
-</symbol>
-</symbols>
-<devicesets>
-<deviceset name="TINY13" prefix="IC">
-<description>&lt;b&gt; 8-bit AVR Microcontroller with 1K Bytes In-System Programmable Flash&lt;/b&gt;&lt;p&gt;
-Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description>
-<gates>
-<gate name="G$1" symbol="TINY13" x="0" y="0"/>
-</gates>
-<devices>
-<device name="PU" package="DIL08">
-<connects>
-<connect gate="G$1" pin="GND" pad="4"/>
-<connect gate="G$1" pin="PB0/PCINT0/AIN0/OC0A/MOSI" pad="5"/>
-<connect gate="G$1" pin="PB1/PCINT1/AIN1/OC0B/INT0/MISO" pad="6"/>
-<connect gate="G$1" pin="PB2/PCINT2/SCK/ADC1/T0" pad="7"/>
-<connect gate="G$1" pin="PB3/PCINT3/CLKI/ADC3" pad="2"/>
-<connect gate="G$1" pin="PB4/PCINT4/ADC2" pad="3"/>
-<connect gate="G$1" pin="PB5/PCINT5/!RESET!/ADC0/DW" pad="1"/>
-<connect gate="G$1" pin="VCC" pad="8"/>
-</connects>
-<technologies>
-<technology name="-20">
-<attribute name="MF" value="" constant="no"/>
-<attribute name="MPN" value="ATTINY13-20PU" constant="no"/>
-<attribute name="OC_FARNELL" value="9171550" constant="no"/>
-<attribute name="OC_NEWARK" value="96K6521" constant="no"/>
-</technology>
-<technology name="V-10">
-<attribute name="MF" value="" constant="no"/>
-<attribute name="MPN" value="ATTINY13V-10PU" constant="no"/>
-<attribute name="OC_FARNELL" value="9171576" constant="no"/>
-<attribute name="OC_NEWARK" value="96K6523" constant="no"/>
-</technology>
-</technologies>
-</device>
-<device name="SSU" package="8S1">
-<connects>
-<connect gate="G$1" pin="GND" pad="4"/>
-<connect gate="G$1" pin="PB0/PCINT0/AIN0/OC0A/MOSI" pad="5"/>
-<connect gate="G$1" pin="PB1/PCINT1/AIN1/OC0B/INT0/MISO" pad="6"/>
-<connect gate="G$1" pin="PB2/PCINT2/SCK/ADC1/T0" pad="7"/>
-<connect gate="G$1" pin="PB3/PCINT3/CLKI/ADC3" pad="2"/>
-<connect gate="G$1" pin="PB4/PCINT4/ADC2" pad="3"/>
-<connect gate="G$1" pin="PB5/PCINT5/!RESET!/ADC0/DW" pad="1"/>
-<connect gate="G$1" pin="VCC" pad="8"/>
-</connects>
-<technologies>
-<technology name="-20">
-<attribute name="MF" value="" constant="no"/>
-<attribute name="MPN" value="ATTINY13-20SSU" constant="no"/>
-<attribute name="OC_FARNELL" value="1455133" constant="no"/>
-<attribute name="OC_NEWARK" value="58M3771" constant="no"/>
-</technology>
-<technology name="V-10">
-<attribute name="MF" value="" constant="no"/>
-<attribute name="MPN" value="ATTINY13V-10SSU" constant="no"/>
-<attribute name="OC_FARNELL" value="1455135" constant="no"/>
-<attribute name="OC_NEWARK" value="58M3773" constant="no"/>
-</technology>
-</technologies>
-</device>
-<device name="SU" package="8S2">
-<connects>
-<connect gate="G$1" pin="GND" pad="4"/>
-<connect gate="G$1" pin="PB0/PCINT0/AIN0/OC0A/MOSI" pad="5"/>
-<connect gate="G$1" pin="PB1/PCINT1/AIN1/OC0B/INT0/MISO" pad="6"/>
-<connect gate="G$1" pin="PB2/PCINT2/SCK/ADC1/T0" pad="7"/>
-<connect gate="G$1" pin="PB3/PCINT3/CLKI/ADC3" pad="2"/>
-<connect gate="G$1" pin="PB4/PCINT4/ADC2" pad="3"/>
-<connect gate="G$1" pin="PB5/PCINT5/!RESET!/ADC0/DW" pad="1"/>
-<connect gate="G$1" pin="VCC" pad="8"/>
-</connects>
-<technologies>
-<technology name="-20">
-<attribute name="MF" value="" constant="no"/>
-<attribute name="MPN" value="ATTINY13-20SU" constant="no"/>
-<attribute name="OC_FARNELL" value="9171568" constant="no"/>
-<attribute name="OC_NEWARK" value="96K6522" constant="no"/>
-</technology>
-<technology name="V-10">
-<attribute name="MF" value="" constant="no"/>
-<attribute name="MPN" value="ATTINY13V-10SU" constant="no"/>
-<attribute name="OC_FARNELL" value="9171584" constant="no"/>
-<attribute name="OC_NEWARK" value="96K6524" constant="no"/>
-</technology>
-</technologies>
-</device>
-</devices>
-</deviceset>
-</devicesets>
-</library>
-<library name="supply1" urn="urn:adsk.eagle:library:371">
-<description>&lt;b&gt;Supply Symbols&lt;/b&gt;&lt;p&gt;
- GND, VCC, 0V, +5V, -5V, etc.&lt;p&gt;
- Please keep in mind, that these devices are necessary for the
- automatic wiring of the supply signals.&lt;p&gt;
- The pin name defined in the symbol is identical to the net which is to be wired automatically.&lt;p&gt;
- In this library the device names are the same as the pin names of the symbols, therefore the correct signal names appear next to the supply symbols in the schematic.&lt;p&gt;
- &lt;author&gt;Created by librarian@cadsoft.de&lt;/author&gt;</description>
-<packages>
-</packages>
-<symbols>
-<symbol name="VCC" urn="urn:adsk.eagle:symbol:26928/1" library_version="1">
-<wire x1="1.27" y1="-1.905" x2="0" y2="0" width="0.254" layer="94"/>
-<wire x1="0" y1="0" x2="-1.27" y2="-1.905" width="0.254" layer="94"/>
-<text x="-2.54" y="-2.54" size="1.778" layer="96" rot="R90">&gt;VALUE</text>
-<pin name="VCC" x="0" y="-2.54" visible="off" length="short" direction="sup" rot="R90"/>
-</symbol>
-</symbols>
-<devicesets>
-<deviceset name="VCC" urn="urn:adsk.eagle:component:26957/1" prefix="P+" library_version="1">
-<description>&lt;b&gt;SUPPLY SYMBOL&lt;/b&gt;</description>
-<gates>
-<gate name="VCC" symbol="VCC" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-</devicesets>
-</library>
 <library name="switch-omron" urn="urn:adsk.eagle:library:377">
 <description>&lt;b&gt;Omron Switches&lt;/b&gt;&lt;p&gt;
 &lt;author&gt;Created by librarian@cadsoft.de&lt;/author&gt;</description>
@@ -9328,6 +9092,645 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 </deviceset>
 </devicesets>
 </library>
+<library name="attiny85">
+<packages>
+<package name="DIL08">
+<description>
+&lt;b&gt;DIL package&lt;/b&gt;, pin row distance 300mil
+</description>
+<pad name="1" x="-3.81" y="-3.81" drill="0.8" diameter="1.4" shape="square" first="yes"/>
+<pad name="2" x="-1.27" y="-3.81" drill="0.8" diameter="1.4"/>
+<pad name="3" x="1.27" y="-3.81" drill="0.8" diameter="1.4"/>
+<pad name="4" x="3.81" y="-3.81" drill="0.8" diameter="1.4"/>
+<pad name="5" x="3.81" y="3.81" drill="0.8" diameter="1.4"/>
+<pad name="6" x="1.27" y="3.81" drill="0.8" diameter="1.4"/>
+<pad name="7" x="-1.27" y="3.81" drill="0.8" diameter="1.4"/>
+<pad name="8" x="-3.81" y="3.81" drill="0.8" diameter="1.4"/>
+<text x="-5.334" y="0" size="1.27" layer="25" rot="R90" align="bottom-center">&gt;NAME</text>
+<text x="0" y="0" size="1.27" layer="27" align="center">&gt;VALUE</text>
+<wire x1="5.08" y1="2.921" x2="-5.08" y2="2.921" width="0.1524" layer="21"/>
+<wire x1="-5.08" y1="-2.921" x2="5.08" y2="-2.921" width="0.1524" layer="21"/>
+<wire x1="5.08" y1="2.921" x2="5.08" y2="-2.921" width="0.1524" layer="21"/>
+<wire x1="-5.08" y1="2.921" x2="-5.08" y2="1.016" width="0.1524" layer="21"/>
+<wire x1="-5.08" y1="-2.921" x2="-5.08" y2="-1.016" width="0.1524" layer="21"/>
+<wire x1="-5.08" y1="1.016" x2="-5.08" y2="-1.016" width="0.1524" layer="21" curve="-180"/>
+</package>
+<package name="8S2">
+<description>
+8 leads &lt;b&gt;Plastic Small Outline Package&lt;/b&gt;, 208mil body width, 50mil lead pitch&lt;p&gt;
+JEDEC: &lt;p&gt;
+Atmel: 8S2&lt;br&gt;
+Texas Instruments: PS (R-PDSO-G8)&lt;br&gt;
+</description>
+<smd name="1" x="-1.905" y="-3.55" dx="0.6" dy="1.8" layer="1"/>
+<smd name="2" x="-0.635" y="-3.55" dx="0.6" dy="1.8" layer="1"/>
+<smd name="3" x="0.635" y="-3.55" dx="0.6" dy="1.8" layer="1"/>
+<smd name="4" x="1.905" y="-3.55" dx="0.6" dy="1.8" layer="1"/>
+<smd name="5" x="1.905" y="3.55" dx="0.6" dy="1.8" layer="1"/>
+<smd name="6" x="0.635" y="3.55" dx="0.6" dy="1.8" layer="1"/>
+<smd name="7" x="-0.635" y="3.55" dx="0.6" dy="1.8" layer="1"/>
+<smd name="8" x="-1.905" y="3.55" dx="0.6" dy="1.8" layer="1"/>
+<text x="-3.175" y="0" size="1.27" layer="25" ratio="10" rot="R90" align="bottom-center">&gt;NAME</text>
+<text x="3.175" y="0" size="1.27" layer="27" ratio="10" align="center-left">&gt;VALUE</text>
+<wire x1="2.6162" y1="-2.6416" x2="-2.6162" y2="-2.6416" width="0.1524" layer="51"/>
+<wire x1="-2.6162" y1="2.6416" x2="2.6162" y2="2.6416" width="0.1524" layer="51"/>
+<wire x1="-2.6162" y1="2.6416" x2="-2.6162" y2="-2.667" width="0.1524" layer="21"/>
+<wire x1="2.6162" y1="-2.6416" x2="2.6162" y2="2.6416" width="0.1524" layer="21"/>
+<circle x="-2.1082" y="-2.1336" radius="0.254" width="0" layer="21"/>
+<rectangle x1="-2.1209" y1="-3.9624" x2="-1.6891" y2="-2.6416" layer="51"/>
+<rectangle x1="-0.8509" y1="-3.9624" x2="-0.4191" y2="-2.6416" layer="51"/>
+<rectangle x1="0.4191" y1="-3.9624" x2="0.8509" y2="-2.6416" layer="51"/>
+<rectangle x1="1.6891" y1="-3.9624" x2="2.1209" y2="-2.6416" layer="51"/>
+<rectangle x1="1.6891" y1="2.6416" x2="2.1209" y2="3.9624" layer="51"/>
+<rectangle x1="0.4191" y1="2.6416" x2="0.8509" y2="3.9624" layer="51"/>
+<rectangle x1="-0.8509" y1="2.6416" x2="-0.4191" y2="3.9624" layer="51"/>
+<rectangle x1="-2.1209" y1="2.6416" x2="-1.6891" y2="3.9624" layer="51"/>
+</package>
+<package name="SO8">
+<description>
+&lt;B&gt;Small Outline IC&lt;/B&gt;, 150mil body width, 50mil lead pitch&lt;p&gt;
+package/pad dimensions according to IPC-SM-782, RLP No. 300A&lt;p&gt;
+JEDEC: MS-012 AA&lt;br&gt;
+IPC: SO8&lt;p&gt;
+other notations: SO-8, SO08, SO-08, SOIC8, SOIC-8, SOIC08, SOIC-08
+</description>
+<smd name="1" x="-1.905" y="-2.6" dx="0.6" dy="2.2" layer="1"/>
+<smd name="2" x="-0.635" y="-2.6" dx="0.6" dy="2.2" layer="1"/>
+<smd name="3" x="0.635" y="-2.6" dx="0.6" dy="2.2" layer="1"/>
+<smd name="4" x="1.905" y="-2.6" dx="0.6" dy="2.2" layer="1"/>
+<smd name="5" x="1.905" y="2.6" dx="0.6" dy="2.2" layer="1"/>
+<smd name="6" x="0.635" y="2.6" dx="0.6" dy="2.2" layer="1"/>
+<smd name="7" x="-0.635" y="2.6" dx="0.6" dy="2.2" layer="1"/>
+<smd name="8" x="-1.905" y="2.6" dx="0.6" dy="2.2" layer="1"/>
+<text x="-3.175" y="0" size="1.27" layer="25" rot="R90" align="bottom-center">&gt;NAME</text>
+<text x="3.175" y="0" size="1.27" layer="27" align="center-left">&gt;VALUE</text>
+<wire x1="-2.45" y1="-1.95" x2="-2.45" y2="1.95" width="0.2032" layer="21"/>
+<wire x1="2.45" y1="1.95" x2="2.45" y2="-1.95" width="0.2032" layer="21"/>
+<wire x1="2.45" y1="-1.95" x2="-2.45" y2="-1.95" width="0.2032" layer="51"/>
+<wire x1="-2.45" y1="1.95" x2="2.45" y2="1.95" width="0.2032" layer="51"/>
+<wire x1="2.45" y1="-1.45" x2="-2.45" y2="-1.45" width="0.2032" layer="51"/>
+<rectangle x1="-2.115" y1="-3" x2="-1.695" y2="-1.95" layer="51"/>
+<rectangle x1="-0.845" y1="-3" x2="-0.425" y2="-1.95" layer="51"/>
+<rectangle x1="0.425" y1="-3" x2="0.845" y2="-1.95" layer="51"/>
+<rectangle x1="1.695" y1="-3" x2="2.115" y2="-1.95" layer="51"/>
+<rectangle x1="1.695" y1="1.95" x2="2.115" y2="3" layer="51"/>
+<rectangle x1="0.425" y1="1.95" x2="0.845" y2="3" layer="51"/>
+<rectangle x1="-0.845" y1="1.95" x2="-0.425" y2="3" layer="51"/>
+<rectangle x1="-2.115" y1="1.95" x2="-1.695" y2="3" layer="51"/>
+<rectangle x1="-1" y1="-1" x2="1" y2="1" layer="35"/>
+<wire x1="-3" y1="4" x2="3" y2="4" width="0" layer="39"/>
+<wire x1="3" y1="4" x2="3" y2="-4" width="0" layer="39"/>
+<wire x1="3" y1="-4" x2="-3" y2="-4" width="0" layer="39"/>
+<wire x1="-3" y1="-4" x2="-3" y2="4" width="0" layer="39"/>
+</package>
+<package name="MO-153AA">
+<description>
+&lt;b&gt;Small Shrink Outline Package&lt;/b&gt;, 3.0mm x 4.4mm body, 0.65mm lead pitch &lt;p&gt;
+JEDEC: MO-153, variation AA&lt;p&gt;
+NXP: TSSOP8 (SOT530)&lt;br&gt;
+Texas Instruments: PW (R-PDSO-G8)&lt;p&gt;
+other notations: TSSOP8, TSSOP-8, TSSOP08, TSSOP-08
+</description>
+<smd name="1" x="-0.975" y="-2.925" dx="0.4" dy="1.35" layer="1"/>
+<smd name="2" x="-0.325" y="-2.925" dx="0.4" dy="1.35" layer="1"/>
+<smd name="3" x="0.325" y="-2.925" dx="0.4" dy="1.35" layer="1"/>
+<smd name="4" x="0.975" y="-2.925" dx="0.4" dy="1.35" layer="1"/>
+<smd name="5" x="0.975" y="2.925" dx="0.4" dy="1.35" layer="1"/>
+<smd name="6" x="0.325" y="2.925" dx="0.4" dy="1.35" layer="1"/>
+<smd name="7" x="-0.325" y="2.925" dx="0.4" dy="1.35" layer="1"/>
+<smd name="8" x="-0.975" y="2.925" dx="0.4" dy="1.35" layer="1"/>
+<text x="-1.905" y="0" size="1.016" layer="25" ratio="10" rot="R90" align="bottom-center">&gt;NAME</text>
+<text x="1.905" y="0" size="1.016" layer="27" ratio="10" align="center-left">&gt;VALUE</text>
+<wire x1="1.5" y1="2.2" x2="1.5" y2="-2.2" width="0.1524" layer="21"/>
+<wire x1="-1.5" y1="-2.2" x2="-1.5" y2="2.2" width="0.1524" layer="21"/>
+<circle x="-1" y="-1.7" radius="0.25" width="0" layer="21"/>
+<wire x1="1.5" y1="2.2" x2="-1.5" y2="2.2" width="0.1524" layer="51"/>
+<wire x1="-1.5" y1="-2.2" x2="1.5" y2="-2.2" width="0.1524" layer="51"/>
+<rectangle x1="-1.1" y1="-3.2" x2="-0.85" y2="-2.2" layer="51"/>
+<rectangle x1="-0.45" y1="-3.2" x2="-0.2" y2="-2.2" layer="51"/>
+<rectangle x1="0.2" y1="-3.2" x2="0.45" y2="-2.2" layer="51"/>
+<rectangle x1="0.85" y1="-3.2" x2="1.1" y2="-2.2" layer="51"/>
+<rectangle x1="0.85" y1="2.2" x2="1.1" y2="3.2" layer="51"/>
+<rectangle x1="0.2" y1="2.2" x2="0.45" y2="3.2" layer="51"/>
+<rectangle x1="-0.45" y1="2.2" x2="-0.2" y2="3.2" layer="51"/>
+<rectangle x1="-1.1" y1="2.2" x2="-0.85" y2="3.2" layer="51"/>
+</package>
+<package name="QFN20_4X4_0.50">
+<description>
+&lt;b&gt;20-Lead Plastic QFN&lt;/b&gt;,  4mm x 4mm body, 0.5mm lead pitch, exposed pad&lt;p&gt;
+0.45 mm lead length&lt;p&gt;
+JEDEC: MO-220&lt;br&gt;
+ATMEL Code: 20M1, ZFV&lt;p&gt;
+other notations: MFL20
+</description>
+<smd name="1" x="-2" y="1" dx="0.9" dy="0.3" layer="1"/>
+<smd name="2" x="-2" y="0.5" dx="0.9" dy="0.3" layer="1"/>
+<smd name="3" x="-2" y="0" dx="0.9" dy="0.3" layer="1"/>
+<smd name="4" x="-2" y="-0.5" dx="0.9" dy="0.3" layer="1"/>
+<smd name="5" x="-2" y="-1" dx="0.9" dy="0.3" layer="1"/>
+<smd name="6" x="-1" y="-2" dx="0.3" dy="0.9" layer="1"/>
+<smd name="7" x="-0.5" y="-2" dx="0.3" dy="0.9" layer="1"/>
+<smd name="8" x="0" y="-2" dx="0.3" dy="0.9" layer="1"/>
+<smd name="9" x="0.5" y="-2" dx="0.3" dy="0.9" layer="1"/>
+<smd name="10" x="1" y="-2" dx="0.3" dy="0.9" layer="1"/>
+<smd name="11" x="2" y="-1" dx="0.9" dy="0.3" layer="1"/>
+<smd name="12" x="2" y="-0.5" dx="0.9" dy="0.3" layer="1"/>
+<smd name="13" x="2" y="0" dx="0.9" dy="0.3" layer="1"/>
+<smd name="14" x="2" y="0.5" dx="0.9" dy="0.3" layer="1"/>
+<smd name="15" x="2" y="1" dx="0.9" dy="0.3" layer="1"/>
+<smd name="16" x="1" y="2" dx="0.3" dy="0.9" layer="1"/>
+<smd name="17" x="0.5" y="2" dx="0.3" dy="0.9" layer="1"/>
+<smd name="18" x="0" y="2" dx="0.3" dy="0.9" layer="1"/>
+<smd name="19" x="-0.5" y="2" dx="0.3" dy="0.9" layer="1"/>
+<smd name="20" x="-1" y="2" dx="0.3" dy="0.9" layer="1"/>
+<smd name="EXP" x="0" y="0" dx="2.4" dy="2.4" layer="1"/>
+<text x="0" y="2.54" size="1.27" layer="25" align="bottom-center">&gt;NAME</text>
+<text x="0" y="-2.54" size="1.27" layer="27" align="top-center">&gt;VALUE</text>
+<wire x1="-2" y1="2" x2="-1.4" y2="2" width="0.2032" layer="21"/>
+<wire x1="-1.4" y1="-2" x2="-2" y2="-2" width="0.2032" layer="21"/>
+<wire x1="2" y1="-2" x2="1.4" y2="-2" width="0.2032" layer="21"/>
+<wire x1="2" y1="-1.4" x2="2" y2="-2" width="0.2032" layer="21"/>
+<wire x1="2" y1="2" x2="2" y2="1.4" width="0.2032" layer="21"/>
+<wire x1="1.4" y1="2" x2="2" y2="2" width="0.2032" layer="21"/>
+<rectangle x1="-2" y1="1.6" x2="-1.6" y2="2" layer="21"/>
+<wire x1="-1.4" y1="2" x2="1.4" y2="2" width="0.2032" layer="51"/>
+<wire x1="2" y1="1.4" x2="2" y2="-1.4" width="0.2032" layer="51"/>
+<wire x1="1.4" y1="-2" x2="-1.4" y2="-2" width="0.2032" layer="51"/>
+<wire x1="-2" y1="-2" x2="-2" y2="2" width="0.2032" layer="21"/>
+</package>
+</packages>
+<symbols>
+<symbol name="TINY85">
+<description>
+AVR Attiny25(V)/45(V)/85(V)
+</description>
+<pin name="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" x="-35.56" y="-5.08" length="middle"/>
+<pin name="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" x="-35.56" y="-2.54" length="middle"/>
+<pin name="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" x="-35.56" y="0" length="middle"/>
+<pin name="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" x="-35.56" y="2.54" length="middle"/>
+<pin name="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" x="-35.56" y="5.08" length="middle"/>
+<pin name="PB5(DW/ADC0/!RESET!/PCINT5)" x="-35.56" y="7.62" length="middle"/>
+<text x="-30.48" y="10.668" size="1.778" layer="95" ratio="10" rot="SR0">&gt;NAME</text>
+<text x="-30.48" y="-8.128" size="1.778" layer="96" ratio="10" rot="SR0" align="top-left">&gt;VALUE</text>
+<wire x1="-30.48" y1="10.16" x2="-30.48" y2="-7.62" width="0.4064" layer="94"/>
+<wire x1="-30.48" y1="-7.62" x2="30.48" y2="-7.62" width="0.4064" layer="94"/>
+<wire x1="30.48" y1="-7.62" x2="30.48" y2="10.16" width="0.4064" layer="94"/>
+<wire x1="30.48" y1="10.16" x2="-30.48" y2="10.16" width="0.4064" layer="94"/>
+</symbol>
+<symbol name="PWR">
+<text x="-0.508" y="0" size="1.778" layer="95" rot="R90" align="bottom-center">&gt;NAME</text>
+<text x="0.635" y="-2.54" size="1.27" layer="95" rot="R90" align="top-right">GND</text>
+<text x="0.508" y="2.54" size="1.27" layer="95" rot="R90" align="top-left">VCC</text>
+<pin name="GND" x="0" y="-7.62" visible="pad" length="middle" direction="pwr" rot="R90"/>
+<pin name="VCC" x="0" y="7.62" visible="pad" length="middle" direction="pwr" rot="R270"/>
+</symbol>
+</symbols>
+<devicesets>
+<deviceset name="ATTINY*5" prefix="IC">
+<description>
+8-bit &lt;b&gt;AVR tiny Microcontroller&lt;/b&gt;&lt;p&gt;
+
+&lt;table cellspacing="0" cellpadding="3" border="1"&gt;
+  &lt;tr&gt;
+    &lt;td&gt;Status&lt;/td&gt;
+    &lt;td bgcolor="lightgreen"&gt;aktiv&lt;/td&gt;
+    &lt;td bgcolor="lightgreen"&gt;aktiv&lt;/td&gt;
+    &lt;td bgcolor="lightgreen"&gt;aktiv&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr bgcolor="#EBEBEB"&gt;
+    &lt;td&gt;&lt;/td&gt;
+    &lt;td align="center"&gt;ATtiny25(V)&lt;/td&gt;
+    &lt;td align="center"&gt;ATtiny45(V)&lt;/td&gt;
+    &lt;td align="center"&gt;ATtiny85(V)&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;General purpose working registers&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;32&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;SRAM&lt;/td&gt;
+    &lt;td align="right"&gt;128 B&lt;/td&gt;
+    &lt;td align="right"&gt;256 B&lt;/td&gt;
+    &lt;td align="right"&gt;512 B&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;Program flash memory&lt;/td&gt;
+    &lt;td align="right"&gt;2 kB&lt;/td&gt;
+    &lt;td align="right"&gt;4 kB&lt;/td&gt;
+    &lt;td align="right"&gt;8 kB&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;EEPROM&lt;/td&gt;
+    &lt;td align="right"&gt;128 B&lt;/td&gt;
+    &lt;td align="right"&gt;256 B&lt;/td&gt;
+    &lt;td align="right"&gt;512 B&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;8-bit Timer/Counter&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;1&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;8-bit Timer/Counter (high speed)&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;1&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;USI&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;1&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;ADC channels&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;4&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;ADC resolution&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;10 bit&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;AC&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;1&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;Watchdog&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;1&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;General purpose I/O&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;6&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td&gt;External interrupts&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;6&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td rowspan="2"&gt;Operating voltage&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;1.8 ... 5.5 V for ATtiny#5V&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;2.7 ... 5.5 V for ATtiny#5&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td rowspan="4"&gt;Speed grade&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;0 ... 4 MHz @ 1.8 ... 5.5 V for ATtiny#5V&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;0 ... 10 MHz @ 2.7 ... 5.5 V for ATtiny#5V&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;0 ... 10 MHz @ 2.7 ... 5.5 V for ATtiny#5&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;0 ... 20 MHz @ 4.5 ... 5.5V for ATtiny#5&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td rowspan="6"&gt;Clock options&lt;/td&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;calibrated internal 8/6.4 MHz oscillator&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;external crystal oscillator / ceramic resonator&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;external 32.768 kHz low-frequency crystal oscillator&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;internal 128 kHz oscillator&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;high frequency PLL clock&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+    &lt;td colspan="3" align="center"&gt;&lt;nobr&gt;external clock input&lt;/nobr&gt;&lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/table&gt;
+</description>
+<gates>
+<gate name="G$1" symbol="TINY85" x="0" y="0"/>
+<gate name="P" symbol="PWR" x="45.72" y="0"/>
+</gates>
+<devices>
+<device name="-20PU" package="DIL08">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="4"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="-20SU" package="8S2">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="4"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="-20SH" package="8S2">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="4"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="-20SN" package="8S2">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+</technologies>
+</device>
+<device name="-20SSU" package="SO8">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="-20SSH" package="SO8">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="-20SSN" package="SO8">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+</technologies>
+</device>
+<device name="-20XU" package="MO-153AA">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="4"/>
+</technologies>
+</device>
+<device name="-20MU" package="QFN20_4X4_0.50">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="11"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="12"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="14"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="5"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="8 EXP"/>
+<connect gate="P" pin="VCC" pad="15"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="4"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="-20MF" package="QFN20_4X4_0.50">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="11"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="12"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="14"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="5"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="8 EXP"/>
+<connect gate="P" pin="VCC" pad="15"/>
+</connects>
+<technologies>
+<technology name="2"/>
+</technologies>
+</device>
+<device name="V-10PU" package="DIL08">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="4"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="V-10SU" package="8S2">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="4"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="V-10SH" package="8S2">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="4"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="V-10SN" package="8S2">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+</technologies>
+</device>
+<device name="V-10SSU" package="SO8">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="V-10SSH" package="SO8">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="V-10SSN" package="SO8">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="2"/>
+</technologies>
+</device>
+<device name="V-10XU" package="MO-153AA">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="5"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="6"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="7"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="3"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="4"/>
+<connect gate="P" pin="VCC" pad="8"/>
+</connects>
+<technologies>
+<technology name="4"/>
+</technologies>
+</device>
+<device name="V-10MU" package="QFN20_4X4_0.50">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="11"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="12"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="14"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="5"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="8 EXP"/>
+<connect gate="P" pin="VCC" pad="15"/>
+</connects>
+<technologies>
+<technology name="2"/>
+<technology name="4"/>
+<technology name="8"/>
+</technologies>
+</device>
+<device name="V-10MF" package="QFN20_4X4_0.50">
+<connects>
+<connect gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)" pad="11"/>
+<connect gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)" pad="12"/>
+<connect gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)" pad="14"/>
+<connect gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)" pad="2"/>
+<connect gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)" pad="5"/>
+<connect gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)" pad="1"/>
+<connect gate="P" pin="GND" pad="8 EXP"/>
+<connect gate="P" pin="VCC" pad="15"/>
+</connects>
+<technologies>
+<technology name="2"/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+</devicesets>
+</library>
 </libraries>
 <attributes>
 </attributes>
@@ -9346,12 +9749,12 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <part name="C1" library="rcl" deviceset="C-EU" device="C0805" value="1uF"/>
 <part name="C4" library="rcl" deviceset="C-EU" device="C0805" value="1uF"/>
 <part name="C2" library="rcl" deviceset="C-EU" device="C0805" value="0.1uF"/>
-<part name="+3V" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="VCC" device=""/>
+<part name="+3V" library="supply1" deviceset="VCC" device=""/>
 <part name="X1" library="con-wago255" deviceset="233-104" device=""/>
 <part name="R1" library="resistor" deviceset="R-EU_" device="R0805" value="3k3"/>
 <part name="GND1" library="supply1" deviceset="GND" device=""/>
 <part name="GND2" library="supply1" deviceset="GND" device=""/>
-<part name="+3V2" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="VCC" device=""/>
+<part name="+3V2" library="supply1" deviceset="VCC" device=""/>
 <part name="LOG" library="pinhead" deviceset="PINHD-1X1" device=""/>
 <part name="R3" library="resistor" deviceset="R-EU_" device="R0805" value="300"/>
 <part name="R2" library="resistor" deviceset="R-EU_" device="R0805" value="3k3"/>
@@ -9367,12 +9770,12 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <part name="GND4" library="supply1" deviceset="GND" device=""/>
 <part name="GND5" library="supply1" deviceset="GND" device=""/>
 <part name="RST" library="pinhead" deviceset="PINHD-1X1" device="" value="RST"/>
-<part name="IC1" library="atmel" deviceset="TINY13" device="SU" technology="-20" value="TINY85-20SU"/>
 <part name="R5" library="resistor" deviceset="R-EU_" device="R0805" value="3k3"/>
 <part name="C3" library="rcl" deviceset="C-EU" device="C0805" value="0.1uF"/>
 <part name="GND7" library="supply1" deviceset="GND" device=""/>
 <part name="U$1" library="MCP1700T-3002E_TT" deviceset="MCP1700T-3002E/TT" device=""/>
 <part name="S1" library="switch-omron" library_urn="urn:adsk.eagle:library:377" deviceset="31-XX" device="" package3d_urn="urn:adsk.eagle:package:27487/1"/>
+<part name="IC1" library="attiny85" deviceset="ATTINY*5" device="-20SU" technology="8"/>
 </parts>
 <sheets>
 <sheet>
@@ -9472,10 +9875,6 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <attribute name="NAME" x="64.77" y="17.145" size="1.778" layer="95" rot="R180"/>
 <attribute name="VALUE" x="64.77" y="25.4" size="1.778" layer="96" rot="R180"/>
 </instance>
-<instance part="IC1" gate="G$1" x="109.22" y="22.86" smashed="yes">
-<attribute name="NAME" x="91.44" y="39.37" size="1.778" layer="95"/>
-<attribute name="VALUE" x="91.44" y="12.7" size="1.778" layer="96"/>
-</instance>
 <instance part="R5" gate="G$1" x="76.2" y="45.72" smashed="yes" rot="R90">
 <attribute name="NAME" x="74.7014" y="41.91" size="1.778" layer="95" rot="R90"/>
 <attribute name="VALUE" x="79.502" y="41.91" size="1.778" layer="96" rot="R90"/>
@@ -9494,6 +9893,13 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <instance part="S1" gate="1" x="43.18" y="25.4" smashed="yes" rot="MR180">
 <attribute name="NAME" x="36.83" y="27.305" size="1.778" layer="95" rot="MR270"/>
 <attribute name="VALUE" x="39.37" y="22.225" size="1.778" layer="96" rot="MR270"/>
+</instance>
+<instance part="IC1" gate="G$1" x="127" y="27.94" smashed="yes" rot="MR180">
+<attribute name="NAME" x="96.52" y="17.272" size="1.778" layer="95" ratio="10" rot="SMR180"/>
+<attribute name="VALUE" x="96.52" y="36.068" size="1.778" layer="96" ratio="10" rot="SMR180" align="top-left"/>
+</instance>
+<instance part="IC1" gate="P" x="162.56" y="27.94" smashed="yes">
+<attribute name="NAME" x="162.052" y="27.94" size="1.778" layer="95" rot="R90" align="bottom-center"/>
 </instance>
 </instances>
 <busses>
@@ -9549,10 +9955,9 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <wire x1="43.18" y1="53.34" x2="76.2" y2="53.34" width="0.1524" layer="91"/>
 <wire x1="76.2" y1="53.34" x2="76.2" y2="50.8" width="0.1524" layer="91"/>
 <junction x="43.18" y="53.34"/>
-<pinref part="IC1" gate="G$1" pin="VCC"/>
-<wire x1="88.9" y1="35.56" x2="81.28" y2="35.56" width="0.1524" layer="91"/>
-<wire x1="81.28" y1="35.56" x2="81.28" y2="53.34" width="0.1524" layer="91"/>
-<wire x1="81.28" y1="53.34" x2="76.2" y2="53.34" width="0.1524" layer="91"/>
+<pinref part="IC1" gate="P" pin="VCC"/>
+<wire x1="76.2" y1="53.34" x2="162.56" y2="53.34" width="0.1524" layer="91"/>
+<wire x1="162.56" y1="53.34" x2="162.56" y2="35.56" width="0.1524" layer="91"/>
 <junction x="76.2" y="53.34"/>
 </segment>
 </net>
@@ -9600,9 +10005,9 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <label x="106.68" y="106.68" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="IC1" gate="G$1" pin="PB3/PCINT3/CLKI/ADC3"/>
-<wire x1="88.9" y1="25.4" x2="68.58" y2="25.4" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="25.4" x2="68.58" y2="25.4" width="0.1524" layer="91"/>
 <label x="68.58" y="25.4" size="1.778" layer="95"/>
+<pinref part="IC1" gate="G$1" pin="PB3(ADC3/!OC1B!/CLKI/XTAL1/PCINT3)"/>
 </segment>
 </net>
 <net name="IN2" class="0">
@@ -9612,9 +10017,9 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <pinref part="R2" gate="G$1" pin="2"/>
 </segment>
 <segment>
-<pinref part="IC1" gate="G$1" pin="PB4/PCINT4/ADC2"/>
-<wire x1="88.9" y1="22.86" x2="68.58" y2="22.86" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="22.86" x2="68.58" y2="22.86" width="0.1524" layer="91"/>
 <label x="68.58" y="22.86" size="1.778" layer="95"/>
+<pinref part="IC1" gate="G$1" pin="PB4(ADC2/OC1B/CLKO/XTAL2/PCINT4)"/>
 </segment>
 </net>
 <net name="GND" class="1">
@@ -9660,15 +10065,14 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <pinref part="GND5" gate="1" pin="GND"/>
 </segment>
 <segment>
-<pinref part="IC1" gate="G$1" pin="GND"/>
-<wire x1="88.9" y1="17.78" x2="86.36" y2="17.78" width="0.1524" layer="91"/>
-<wire x1="86.36" y1="17.78" x2="86.36" y2="7.62" width="0.1524" layer="91"/>
-<wire x1="86.36" y1="7.62" x2="76.2" y2="7.62" width="0.1524" layer="91"/>
 <pinref part="C3" gate="G$1" pin="2"/>
-<wire x1="76.2" y1="7.62" x2="76.2" y2="10.16" width="0.1524" layer="91"/>
 <pinref part="GND7" gate="1" pin="GND"/>
 <wire x1="76.2" y1="5.08" x2="76.2" y2="7.62" width="0.1524" layer="91"/>
+<wire x1="76.2" y1="7.62" x2="76.2" y2="10.16" width="0.1524" layer="91"/>
+<wire x1="76.2" y1="7.62" x2="162.56" y2="7.62" width="0.1524" layer="91"/>
+<wire x1="162.56" y1="7.62" x2="162.56" y2="20.32" width="0.1524" layer="91"/>
 <junction x="76.2" y="7.62"/>
+<pinref part="IC1" gate="P" pin="GND"/>
 </segment>
 </net>
 <net name="N$3" class="0">
@@ -9690,9 +10094,9 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <label x="48.26" y="38.1" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="IC1" gate="G$1" pin="PB0/PCINT0/AIN0/OC0A/MOSI"/>
-<wire x1="88.9" y1="33.02" x2="68.58" y2="33.02" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="33.02" x2="68.58" y2="33.02" width="0.1524" layer="91"/>
 <label x="68.58" y="33.02" size="1.778" layer="95"/>
+<pinref part="IC1" gate="G$1" pin="PB0(MOSI/DI/SDA/AIN0/OC0A/!OC1A!/AREF/PCINT0)"/>
 </segment>
 </net>
 <net name="SCK" class="0">
@@ -9708,9 +10112,9 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <wire x1="43.18" y1="30.48" x2="43.18" y2="35.56" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<pinref part="IC1" gate="G$1" pin="PB2/PCINT2/SCK/ADC1/T0"/>
-<wire x1="88.9" y1="27.94" x2="68.58" y2="27.94" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="27.94" x2="68.58" y2="27.94" width="0.1524" layer="91"/>
 <label x="68.58" y="27.94" size="1.778" layer="95"/>
+<pinref part="IC1" gate="G$1" pin="PB2(SCK/USCK/SCL/ADC1/T0/INT0/PCINT2)"/>
 </segment>
 </net>
 <net name="N$2" class="0">
@@ -9730,9 +10134,9 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <label x="-25.4" y="35.56" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="IC1" gate="G$1" pin="PB1/PCINT1/AIN1/OC0B/INT0/MISO"/>
-<wire x1="88.9" y1="30.48" x2="68.58" y2="30.48" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="30.48" x2="68.58" y2="30.48" width="0.1524" layer="91"/>
 <label x="68.58" y="30.48" size="1.778" layer="95"/>
+<pinref part="IC1" gate="G$1" pin="PB1(MISO/DO/AIN1/OC0B/OC1A/PCINT1)"/>
 </segment>
 </net>
 <net name="N$5" class="0">
@@ -9758,12 +10162,12 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <pinref part="R5" gate="G$1" pin="1"/>
 <pinref part="C3" gate="G$1" pin="1"/>
 <wire x1="76.2" y1="40.64" x2="76.2" y2="20.32" width="0.1524" layer="91"/>
-<pinref part="IC1" gate="G$1" pin="PB5/PCINT5/!RESET!/ADC0/DW"/>
 <wire x1="76.2" y1="20.32" x2="76.2" y2="17.78" width="0.1524" layer="91"/>
-<wire x1="88.9" y1="20.32" x2="76.2" y2="20.32" width="0.1524" layer="91"/>
+<wire x1="91.44" y1="20.32" x2="76.2" y2="20.32" width="0.1524" layer="91"/>
 <junction x="76.2" y="20.32"/>
 <pinref part="RST" gate="G$1" pin="1"/>
 <wire x1="60.96" y1="20.32" x2="76.2" y2="20.32" width="0.1524" layer="91"/>
+<pinref part="IC1" gate="G$1" pin="PB5(DW/ADC0/!RESET!/PCINT5)"/>
 </segment>
 </net>
 </nets>
@@ -9772,13 +10176,12 @@ Source: http://www.atmel.com/dyn/resources/prod_documents/2535S.pdf</description
 <errors>
 <approved hash="102,1,45.72,101.6,VCC,+3V,,,,"/>
 <approved hash="102,1,-10.16,55.88,VCC,+3V,,,,"/>
-<approved hash="104,1,88.9,35.56,IC1,VCC,+3V,,,"/>
+<approved hash="104,1,162.56,35.56,IC1P,VCC,+3V,,,"/>
 <approved hash="208,1,45.72,101.6,+3V,sup,,,,"/>
 <approved hash="208,1,35.56,96.52,+3V,out,,,,"/>
 <approved hash="208,1,-10.16,55.88,+3V,sup,,,,"/>
 <approved hash="113,1,-16.8386,89.1946,JP1,,,,,"/>
 <approved hash="113,1,76.835,96.1796,X1,,,,,"/>
-<approved hash="113,1,-34.5161,45.9571,LOG,,,,,"/>
 <approved hash="113,1,39.6646,25.4,S1,,,,,"/>
 </errors>
 </schematic>
