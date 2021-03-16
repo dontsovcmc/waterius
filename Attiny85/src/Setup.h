@@ -3,9 +3,12 @@
 
 #include <Arduino.h>
 
-#ifdef BUILD_WATERIUS_4C2W
+/*
+#define BUILD_WATERIUS_4C2W 1
+*/
+
 #define WATERIUS_4C2W 1  // attiny84 - 4 счетчика импульсов
-#endif 
+
 
 /* 
 	Включение логирования
@@ -122,7 +125,6 @@ struct Header {
     uint8_t       crc;
     uint8_t       reserved2;
 };  //22 байт
-
     #define HEADER_DATA_SIZE 36
     
     struct LeakHeader
@@ -139,6 +141,7 @@ struct Header {
     }; //8 байт
     #define LEAK_HEADER_SIZE 6
     #define LEAK_HEADER_SIZE_CRC 8
-#endif
 
  #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
+
+#endif

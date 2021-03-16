@@ -12,7 +12,6 @@
 #include <avr/sleep.h>
 #include <avr/power.h>  
 
-
 #define FIRMWARE_VER 14    // Версия прошивки. Передается в ESP и на сервер в данных.
   
 /*
@@ -52,6 +51,7 @@
 */
      
 // Счетчики импульсов
+
 
 #define WDTCR WDTCSR
 // Waterius 4C2W: https://github.com/badenbaden/Waterius-Attiny84-ESP12F
@@ -155,12 +155,14 @@ inline void counting(bool force) {
 		info.adc.adc0 = counter0.adc;
 		storage.add(info.data);
 	}
+#ifndef LOG_ON
 	if (counter1.is_impuls()) {
 		info.data.value1++;
 		info.states.state1 = counter1.state;
 		info.adc.adc1 = counter1.adc;
 		storage.add(info.data);
 	}
+#endif
 	if (counter2.is_impuls()) {
 		info.data.value2++;
 		info.states.state2 = counter2.state;
@@ -198,7 +200,6 @@ void load_settings(uint16_t shift)
 
 	LOG(F("Settings load: "));
 	LOG(sett);
-
 }
 
 // Сохранение настроек в EEPROM
@@ -215,6 +216,7 @@ void save_settings(uint16_t shift)
 
 // Требуется пробуждение
 bool need_wake_up() {
+
 	return (wl_changed && !slaveI2C.alarm_sent) || button.pressed();
 }
 
@@ -251,8 +253,11 @@ void setup() {
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
+	
+#ifdef WATERIUS_4C2W
 	LOG(info.data.value2);
 	LOG(info.data.value3);
+#endif
 }
 
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
@@ -300,7 +305,6 @@ void loop() {
 	LOG(F("Waterleak 2: "));
 	LOG(waterleak2.state);
 	LOG(waterleak2.adc);
-
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит 
 	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания 
@@ -339,6 +343,7 @@ void loop() {
 		LOG(F("ESP wake up fail"));
 	} else {
 		LOG(F("Sleep received"));
+
 		if (SlaveI2C::setup_mode == SETUP_MODE) {
 			waterleak1.turn_off_if_break();
 			waterleak2.turn_off_if_break();
