@@ -100,6 +100,7 @@
 - [zinger76](https://github.com/zinger76) за ссылку на заказ платы и [3D модель крепления](https://github.com/dontsovcmc/waterius/blob/master/wall-mount/wall_mount.md) к стене
 - [badenbaden](https://github.com/badenbaden) за дельные комментарии по производству и новую версию!
 - [kick2nick](https://github.com/kick2nick) за доработки функционала.
+- [foxel](https://github.com/foxel) за доработку платы.
 - Пользователям, приславшим очепятки и предложения: Дмитрию (г. Москва), Сергею (г. Кострома), Александру (г. Санкт-Петербург), Сергею (г. Мурманск), Антону (г. Красноярск) и др.
 
 Форумам: 
