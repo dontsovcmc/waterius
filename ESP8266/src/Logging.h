@@ -56,21 +56,19 @@ const char S_RQT[]                  PROGMEM = "RQT";
 #define LOG_DEBUG(svc, content)	    do {} while (0)
 
 // Depending on log level, add code for logging
-#if LOGLEVEL >= 0
+#ifdef LOGLEVEL
 	#undef LOG_BEGIN
-	#define LOG_BEGIN(baud) do { Serial.begin( baud ,SERIAL_8N1, SERIAL_TX_ONLY); } while(0)
+	#define LOG_BEGIN(baud) do { Serial.begin(baud, SERIAL_8N1); } while(0)
 	#undef LOG_END
 	#define LOG_END() do { Serial.flush(); Serial.end(); } while(0)
+	#undef LOG_ERROR
+	#define LOG_ERROR(svc, content) do { LOG_FORMAT_TIME; Serial << "  ERROR     (" << svc << ") : " << content << endl; } while(0)
 	#if LOGLEVEL >= 1
-		#undef LOG_ERROR
-		#define LOG_ERROR(svc, content) do { LOG_FORMAT_TIME; Serial << "  ERROR     (" << svc << ") : " << content << endl; } while(0)
+		#undef LOG_INFO
+		#define LOG_INFO(svc, content) do { LOG_FORMAT_TIME; Serial << "  INFO      (" << svc << ") : " << content << endl; } while(0)
 		#if LOGLEVEL >= 2
-			#undef LOG_INFO
-			#define LOG_INFO(svc, content) do { LOG_FORMAT_TIME; Serial << "  INFO      (" << svc << ") : " << content << endl; } while(0)
-			#if LOGLEVEL >= 3
-				#undef LOG_DEBUG
-				#define LOG_DEBUG(svc, content) do { LOG_FORMAT_TIME; Serial << "  DEBUG     (" << svc << ") : " << content << endl; } while(0)
-			#endif // LOGLEVEL >= 3
+			#undef LOG_DEBUG
+			#define LOG_DEBUG(svc, content) do { LOG_FORMAT_TIME; Serial << "  DEBUG     (" << svc << ") : " << content << endl; } while(0)
 		#endif // LOGLEVEL >= 2
 	#endif // LOGLEVEL >= 1
 #endif // LOGLEVEL >= 0

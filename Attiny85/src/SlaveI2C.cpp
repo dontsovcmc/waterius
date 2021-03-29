@@ -25,6 +25,10 @@ void SlaveI2C::begin(const uint8_t mode) {
 
 void SlaveI2C::end() {
 	Wire.end();
+	DDRB &= ~_BV(SDA);      // INPUT
+	PORTB &= ~_BV(SDA);     // INPUT
+	DDRB &= ~_BV(SCL);      // INPUT
+	PORTB &= ~_BV(SCL);     // INPUT
 }
 
 void SlaveI2C::requestEvent() {

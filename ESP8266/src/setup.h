@@ -58,7 +58,7 @@
 /* 
     Уровень логирования
 */
-#define LOGLEVEL 3
+#define LOGLEVEL 2
 //#define DEBUG_ESP_HTTP_CLIENT
 //#define DEBUG_ESP_PORT Serial
 

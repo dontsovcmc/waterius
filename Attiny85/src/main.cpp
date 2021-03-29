@@ -17,10 +17,14 @@
 #endif
 
 
-#define FIRMWARE_VER 15    // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 16    // Версия прошивки. Передается в ESP и на сервер в данных.
   
 /*
 Версии прошивок 
+
+16 - 2021.03.29 - dontsovcmc
+	1. Отключение подтягивающих резисторов в I2C (ошибка в tinycore)
+	2. Отключение ESP с задержкой 50мс после получения команды на сон (потребление ESP ниже на 7мкА).
 
 15 - 2021.02.07 - kick2nick
 	Время пробуждения ESP изменено с 1 суток (1440 мин.) на настриваемое значение
@@ -257,7 +261,6 @@ void loop() {
 		}
 	}
 
-	esp.power(false);
 	slaveI2C.end();			// выключаем i2c slave.
 
 	if (!slaveI2C.masterGoingToSleep()) {
@@ -265,4 +268,7 @@ void loop() {
 	} else {
 		LOG(F("Sleep received"));
 	}
+	
+	delayMicroseconds(100000);
+	esp.power(false);
 }
