@@ -269,6 +269,7 @@ void loop() {
 		LOG(F("Sleep received"));
 	}
 	
-	delayMicroseconds(100000);
+	delayMicroseconds(20000);
+	
 	esp.power(false);
 }
