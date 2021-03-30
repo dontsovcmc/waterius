@@ -25,8 +25,6 @@ void ESPPowerPin::power(const bool on)
 	}
 	else
 	{
-		delayMicroseconds(50000);   // чтобы заснул
-		
 		digitalWrite(power_pin, LOW);
 
 		pinMode(power_pin, INPUT);  // снижаем потребление

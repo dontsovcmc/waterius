@@ -26,7 +26,6 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     WiFiClient *wc;
     if (url.substring(0, 5) == "https") {
         wc = &wifiTlsClient;
-        certs.append(le_ca_cert);
         certs.append(lets_encrypt_x3_ca);
         certs.append(lets_encrypt_x4_ca);
         certs.append(cloud_waterius_ru_ca);

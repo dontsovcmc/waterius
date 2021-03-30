@@ -3,11 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.10.1"
+#define FIRMWARE_VERSION "0.10.2"
   
 
 /*
 Версии прошивки для ESP
+
+0.10.2 - 2021.02.30 - Обновлены сертификаты Lets Encrypt
 
 0.10.1 - 2021.02.08 - Добавлена настройка веса импульса для горячего
                       и холодного счетчика. Добавлена настройка периода
@@ -58,7 +60,7 @@
 /* 
     Уровень логирования
 */
-#define LOGLEVEL 3
+#define LOGLEVEL 2
 //#define DEBUG_ESP_HTTP_CLIENT
 //#define DEBUG_ESP_PORT Serial
 

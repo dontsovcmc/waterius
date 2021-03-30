@@ -157,5 +157,5 @@ void loop()
     masterI2C.sendCmd('Z');        // "Можешь идти спать, attiny"
     LOG_END();
     
-    ESP.deepSleep(0, RF_DEFAULT);  // Спим до следущего включения EN
+    ESP.deepSleepInstant(0, RF_DEFAULT);  // Спим до следущего включения EN. Instant не ждет 92мс
 }
