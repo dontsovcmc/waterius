@@ -17,13 +17,16 @@
 #endif
 
 
-#define FIRMWARE_VER 18    // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 19    // Версия прошивки. Передается в ESP и на сервер в данных.
   
 /*
 Версии прошивок 
 
+19 - 2021.04.03 - dontsovcmc
+	1. WDTCR = bit( WDCE ); в resetWatchdog
+
 18 - 2021.04.02 - dontsovcmc
-	1. WDTCR |= bit( WDIE ); 
+	1. WDTCR |= bit( WDIE ); в прерывании
 
 17 - 2021.04.01 - dontsovcmc
     1. Рефакторинг getWakeUpPeriod
@@ -123,18 +126,18 @@ ISR( WDT_vect ) {
 void resetWatchdog() {
 	
 	MCUSR = 0; // очищаем все флаги прерываний
-	WDTCR = bit( WDCE ) | bit( WDE ); // allow changes, disable reset, clear existing interrupt
+	WDTCR = bit( WDCE );
 
-	// настраиваем период сна и кол-во просыпаний за 1 минуту
-	// Итак, пробуждаемся (проверяем входы) каждые 250 мс
-	// 1 минута примерно равна 240 пробуждениям
+	// Пробуждаемся (проверяем входы) каждые 250 мс
 	
 	//WDTCR = bit( WDIE ) | bit( WDP2 );   // bit( WDP0 )  32 ms  Минута будет в 8 раз чаще
 										   // bit( WDP2 ) 250 ms
+
 	WDTCR = bit( WDIE ) | bit( WDP2 );     // 250 ms
 	
+	// 1 минута примерно равна 240 пробуждениям
 	#define ONE_MINUTE 240		
-	wdt_reset(); // pat the dog
+	wdt_reset();
 } 
 
 // Проверяем входы на замыкание. 
