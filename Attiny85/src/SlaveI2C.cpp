@@ -75,12 +75,10 @@ void SlaveI2C::getWakeUpPeriod(){
 	data[0] = Wire.read();
 	data[1] = Wire.read();
 	uint8_t crc = Wire.read();
+
 	uint16_t newPeriod = (data[0]<<8) | data[1];
 
-	if ((crc != crc_8(data, 2)) || (newPeriod==0)) { 
-		wakeup_period_min = WAKEUP_DEFAULT_PER_MIN;
-	}
-	else {
+	if ((crc == crc_8(data, 2)) && (newPeriod != 0)) { 
 		wakeup_period_min = newPeriod;
 	}
 }

@@ -17,10 +17,16 @@
 #endif
 
 
-#define FIRMWARE_VER 16    // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 18    // Версия прошивки. Передается в ESP и на сервер в данных.
   
 /*
 Версии прошивок 
+
+18 - 2021.04.02 - dontsovcmc
+	1. WDTCR |= bit( WDIE ); 
+
+17 - 2021.04.01 - dontsovcmc
+    1. Рефакторинг getWakeUpPeriod
 
 16 - 2021.03.29 - dontsovcmc
 	1. Отключение подтягивающих резисторов в I2C (ошибка в tinycore)
@@ -110,6 +116,7 @@ volatile int wdt_count; // таймер может быть < 0 ?
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR( WDT_vect ) { 
 	wdt_count--;
+	WDTCR |= bit( WDIE ); 
 }  
 
 /* Подготовка сторожевого таймера watchdog */
@@ -125,8 +132,8 @@ void resetWatchdog() {
 	//WDTCR = bit( WDIE ) | bit( WDP2 );   // bit( WDP0 )  32 ms  Минута будет в 8 раз чаще
 										   // bit( WDP2 ) 250 ms
 	WDTCR = bit( WDIE ) | bit( WDP2 );     // 250 ms
-	#define ONE_MINUTE 240
-									
+	
+	#define ONE_MINUTE 240		
 	wdt_reset(); // pat the dog
 } 
 
