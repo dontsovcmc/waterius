@@ -1,11 +1,13 @@
 ### Aвтономное устройство для передачи показаний импульсных счётчиков воды по Wi-Fi
 
-# Ватериус 0.10.1
+# Ватериус 0.10.3
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
+
+![waterius2-phone_](https://user-images.githubusercontent.com/6192152/113519909-0700e980-9598-11eb-8061-674978da3765.jpg)
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
-[Прошивки HEX, BIN](https://github.com/dontsovcmc/waterius/releases)
+### >> [Купить](https://waterius.ru?utm_source=github) <<
 
 ### Характеристики
 - 2 счётчика воды [Список поддерживаемых счётчиков](https://github.com/dontsovcmc/waterius/issues/65)
@@ -13,31 +15,33 @@
 - передача по Wi-Fi раз в сутки
 - не нужно знать, сколько литров на импульс (Ватериус сам определит 1 или 10л/имп)
 - не нужно знать, какого типа выход: "сухой контакт" или "НАМУР"
-- детектор низкого заряда (экспериментально)
+- флаг низкого заряда (экспериментально)
 - настраиваемый период отправки (с 0.10.1)
 - Авто+ручная настройка веса импульса (с 0.10.1)
 
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru?utm_source=github">waterius.ru</a>
-* в приложении [Blynk.io](https://blynk.io) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8))
-* на вашем [HTTP/HTTPS сервере (POST запрос с JSON)](https://github.com/dontsovcmc/waterius/blob/master/Export.md#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B8-%D0%BF%D0%BE-http-%D1%81%D0%B2%D0%BE%D0%B9-%D1%81%D0%B5%D1%80%D0%B2%D0%B5%D1%80)
-* в MQTT клиенте [настройка](https://github.com/dontsovcmc/waterius/blob/master/Export.md#настройка-отправки-по-mqtt)
+* в приложении [Blynk](https://blynk.io) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8)). [Настройка Ватериуса](https://github.com/dontsovcmc/waterius/wiki/%D0%9D%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BF%D1%80%D0%B8%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F-Blynk)
+* на вашем [HTTP/HTTPS сервере](https://github.com/dontsovcmc/waterius/blob/master/Export.md#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B8-%D0%BF%D0%BE-http-%D1%81%D0%B2%D0%BE%D0%B9-%D1%81%D0%B5%D1%80%D0%B2%D0%B5%D1%80)
+* в MQTT клиенте [описание полей и настройка](https://github.com/dontsovcmc/waterius/blob/master/Export.md#настройка-отправки-по-mqtt)
   * в HomeAssistant [конфигурация](https://github.com/dontsovcmc/waterius/blob/master/homeassistant.configuration.yaml), [обсуждение](https://github.com/dontsovcmc/waterius/issues/86)
   * в Domoticz [инструкция](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
 * там, куда сами запрограммируете
   * [httpwaterius](https://github.com/grffio/httpwaterius) - web сервер с простым UI от [grffio](https://github.com/grffio)
-* передать в управляющую компанию [waterius.ru](http://waterius.ru).
+* передать сразу в управляющую компанию через сайт [waterius.ru](http://waterius.ru?utm_source=github).
 
-### [Купить Ватериус и счётчики воды](https://waterius.ru?utm_source=github)
+## Подключение и настройка
+[Текстом](http://waterius.ru/manual?utm_source=github)
 
-### Отзывы
-<a href="https://vk.com/topic-183491011_40049475" target="_black">VK</a> и <a href="https://www.facebook.com/waterius/reviews/" target="_black">FB</a>. Напишите о своем использовании Ватериуса! Спасибо!
+[Видео](https://www.youtube.com/watch?v=dsmIdWbqJ58)
 
-<img src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/top.jpg" width="360"/> <img src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/files/step02.png" width="180"/>
-
-#### [Заводские и DIY аналоги](https://github.com/dontsovcmc/waterius/issues/10)
+## Аналоги
+[Заводские и DIY](https://github.com/dontsovcmc/waterius/issues/10)
 
 ## Изготовление
+
+[Прошивки HEX, BIN](https://github.com/dontsovcmc/waterius/releases)
+
 Народная инструкция в Телеграм чате: [waterius_forum](https://t.me/waterius_forum)
 - [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
 - [Прошивка Attiny85 и ESP](https://github.com/dontsovcmc/waterius/blob/master/Firmware.md) 
@@ -47,11 +51,9 @@
 Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в сутки она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого ESP8266 засыпает, а Attiny85 продолжает считать-считать-считать...
 
 ### Известные ошибки
-- Иногда (?) не подключается к Ростелекомовским роутерам: Sercomm rv6699, Innbox e70. Если у вас такие, напишите в теме: [Проблемы с роутерами](https://github.com/dontsovcmc/waterius/issues/131)
+- Иногда (?) не подключается к Ростелекомовским роутерам: Sercomm rv6699, Innbox e70. Лечится указанием статического ip в настройках. Если у вас такие, напишите в теме: [Проблемы с роутерами](https://github.com/dontsovcmc/waterius/issues/131)
 
 ## Схема
-<img src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" data-canonical-src="https://github.com/dontsovcmc/waterius/blob/master/Board/scheme.png" width="600"/>
-
 Заводская плата:
 
 <img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" width="400"/>
@@ -60,13 +62,14 @@
 В репозитории ещё есть однослойная для ЛУТа.
 
 # Помочь проекту
-- Записать видео установки/настройки Ватериуса (можно сразу в [FB](https://www.facebook.com/waterius), [VK](https://vk.com/waterius1))
+- Разместить в соцсетях ссылку на https://waterius.ru, написать свои впечатления. 
+- Написать отзыв в офиц. группы <a href="https://vk.com/topic-183491011_40049475" target="_black">VK</a> и <a href="https://www.facebook.com/waterius/reviews/" target="_black">FB</a>.
 
 - Отправка лога ESP в вебинтерфейс (JS код есть, спасибо Владимиру)
-- OTA обновления: предложить код прошивки и пример веб сервера
-- Добавить архив потребления (временные метки) (доработка i2c и буфера, пишите, расскажу)
+- OTA обновления: предложить код прошивки и пример веб сервера (можно на базе NodeMCU)
 
 Решены:
+- ~~Записать видео установки/настройки Ватериуса (можно сразу в FB, VK)~~, спасибо Денису С.
 - ~~Поддержка HTTPS~~, спасибо [marvel-m9y](https://github.com/marvel-m9y)
 - ~~Поддержка НАМУР~~, спасибо Мише и его счетчику за вдохновение
 - ~~Поддержка MQTT~~, спасибо [popsodav](https://github.com/popsodav)
@@ -102,6 +105,7 @@
 - [kick2nick](https://github.com/kick2nick) за доработки функционала.
 - [foxel](https://github.com/foxel) за доработку платы.
 - Пользователям, приславшим очепятки и предложения: Дмитрию (г. Москва), Сергею (г. Кострома), Александру (г. Санкт-Петербург), Сергею (г. Мурманск), Антону (г. Красноярск) и др.
+- Денису С. (г. Москва) за видео установки Ватериуса.
 
 Форумам: 
 - https://electronix.ru
