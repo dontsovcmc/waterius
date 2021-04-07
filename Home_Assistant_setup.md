@@ -9,61 +9,8 @@
 
 
 
-Файл конфигурации:
-``` 
-configuration.yaml 
-```
-Раздел *sensor*
+Ознакомьтесь с примером файла конфигурации [configuration.yaml](homeassistant.configuration.yaml)
 
-```
-# Основная конфигурация
-sensor:
-    # Получаем значение общего расхода холодной воды
-  - platform: mqtt
-    name: 'Холодная вода'
-    state_topic: 'waterius/2291493/ch1'
-    value_template: '{{ value }}'
-    unit_of_measurement: 'м3'
-    icon: mdi:water
-    # Получаем значение общего расхода горячей воды
-  - platform: mqtt
-    name: 'Горячая вода'
-    state_topic: 'waterius/2291493/ch0'
-    value_template: '{{ value }}'
-    unit_of_measurement: 'м3'
-    icon: mdi:water
-    # Получаем значение расхода горячей воды в литрах с момента последней передачи данных 
-  - platform: mqtt
-    name: 'Горячая вода суточный расход'
-    state_topic: 'waterius/2291493/delta0'
-    value_template: '{{ value }}'
-    unit_of_measurement: 'л'
-    icon: mdi:water
-    # Получаем значение расхода холодной воды в литрах с момента последней передачи данных 
-  - platform: mqtt
-    name: 'Холодная вода суточный расход'
-    state_topic: 'waterius/2291493/delta1'
-    value_template: '{{ value }}'
-    unit_of_measurement: 'л'
-    icon: mdi:water
-
-    # Создаём сенсор низкого напряжения питания Ватериуса, для последующего использования в автоматизациях
-  - platform: mqtt
-    name: 'Напряжение питания ватериуса'
-    state_topic: 'waterius/2291493/voltage_low'
-    value_template: > 
-      {%if value == 1 %}
-        'Низкое напряжение'
-      {% else %}
-        'Напряжение в порядке'
-      {% endif %}
-
-  # Создаём сенсор счётчик прошедшего времени с момента последнего обновления данных Ватериусом    
-  - platform: template
-      vaterius_last_seen:
-      friendly_name: 'Ватериус вне сети'
-      value_template: '{{ as_timestamp(now())|int - as_timestamp(states.sensor.napriazhenie_pitaniia_vateriusa.last_changed)|int}}'
-```
 Обратите внимание, что название сенсора 
 ```
 states.sensor.napriazhenie_pitaniia_vateriusa.last_changed
