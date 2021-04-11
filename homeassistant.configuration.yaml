@@ -94,9 +94,13 @@ sensor:
 
 
     # Создаём сенсор счётчик прошедшего времени с момента последнего обновления данных Ватериусом
+    # Используем время последнего обновления показаний холодной воды, так как этот сенсор обновляется
+    # чаще, чем все остальные
   - platform: template
+    sensors:
       vaterius_last_seen:
-      friendly_name: 'Ватериус вне сети'
-      value_template: '{{ as_timestamp(now())|int - as_timestamp(states.sensor.napriazhenie_pitaniia_vateriusa.last_changed)|int}}'
-      unit_of_measurement: "сек."
+        friendly_name: 'Ватериус вне сети'
+        value_template: >
+          {{(as_timestamp(now())-as_timestamp(states.sensor.kholodnaia_voda.last_updated))|int}}
+        unit_of_measurement: "сек."
 # кусок конфигурации отсутствует    
