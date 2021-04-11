@@ -2,6 +2,8 @@
 
 Предполагается, что у вас уже установлен MQTT брокер, а также соответствующая интеграция для Home Assistant.
 
+[Видео инструкция](https://www.youtube.com/watch?v=50J8hMOy7Dc)
+
 ### Создание сенсоров
 Со списком доступных параметров, а также их описанием можно ознакомиться по [ссылке](https://github.com/dontsovcmc/waterius/blob/master/Export.md)
 
@@ -13,9 +15,9 @@
 
 Обратите внимание, что название сенсора 
 ```
-states.sensor.napriazhenie_pitaniia_vateriusa.last_changed
+states.sensor.kholodnaia_voda.last_updated
 ```
-у вас может отличаться, всё зависит от того как вы назвали сенсор слушающий топик *voltage_low*
+у вас может отличаться, всё зависит от того как вы назвали сенсор слушающий топик расхода холодной воды *ch1*
 
 
 ### Создание автоматизаций
@@ -28,12 +30,10 @@ states.sensor.napriazhenie_pitaniia_vateriusa.last_changed
 
 ```
 - alias: Ватериус низкое напряжение
-  description: ''
   trigger:
   - platform: state
     entity_id: sensor.napriazhenie_pitaniia_vateriusa
     to: Низкое напряжение
-  condition: []
   action:
   - service: notify.telega
     data:
@@ -47,12 +47,10 @@ states.sensor.napriazhenie_pitaniia_vateriusa.last_changed
 **NB:** Значение сенсора в entity_id может отличаться от указанного в примере, в случае если вы вносили изменения в название сенсоров. 
 ```
 - alias: Ватериус вне сети более 27 часов
-  description: ''
   trigger:
   - platform: state
     entity_id: sensor.vaterius_last_seen
     to: '100000'
-  condition: []
   action:
   - service: notify.telega
     data:
