@@ -17,7 +17,7 @@
 - не нужно знать, какого типа выход: "сухой контакт" или "НАМУР"
 - флаг низкого заряда (экспериментально)
 - настраиваемый период отправки (с 0.10.1)
-- Авто+ручная настройка веса импульса (с 0.10.1)
+- ручная настройка веса импульса (с 0.10.1)
 
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru?utm_source=github">waterius.ru</a>
@@ -32,7 +32,6 @@
 
 ## Подключение и настройка
 [Текстом](http://waterius.ru/manual?utm_source=github)
-
 [Видео](https://www.youtube.com/watch?v=dsmIdWbqJ58)
 
 ## Аналоги
@@ -76,10 +75,10 @@
 
 Датчик протечек:
 - На пине reset сделал [OloloevReal](https://github.com/OloloevReal), вот [схема](https://github.com/dontsovcmc/waterius/issues/51)
-- На [Waterius-Attiny84-ESP12F](https://github.com/dontsovcmc/waterius/issues/41#issuecomment-439402464) сделан (но не запрограммирован) тут [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F), спасибо [badenbaden]
+- Есть в клоне [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F), спасибо [badenbaden]
 
 ### Модицикации
-[ветка attiny84](https://github.com/dontsovcmc/waterius/tree/attiny84) поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками и 2мя датчиками протечек (требует тестирования).
+[ветка attiny84](https://github.com/dontsovcmc/waterius/tree/attiny84) поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками и 2мя датчиками протечек.
 
 [Waterius на ESP32 с NB-IoT](https://github.com/OloloevReal/Waterius32) от OloloevReal
 
