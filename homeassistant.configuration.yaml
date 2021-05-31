@@ -80,4 +80,27 @@ sensor:
     value_template: "{{ value }}"
     unit_of_measurement: "V"
     icon: mdi:battery
+    
+    # Создаём сенсор низкого напряжения питания Ватериуса, для последующего использования в автоматизациях
+  - platform: mqtt
+    name: 'Напряжение питания ватериуса'
+    state_topic: 'waterius/2291493/voltage_low'
+    value_template: > 
+      {%if value == 1 %}
+        'Низкое напряжение'
+      {% else %}
+        'Напряжение в порядке'
+      {% endif %}
+
+
+    # Создаём сенсор счётчик прошедшего времени с момента последнего обновления данных Ватериусом
+    # Используем время последнего обновления показаний холодной воды, так как этот сенсор обновляется
+    # чаще, чем все остальные
+  - platform: template
+    sensors:
+      vaterius_last_seen:
+        friendly_name: 'Ватериус вне сети'
+        value_template: >
+          {{(as_timestamp(now())-as_timestamp(states.sensor.kholodnaia_voda.last_updated))|int}}
+        unit_of_measurement: "сек."
 # кусок конфигурации отсутствует    
