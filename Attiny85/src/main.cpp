@@ -17,10 +17,14 @@
 #endif
 
 
-#define FIRMWARE_VER 19    // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 20    // Версия прошивки. Передается в ESP и на сервер в данных.
   
 /*
 Версии прошивок 
+
+20 - 2021.05.31 - dontsovcmc
+    1. atmelavr@3.3.0
+	2. конфигурация для attiny45
 
 19 - 2021.04.03 - dontsovcmc
 	1. WDTCR = bit( WDCE ); в resetWatchdog
