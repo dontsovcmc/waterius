@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "command": "platformio",
+            "args": [
+                "device",
+                "monitor",
+                "--port", "/dev/cu.wchusbserial1410",
+                "--baud", "115200"
+            ],
+            "problemMatcher": [
+                "$platformio"
+            ],
+            "label": "PlatformIO: monitor port"
+        }
+    ]
+}

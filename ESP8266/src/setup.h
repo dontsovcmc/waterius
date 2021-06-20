@@ -3,11 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.10.3"
+#define FIRMWARE_VERSION "0.10.4"
   
 
 /*
 Версии прошивки для ESP
+
+0.10.4 - 2021.06.20 - Добавил серийные номера
 
 0.10.3 - 2021.04.02 - Исправления в прошивке attiny
 
@@ -97,6 +99,8 @@
 #define MQTT_PASSWORD_LEN 32
 #define MQTT_TOPIC_LEN 64
 
+#define SERIAL_LEN 16
+
 #define DEFAULT_WAKEUP_PERIOD_MIN 1440
 
 #define AUTO_IMPULSE_FACTOR 2
@@ -164,9 +168,15 @@ struct Settings
     /*
     Кол-во литров на 1 импульс
     */
-    uint8_t factor0;
-    uint8_t factor1;
+    uint8_t  factor0;
+    uint8_t  factor1;
     
+    /*
+    Серийные номера счётчиков воды
+    */
+    char     serial0[SERIAL_LEN];
+    char     serial1[SERIAL_LEN];
+
     /*
     Кол-во импульсов Attiny85 соответствующие показаниям счетчиков, 
     введенных пользователем при настройке
@@ -203,11 +213,12 @@ struct Settings
     */
     uint16_t wakeup_per_min;
     
+
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t  reserved2[194];
+    uint8_t  reserved2[162];
 
     /*
     Контрольная сумма, чтобы гарантировать корректность чтения настроек

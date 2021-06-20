@@ -48,8 +48,11 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["adc0"] =          data.adc0;
     root["adc1"] =          data.adc1;
     root["period_min"] =    settings.wakeup_per_min;
+    root["serial0"] =       settings.serial0;
+    root["serial1"] =       settings.serial1;
 
     serializeJson(root, jsonBody);
+    //JSON size:  355  0.10.3
     LOG_INFO(FPSTR(S_SND), "JSON size:\t" << jsonBody.length());
     
     // Try to send

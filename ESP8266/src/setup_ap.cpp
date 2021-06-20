@@ -115,7 +115,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     // Настройки HTTP 
 
     WiFiManagerParameter param_waterius_email( "wmail", "Электронная почта с сайта waterius.ru",  sett.waterius_email, EMAIL_LEN-1);
-    wm.addParameter( &param_waterius_email);
+    wm.addParameter(&param_waterius_email);
 
     // Чекбокс доп. настроек
 
@@ -128,65 +128,65 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     // Сервер http запроса 
 
     WiFiManagerParameter param_waterius_host( "whost", "Адрес сервера (включает отправку)",  sett.waterius_host, WATERIUS_HOST_LEN-1);
-    wm.addParameter( &param_waterius_host );
+    wm.addParameter(&param_waterius_host);
 
     ShortParameter param_wakeup_per("mperiod", "Период отправки показаний, мин.",  sett.wakeup_per_min);
-    wm.addParameter( &param_wakeup_per);
+    wm.addParameter(&param_wakeup_per);
 
     // Настройки Blynk.сс
 
     WiFiManagerParameter label_blynk("<h3>Blynk.cc</h3>");
-    wm.addParameter( &label_blynk);
+    wm.addParameter(&label_blynk);
     WiFiManagerParameter param_blynk_host( "bhost", "Адрес сервера",  sett.blynk_host, BLYNK_HOST_LEN-1);
-    wm.addParameter( &param_blynk_host );
+    wm.addParameter(&param_blynk_host);
     WiFiManagerParameter param_blynk_key( "bkey", "Уникальный ключ (включает отправку)",  sett.blynk_key, BLYNK_KEY_LEN-1);
-    wm.addParameter( &param_blynk_key );
+    wm.addParameter(&param_blynk_key);
     WiFiManagerParameter param_blynk_email( "bemail", "Адрес эл. почты (включает ежедневные письма)",  sett.blynk_email, EMAIL_LEN-1);
-    wm.addParameter( &param_blynk_email );
+    wm.addParameter(&param_blynk_email);
     WiFiManagerParameter param_blynk_email_title( "btitle", "Тема письма",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
-    wm.addParameter( &param_blynk_email_title );
+    wm.addParameter(&param_blynk_email_title);
     WiFiManagerParameter param_blynk_email_template( "btemplate", "Текст письма",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
-    wm.addParameter( &param_blynk_email_template );
+    wm.addParameter(&param_blynk_email_template);
 
     // Настройки MQTT
     
     WiFiManagerParameter label_mqtt("<h3>MQTT</h3>");
-    wm.addParameter( &label_mqtt);
+    wm.addParameter(&label_mqtt);
     WiFiManagerParameter param_mqtt_host( "mhost", "Адрес сервера (включает отправку)<br/>Пример: broker.hivemq.com",  sett.mqtt_host, MQTT_HOST_LEN-1);
-    wm.addParameter( &param_mqtt_host );
+    wm.addParameter(&param_mqtt_host );
 
     LongParameter param_mqtt_port( "mport", "Порт",  sett.mqtt_port);
-    wm.addParameter( &param_mqtt_port );
+    wm.addParameter(&param_mqtt_port );
     WiFiManagerParameter param_mqtt_login( "mlogin", "Логин",  sett.mqtt_login, MQTT_LOGIN_LEN-1);
-    wm.addParameter( &param_mqtt_login );
+    wm.addParameter(&param_mqtt_login );
     WiFiManagerParameter param_mqtt_password( "mpassword", "Пароль",  sett.mqtt_password, MQTT_PASSWORD_LEN-1);
-    wm.addParameter( &param_mqtt_password );
+    wm.addParameter(&param_mqtt_password );
     WiFiManagerParameter param_mqtt_topic( "mtopic", "Topic",  sett.mqtt_topic, MQTT_TOPIC_LEN-1);
-    wm.addParameter( &param_mqtt_topic );
+    wm.addParameter(&param_mqtt_topic );
     
     // Статический ip
     
     WiFiManagerParameter label_network("<h3>Сетевые настройки</h3>");
-    wm.addParameter( &label_network);
+    wm.addParameter(&label_network);
     
     String mac("<label class=\"label\">MAC: ");
     mac += WiFi.macAddress();
     mac += "</label>";
     WiFiManagerParameter label_mac(mac.c_str());
-    wm.addParameter( &label_mac );
+    wm.addParameter(&label_mac);
 
     IPAddressParameter param_ip("ip", "Статический ip<br/>(DHCP, если равен 0.0.0.0)",  sett.ip);
-    wm.addParameter( &param_ip );
+    wm.addParameter(&param_ip);
     IPAddressParameter param_gw("gw", "Шлюз",  sett.gateway);
-    wm.addParameter( &param_gw );
+    wm.addParameter(&param_gw);
     IPAddressParameter param_mask("sn", "Маска подсети",  sett.mask);
-    wm.addParameter( &param_mask );
+    wm.addParameter(&param_mask);
 
     WiFiManagerParameter label_factor_settings("<h3>Параметры счетчиков</h3>");
-    wm.addParameter( &label_factor_settings);
+    wm.addParameter(&label_factor_settings);
 
     WiFiManagerParameter label_cold_factor("<b>Холодная вода л/имп</b>");
-    wm.addParameter( &label_cold_factor);
+    wm.addParameter(&label_cold_factor);
     
     DropdownParameter dropdown_cold_factor("factorCold");
     dropdown_cold_factor.add_option(AUTO_IMPULSE_FACTOR, "Авто", sett.factor1);
@@ -196,10 +196,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&dropdown_cold_factor);
 
     WiFiManagerParameter label_factor_cold_feedback("<p id='fc_fb_control'>Вес импульса: <a id='factor_cold_feedback'></a> л/имп");
-    wm.addParameter( &label_factor_cold_feedback);
+    wm.addParameter(&label_factor_cold_feedback);
 
     WiFiManagerParameter label_hot_factor("<p><b>Горячая вода л/имп</b>");
-    wm.addParameter( &label_hot_factor);
+    wm.addParameter(&label_hot_factor);
     
     DropdownParameter dropdown_hot_factor("factorHot");
     dropdown_hot_factor.add_option(AS_COLD_CHANNEL, "Как у холодной", sett.factor0);
@@ -230,6 +230,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter( &label_cold);
     FloatParameter param_channel1_start( "ch1", "",  cdata.channel1);
     wm.addParameter( &param_channel1_start);
+    
+    WiFiManagerParameter param_serial_cold("serialCold", "серийный номер",  sett.serial1, SERIAL_LEN-1);
+    wm.addParameter(&param_serial_cold);
 
     WiFiManagerParameter hot_water("<h3>Горячая вода</h3>");
     wm.addParameter(&hot_water);
@@ -245,6 +248,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     FloatParameter param_channel0_start( "ch0", "",  cdata.channel0);
     wm.addParameter( &param_channel0_start);
 
+    WiFiManagerParameter param_serial_hot("serialHot", "серийный номер",  sett.serial0, SERIAL_LEN-1);
+    wm.addParameter(&param_serial_hot);
 
     wm.setConfigPortalTimeout(SETUP_TIME_SEC);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
@@ -305,6 +310,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     
     combobox_factor = dropdown_hot_factor.getValue();
     sett.factor0 = get_factor(combobox_factor, runtime_data.impulses0, data.impulses0, sett.factor1);
+
+    strncpy0(sett.serial0, param_serial_hot.getValue(), SERIAL_LEN);
+    strncpy0(sett.serial1, param_serial_cold.getValue(), SERIAL_LEN);
 
     // Текущие показания счетчиков
     sett.channel0_start = param_channel0_start.getValue();
