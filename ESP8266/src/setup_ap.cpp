@@ -114,7 +114,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     
     // Настройки HTTP 
 
-    WiFiManagerParameter param_waterius_email( "wmail", "Электронная почта с сайта waterius.ru",  sett.waterius_email, EMAIL_LEN-1);
+    WiFiManagerParameter title_email("<h3>Ваша электронная почта с сайта waterius.ru</h3><p>Заполните, чтобы увидеть показания на сайте</p>");
+    wm.addParameter(&title_email);
+
+    WiFiManagerParameter param_waterius_email("wmail", "Электронная почта",  sett.waterius_email, EMAIL_LEN-1);
     wm.addParameter(&param_waterius_email);
 
     // Чекбокс доп. настроек
@@ -126,7 +129,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&div_start);
 
     // Сервер http запроса 
-
     WiFiManagerParameter param_waterius_host( "whost", "Адрес сервера (включает отправку)",  sett.waterius_host, WATERIUS_HOST_LEN-1);
     wm.addParameter(&param_waterius_host);
 
