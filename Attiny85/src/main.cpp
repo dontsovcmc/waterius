@@ -17,20 +17,25 @@
 #endif
 
 
-#define FIRMWARE_VER 20    // Версия прошивки. Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 21    // Передается в ESP и на сервер в данных.
   
 /*
 Версии прошивок 
+
+21 - 2021.07.01 - dontsovcmc
+    1. переписана работа с watchdog
+	2. поле voltage стало uint16 (2 байта от uint32 пустые для совместимости с 0.10.3)
+	3. период пробуждения 15 мин, от ESP получит 1440 или другой.
 
 20 - 2021.05.31 - dontsovcmc
     1. atmelavr@3.3.0
 	2. конфигурация для attiny45
 
 19 - 2021.04.03 - dontsovcmc
-	1. WDTCR = bit( WDCE ); в resetWatchdog
+	1. WDTCR = _BV( WDCE ); в resetWatchdog
 
 18 - 2021.04.02 - dontsovcmc
-	1. WDTCR |= bit( WDIE ); в прерывании
+	1. WDTCR |= _BV( WDIE ); в прерывании
 
 17 - 2021.04.01 - dontsovcmc
     1. Рефакторинг getWakeUpPeriod
@@ -101,14 +106,15 @@ static ButtonB  button(2);	   // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1);  // Питание на ESP 
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_2C, 
+struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, WATERIUS_2C, 
 					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
 				       {0, 0},
 					   {0, 0},
 					    0, 0
 					 };
 
-int16_t wakeup_period_min;
+uint16_t wakeup_period_min;
+
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
 //Кольцовой нужен для того, чтобы превысить лимит записи памяти в 100 000 раз
@@ -118,31 +124,12 @@ static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
 
 SlaveI2C slaveI2C;
 
-volatile int wdt_count; // таймер может быть < 0 ?
+volatile uint16_t wdt_count;
 
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR( WDT_vect ) { 
-	wdt_count--;
-	WDTCR |= bit( WDIE ); 
+	++wdt_count;
 }  
-
-/* Подготовка сторожевого таймера watchdog */
-void resetWatchdog() {
-	
-	MCUSR = 0; // очищаем все флаги прерываний
-	WDTCR = bit( WDCE );
-
-	// Пробуждаемся (проверяем входы) каждые 250 мс
-	
-	//WDTCR = bit( WDIE ) | bit( WDP2 );   // bit( WDP0 )  32 ms  Минута будет в 8 раз чаще
-										   // bit( WDP2 ) 250 ms
-
-	WDTCR = bit( WDIE ) | bit( WDP2 );     // 250 ms
-	
-	// 1 минута примерно равна 240 пробуждениям
-	#define ONE_MINUTE 240		
-	wdt_reset();
-} 
 
 // Проверяем входы на замыкание. 
 // Замыкание засчитывается только при повторной проверке.
@@ -174,13 +161,10 @@ inline void counting() {
 // Настройка. Вызывается однократно при запуске.
 void setup() {
 
-	info.service = MCUSR; //причина перезагрузки
-
 	noInterrupts();
-	ACSR |= bit( ACD ); //выключаем компаратор  TODO: не понятно, м.б. его надо повторно выключать в цикле 
+	info.service = MCUSR; //причина перезагрузки
+	wdt_disable();
 	interrupts();
-	resetWatchdog(); 
-	//adc_disable(); //выключаем ADC. Теперь в цикле вкл/выкл, тут не нужен.
 
 	if (storage.get(info.data)) { //не первая загрузка
 		info.resets = EEPROM.read(storage.size());
@@ -189,7 +173,6 @@ void setup() {
 	} else {
 		EEPROM.write(storage.size(), 0);
 	}
-
 
 	wakeup_period_min = WAKEUP_DEFAULT_PER_MIN;
 
@@ -207,19 +190,25 @@ void setup() {
 }
 
 
+#define ONE_MINUTE 240  // 1 минута примерно равна 240 пробуждениям
+
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop() {
 	power_all_disable();  // Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
 
 	set_sleep_mode( SLEEP_MODE_PWR_DOWN );  // Режим сна
 
-	resetWatchdog();  // Настраиваем служебный таймер (watchdog)
+	noInterrupts();
+	wdt_enable(WDTO_250MS); // разрешаем ватчдог 250 ms
+	interrupts(); 
 
 	// Цикл опроса входов
-	// Выход по прошествию WAKE_EVERY_MIN минут или по нажатию кнопки
-	for (unsigned int i = 0; i < ONE_MINUTE && !button.pressed(); ++i)  {
-		wdt_count = wakeup_period_min;
-		while ( wdt_count > 0 ) {
+	// Выход по прошествию wakeup_period_min минут или по нажатию кнопки
+	for (uint16_t i = 0; i < ONE_MINUTE && !button.pressed(); ++i)  {
+		wdt_count = 0;
+		
+		while (wdt_count < wakeup_period_min)
+		{
 			noInterrupts();
 
 			if (button.pressed()) { 
@@ -228,6 +217,8 @@ void loop() {
 			} else 	{
 				counting(); //Опрос входов. Тут т.к. https://github.com/dontsovcmc/waterius/issues/76
 
+				wdt_reset();
+				WDTCR |= _BV(WDIE); 
 				interrupts();
 				sleep_mode();  // Спим (WDTCR)
 			}
@@ -238,7 +229,7 @@ void loop() {
 	power_all_enable();   // power everything back on
 
 	storage.get(info.data);     // Берем из хранилища текущие значения импульсов
-
+	
 	LOG_BEGIN(9600);
 	LOG(F("Data:"));
 	LOG(info.data.value0);
