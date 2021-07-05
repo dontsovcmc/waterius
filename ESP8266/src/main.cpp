@@ -126,6 +126,9 @@ void loop()
                 && WiFi.status() == WL_CONNECTED
                 && masterI2C.getSlaveData(data)) {  //т.к. в check_voltage не проверяем crc
                 
+				if(!WiFi.hostname((String("Waterius-"+String(ESP.getChipId(), HEX))).c_str())) LOG_INFO(FPSTR(S_WIF), "set hostname fail");
+                LOG_INFO(FPSTR(S_WIF), "hostname "+String(WiFi.hostname()));
+				
                 print_wifi_mode();
                 LOG_INFO(FPSTR(S_WIF), F("Connected, IP: ") << WiFi.localIP().toString());
                 
