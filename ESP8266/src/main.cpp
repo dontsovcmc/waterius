@@ -18,6 +18,9 @@ MasterI2C masterI2C; // Для общения с Attiny85 по i2c
 SlaveData data; // Данные от Attiny85
 Settings sett;  // Настройки соединения и предыдущие показания из EEPROM
 CalculatedData cdata; //вычисляемые данные
+Voltage volt; // клас монитора питания
+
+ADC_MODE(ADC_VCC);
 
 /*
 Выполняется однократно при включении
@@ -31,6 +34,7 @@ void setup()
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(FPSTR(S_ESP), F("Booted"));
     masterI2C.begin();    //Включаем i2c master
+    volt.begin();
 }
 
 /*
@@ -115,17 +119,20 @@ void loop()
                         LOG_INFO(FPSTR(S_WIF), F("Status: ") << WiFi.status());
                         delay(300);
                     
-                        check_voltage(data, cdata);
+                        volt.get();
                         //В будущем добавим success, означающее, что напряжение не критично изменяется, можно продолжать
                         //иначе есть риск ошибки ESP и стирания конфигурации
                     }
+                    cdata.voltage_diff=volt.diff(); 
+                    cdata.low_voltage = volt.low_voltage();
                 }
             }
             
             if (success 
                 && WiFi.status() == WL_CONNECTED
                 && masterI2C.getSlaveData(data)) {  //т.к. в check_voltage не проверяем crc
-                
+                data.voltage=volt.value();
+
                 print_wifi_mode();
                 LOG_INFO(FPSTR(S_WIF), F("Connected, IP: ") << WiFi.localIP().toString());
                 
