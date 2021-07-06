@@ -60,46 +60,46 @@ bool loadConfig(struct Settings &sett)
         sett.mqtt_password[MQTT_PASSWORD_LEN-1] = '\0'; 
         sett.mqtt_topic[MQTT_TOPIC_LEN-1] = '\0'; 
 
-        LOG_INFO(FPSTR(S_CFG), F("--- Waterius.ru ---- "));
-        LOG_INFO(FPSTR(S_CFG), F("email=") << sett.waterius_email);
-        LOG_INFO(FPSTR(S_CFG), F("host=") << sett.waterius_host << F(" key=") << sett.waterius_key);
-        LOG_INFO(FPSTR(S_CFG), F("wakeup min=") << sett.wakeup_per_min);
+        LOG_INFO(FPSTR(S_CFG), "--- Waterius.ru ---- ");
+        LOG_INFO(FPSTR(S_CFG), "email=     " + String( sett.waterius_email));
+        LOG_INFO(FPSTR(S_CFG), "host=      " + String( sett.waterius_host) + " key=" + String( sett.waterius_key));
+        LOG_INFO(FPSTR(S_CFG), "wakeup min=" + String( sett.wakeup_per_min));
         
-        LOG_INFO(FPSTR(S_CFG), F("--- Blynk.cc ---- "));
-        LOG_INFO(FPSTR(S_CFG), F("host=") << sett.blynk_host << F(" key=") << sett.blynk_key);
-        LOG_INFO(FPSTR(S_CFG), F("email=") << sett.blynk_email);
+        LOG_INFO(FPSTR(S_CFG), "--- Blynk.cc ---- ");
+        LOG_INFO(FPSTR(S_CFG), "host=      " + String( sett.blynk_host) + " key=" + String( sett.blynk_key));
+        LOG_INFO(FPSTR(S_CFG), "email=     " + String( sett.blynk_email));
 
-        LOG_INFO(FPSTR(S_CFG), F("--- MQTT ---- "));
-        LOG_INFO(FPSTR(S_CFG), F("host=") << sett.mqtt_host << F(" port=") << sett.mqtt_port);
-        LOG_INFO(FPSTR(S_CFG), F("login=") << sett.mqtt_login << F(" pass=") << sett.mqtt_password);
-        LOG_INFO(FPSTR(S_CFG), F("topic=") << sett.mqtt_topic);        
+        LOG_INFO(FPSTR(S_CFG), "--- MQTT ---- ");
+        LOG_INFO(FPSTR(S_CFG), "host=      " + String( sett.mqtt_host) + " port=" + String( sett.mqtt_port));
+        LOG_INFO(FPSTR(S_CFG), "login=     " + String( sett.mqtt_login) + " pass=" + String( sett.mqtt_password));
+        LOG_INFO(FPSTR(S_CFG), "topic=     " + String( sett.mqtt_topic));        
         
-        LOG_INFO(FPSTR(S_CFG), F("--- Network ---- "));
+        LOG_INFO(FPSTR(S_CFG), "--- Network ---- ");
         if (sett.ip) {
-            LOG_INFO(FPSTR(S_CFG), F("DHCP turn off"));
+            LOG_INFO(FPSTR(S_CFG), "DHCP turn off");
         } else {
-            LOG_INFO(FPSTR(S_CFG), F("DHCP is on"));
+            LOG_INFO(FPSTR(S_CFG), "DHCP is on");
         }
-        LOG_INFO(FPSTR(S_CFG), F("static_ip=") << IPAddress(sett.ip).toString());
-        LOG_INFO(FPSTR(S_CFG), F("gateway=") << IPAddress(sett.gateway).toString());
-        LOG_INFO(FPSTR(S_CFG), F("mask=") << IPAddress(sett.mask).toString());
+        LOG_INFO(FPSTR(S_CFG), "static_ip= " + String( IPAddress(sett.ip).toString()));
+        LOG_INFO(FPSTR(S_CFG), "gateway=   " + String( IPAddress(sett.gateway).toString()));
+        LOG_INFO(FPSTR(S_CFG), "mask=      " + String( IPAddress(sett.mask).toString()));
 
         // Всегда одно и тоже будет
-        LOG_INFO(FPSTR(S_CFG), F("--- Counters ---- "));
-        LOG_INFO(FPSTR(S_CFG), F("channel0 start=") << sett.channel0_start << F(", impulses=") << sett.impulses0_start << F(", factor=") << sett.factor0);
-        LOG_INFO(FPSTR(S_CFG), F("channel1 start=") << sett.channel1_start << F(", impulses=") << sett.impulses1_start << F(", factor=") << sett.factor1);
+        LOG_INFO(FPSTR(S_CFG), "--- Counters ---- ");
+        LOG_INFO(FPSTR(S_CFG), "channel0 start=" + String( sett.channel0_start) + ", impulses=" + String( sett.impulses0_start) + ", factor=" + String( sett.factor0));
+        LOG_INFO(FPSTR(S_CFG), "channel1 start=" + String( sett.channel1_start) + ", impulses=" + String( sett.impulses1_start) + ", factor=" + String( sett.factor1));
         
         return true;
 
     } else {    
         // Конфигурация не была сохранена в EEPROM, инициализируем с нуля
-        LOG_INFO(FPSTR(S_CFG), F("Configuration CRC failed=") << sett.crc );
+        LOG_INFO(FPSTR(S_CFG), "Configuration CRC failed=" + String( sett.crc ));
         
         // Заполняем нулями всю конфигурацию
         memset(&sett, 0, sizeof(sett));
 
         sett.version = CURRENT_VERSION;  //для совместимости в будущем
-        LOG_INFO(FPSTR(S_CFG), F("version=") << sett.version);
+        LOG_INFO(FPSTR(S_CFG), "version=" + String( sett.version));
 
         strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, WATERIUS_HOST_LEN);
 
@@ -131,26 +131,26 @@ bool loadConfig(struct Settings &sett)
         #pragma message(VAR_NAME_VALUE(BLYNK_KEY))
         String key = VALUE(BLYNK_KEY);
         strncpy0(sett.blynk_key, key.c_str(), BLYNK_KEY_LEN);
-        LOG_INFO(FPSTR(S_CFG), F("default Blynk key=") << key);
+        LOG_INFO(FPSTR(S_CFG), "default Blynk key=" + String( key));
 #endif
 
 #ifdef WATERIUS_HOST
         #pragma message(VAR_NAME_VALUE(WATERIUS_HOST))
         String waterius_host = VALUE(WATERIUS_HOST);
         strncpy0(sett.waterius_host, waterius_host.c_str(), WATERIUS_HOST_LEN);
-        LOG_INFO(FPSTR(S_CFG), "default waterius_host=" << waterius_host);
+        LOG_INFO(FPSTR(S_CFG), "default waterius_host=" + String(waterius_host));
 #endif
 
 #ifdef WATERIUS_EMAIL
         #pragma message(VAR_NAME_VALUE(WATERIUS_EMAIL))
         strncpy0(sett.waterius_email, VALUE(WATERIUS_EMAIL), EMAIL_LEN);
-        LOG_INFO(FPSTR(S_CFG), F("default waterius email=") << VALUE(WATERIUS_EMAIL));
+        LOG_INFO(FPSTR(S_CFG), "default waterius email=" + String(VALUE(WATERIUS_EMAIL)));
 #endif
 
 #ifdef WATERIUS_KEY
         #pragma message(VAR_NAME_VALUE(WATERIUS_KEY))
         strncpy0(sett.waterius_key, VALUE(WATERIUS_KEY), WATERIUS_KEY_LEN);
-        LOG_INFO(FPSTR(S_CFG), F("default waterius key=") << VALUE(WATERIUS_KEY));
+        LOG_INFO(FPSTR(S_CFG), "default waterius key=" + String(VALUE(WATERIUS_KEY)));
 #else
         LOG_INFO(FPSTR(S_CFG), F("Generate waterius key"));
         WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, 
@@ -162,7 +162,7 @@ bool loadConfig(struct Settings &sett)
         #pragma message(VAR_NAME_VALUE(SSID_NAME))
         #pragma message(VAR_NAME_VALUE(SSID_PASS))
         WiFi.begin(VALUE(SSID_NAME), VALUE(SSID_PASS), 0, NULL, false);  //connect=false, т.к. мы следом вызываем Wifi.begin
-        LOG_INFO(FPSTR(S_CFG), F("default ssid=") << VALUE(SSID_NAME) << F(", pwd=") << VALUE(SSID_PASS));
+        LOG_INFO(FPSTR(S_CFG), "default ssid=" + String( VALUE(SSID_NAME)) + ", pwd=" + String( VALUE(SSID_PASS)));
         
         sett.crc = FAKE_CRC; //чтобы больше не попадать сюда
         return true;

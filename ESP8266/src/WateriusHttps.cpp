@@ -18,9 +18,9 @@ BearSSL::WiFiClientSecure wifiTlsClient;
 WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url, const char *key, const char *email, const String &body)
 {
     constexpr char THIS_FUNC_DESCRIPTION[] = "Send JSON POST request";
-    LOG_INFO(FPSTR(S_RQT), "-- START -- " << THIS_FUNC_DESCRIPTION);
-    LOG_INFO(FPSTR(S_RQT), "URL:\t" << url);
-    LOG_INFO(FPSTR(S_RQT), "Body:\t" << body);
+    LOG_INFO(FPSTR(S_RQT), "-- START -- " + String( THIS_FUNC_DESCRIPTION));
+    LOG_INFO(FPSTR(S_RQT), "URL:\t" + String( url));
+    LOG_INFO(FPSTR(S_RQT), "Body:\t" + String( body));
     
     // Set wc client
     WiFiClient *wc;
@@ -47,7 +47,7 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     
     // Check input data
     if (url.substring(0, 4) != "http") {
-        LOG_ERROR(FPSTR(S_RQT), F("URL \"") << url << F("\" has not 'http' ('https')"));
+        LOG_ERROR(FPSTR(S_RQT), "URL \"" + String( url ) + "\" has not 'http' ('https')");
     }
     if (wc->available()) {
         LOG_ERROR(FPSTR(S_RQT), F("Wi-Fi client is not available"));
@@ -67,9 +67,9 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
             hc->addHeader(F("Waterius-Email"), email);
         }
         responseCode = hc->POST(body);
-        LOG_INFO(FPSTR(S_RQT), F("Response code:\t") << responseCode);
+        LOG_INFO(FPSTR(S_RQT), "Response code:\t" + String( responseCode));
         responseBody = hc->getString();
-        LOG_INFO(FPSTR(S_RQT), F("Response body:\t") << responseBody);
+        LOG_INFO(FPSTR(S_RQT), "Response body:\t" + String( responseBody));
         hc->end();
         wc->stop();
     } else {
@@ -85,26 +85,26 @@ void WateriusHttps::generateSha256Token(char *token, const int token_len,
                                         const char *email)
 {
     constexpr char THIS_FUNC_SVC[] = "TKN";
-    LOG_INFO(THIS_FUNC_SVC, F("-- START -- ") << F("Generate SHA256 token from email"));
+    LOG_INFO(THIS_FUNC_SVC, "-- START -- Generate SHA256 token from email");
     
     auto x = BearSSL::HashSHA256();
     if (email != nullptr && strlen(email)) {
-        LOG_INFO(THIS_FUNC_SVC, F("E-mail:\t") << email);
+        LOG_INFO(THIS_FUNC_SVC, "E-mail:\t" + String( email));
         x.add(email, strlen(email));
     }
     
     randomSeed(micros());
     uint32_t salt = rand();
-    LOG_INFO(THIS_FUNC_SVC, F("salt:\t") << salt);
+    LOG_INFO(THIS_FUNC_SVC, "salt:\t" + String( salt));
     x.add(&salt, sizeof(salt));
 
     salt = getChipId();
     x.add(&salt, sizeof(salt));
-    LOG_INFO(THIS_FUNC_SVC, F("chip id: ") << salt);
+    LOG_INFO(THIS_FUNC_SVC, "chip id: " + String(salt));
     
     salt = ESP.getFlashChipId();
     x.add(&salt, sizeof(salt));
-    LOG_INFO(THIS_FUNC_SVC, F("flash id: ") << salt);
+    LOG_INFO(THIS_FUNC_SVC, "flash id: " + String( salt));
     x.end();
     unsigned char *hash = (unsigned char *)x.hash();
 
@@ -115,6 +115,6 @@ void WateriusHttps::generateSha256Token(char *token, const int token_len,
         token[i+1] = digits[*hash & 0xF];
     }
 
-    LOG_INFO(THIS_FUNC_SVC, F("SHA256 token: ") << token);
+    LOG_INFO(THIS_FUNC_SVC, "SHA256 token: " + String( token));
     LOG_INFO(THIS_FUNC_SVC, F("-- END --"));
 }

@@ -39,16 +39,16 @@ void setup()
 */
 void calculate_values(const Settings &sett, const SlaveData &data, CalculatedData &cdata)
 {
-    LOG_INFO(FPSTR(S_ESP), F("new impulses=") << data.impulses0 << " " << data.impulses1);
+    LOG_INFO(FPSTR(S_ESP), "new impulses=" + String(data.impulses0) + " " + String(data.impulses1));
 
     if ((sett.factor1 > 0) && (sett.factor0 > 0)) {
         cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.factor0;
         cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.factor1;
-        LOG_INFO(FPSTR(S_ESP), F("new value0=") << cdata.channel0 << F(" value1=") << cdata.channel1);
+        LOG_INFO(FPSTR(S_ESP), "new value0=" + String(cdata.channel0) + " value1=" + String(cdata.channel1));
         
         cdata.delta0  = (data.impulses0 - sett.impulses0_previous) * sett.factor0;
         cdata.delta1 = (data.impulses1 - sett.impulses1_previous) * sett.factor1;
-        LOG_INFO(FPSTR(S_ESP), F("delta0=") << cdata.delta0 << F(" delta1=") << cdata.delta1);
+        LOG_INFO(FPSTR(S_ESP), "delta0=" + String(cdata.delta0) + " delta1=" + String(cdata.delta1));
     }
 }
 
@@ -103,7 +103,7 @@ void loop()
                         LOG_ERROR(FPSTR(S_I2C), F("Wakeup period wasn't set"));
                     } //"Разбуди меня через..."
                     else{
-                        LOG_INFO(FPSTR(S_I2C), F("Wakeup period, min:") << sett.wakeup_per_min);
+                        LOG_INFO(FPSTR(S_I2C), "Wakeup period, min:" + String(sett.wakeup_per_min));
                     }
 
                     //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
@@ -112,7 +112,7 @@ void loop()
                     //Ожидаем подключения к точке доступа
                     uint32_t start = millis();
                     while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
-                        LOG_INFO(FPSTR(S_WIF), F("Status: ") << WiFi.status());
+                        LOG_INFO(FPSTR(S_WIF), "Status: " + String(WiFi.status()));
                         delay(300);
                     
                         check_voltage(data, cdata);
@@ -127,10 +127,10 @@ void loop()
                 && masterI2C.getSlaveData(data)) {  //т.к. в check_voltage не проверяем crc
                 
                 print_wifi_mode();
-                LOG_INFO(FPSTR(S_WIF), F("Connected, IP: ") << WiFi.localIP().toString());
+                LOG_INFO(FPSTR(S_WIF), "Connected, IP: " + String(WiFi.localIP().toString()));
                 
                 cdata.rssi = WiFi.RSSI();
-                LOG_DEBUG(FPSTR(S_WIF), F("RSSI: ") << cdata.rssi);
+                LOG_DEBUG(FPSTR(S_WIF), "RSSI: " + String(cdata.rssi));
 
                 if (send_blynk(sett, data, cdata)) {
                     LOG_INFO(FPSTR(S_BLK), F("Send OK"));
@@ -159,3 +159,4 @@ void loop()
     
     ESP.deepSleepInstant(0, RF_DEFAULT);  // Спим до следущего включения EN. Instant не ждет 92мс
 }
+

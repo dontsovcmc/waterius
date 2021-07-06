@@ -35,7 +35,7 @@ bool setClock()
 		time_t now = time(nullptr);
 		struct tm timeinfo;
 		gmtime_r(&now, &timeinfo);
-		LOG_INFO(F("NTP"), F("Current time: ") << asctime(&timeinfo));
+		LOG_INFO(F("NTP"), "Current time: " + String( asctime(&timeinfo)));
 		return true;
 	}
 	return false;
@@ -57,7 +57,7 @@ void print_wifi_mode()
 			LOG_INFO(FPSTR(S_WIF), F("mode N"));
 			break;
 		default:
-			LOG_INFO(FPSTR(S_WIF), F("mode ") << (int)m);
+			LOG_INFO(FPSTR(S_WIF), "mode " + String( (int)m));
 		break;
 	}
 }

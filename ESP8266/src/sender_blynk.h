@@ -44,7 +44,7 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
         
         // Если заполнен параметр email отправим эл. письмо
         if (strnlen(sett.blynk_email, EMAIL_LEN) > 4) {
-            LOG_INFO(FPSTR(S_BLK), "send email: " << sett.blynk_email);
+            LOG_INFO(FPSTR(S_BLK), "send email: " + String(sett.blynk_email));
 
             String msg = sett.blynk_email_template;
             String title = sett.blynk_email_title;

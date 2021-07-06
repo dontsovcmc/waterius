@@ -259,7 +259,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(FPSTR(S_AP), F("Start ConfigPortal"));
 
     // Запуск веб сервера на 192.168.4.1
-    LOG_INFO(FPSTR(S_AP), F("chip id:") << getChipId());
+    LOG_INFO(FPSTR(S_AP), "chip id:" + String( getChipId()));
     
     /*
     String ap_name = AP_NAME "_" + String(getChipId(), HEX).substring(0, 4);
@@ -301,11 +301,11 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     
     //период отправки данных
     sett.wakeup_per_min = param_wakeup_per.getValue();
-    LOG_INFO(FPSTR(S_AP), "wakeup period, min=" << sett.wakeup_per_min);
+    LOG_INFO(FPSTR(S_AP), "wakeup period, min=" + String( sett.wakeup_per_min));
 
     //Веса импульсов
-    LOG_INFO(FPSTR(S_AP), "hot dropdown=" << dropdown_hot_factor.getValue());
-    LOG_INFO(FPSTR(S_AP), "cold dropdown=" << dropdown_cold_factor.getValue());
+    LOG_INFO(FPSTR(S_AP), "hot dropdown=" + String( dropdown_hot_factor.getValue()));
+    LOG_INFO(FPSTR(S_AP), "cold dropdown=" + String( dropdown_cold_factor.getValue()));
     
     uint8_t combobox_factor = dropdown_cold_factor.getValue();
     sett.factor1 = get_factor(combobox_factor, runtime_data.impulses1, data.impulses1, 1);
@@ -321,8 +321,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.channel1_start = param_channel1_start.getValue();
 
     //sett.liters_per_impuls_hot = 
-    LOG_INFO(FPSTR(S_AP), "factorHot=" << sett.factor0);
-    LOG_INFO(FPSTR(S_AP), "factorCold=" << sett.factor1);
+    LOG_INFO(FPSTR(S_AP), "factorHot=" + String( sett.factor0));
+    LOG_INFO(FPSTR(S_AP), "factorCold=" + String( sett.factor1));
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = runtime_data.impulses0;
@@ -332,8 +332,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.impulses0_previous = sett.impulses0_start;
     sett.impulses1_previous = sett.impulses1_start;
 
-    LOG_INFO(FPSTR(S_AP), "impulses0=" << sett.impulses0_start );
-    LOG_INFO(FPSTR(S_AP), "impulses1=" << sett.impulses1_start );
+    LOG_INFO(FPSTR(S_AP), "impulses0=" + String( sett.impulses0_start ));
+    LOG_INFO(FPSTR(S_AP), "impulses1=" + String( sett.impulses1_start ));
 
     sett.setup_time = millis();
     
