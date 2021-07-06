@@ -20,7 +20,7 @@ uint32_t impulses1 = 0;
 SlaveData prev_data;
 
 
-void communicate(SlaveData &data)
+bool communicate(SlaveData &data)
 {
   LOG_INFO("Communicate");
 
@@ -59,10 +59,15 @@ void communicate(SlaveData &data)
         }
     } 
   }
+  else {
+    return false;
+  }
   LOG_INFO(F("Going to sleep"));
   masterI2C.sendCmd('Z');        // "Можешь идти спать, attiny"
 
   delay(100);
+
+  return true;
 }
 
 void setup() {
@@ -75,6 +80,7 @@ void setup() {
 
   while (digitalRead(PIN_DETECT_POWER) != HIGH)
     ;
+  LOG_INFO("First wake up OK");
 
   communicate(prev_data);
   impulses0 = prev_data.impulses0;
@@ -82,11 +88,13 @@ void setup() {
 
   LOG_INFO("Start impulse0: " << impulses0);
   LOG_INFO("Start impulse1: " << impulses1);
+
+  delay(500);
 }
 
 void impulse(uint8_t pin, uint32_t &counter) {
   digitalWrite(pin, HIGH);
-  delay(random(500, 5000));
+  delay(random(500, 15000));
   digitalWrite(pin, LOW);
   ++counter;
 }
@@ -110,13 +118,16 @@ void loop() {
   
   if (digitalRead(PIN_DETECT_POWER) == HIGH) {
     
-    wakeup_per_min = random(1, 10);
+    wakeup_per_min = random(1, 100);
 
     SlaveData data;
-    communicate(data);
+    if (communicate(data)) {
+      check(data);
+      prev_data = data;
+    } else {
+      LOG_ERROR("Communicate error");
+    }
 
-    check(data);
-    prev_data = data;
   }
 
   impulse(PIN_COUNTER0, impulses0);
