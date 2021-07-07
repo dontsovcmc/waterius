@@ -29,7 +29,10 @@ void setup()
     memset(&cdata, 0, sizeof(cdata));
     memset(&data, 0, sizeof(data));
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
-    LOG_INFO(FPSTR(S_ESP), F("Booted"));
+    //LOG_INFO(FPSTR(S_ESP), F("Booted"));
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_ESP)); LOG(F("BOOT"));
+    #endif
     masterI2C.begin();    //Включаем i2c master
 }
 
@@ -39,16 +42,22 @@ void setup()
 */
 void calculate_values(const Settings &sett, const SlaveData &data, CalculatedData &cdata)
 {
-    LOG_INFO(FPSTR(S_ESP), F("new impulses=") << data.impulses0 << " " << data.impulses1);
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_ESP)); LOG(F("new impulses=")); LOG(data.impulses0); LOG(F(" ")); LOG(data.impulses1);
+    #endif
 
     if ((sett.factor1 > 0) && (sett.factor0 > 0)) {
         cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.factor0;
         cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.factor1;
-        LOG_INFO(FPSTR(S_ESP), F("new value0=") << cdata.channel0 << F(" value1=") << cdata.channel1);
+        #if LOGLEVEL>=1
+        LOG_START(FPSTR(S_INFO) ,FPSTR(S_ESP)); LOG(F("new value0=")); LOG(cdata.channel0); LOG(F(" value1=")); LOG(cdata.channel1);
+        #endif
         
         cdata.delta0  = (data.impulses0 - sett.impulses0_previous) * sett.factor0;
         cdata.delta1 = (data.impulses1 - sett.impulses1_previous) * sett.factor1;
-        LOG_INFO(FPSTR(S_ESP), F("delta0=") << cdata.delta0 << F(" delta1=") << cdata.delta1);
+        #if LOGLEVEL>=1
+        LOG_START(FPSTR(S_INFO) ,FPSTR(S_ESP)); LOG(F("delta0=")); LOG(cdata.delta0); LOG(F(" delta1=")); LOG(cdata.delta1);
+        #endif
     }
 }
 
@@ -61,7 +70,8 @@ void loop()
         //Загружаем конфигурацию из EEPROM
         bool success = loadConfig(sett);
         if (!success) {
-            LOG_ERROR(FPSTR(S_ESP), F("Error loading config"));
+            //LOG_ERROR(FPSTR(S_ESP), F("Error loading config"));
+            LOG_START(FPSTR(S_ERROR),FPSTR(S_ESP)); LOG(F("Error loading config"));
         }
 
         //Вычисляем текущие показания
@@ -86,24 +96,34 @@ void loop()
         if (success) {
             if (mode == TRANSMIT_MODE) { 
                 //Проснулись для передачи показаний
-                LOG_INFO(FPSTR(S_WIF), F("Starting Wi-fi"));
+                #if LOGLEVEL>=1
+                LOG_START(FPSTR(S_INFO) ,FPSTR(S_WIF)); LOG(F("Starting Wi-fi"));
+                #endif
                 
                 if (sett.ip != 0) {
                     success = WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, IPAddress(8,8,8,8));
                     if (success) {
-                        LOG_INFO(FPSTR(S_WIF), F("Static IP OK"));
+                        #if LOGLEVEL>=1
+                        LOG_START(FPSTR(S_INFO) ,FPSTR(S_WIF)); LOG(F("Static IP OK"));
+                        #endif
                     } else {
-                        LOG_ERROR(FPSTR(S_WIF), F("Static IP FAILED"));
+                        #if LOGLEVEL>=0
+                        LOG_START(FPSTR(S_ERROR) ,FPSTR(S_WIF)); LOG(F("Static IP FAILED"));
+                        #endif
                     }
                 }
 
                 if (success) {
 
                     if(!masterI2C.setWakeUpPeriod(sett.wakeup_per_min)){
-                        LOG_ERROR(FPSTR(S_I2C), F("Wakeup period wasn't set"));
+                        #if LOGLEVEL>=0
+                        LOG_START(FPSTR(S_ERROR) ,FPSTR(S_I2C)); LOG(F("Wakeup period wasn't set"));
+                        #endif
                     } //"Разбуди меня через..."
                     else{
-                        LOG_INFO(FPSTR(S_I2C), F("Wakeup period, min:") << sett.wakeup_per_min);
+                        #if LOGLEVEL>=1
+                        LOG_START(FPSTR(S_INFO), FPSTR(S_I2C)); LOG("Wakeup period, min:"); LOG(sett.wakeup_per_min);
+                        #endif
                     }
 
                     //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
@@ -112,7 +132,9 @@ void loop()
                     //Ожидаем подключения к точке доступа
                     uint32_t start = millis();
                     while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT) {
-                        LOG_INFO(FPSTR(S_WIF), F("Status: ") << WiFi.status());
+                        #if LOGLEVEL>=1
+                        LOG_START(FPSTR(S_INFO) ,FPSTR(S_WIF)); LOG(F("Status: ")); LOG(WiFi.status());
+                        #endif
                         delay(300);
                     
                         check_voltage(data, cdata);
@@ -127,17 +149,25 @@ void loop()
                 && masterI2C.getSlaveData(data)) {  //т.к. в check_voltage не проверяем crc
                 
                 print_wifi_mode();
-                LOG_INFO(FPSTR(S_WIF), F("Connected, IP: ") << WiFi.localIP().toString());
+                #if LOGLEVEL>=1
+                LOG_START(FPSTR(S_INFO) ,FPSTR(S_WIF)); LOG(F("Connected, IP: ")); LOG(WiFi.localIP().toString());
+                #endif
                 
                 cdata.rssi = WiFi.RSSI();
-                LOG_DEBUG(FPSTR(S_WIF), F("RSSI: ") << cdata.rssi);
+                #if LOGLEVEL>=2
+                LOG_START(FPSTR(S_DEBUG) ,FPSTR(S_WIF)); LOG(F("RSSI: ")); LOG(cdata.rssi);
+                #endif
 
                 if (send_blynk(sett, data, cdata)) {
-                    LOG_INFO(FPSTR(S_BLK), F("Send OK"));
+                    #if LOGLEVEL>=1
+                    LOG_START(FPSTR(S_INFO) ,FPSTR(S_BLK)); LOG(F("Send OK"));
+                    #endif
                 }
                 
                 if (send_mqtt(sett, data, cdata)) {
-                    LOG_INFO(FPSTR(S_MQT), F("Send OK"));
+                    #if LOGLEVEL>=1
+                    LOG_START(FPSTR(S_INFO) ,FPSTR(S_MQT)); LOG(F("Send OK"));
+                    #endif
                 }
 
                 UserClass::sendNewData(sett, data, cdata);
@@ -152,10 +182,13 @@ void loop()
             }
         } 
     }
-    LOG_INFO(FPSTR(S_ESP), F("Going to sleep"));
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_ESP)); LOG(F("Going to sleep"));
+    #endif
     
     masterI2C.sendCmd('Z');        // "Можешь идти спать, attiny"
     LOG_END();
     
     ESP.deepSleepInstant(0, RF_DEFAULT);  // Спим до следущего включения EN. Instant не ждет 92мс
 }
+

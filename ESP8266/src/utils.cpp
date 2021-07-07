@@ -14,7 +14,9 @@ bool setClock(const char* ntp_server)
 {
 	configTime(0, 0, ntp_server);
 
-	LOG_INFO(F("NTP"), F("Waiting for NTP time sync: "));
+	#if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_NTP)); LOG(F("Waiting for NTP time sync: ")); 
+    #endif
 	uint32_t start = millis();
 	time_t now = time(nullptr);
 	
@@ -35,7 +37,9 @@ bool setClock()
 		time_t now = time(nullptr);
 		struct tm timeinfo;
 		gmtime_r(&now, &timeinfo);
-		LOG_INFO(F("NTP"), F("Current time: ") << asctime(&timeinfo));
+		#if LOGLEVEL>=1
+    	LOG_START(FPSTR(S_INFO) ,FPSTR(S_NTP)); LOG(F("Current time: ")); LOG(asctime(&timeinfo));
+    	#endif
 		return true;
 	}
 	return false;
@@ -46,18 +50,21 @@ void print_wifi_mode()
 {
     //WiFi.setPhyMode(WIFI_PHY_MODE_11B = 1, WIFI_PHY_MODE_11G = 2, WIFI_PHY_MODE_11N = 3);
     WiFiPhyMode_t m = WiFi.getPhyMode();
+	#if LOGLEVEL>=1
+	LOG_START(FPSTR(S_INFO) ,FPSTR(S_WIF));
 	switch (m) {
 		case WIFI_PHY_MODE_11B: 
-			LOG_INFO(FPSTR(S_WIF), F("mode B"));
+    		LOG(F("mode B")); 
 			break;
 		case WIFI_PHY_MODE_11G: 
-			LOG_INFO(FPSTR(S_WIF), F("mode G"));
+			LOG(F("mode G"));
 			break;
 		case WIFI_PHY_MODE_11N: 
-			LOG_INFO(FPSTR(S_WIF), F("mode N"));
+			LOG(F("mode N"));
 			break;
 		default:
-			LOG_INFO(FPSTR(S_WIF), F("mode ") << (int)m);
+			LOG(F("mode ")); LOG(m);
 		break;
 	}
+    #endif
 }

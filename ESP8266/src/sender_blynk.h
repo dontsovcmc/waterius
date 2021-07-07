@@ -16,14 +16,18 @@
 bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
     if (strnlen(sett.blynk_key, BLYNK_KEY_LEN) == 0) {
-        LOG_INFO(FPSTR(S_BLK), F("SKIP"));
+        #if LOGLEVEL>=1
+        LOG_START(FPSTR(S_INFO) ,FPSTR(S_BLK)); LOG(F("SKIP"));
+        #endif
         return false;
     }
         
     Blynk.config(sett.blynk_key, sett.blynk_host, BLYNK_DEFAULT_PORT);
     if (Blynk.connect(SERVER_TIMEOUT)) {
         
-        LOG_INFO(FPSTR(S_BLK), F("Run"));
+        #if LOGLEVEL>=1
+        LOG_START(FPSTR(S_INFO) ,FPSTR(S_BLK)); LOG(F("Run"));
+        #endif
 
         // LOG_INFO(FPSTR(S_BLK), "Delta0:" << cdata.delta0);
         // LOG_INFO(FPSTR(S_BLK), "Delta1:" << cdata.delta1);
@@ -40,11 +44,15 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
         WidgetLED battery_led(V6);
         cdata.low_voltage ? battery_led.on() : battery_led.off();
 
-        LOG_INFO(FPSTR(S_BLK), F("virtualWrite OK"));
+        #if LOGLEVEL>=1
+        LOG_START(FPSTR(S_INFO) ,FPSTR(S_BLK)); LOG(F("virtualWrite OK"));
+        #endif
         
         // Если заполнен параметр email отправим эл. письмо
         if (strnlen(sett.blynk_email, EMAIL_LEN) > 4) {
-            LOG_INFO(FPSTR(S_BLK), "send email: " << sett.blynk_email);
+            #if LOGLEVEL>=1
+            LOG_START(FPSTR(S_INFO) ,FPSTR(S_BLK)); LOG(F("send email: ")); LOG(sett.blynk_email);
+            #endif
 
             String msg = sett.blynk_email_template;
             String title = sett.blynk_email_title;
@@ -80,17 +88,23 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
 
             Blynk.email(sett.blynk_email, title, msg);
 
-            LOG_INFO(FPSTR(S_BLK), F("EMail was send"));
-            LOG_INFO(FPSTR(S_BLK), title);
-            LOG_INFO(FPSTR(S_BLK), msg);
+            #if LOGLEVEL>=1
+            LOG_START(FPSTR(S_INFO) ,FPSTR(S_BLK)); LOG(F("EMail was send"));
+            LOG_START(FPSTR(S_INFO) ,FPSTR(S_BLK)); LOG(title);
+            LOG_START(FPSTR(S_INFO) ,FPSTR(S_BLK)); LOG(msg);
+            #endif
         }
 
         Blynk.disconnect();
-        LOG_INFO(FPSTR(S_BLK), F("Disconnected"));
+        #if LOGLEVEL>=1
+        LOG_START(FPSTR(S_INFO) ,FPSTR(S_BLK)); LOG(F("Disconnected"));
+        #endif
 
         return true;
     } else {
-        LOG_ERROR(FPSTR(S_BLK), F("Connect error"));
+        #if LOGLEVEL>=0
+        LOG_START(FPSTR(S_ERROR) ,FPSTR(S_BLK)); LOG(F("Connect error"));
+        #endif
     } 
 
     return false;

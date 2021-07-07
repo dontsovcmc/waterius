@@ -10,14 +10,20 @@
 bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, const CalculatedData &cdata)
 {
     constexpr char THIS_FUNC_DESCRIPTION[] = "Send new data";
-    LOG_INFO(FPSTR(S_SND), "-- START -- " << THIS_FUNC_DESCRIPTION);
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_SND)); LOG(F("-- START -- ")); LOG(THIS_FUNC_DESCRIPTION);
+    #endif
 
     if (strnlen(settings.waterius_key, WATERIUS_KEY_LEN) == 0) {
-        LOG_INFO(FPSTR(S_SND), F("SKIP"));
+        #if LOGLEVEL>=1
+        LOG_START(FPSTR(S_INFO) ,FPSTR(S_SND)); LOG(F("SKIP"));
+        #endif
         return false;
     };
     if (strnlen(settings.waterius_host, WATERIUS_HOST_LEN) == 0) {
-        LOG_INFO(FPSTR(S_SND), F("SKIP"));
+        #if LOGLEVEL>=1
+        LOG_START(FPSTR(S_INFO) ,FPSTR(S_SND)); LOG(F("SKIP"));
+        #endif
         return false;
     }
 
@@ -53,14 +59,18 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
 
     serializeJson(root, jsonBody);
     //JSON size:  355  0.10.3
-    LOG_INFO(FPSTR(S_SND), "JSON size:\t" << jsonBody.length());
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_SND)); LOG(F("JSON size:\t")); LOG(jsonBody.length());
+    #endif
     
     // Try to send
     WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(
         settings.waterius_host, settings.waterius_key, settings.waterius_email, jsonBody);
 
-    LOG_INFO(FPSTR(S_SND), "Send HTTP code:\t" << responseData.code);
-    LOG_INFO(FPSTR(S_SND), "-- END --");
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_SND)); LOG(F("Send HTTP code:\t")); LOG(responseData.code);
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_SND)); LOG(F("-- END --"));
+    #endif
 
     return responseData.code == 200;
 }

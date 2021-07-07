@@ -83,7 +83,9 @@ void update_data(String &message)
 
 WiFiManager wm;
 void handleStates(){
-  LOG_INFO(FPSTR(S_AP), F("/states request"));
+  #if LOGLEVEL>=1
+  LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("/states request"));
+  #endif
   String message;
   message.reserve(300); //сейчас 200
   update_data(message);
@@ -91,7 +93,9 @@ void handleStates(){
 }
 
 void handleNetworks() {
-  LOG_INFO(FPSTR(S_AP), F("/networks request"));
+  #if LOGLEVEL>=1
+  LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("/networks request"));
+  #endif
   String message;
   message.reserve(2000);
   wm.WiFi_scanNetworks(wm.server->hasArg(F("refresh")),false); //wifiscan, force if arg refresh
@@ -110,7 +114,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
 
-    LOG_INFO(FPSTR(S_AP), F("User requested captive portal"));
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("User requested captive portal"));
+    #endif
     
     // Настройки HTTP 
 
@@ -256,10 +262,14 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.setConfigPortalTimeout(SETUP_TIME_SEC);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
     
-    LOG_INFO(FPSTR(S_AP), F("Start ConfigPortal"));
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("Start ConfigPortal"));
+    #endif
 
     // Запуск веб сервера на 192.168.4.1
-    LOG_INFO(FPSTR(S_AP), F("chip id:") << getChipId());
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("chip id:")); LOG(getChipId());
+    #endif
     
     /*
     String ap_name = AP_NAME "_" + String(getChipId(), HEX).substring(0, 4);
@@ -269,7 +279,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.startConfigPortal(AP_NAME);
 
     // Успешно подключились к Wi-Fi, можно засыпать
-    LOG_INFO(FPSTR(S_AP), F("Connected to wifi. Save settings, go to sleep"));
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("Connected to wifi. Save settings, go to sleep"));
+    #endif
 
     // Переписываем введенные пользователем значения в Конфигурацию
 
@@ -278,7 +290,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     // Генерируем ключ используя и введенную эл. почту
     if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0) {
-        LOG_INFO(FPSTR(S_CFG), F("Generate waterius key"));
+        #if LOGLEVEL>=1
+        LOG_START(FPSTR(S_INFO) ,FPSTR(S_CFG)); LOG(F("Generate waterius key"));
+        #endif
         WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, 
                                            sett.waterius_email);
     }
@@ -301,11 +315,13 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     
     //период отправки данных
     sett.wakeup_per_min = param_wakeup_per.getValue();
-    LOG_INFO(FPSTR(S_AP), "wakeup period, min=" << sett.wakeup_per_min);
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("wakeup period, min=")); LOG(sett.wakeup_per_min);
 
     //Веса импульсов
-    LOG_INFO(FPSTR(S_AP), "hot dropdown=" << dropdown_hot_factor.getValue());
-    LOG_INFO(FPSTR(S_AP), "cold dropdown=" << dropdown_cold_factor.getValue());
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("hot dropdown=")); LOG(dropdown_hot_factor.getValue());
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("cold dropdown=")); LOG(dropdown_cold_factor.getValue());
+    #endif
     
     uint8_t combobox_factor = dropdown_cold_factor.getValue();
     sett.factor1 = get_factor(combobox_factor, runtime_data.impulses1, data.impulses1, 1);
@@ -321,8 +337,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.channel1_start = param_channel1_start.getValue();
 
     //sett.liters_per_impuls_hot = 
-    LOG_INFO(FPSTR(S_AP), "factorHot=" << sett.factor0);
-    LOG_INFO(FPSTR(S_AP), "factorCold=" << sett.factor1);
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("factorHot=")); LOG(sett.factor0);
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("factorCold=")); LOG(sett.factor1);
+    #endif
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = runtime_data.impulses0;
@@ -332,8 +350,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.impulses0_previous = sett.impulses0_start;
     sett.impulses1_previous = sett.impulses1_start;
 
-    LOG_INFO(FPSTR(S_AP), "impulses0=" << sett.impulses0_start );
-    LOG_INFO(FPSTR(S_AP), "impulses1=" << sett.impulses1_start );
+    #if LOGLEVEL>=1
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("impulses0=")); LOG(sett.impulses0_start);
+    LOG_START(FPSTR(S_INFO) ,FPSTR(S_AP)); LOG(F("impulses1=")); LOG(sett.impulses1_start);
+    #endif
 
     sett.setup_time = millis();
     
