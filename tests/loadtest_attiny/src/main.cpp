@@ -6,7 +6,7 @@
 
 #define PIN_COUNTER0 D5
 #define PIN_COUNTER1 D6
-#define PIN_DETECT_POWER D3
+#define PIN_DETECT_POWER D7
 #define PIN_VIRT_BUTTON SCL
 
 
