@@ -6,7 +6,7 @@
 #include <Wire.h>
 
 extern struct Header info;
-extern uint16_t wakeup_period_min;
+extern uint32_t wakeup_period;
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -66,6 +66,7 @@ void SlaveI2C::receiveEvent(int howMany) {
 
 	}
 }
+
 void SlaveI2C::getWakeUpPeriod(){
 	uint8_t data[2];
 
@@ -76,9 +77,10 @@ void SlaveI2C::getWakeUpPeriod(){
 	uint16_t newPeriod = (data[0]<<8) | data[1];
 
 	if ((crc == crc_8(data, 2)) && (newPeriod != 0)) { 
-		wakeup_period_min = newPeriod;
+		wakeup_period = ONE_MINUTE * newPeriod;
 	}
 }
+
 bool SlaveI2C::masterGoingToSleep() {
 	return masterSentSleep;
 }

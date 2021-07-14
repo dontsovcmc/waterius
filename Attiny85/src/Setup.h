@@ -26,11 +26,16 @@
     #define LOG(x) mySerial.print(millis()); mySerial.print(F(" : ")); mySerial.println(x);
 #endif
 
+/* 
+   1 минута примерно равна 240 пробуждениям
+*/
+#define ONE_MINUTE 240L  
+
 /*
     Период отправки данных на сервер, мин. 
-    Используется если пользователь не сконфигурировал waterius или произошла ошибка контрольной суммы при приеме периода.
 */
-#define WAKEUP_DEFAULT_PER_MIN 15
+#define WAKEUP_PERIOD_DEFAULT 15L * ONE_MINUTE
+
 
 /*
 	Аварийное отключение, если ESP зависнет и не пришлет команду "сон".
