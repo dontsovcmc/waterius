@@ -104,8 +104,8 @@ struct ButtonB
     explicit ButtonB(uint8_t pin)  
       : _pin(pin)
     {
-       DDRB &= ~_BV(pin);      // INPUT
-       PORTB &= ~_BV(_pin);     // INPUT
+        DDRB &= ~_BV(pin);      // INPUT
+        PORTB &= ~_BV(_pin);    // INPUT
     }
 
     inline bool digBit() 

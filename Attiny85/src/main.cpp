@@ -130,7 +130,7 @@ SlaveI2C slaveI2C;
 volatile uint32_t wdt_count;
 
 /* Вектор прерываний сторожевого таймера watchdog */
-ISR( WDT_vect ) { 
+ISR(WDT_vect) { 
 	++wdt_count;
 }  
 
@@ -258,7 +258,6 @@ void loop() {
 	if (!slaveI2C.masterGoingToSleep()) {
 		LOG(F("ESP wake up fail"));
 	} else {
-
 		LOG(F("Sleep received"));
 	}
 	
