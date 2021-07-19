@@ -1,6 +1,6 @@
 ### Aвтономное устройство для передачи показаний импульсных счётчиков воды по Wi-Fi
 
-# Ватериус 0.10.3
+# Ватериус 0.10.5
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
 
 ![waterius2-phone_](https://user-images.githubusercontent.com/6192152/113519909-0700e980-9598-11eb-8061-674978da3765.jpg)
@@ -21,7 +21,7 @@
 
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru?utm_source=github">waterius.ru</a>
-* в приложении [Blynk](https://blynk.io) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8)). [Настройка Ватериуса](https://github.com/dontsovcmc/waterius/wiki/%D0%9D%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BF%D1%80%D0%B8%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F-Blynk)
+* в приложении [Blynk 0.1](https://blynk.io) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8)). [Настройка Ватериуса](https://github.com/dontsovcmc/waterius/wiki/%D0%9D%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BF%D1%80%D0%B8%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F-Blynk) работает только до конца 2021г!
 * на вашем [HTTP/HTTPS сервере](https://github.com/dontsovcmc/waterius/blob/master/Export.md#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B8-%D0%BF%D0%BE-http-%D1%81%D0%B2%D0%BE%D0%B9-%D1%81%D0%B5%D1%80%D0%B2%D0%B5%D1%80)
 * в MQTT клиенте [описание полей и настройка](https://github.com/dontsovcmc/waterius/blob/master/Export.md#настройка-отправки-по-mqtt)
   * в HomeAssistant [инструкция с пояснениями](Home_Assistant_setup.md), [конфигурация](https://github.com/dontsovcmc/waterius/blob/master/homeassistant.configuration.yaml), [обсуждение](https://github.com/dontsovcmc/waterius/issues/86)
@@ -51,6 +51,7 @@
 
 ### Известные ошибки
 - Иногда (?) не подключается к Ростелекомовским роутерам: Sercomm rv6699, Innbox e70. Лечится указанием статического ip в настройках. Если у вас такие, напишите в теме: [Проблемы с роутерами](https://github.com/dontsovcmc/waterius/issues/131)
+- Подозрение на очень редкие зависания в версиях attiny 14 - 21. В 22 (0.10.5) починили, тестируем.
 
 ## Схема
 Заводская плата:
@@ -106,6 +107,7 @@
 - Пользователям, приславшим очепятки и предложения: Дмитрию (г. Москва), Сергею (г. Кострома), Александру (г. Санкт-Петербург), Сергею (г. Мурманск), Антону (г. Красноярск) и др.
 - Денису С. (г. Москва) за видео установки Ватериуса.
 - [ivakorin](https://github.com/ivakorin) за инструкцию к Home Assistant
+- Евгению К. из Самары, Олегу из Москвы за критику и помощь с прошивкой
 
 Форумам: 
 - https://electronix.ru

@@ -3,11 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.10.4"
+#define FIRMWARE_VERSION "0.10.5"
   
 
 /*
 Версии прошивки для ESP
+
+0.10.5 - 2021.07.18 - attiny версия 22
 
 0.10.4 - 2021.06.20 - Добавил серийные номера
 
