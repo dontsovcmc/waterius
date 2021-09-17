@@ -7,7 +7,7 @@
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
-### >> [Купить](https://waterius.ru?utm_source=github) <<
+### >> [Купить](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github) <<
 
 ### Характеристики
 - 2 счётчика воды [Список поддерживаемых счётчиков](https://github.com/dontsovcmc/waterius/issues/65)
@@ -20,7 +20,7 @@
 - ручная настройка веса импульса (с 0.10.1)
 
 #### Данные с Ватериуса можно увидеть:
-* на сайте <a href="https://waterius.ru?utm_source=github">waterius.ru</a>
+* на сайте <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github">waterius.ru</a>
 * в приложении [Blynk 0.1](https://blynk.io) (под [Android](https://play.google.com/store/apps/details?id=cc.blynk), [iOS](https://itunes.apple.com/us/app/blynk-control-arduino-raspberry/id808760481?ls=1&mt=8)). [Настройка Ватериуса](https://github.com/dontsovcmc/waterius/wiki/%D0%9D%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BF%D1%80%D0%B8%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F-Blynk) работает только до конца 2021г!
 * на вашем [HTTP/HTTPS сервере](https://github.com/dontsovcmc/waterius/blob/master/Export.md#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B8-%D0%BF%D0%BE-http-%D1%81%D0%B2%D0%BE%D0%B9-%D1%81%D0%B5%D1%80%D0%B2%D0%B5%D1%80)
 * в MQTT клиенте [описание полей и настройка](https://github.com/dontsovcmc/waterius/blob/master/Export.md#настройка-отправки-по-mqtt)
@@ -28,7 +28,7 @@
   * в Domoticz [инструкция](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
 * там, куда сами запрограммируете
   * [httpwaterius](https://github.com/grffio/httpwaterius) - web сервер с простым UI от [grffio](https://github.com/grffio)
-* передать сразу в управляющую компанию через сайт [waterius.ru](http://waterius.ru?utm_source=github).
+* передать сразу в управляющую компанию через сайт [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github).
 
 ## Подключение и настройка
 [Текстом](http://waterius.ru/manual?utm_source=github)
@@ -108,6 +108,8 @@
 - Денису С. (г. Москва) за видео установки Ватериуса.
 - [ivakorin](https://github.com/ivakorin) за инструкцию к Home Assistant
 - Евгению К. из Самары, Олегу из Москвы за критику и помощь с прошивкой
+- Олегу К. из Республики Беларусь за [инструкцию к MajorDoMo](https://mjdm.ru/forum/viewtopic.php?p=129000#p129000)
+- [Drafteed](https://github.com/Drafteed) за виджет карты России
 
 Форумам: 
 - https://electronix.ru
