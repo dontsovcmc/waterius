@@ -50,7 +50,9 @@ struct CounterB
     inline uint16_t aRead() 
     {
         PORTB |= _BV(_pin);      // INPUT_PULLUP
-        uint16_t ret = analogRead(_apin); // в TinyCore там работа с битами, оптимально
+        analogRead(_apin);   // Switch MUX to channel and discard the read
+        delayMicroseconds(1000);    // Wait for ADC S/H capacitor to charge
+        uint16_t ret = analogRead(_apin); // Read ADC
         PORTB &= ~_BV(_pin);     // INPUT
         return ret;
     }
