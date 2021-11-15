@@ -6,7 +6,7 @@
 #include <Wire.h>
 
 extern struct Header info;
-extern uint32_t wakeup_period;
+extern volatile uint32_t wakeup_period;
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;

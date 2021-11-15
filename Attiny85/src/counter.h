@@ -16,8 +16,8 @@
 #define LIMIT_NAMUR_OPEN   800   // < 800 - намур разомкнут
                                  // > - обрыв
 
-#define TRIES_CLOSE 1  //Минимальная длительность состояния "1"
-#define TRIES_OPEN  3  //Минимальная длительность состояния "0"
+#define TRIES_CLOSE 2   //Минимальная длительность состояния "1"
+#define TRIES_OPEN  24  //Минимальная длительность состояния "0"
 
 enum CounterState_e
 {
