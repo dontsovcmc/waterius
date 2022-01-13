@@ -3,7 +3,7 @@
 # Ватериус 0.10.5
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
 
-![waterius2-phone_](https://user-images.githubusercontent.com/6192152/113519909-0700e980-9598-11eb-8061-674978da3765.jpg)
+![waterius2-phone_](https://user-images.githubusercontent.com/6192152/149360414-92541db0-0a21-4915-8b61-e894fbfbe2aa.jpeg)
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
