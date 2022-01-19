@@ -143,15 +143,15 @@ inline void counting() {
 
 	if (counter0.is_impuls()) {
 		info.data.value0++;	  //нужен т.к. при пробуждении запрашиваем данные
-		info.adc.adc0 = counter0.closed_adc;
-		info.states.state0 = counter0.stable_state;
+		info.adc.adc0 = counter0.adc;		
+		info.states.state0 = counter0.state;
 		storage.add(info.data);
 	}
 #ifndef LOG_ON
 	if (counter1.is_impuls()) {
 		info.data.value1++;
-		info.adc.adc1 = counter1.closed_adc;
-		info.states.state1 = counter1.stable_state;
+		info.adc.adc1 = counter1.adc;
+		info.states.state1 = counter1.state;
 		storage.add(info.data);
 
 		//delayMicroseconds(65000);
