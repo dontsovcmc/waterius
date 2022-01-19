@@ -17,13 +17,10 @@
 #endif
 
 
-#define FIRMWARE_VER 23    // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 22    // Передается в ESP и на сервер в данных.
   
 /*
 Версии прошивок 
-
-23 - 2021.11.16 - svpcom
-        1. Fix impulse counting
 
 22 - 2021.07.13 - dontsovcmc
 	1. переписана работа с watchdog: чип перезагрузится в случае сбоя
@@ -119,7 +116,7 @@ struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, WATERIUS_2C,
 					    0, 0
 					 };
 
-volatile uint32_t wakeup_period;
+uint32_t wakeup_period;
 
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
@@ -177,7 +174,7 @@ void setup() {
 	info.service = MCUSR; // причина перезагрузки
 	MCUSR = 0;            // без этого не работает после перезагрузки по watchdog
 	wdt_disable();
-	wdt_enable(WDTO_250MS);
+    wdt_enable(WDTO_250MS);
 	interrupts(); 
 
 	set_sleep_mode( SLEEP_MODE_PWR_DOWN );
@@ -241,7 +238,7 @@ void loop() {
 
 	esp.power(true);
 	LOG(F("ESP turn on"));
-
+	
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit)) {
 		
 		wdt_reset(); 
@@ -249,12 +246,7 @@ void loop() {
 		info.voltage = readVcc();   // Текущее напряжение
 		counting();
 
-		delayMicroseconds(62500u);
-		delayMicroseconds(62500u);
-		wdt_reset();
-
-		delayMicroseconds(62500u);
-		delayMicroseconds(62500u);
+		delayMicroseconds(65000);
 
 		if (button.wait_release() > LONG_PRESS_MSEC) {  //wdt_reset внутри wait_release
 			break; // принудительно выключаем
