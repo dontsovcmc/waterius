@@ -50,6 +50,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["period_min"] =    settings.wakeup_per_min;
     root["serial0"] =       settings.serial0;
     root["serial1"] =       settings.serial1;
+    root["settings"] =      data.settings;
 
     serializeJson(root, jsonBody);
     //JSON size:  355  0.10.3
