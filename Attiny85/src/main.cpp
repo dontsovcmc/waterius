@@ -232,7 +232,11 @@ void loop() {
 	} else {
 
 		LOG(F("wake up for transmitting"));
-		slaveI2C.begin(TRANSMIT_MODE);
+		if (wdt_count < wakeup_period){
+			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
+		}else{
+			slaveI2C.begin(TRANSMIT_MODE);
+		}
 		wake_up_limit = WAIT_ESP_MSEC; //15 секунд при передаче данных
 	}
 
