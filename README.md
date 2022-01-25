@@ -3,7 +3,7 @@
 # Ватериус 0.10.5
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
 
-![waterius2-phone_](https://user-images.githubusercontent.com/6192152/149360414-92541db0-0a21-4915-8b61-e894fbfbe2aa.jpeg)
+![waterius2-phone_](https://user-images.githubusercontent.com/3930496/149906477-6aa47cdd-f714-4546-85ff-5541c60260a2.jpeg)
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
@@ -67,9 +67,10 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://am.wildberries.ru/catalog/2
 
 В репозитории ещё есть однослойная для ЛУТа.
 
-# Помочь проекту
-- Разместить в соцсетях ссылку на https://waterius.ru, написать свои впечатления. 
-- Написать отзыв в офиц. группы <a href="https://vk.com/topic-183491011_40049475" target="_black">VK</a> и <a href="https://www.facebook.com/waterius/reviews/" target="_black">FB</a>.
+## Разработка 
+
+Ветка dev для pull-request
+Ветка master только для публикации прошивок
 
 - Отправка лога ESP в вебинтерфейс (JS код есть, спасибо Владимиру)
 - OTA обновления: предложить код прошивки и пример веб сервера (можно на базе NodeMCU)
@@ -116,6 +117,7 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://am.wildberries.ru/catalog/2
 - Евгению К. из Самары, Олегу из Москвы за критику и помощь с прошивкой
 - Олегу К. из Республики Беларусь за [инструкцию к MajorDoMo](https://mjdm.ru/forum/viewtopic.php?p=129000#p129000)
 - [Drafteed](https://github.com/Drafteed) за виджет карты России
+- [neitri](https://github.com/neitri) за доработки прошивки
 
 Форумам: 
 - https://electronix.ru
