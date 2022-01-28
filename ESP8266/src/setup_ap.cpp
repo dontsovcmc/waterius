@@ -12,8 +12,7 @@
 #include "WateriusHttps.h"
 #include "master_i2c.h"
 #include "porting.h"
-
-#define AP_NAME "Waterius_" FIRMWARE_VERSION
+#include "LittleFS.h" 
 
 extern SlaveData data;
 extern MasterI2C masterI2C;
@@ -83,7 +82,8 @@ void update_data(String &message)
 
 WiFiManager wm;
 void handleStates(){
-  LOG_INFO(FPSTR(S_AP), F("/states request"));
+  //LOG_INFO(FPSTR(S_AP), F("/states request"));
+  log_ap.debug(F("/states request"));
   String message;
   message.reserve(300); //сейчас 200
   update_data(message);
@@ -91,7 +91,8 @@ void handleStates(){
 }
 
 void handleNetworks() {
-  LOG_INFO(FPSTR(S_AP), F("/networks request"));
+  //LOG_INFO(FPSTR(S_AP), F("/networks request"));
+  log_ap.debug(F("/networks request"));
   String message;
   message.reserve(2000);
   wm.WiFi_scanNetworks(wm.server->hasArg(F("refresh")),false); //wifiscan, force if arg refresh
@@ -99,9 +100,16 @@ void handleNetworks() {
   wm.server->send(200, F("text/plain"), message);
 }
 
+void handleLog(){
+    String message;
+    log_ap.debug(F("/networks request"));
+    wm.server->send(200, F("text/plain"), message);
+}
+
 void bindServerCallback(){
   wm.server->on(F("/states"), handleStates);
   wm.server->on(F("/networks"), handleNetworks);
+  wm.server->serveStatic("/log.txt", LittleFS, "/log.txt", "max-age=0");
 }
 
 
@@ -110,7 +118,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
 
-    LOG_INFO(FPSTR(S_AP), F("User requested captive portal"));
+    //LOG_INFO(FPSTR(S_AP), F("User requested captive portal"));
+    log_ap.info(F("User requested captive portal"));
     
     // Настройки HTTP 
 
@@ -184,6 +193,26 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     IPAddressParameter param_mask("sn", "Маска подсети",  sett.mask);
     wm.addParameter(&param_mask);
 
+    WiFiManagerParameter label_save_log("<h3>Лог сообщений</h3>");
+    wm.addParameter(&label_save_log);
+
+    DropdownParameter dropdown_save_log("savelog");
+    dropdown_save_log.add_option(-1, "OFF", sett.SaveLogLevel);
+    dropdown_save_log.add_option(0, "EMERG", sett.SaveLogLevel);
+    dropdown_save_log.add_option(1, "ALERT", sett.SaveLogLevel);
+    dropdown_save_log.add_option(2, "CRIT", sett.SaveLogLevel);
+    dropdown_save_log.add_option(3, "ERR", sett.SaveLogLevel);
+    dropdown_save_log.add_option(4, "WARNING", sett.SaveLogLevel);
+    dropdown_save_log.add_option(5, "NOTICE", sett.SaveLogLevel);
+    dropdown_save_log.add_option(6, "INFO", sett.SaveLogLevel);
+    dropdown_save_log.add_option(7, "DEBUG", sett.SaveLogLevel);
+    dropdown_save_log.add_option(8, "TRACE", sett.SaveLogLevel);
+    dropdown_save_log.add_option(9, "ALL", sett.SaveLogLevel);
+    wm.addParameter(&dropdown_save_log);
+    
+    WiFiManagerParameter label_save_log_feedback("<p id='sl_fb_control'>Уровень сообщений: <a id='save_log_feedback'></a>");
+    wm.addParameter(&label_save_log_feedback);
+
     WiFiManagerParameter label_factor_settings("<h3>Параметры счетчиков</h3>");
     wm.addParameter(&label_factor_settings);
 
@@ -256,10 +285,12 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.setConfigPortalTimeout(SETUP_TIME_SEC);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
     
-    LOG_INFO(FPSTR(S_AP), F("Start ConfigPortal"));
+    //LOG_INFO(FPSTR(S_AP), F("Start ConfigPortal"));
+    log_ap.info(F("Start ConfigPortal"));
 
     // Запуск веб сервера на 192.168.4.1
-    LOG_INFO(FPSTR(S_AP), F("chip id:") << getChipId());
+    //LOG_INFO(FPSTR(S_AP), F("chip id:") << getChipId());
+    log_ap.info(F("chip id:%i"), getChipId());
     
     /*
     String ap_name = AP_NAME "_" + String(getChipId(), HEX).substring(0, 4);
@@ -269,7 +300,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.startConfigPortal(AP_NAME);
 
     // Успешно подключились к Wi-Fi, можно засыпать
-    LOG_INFO(FPSTR(S_AP), F("Connected to wifi. Save settings, go to sleep"));
+    //LOG_INFO(FPSTR(S_AP), F("Connected to wifi. Save settings, go to sleep"));
+    log_ap.info( F("Connected to wifi. Save settings, go to sleep"));
 
     // Переписываем введенные пользователем значения в Конфигурацию
 
@@ -278,7 +310,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     // Генерируем ключ используя и введенную эл. почту
     if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0) {
-        LOG_INFO(FPSTR(S_CFG), F("Generate waterius key"));
+        //LOG_INFO(FPSTR(S_CFG), F("Generate waterius key"));
+        log_cfg.info( F("Generate waterius key"));
         WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, 
                                            sett.waterius_email);
     }
@@ -298,14 +331,19 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.ip = param_ip.getValue();
     sett.gateway = param_gw.getValue();
     sett.mask = param_mask.getValue();
+
+    sett.SaveLogLevel = dropdown_save_log.getValue();
     
     //период отправки данных
     sett.wakeup_per_min = param_wakeup_per.getValue();
-    LOG_INFO(FPSTR(S_AP), "wakeup period, min=" << sett.wakeup_per_min);
+    //LOG_INFO(FPSTR(S_AP), "wakeup period, min=" << sett.wakeup_per_min);
+    log_ap.info(F("wakeup period, min=%i"), sett.wakeup_per_min);
 
     //Веса импульсов
-    LOG_INFO(FPSTR(S_AP), "hot dropdown=" << dropdown_hot_factor.getValue());
-    LOG_INFO(FPSTR(S_AP), "cold dropdown=" << dropdown_cold_factor.getValue());
+    //LOG_INFO(FPSTR(S_AP), "hot dropdown=" << dropdown_hot_factor.getValue());
+    //LOG_INFO(FPSTR(S_AP), "cold dropdown=" << dropdown_cold_factor.getValue());
+    log_ap.info( F("hot dropdown="), dropdown_hot_factor.getValue());
+    log_ap.info( F("cold dropdown="), dropdown_cold_factor.getValue());
     
     uint8_t combobox_factor = dropdown_cold_factor.getValue();
     sett.factor1 = get_factor(combobox_factor, runtime_data.impulses1, data.impulses1, 1);
@@ -321,8 +359,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.channel1_start = param_channel1_start.getValue();
 
     //sett.liters_per_impuls_hot = 
-    LOG_INFO(FPSTR(S_AP), "factorHot=" << sett.factor0);
-    LOG_INFO(FPSTR(S_AP), "factorCold=" << sett.factor1);
+    //LOG_INFO(FPSTR(S_AP), "factorHot=" << sett.factor0);
+    //LOG_INFO(FPSTR(S_AP), "factorCold=" << sett.factor1);
+    log_ap.info( F("factorHot=%i"), sett.factor0);
+    log_ap.info( F("factorCold=%i"), sett.factor1);
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = runtime_data.impulses0;
@@ -332,8 +372,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.impulses0_previous = sett.impulses0_start;
     sett.impulses1_previous = sett.impulses1_start;
 
-    LOG_INFO(FPSTR(S_AP), "impulses0=" << sett.impulses0_start );
-    LOG_INFO(FPSTR(S_AP), "impulses1=" << sett.impulses1_start );
+    //LOG_INFO(FPSTR(S_AP), "impulses0=" << sett.impulses0_start );
+    //LOG_INFO(FPSTR(S_AP), "impulses1=" << sett.impulses1_start );
+    log_ap.info( F("impulses0=%i"), sett.impulses0_start);
+    log_ap.info( F("impulses1=%i"), sett.impulses1_start);
 
     sett.setup_time = millis();
     

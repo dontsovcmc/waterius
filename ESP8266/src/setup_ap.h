@@ -7,6 +7,8 @@
 
 #include <WiFiManager.h>    
 
+#define AP_NAME "Waterius_" FIRMWARE_VERSION
+
 /*
 Запускаем вебсервер для настройки подключения к Интернету и ввода текущих показаний
 */
