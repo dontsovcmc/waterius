@@ -1,6 +1,7 @@
 #include "UserClass.h"
 #include "WateriusHttps.h"
 #include "Logging.h"
+#include "string.h"
 #include <ArduinoJson.h>
 
 

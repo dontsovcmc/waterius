@@ -130,7 +130,7 @@ void loop()
                 LOG_INFO(FPSTR(S_WIF), F("Connected, IP: ") << WiFi.localIP().toString());
                 
                 cdata.rssi = WiFi.RSSI();
-                LOG_DEBUG(FPSTR(S_WIF), F("RSSI: ") << cdata.rssi);
+                LOG_INFO(FPSTR(S_WIF), F("RSSI: ") << cdata.rssi);
 
                 if (send_blynk(sett, data, cdata)) {
                     LOG_INFO(FPSTR(S_BLK), F("Send OK"));

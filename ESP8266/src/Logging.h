@@ -2,7 +2,6 @@
 #define _WATERIUS_LOGGING_h
 
 #include "setup.h"
-#define LOG_TIME_FORMAT 2
 
 #include <Arduino.h>
 
@@ -10,7 +9,6 @@
 template<class T> inline Print &operator <<( Print &obj, T arg ) {
 	obj.print( arg ); return obj;
 }
-#define endl "\r\n"
 
 const char S_ESP[]                  PROGMEM = "ESP";
 const char S_CFG[]                  PROGMEM = "CFG";
@@ -27,33 +25,28 @@ const char S_RQT[]                  PROGMEM = "RQT";
 		1 = (1234), showing time in seconds since boot. Generates lightweight inline code.
 		2 = (001:02:03:04:005) ( day 1, hour 2, minute 3, second 4, millisecond 5 ). Much bigger code, but very readable
 */
-#if LOG_TIME_FORMAT == 1
-	#define LOG_FORMAT_TIME do { Serial << millis() / 1000; } while (0)
-#elif LOG_TIME_FORMAT == 2 
-	#define MS_IN_DAY 86400000
-	#define MS_IN_HOUR 3600000
-	#define MS_IN_MINUTE 60000
-	#define MS_IN_SECOND  1000
-	#define LOG_FORMAT_TIME do \
-	{ \
-		unsigned long logTime = millis(); \
-		unsigned short days = logTime / MS_IN_DAY; \
-		unsigned char hours = ( logTime % MS_IN_DAY ) / MS_IN_HOUR; \
-		unsigned char minutes = ( ( logTime % MS_IN_DAY ) % MS_IN_HOUR ) / MS_IN_MINUTE; \
-		unsigned char seconds = ( ( ( logTime % MS_IN_DAY ) % MS_IN_HOUR ) % MS_IN_MINUTE ) / MS_IN_SECOND; \
-		unsigned short ms = ( ( ( ( logTime % MS_IN_DAY ) % MS_IN_HOUR ) % MS_IN_MINUTE ) % MS_IN_SECOND ); \
-		char logFormattedTime[17]; \
-		sprintf( logFormattedTime, "%03u:%02u:%02u:%02u:%03u", days, hours, minutes, seconds, ms ); \
-		Serial << logFormattedTime; \
-	} while (0)
-#endif // LOG_TIME_FORMAT
+
+#define MS_IN_DAY 86400000
+#define MS_IN_HOUR 3600000
+#define MS_IN_MINUTE 60000
+#define MS_IN_SECOND  1000
+#define LOG_FORMAT_TIME do \
+{ \
+	unsigned long logTime = millis(); \
+	unsigned short days = logTime / MS_IN_DAY; \
+	unsigned char hours = ( logTime % MS_IN_DAY ) / MS_IN_HOUR; \
+	unsigned char minutes = ( ( logTime % MS_IN_DAY ) % MS_IN_HOUR ) / MS_IN_MINUTE; \
+	unsigned char seconds = ( ( ( logTime % MS_IN_DAY ) % MS_IN_HOUR ) % MS_IN_MINUTE ) / MS_IN_SECOND; \
+	unsigned short ms = ( ( ( ( logTime % MS_IN_DAY ) % MS_IN_HOUR ) % MS_IN_MINUTE ) % MS_IN_SECOND ); \
+	char logFormattedTime[17]; \
+	sprintf( logFormattedTime, "%03u:%02u:%02u:%02u:%03u", days, hours, minutes, seconds, ms ); \
+	Serial << String(logFormattedTime); \
+} while (0)
 
 // Default do no logging...
 #define LOG_BEGIN(baud) do {} while (0)
 #define LOG_END() do {} while (0)
-#define LOG_ERROR(svc, content)     do {} while (0)
 #define LOG_INFO(svc, content)      do {} while (0)
-#define LOG_DEBUG(svc, content)	    do {} while (0)
 
 // Depending on log level, add code for logging
 #ifdef LOGLEVEL
@@ -62,15 +55,9 @@ const char S_RQT[]                  PROGMEM = "RQT";
 	#undef LOG_END
 	#define LOG_END() do { Serial.flush(); Serial.end(); } while(0)
 	#undef LOG_ERROR
-	#define LOG_ERROR(svc, content) do { LOG_FORMAT_TIME; Serial << "  ERROR     (" << svc << ") : " << content << endl; } while(0)
-	#if LOGLEVEL >= 1
-		#undef LOG_INFO
-		#define LOG_INFO(svc, content) do { LOG_FORMAT_TIME; Serial << "  INFO      (" << svc << ") : " << content << endl; } while(0)
-		#if LOGLEVEL >= 2
-			#undef LOG_DEBUG
-			#define LOG_DEBUG(svc, content) do { LOG_FORMAT_TIME; Serial << "  DEBUG     (" << svc << ") : " << content << endl; } while(0)
-		#endif // LOGLEVEL >= 2
-	#endif // LOGLEVEL >= 1
+	#define LOG_ERROR(svc, content) do { LOG_FORMAT_TIME; Serial << "  ERROR     (" << svc << ") : " << content << "\r\n"; } while(0)
+	#undef LOG_INFO
+	#define LOG_INFO(svc, content) do { LOG_FORMAT_TIME; Serial << "  INFO      (" << svc << ") : " << content << "\r\n"; } while(0)
 #endif // LOGLEVEL >= 0
 
 #endif
