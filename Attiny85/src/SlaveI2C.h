@@ -7,6 +7,7 @@
 
 #define SETUP_MODE 1
 #define TRANSMIT_MODE 2
+#define MANUAL_TRANSMIT_MODE 3
 
 
 class SlaveI2C

@@ -63,6 +63,7 @@ void loop()
         if (!success) {
             LOG_ERROR(FPSTR(S_ESP), F("Error loading config"));
         }
+        sett.mode=mode;
 
         //Вычисляем текущие показания
         calculate_values(sett, data, cdata);
@@ -84,7 +85,7 @@ void loop()
             success = false;
         }
         if (success) {
-            if (mode == TRANSMIT_MODE) { 
+            if (mode == TRANSMIT_MODE || mode == MANUAL_TRANSMIT_MODE) { 
                 //Проснулись для передачи показаний
                 LOG_INFO(FPSTR(S_WIF), F("Starting Wi-fi"));
                 
@@ -98,13 +99,6 @@ void loop()
                 }
 
                 if (success) {
-
-                    if(!masterI2C.setWakeUpPeriod(sett.wakeup_per_min)){
-                        LOG_ERROR(FPSTR(S_I2C), F("Wakeup period wasn't set"));
-                    } //"Разбуди меня через..."
-                    else{
-                        LOG_INFO(FPSTR(S_I2C), F("Wakeup period, min:") << sett.wakeup_per_min);
-                    }
 
                     //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                     WiFi.begin(); 
@@ -147,6 +141,31 @@ void loop()
                 sett.impulses1_previous = data.impulses1;
                 //Перешлем время на сервер при след. включении
                 sett.wake_time = millis();
+
+                //Перерасчет времени пробуждения
+                if(mode==TRANSMIT_MODE){
+                    time_t now = time(nullptr);
+                    if (now>sett.lastsend){
+                        time_t t1=(now-sett.lastsend)/60;
+                        LOG_INFO(FPSTR(S_I2C), F("Minutes :") << t1);
+                        time_t new_wakeup=sett.wakeup_per_min*sett.set_wakeup/t1;
+                        sett.set_wakeup=new_wakeup;
+                    }else{
+                        sett.set_wakeup=sett.wakeup_per_min;
+                    }
+                }
+                sett.lastsend = time(nullptr);
+                if(sett.set_wakeup==0){
+                    sett.set_wakeup=sett.wakeup_per_min;
+                }
+
+                if(!masterI2C.setWakeUpPeriod(sett.set_wakeup)){
+                    LOG_ERROR(FPSTR(S_I2C), F("Wakeup period wasn't set"));
+                } //"Разбуди меня через..."
+                else{
+                    LOG_INFO(FPSTR(S_I2C), F("Wakeup period, min:") << sett.wakeup_per_min);
+                    LOG_INFO(FPSTR(S_I2C), F("Wakeup period, tick:") << sett.set_wakeup);
+                }
 
                 storeConfig(sett);
             }

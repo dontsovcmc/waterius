@@ -12,6 +12,7 @@
 //attiny85
 #define SETUP_MODE 1
 #define TRANSMIT_MODE 2
+#define MANUAL_TRANSMIT_MODE 3
 
 //model
 #define WATERIUS_CLASSIC 0
