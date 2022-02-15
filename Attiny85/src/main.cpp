@@ -109,7 +109,7 @@ static ButtonB  button(2);	   // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1);  // Питание на ESP 
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, WATERIUS_2C, 
+struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_2C, 
 					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
 				       {0, 0},
 					   {0, 0},
@@ -184,8 +184,11 @@ void setup() {
 		info.resets = EEPROM.read(size);
 		info.resets++;
 		EEPROM.write(size, info.resets);
+		info.settings = EEPROM.read(size+1);
 	} else {
 		EEPROM.write(size, 0);
+		info.settings = 0;
+		EEPROM.write(size+1, info.settings);
 	}
 
 	wakeup_period = WAKEUP_PERIOD_DEFAULT;
@@ -227,6 +230,9 @@ void loop() {
 	if (button.wait_release() > LONG_PRESS_MSEC) { //wdt_reset внутри wait_release
 
 		LOG(F("SETUP pressed"));
+		uint16_t size = storage.size()+1;
+		info.settings++;
+		EEPROM.write(size, info.settings);
 		slaveI2C.begin(SETUP_MODE);
 		wake_up_limit = SETUP_TIME_MSEC; //10 мин при настройке
 	} else {
