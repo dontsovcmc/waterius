@@ -301,7 +301,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     
     //период отправки данных
     sett.wakeup_per_min = param_wakeup_per.getValue();
-    sett.set_wakeup=sett.wakeup_per_min;
     LOG_INFO(FPSTR(S_AP), "wakeup period, min=" << sett.wakeup_per_min);
 
     //Веса импульсов
