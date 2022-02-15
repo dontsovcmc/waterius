@@ -125,9 +125,7 @@ bool MasterI2C::    getSlaveData(SlaveData &data) {
     uint8_t dummy, crc = 0;
     bool good = getByte(data.version, crc);
     good &= getByte(data.service, crc);
-    good &= getUint16(data.voltage, crc);
-    good &= getByte(data.reserved, crc);
-    good &= getByte(data.settings, crc);
+    good &= getUint(data.voltage, crc);
 
     good &= getByte(data.resets, crc);
     good &= getByte(data.model, crc);
@@ -153,7 +151,6 @@ bool MasterI2C::    getSlaveData(SlaveData &data) {
             LOG_INFO(FPSTR(S_I2C), F("version: ") << data.version);
             LOG_INFO(FPSTR(S_I2C), F("service: ") << data.service);
             LOG_INFO(FPSTR(S_I2C), F("voltage: ") << data.voltage);
-            LOG_INFO(FPSTR(S_I2C), F("settings: ") << data.settings);
             LOG_INFO(FPSTR(S_I2C), F("resets: ") << data.resets);
             LOG_INFO(FPSTR(S_I2C), F("MODEL: ") << data.model);
             LOG_INFO(FPSTR(S_I2C), F("state0: ") << data.state0);
