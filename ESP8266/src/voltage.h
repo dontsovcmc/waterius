@@ -12,9 +12,9 @@ extern MasterI2C masterI2C;
 
 bool check_voltage(SlaveData &data, CalculatedData &cdata)
 {   
-    uint32_t prev = data.voltage;
+    int16_t prev = data.voltage;
 	if (masterI2C.getSlaveData(data)) {
-        uint32_t diff = abs(prev - data.voltage);
+        uint32_t diff = abs(prev - int16_t(data.voltage));
         if (diff > cdata.voltage_diff) {
             cdata.voltage_diff = diff;
         }

@@ -118,7 +118,7 @@ bool MasterI2C::getMode(uint8_t &mode) {
     return true;
 }
 
-bool MasterI2C::    getSlaveData(SlaveData &data) {
+bool MasterI2C::getSlaveData(SlaveData &data) {
     sendCmd('B');
     data.diagnostic = WATERIUS_NO_LINK;
 
