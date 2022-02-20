@@ -1,4 +1,4 @@
-### Aвтономное устройство для передачи показаний импульсных счётчиков воды по Wi-Fi
+### Автономное устройство для передачи показаний импульсных счётчиков воды по Wi-Fi
 
 # Ватериус 0.10.5
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
@@ -71,8 +71,8 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://am.wildberries.ru/catalog/2
 - Разместить в соцсетях ссылку на https://waterius.ru, написать свои впечатления. 
 - Написать отзыв в офиц. группы <a href="https://vk.com/topic-183491011_40049475" target="_black">VK</a> и <a href="https://www.facebook.com/waterius/reviews/" target="_black">FB</a>.
 
-- Отправка лога ESP в вебинтерфейс (JS код есть, спасибо Владимиру)
-- OTA обновления: предложить код прошивки и пример веб сервера (можно на базе NodeMCU)
+- Отправка лога ESP в веб-интерфейс (JS код есть, спасибо Владимиру)
+- OTA обновления: предложить код прошивки и пример веб-сервера (можно на базе NodeMCU)
 
 Решены:
 - ~~Записать видео установки/настройки Ватериуса (можно сразу в FB, VK)~~, спасибо Денису С.
@@ -84,7 +84,7 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://am.wildberries.ru/catalog/2
 - На пине reset сделал [OloloevReal](https://github.com/OloloevReal), вот [схема](https://github.com/dontsovcmc/waterius/issues/51)
 - Есть в клоне [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F), спасибо [badenbaden]
 
-### Модицикации
+### Модификации
 [ветка attiny84](https://github.com/dontsovcmc/waterius/tree/attiny84) поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками и 2мя датчиками протечек.
 
 [Waterius на ESP32 с NB-IoT](https://github.com/OloloevReal/Waterius32) от OloloevReal
@@ -102,7 +102,7 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://am.wildberries.ru/catalog/2
 - Ивану Коваленко и Иван Ганжа за консультации по электротехнике
 - Alex Jensen, за проект [температурного датчика](https://www.cron.dk/esp8266-on-batteries-for-years-part-1).
 - [freenetwork](https://github.com/freenetwork) за конфигурацию для HomeAssistant
-- [grffio](https://github.com/grffio) за локальный вебсервер
+- [grffio](https://github.com/grffio) за локальный веб-сервер
 - [Игорю Вахромееву](http://vakhromeev.com) за наикрутейший редизайн настроек
 - Сергею А. (г. Мурманск) за подробную инструкцию по [настройке Domoticz и NodeRed](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
 - [sintech](https://github.com/sintech) за найденные и исправленные баги
