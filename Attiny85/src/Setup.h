@@ -89,19 +89,24 @@ struct Header {
     10 - 1010 - WDRF + EXTRF
     */
     uint8_t       service; 
-
+    
     /*
-    Напряжение питания в мВ.
+    ver 24: убрал напряжение
     */
-    uint16_t      voltage;
+    uint16_t      reserved;
 
     /*
     Для совместимости с 0.10.0.
     */
-    uint16_t      reserved;
+    uint8_t       reserved2;
+
+    /*
+    Включение режима настройки
+    */
+    uint8_t       setup_started_count;
     
     /*
-    Количество перезагрузок.
+    Количество перезагрузок
     */
     uint8_t       resets;
 
@@ -119,7 +124,7 @@ struct Header {
     // HEADER_DATA_SIZE
 
     uint8_t       crc;
-    uint8_t       reserved2;
+    uint8_t       reserved3;
 };  //24 байт
 
 #define HEADER_DATA_SIZE 22

@@ -7,8 +7,6 @@
 #define adc_disable() (ADCSRA &= ~(1<<ADEN)) // disable ADC
 #define adc_enable()  (ADCSRA |=  (1<<ADEN)) // re-enable ADC
 
-uint16_t readVcc();
-
 /*
     Включение питания ESP подачей HIGH на ESP_POWER_PIN пин.
     Класс нужен для измерения времени подачи питания.

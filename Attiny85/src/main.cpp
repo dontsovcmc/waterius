@@ -17,10 +17,17 @@
 #endif
 
 
-#define FIRMWARE_VER 22    // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 24    // Передается в ESP и на сервер в данных.
   
 /*
 Версии прошивок 
+
+24 - 2022.02.22 - neitri, dontsovcmc
+	1. Передача флага о том, что пробуждение по кнопке
+	2. Передача количества включений режима настройки
+	3. Убрано измерение напряжение, пусть его считает ESP
+
+23 - ветка "8times" - 8 раз в секунду проверка входов
 
 22 - 2021.07.13 - dontsovcmc
 	1. переписана работа с watchdog: чип перезагрузится в случае сбоя
@@ -109,7 +116,7 @@ static ButtonB  button(2);	   // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1);  // Питание на ESP 
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, WATERIUS_2C, 
+struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_2C, 
 					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
 				       {0, 0},
 					   {0, 0},
@@ -185,7 +192,8 @@ void setup() {
 		info.resets++;
 		EEPROM.write(size, info.resets);
 	} else {
-		EEPROM.write(size, 0);
+		EEPROM.write(size, info.resets);  // 0
+		EEPROM.write(size+1, info.setup_started_counter); // 0
 	}
 
 	wakeup_period = WAKEUP_PERIOD_DEFAULT;
@@ -194,7 +202,7 @@ void setup() {
 	LOG(F("==== START ===="));
 	LOG(F("MCUSR")); LOG(info.service);
 	LOG(F("RESET")); LOG(info.resets);
-	LOG(F("EEPROM used:")); LOG(storage.size() + 1);
+	LOG(F("EEPROM used:")); LOG(size + 2);
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
@@ -225,14 +233,23 @@ void loop() {
 	// Если кнопка не нажата или нажата коротко - передаем показания 
 	unsigned long wake_up_limit;
 	if (button.wait_release() > LONG_PRESS_MSEC) { //wdt_reset внутри wait_release
-
 		LOG(F("SETUP pressed"));
 		slaveI2C.begin(SETUP_MODE);
 		wake_up_limit = SETUP_TIME_MSEC; //10 мин при настройке
+
+		uint16_t setup_started_addr = storage.size() + 1;
+		info.setup_started_counter = EEPROM.read(setup_started_addr);
+		info.setup_started_counter++;
+		EEPROM.write(setup_started_addr, info.setup_started_counter);
 	} else {
 
-		LOG(F("wake up for transmitting"));
-		slaveI2C.begin(TRANSMIT_MODE);
+		if (wdt_count < wakeup_period){
+			LOG(F("Manual transmit wake up"));
+			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
+		}else{
+			LOG(F("wake up for transmitting"));
+			slaveI2C.begin(TRANSMIT_MODE);
+		}
 		wake_up_limit = WAIT_ESP_MSEC; //15 секунд при передаче данных
 	}
 
@@ -242,8 +259,7 @@ void loop() {
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit)) {
 		
 		wdt_reset(); 
-		
-		info.voltage = readVcc();   // Текущее напряжение
+
 		counting();
 
 		delayMicroseconds(65000);

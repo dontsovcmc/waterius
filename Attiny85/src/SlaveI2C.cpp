@@ -57,8 +57,9 @@ void SlaveI2C::receiveEvent(int howMany) {
         case 'M':  // Разбудили ESP для настройки или передачи данных?
             txBuffer[0] = setup_mode;
             break;
-        case 'T':  // Не используется. После настройки ESP перезагрузим, поэтому меняем режим на передачу данных
-            setup_mode = TRANSMIT_MODE;
+        case 'T':  // После настройки ESP сменит режим пробуждения и сразу скинет данные
+                   // MANUAL потому что при TRANSMIT_MODE ESP корректирует время
+            setup_mode = MANUAL_TRANSMIT_MODE;
             break;
         case 'S': //ESP присылает новое значение периода пробуждения
             getWakeUpPeriod();
