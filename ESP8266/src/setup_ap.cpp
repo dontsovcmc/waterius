@@ -301,7 +301,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     
     //период отправки данных
     sett.wakeup_per_min = param_wakeup_per.getValue();
+    sett.set_wakeup = sett.wakeup_per_min;
     LOG_INFO(FPSTR(S_AP), "wakeup period, min=" << sett.wakeup_per_min);
+    LOG_INFO(FPSTR(S_AP), "wakeup period, tick=" << sett.set_wakeup);
 
     //Веса импульсов
     LOG_INFO(FPSTR(S_AP), "hot dropdown=" << dropdown_hot_factor.getValue());
@@ -336,7 +338,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(FPSTR(S_AP), "impulses1=" << sett.impulses1_start );
 
     sett.setup_time = millis();
-    
+    sett.setup_finished_counter++;
+
     sett.crc = FAKE_CRC; // todo: сделать нормальный crc16
     storeConfig(sett);
 }

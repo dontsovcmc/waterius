@@ -18,19 +18,40 @@ MasterI2C masterI2C; // Для общения с Attiny85 по i2c
 SlaveData data; // Данные от Attiny85
 Settings sett;  // Настройки соединения и предыдущие показания из EEPROM
 CalculatedData cdata; //вычисляемые данные
+Voltage voltage; // клас монитора питания
+ADC_MODE(ADC_VCC);
+
 
 /*
 Выполняется однократно при включении
 */
 void setup()
 {
-    WiFi.mode(WIFI_OFF);  //TODO  а нужна ли?
-
     memset(&cdata, 0, sizeof(cdata));
     memset(&data, 0, sizeof(data));
     LOG_BEGIN(115200);    //Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(FPSTR(S_ESP), F("Booted"));
+
+    LOG_INFO(FPSTR(S_ESP), F("Saved SSID: ") << WiFi.SSID());
+    LOG_INFO(FPSTR(S_ESP), F("Saved password: ") << WiFi.psk());
+
     masterI2C.begin();    //Включаем i2c master
+    voltage.begin();
+}
+
+void wifi_handle_event_cb(System_Event_t *evt) {
+    
+    switch (evt->event)
+    {
+        case EVENT_STAMODE_CONNECTED:
+            cdata.channel = evt->event_info.connected.channel;
+            cdata.router_mac = evt->event_info.connected.bssid[0];
+            cdata.router_mac = cdata.router_mac << 8;
+            cdata.router_mac |= evt->event_info.connected.bssid[1];
+            cdata.router_mac = cdata.router_mac << 8;
+            cdata.router_mac |= evt->event_info.connected.bssid[2];
+            break;
+    }
 }
 
 /*
@@ -55,7 +76,8 @@ void calculate_values(const Settings &sett, const SlaveData &data, CalculatedDat
 
 void loop()
 {
-    uint8_t mode = SETUP_MODE;//TRANSMIT_MODE;
+    uint8_t mode = SETUP_MODE; //TRANSMIT_MODE;
+
 	// спрашиваем у Attiny85 повод пробуждения и данные
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data)) {
         //Загружаем конфигурацию из EEPROM
@@ -64,30 +86,45 @@ void loop()
             LOG_ERROR(FPSTR(S_ESP), F("Error loading config"));
         }
 
+        sett.mode = mode;
+
         //Вычисляем текущие показания
         calculate_values(sett, data, cdata);
 
-        if (mode == SETUP_MODE) { //Режим настройки - запускаем точку доступа на 192.168.4.1
-            //Запускаем точку доступа с вебсервером
+        if (mode == SETUP_MODE) { 
+            // Режим настройки - запускаем точку доступа на 192.168.4.1
+            // Запускаем точку доступа с вебсервером
             WiFi.mode(WIFI_AP_STA);
             setup_ap(sett, data, cdata);
             
-            //Необходимо протестировать WiFi, чтобы роутер не блокировал повторное подключение.
-            //
-            //masterI2C.sendCmd('T'); //Передаем в Attiny, что режим "Передача". 
-            //                        //ESP перезагрузится и передаст данные 
-            //LOG_END();
-            //WiFi.forceSleepBegin();
-            //delay(100);
-            //ESP.restart();
+            //не будет ли роутер блокировать повторное подключение?
+            
+            // ухищрения, чтобы не стереть SSID, pwd
+            if (WiFi.getPersistent() == true) 
+                WiFi.persistent(false);   //disable saving wifi config into SDK flash area
+            WiFi.disconnect(true);
+            WiFi.mode(WIFI_OFF); // отключаем WIFI
+            WiFi.persistent(true);   //enable saving wifi config into SDK flash area
+      
+            LOG_INFO(FPSTR(S_ESP), F("Set mode MANUAL_TRANSMIT to attiny"));
+            masterI2C.sendCmd('T'); // Режим "Передача"
 
+            LOG_INFO(FPSTR(S_ESP), F("Restart ESP"));
+            LOG_END();
+            WiFi.forceSleepBegin();
+            delay(1000);
+            ESP.restart();
+
+            //never happend here
             success = false;
         }
         if (success) {
-            if (mode == TRANSMIT_MODE) { 
+            if (mode != SETUP_MODE) { 
                 //Проснулись для передачи показаний
                 LOG_INFO(FPSTR(S_WIF), F("Starting Wi-fi"));
                 
+                wifi_set_event_handler_cb(wifi_handle_event_cb);
+
                 if (sett.ip != 0) {
                     success = WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, IPAddress(8,8,8,8));
                     if (success) {
@@ -99,12 +136,8 @@ void loop()
 
                 if (success) {
 
-                    if(!masterI2C.setWakeUpPeriod(sett.wakeup_per_min)){
-                        LOG_ERROR(FPSTR(S_I2C), F("Wakeup period wasn't set"));
-                    } //"Разбуди меня через..."
-                    else{
-                        LOG_INFO(FPSTR(S_I2C), F("Wakeup period, min:") << sett.wakeup_per_min);
-                    }
+                    WiFi.mode(WIFI_STA); //без этого не записывается hostname
+                    set_hostname();
 
                     //WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                     WiFi.begin(); 
@@ -115,22 +148,26 @@ void loop()
                         LOG_INFO(FPSTR(S_WIF), F("Status: ") << WiFi.status());
                         delay(300);
                     
-                        check_voltage(data, cdata);
+                        voltage.update();
                         //В будущем добавим success, означающее, что напряжение не критично изменяется, можно продолжать
                         //иначе есть риск ошибки ESP и стирания конфигурации
                     }
+                    cdata.voltage = voltage.value();
+                    cdata.voltage_diff = voltage.diff(); 
+                    cdata.low_voltage = voltage.low_voltage();
                 }
             }
             
             if (success 
-                && WiFi.status() == WL_CONNECTED
-                && masterI2C.getSlaveData(data)) {  //т.к. в check_voltage не проверяем crc
+                && WiFi.status() == WL_CONNECTED) {
                 
                 print_wifi_mode();
                 LOG_INFO(FPSTR(S_WIF), F("Connected, IP: ") << WiFi.localIP().toString());
                 
                 cdata.rssi = WiFi.RSSI();
                 LOG_INFO(FPSTR(S_WIF), F("RSSI: ") << cdata.rssi);
+                LOG_INFO(FPSTR(S_WIF), F("channel: ") << cdata.channel);
+                LOG_INFO(FPSTR(S_WIF), F("MAC: ") << String(cdata.router_mac, HEX));
 
                 if (send_blynk(sett, data, cdata)) {
                     LOG_INFO(FPSTR(S_BLK), F("Send OK"));
@@ -145,8 +182,30 @@ void loop()
                 //Сохраним текущие значения в памяти.
                 sett.impulses0_previous = data.impulses0;
                 sett.impulses1_previous = data.impulses1;
+
                 //Перешлем время на сервер при след. включении
                 sett.wake_time = millis();
+
+                //Перерасчет времени пробуждения
+                if (mode == TRANSMIT_MODE) {
+                    time_t now = time(nullptr);
+                    if (now > sett.lastsend){
+                        time_t t1 = (now - sett.lastsend) / 60;
+                        LOG_INFO(FPSTR(S_I2C), F("Minutes diff:") << t1);
+                        sett.set_wakeup = sett.wakeup_per_min * sett.set_wakeup / t1;
+                    } else {
+                        sett.set_wakeup = sett.wakeup_per_min;
+                    }
+                }
+                sett.lastsend = time(nullptr);
+
+                if (!masterI2C.setWakeUpPeriod(sett.set_wakeup)) {
+                    LOG_ERROR(FPSTR(S_I2C), F("Wakeup period wasn't set"));
+                } //"Разбуди меня через..."
+                else {
+                    LOG_INFO(FPSTR(S_I2C), F("Wakeup period, min:") << sett.wakeup_per_min);
+                    LOG_INFO(FPSTR(S_I2C), F("Wakeup period, tick:") << sett.set_wakeup);
+                }
 
                 storeConfig(sett);
             }

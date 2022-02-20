@@ -41,7 +41,7 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "ch1").c_str(), String((float)cdata.channel1,3).c_str(), true);
         client.publish((topic + "delta0").c_str(), String(cdata.delta0).c_str(), true);
         client.publish((topic + "delta1").c_str(), String(cdata.delta1).c_str(), true);
-        client.publish((topic + "voltage").c_str(), String((float)(data.voltage / 1000.0), 3).c_str(), true);
+        client.publish((topic + "voltage").c_str(), String((float)(cdata.voltage / 1000.0), 3).c_str(), true);
         client.publish((topic + "resets").c_str(), String(data.resets).c_str(), true);
         client.publish((topic + "model").c_str(), String(data.model).c_str(), true);
         client.publish((topic + "boot").c_str(), String(data.service).c_str(), true);
@@ -62,6 +62,11 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "period_min").c_str(), String(sett.wakeup_per_min).c_str(), true);
         client.publish((topic + "serial0").c_str(), String(sett.serial0).c_str(), true);
         client.publish((topic + "serial1").c_str(), String(sett.serial1).c_str(), true);
+        client.publish((topic + "mode").c_str(), String(sett.mode).c_str(), true);
+        client.publish((topic + "setup_finished").c_str(), String(sett.setup_finished_counter).c_str(), true);
+        client.publish((topic + "setup_started").c_str(), String(data.setup_started_counter).c_str(), true);
+        client.publish((topic + "channel").c_str(), String(cdata.channel).c_str(), true);
+        client.publish((topic + "mac").c_str(), String(cdata.router_mac).c_str(), true);
         
         client.disconnect();
         return true;

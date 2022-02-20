@@ -30,7 +30,7 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
 
         Blynk.virtualWrite(V0, cdata.channel0);
         Blynk.virtualWrite(V1, cdata.channel1);
-        Blynk.virtualWrite(V2, (float)(data.voltage / 1000.0));
+        Blynk.virtualWrite(V2, (float)(cdata.voltage / 1000.0));
         Blynk.virtualWrite(V3, cdata.delta0);
         Blynk.virtualWrite(V4, cdata.delta1);
         Blynk.virtualWrite(V5, data.resets);
@@ -50,7 +50,7 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
             String title = sett.blynk_email_title;
             String v0(cdata.channel0, 1);   //.1 для образца СМС сообщения
             String v1(cdata.channel1, 1);   //.1 для образца СМС сообщения
-            String v2((float)(data.voltage / 1000.0), 3);
+            String v2((float)(cdata.voltage / 1000.0), 3);
             String v3(cdata.delta0, DEC);
             String v4(cdata.delta1, DEC);
             String v5(data.resets, DEC);

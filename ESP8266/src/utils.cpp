@@ -61,3 +61,12 @@ void print_wifi_mode()
 		break;
 	}
 }
+
+void set_hostname()
+{
+    String hostname = String("Waterius-"+String(ESP.getChipId(), HEX));
+
+    if(!WiFi.hostname(hostname.c_str())) 
+        LOG_INFO(FPSTR(S_WIF), "set hostname fail");
+    LOG_INFO(FPSTR(S_WIF), "hostname " + String(WiFi.hostname()));
+}

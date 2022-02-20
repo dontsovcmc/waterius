@@ -103,7 +103,7 @@ struct Header {
     /*
     Включение режима настройки
     */
-    uint8_t       setup_started_count;
+    uint8_t       setup_started_counter;
     
     /*
     Количество перезагрузок

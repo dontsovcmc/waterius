@@ -99,7 +99,7 @@ bool loadConfig(struct Settings &sett)
         memset(&sett, 0, sizeof(sett));
 
         sett.version = CURRENT_VERSION;  //для совместимости в будущем
-        LOG_INFO(FPSTR(S_CFG), F("version=") << sett.version);
+        LOG_INFO(FPSTR(S_CFG), F("cfg version=") << sett.version);
 
         strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, WATERIUS_HOST_LEN);
 
@@ -124,6 +124,7 @@ bool loadConfig(struct Settings &sett)
         sett.factor0 = AS_COLD_CHANNEL;
 
         sett.wakeup_per_min = DEFAULT_WAKEUP_PERIOD_MIN;
+        sett.set_wakeup = DEFAULT_WAKEUP_PERIOD_MIN;
         
 //Можно задать константы при компиляции, чтобы Ватериус сразу заработал
 

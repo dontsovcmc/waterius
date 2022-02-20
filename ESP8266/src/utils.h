@@ -18,4 +18,6 @@ bool setClock();
 
 void print_wifi_mode();
 
+void set_hostname();
+
 #endif
