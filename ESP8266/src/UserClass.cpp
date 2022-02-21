@@ -59,7 +59,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
 
     serializeJson(root, jsonBody);
     //JSON size 0.10.3:  355  
-    //JSON size 0.10.6:  TODO
+    //JSON size 0.10.6:  439
     LOG_INFO(FPSTR(S_SND), "JSON size:\t" << jsonBody.length());
     
     // Try to send
