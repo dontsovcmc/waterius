@@ -11,14 +11,14 @@
 bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, const CalculatedData &cdata)
 {
     constexpr char THIS_FUNC_DESCRIPTION[] = "Send new data";
-    LOG_INFO(FPSTR(S_SND), "-- START -- " << THIS_FUNC_DESCRIPTION);
+    LOG_INFO("HTTP: -- START -- " << THIS_FUNC_DESCRIPTION);
 
     if (strnlen(settings.waterius_key, WATERIUS_KEY_LEN) == 0) {
-        LOG_INFO(FPSTR(S_SND), F("SKIP"));
+        LOG_INFO(F("HTTP: SKIP"));
         return false;
     };
     if (strnlen(settings.waterius_host, WATERIUS_HOST_LEN) == 0) {
-        LOG_INFO(FPSTR(S_SND), F("SKIP"));
+        LOG_INFO(F("HTTP: SKIP"));
         return false;
     }
 
@@ -60,14 +60,14 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     serializeJson(root, jsonBody);
     //JSON size 0.10.3:  355  
     //JSON size 0.10.6:  439
-    LOG_INFO(FPSTR(S_SND), "JSON size:\t" << jsonBody.length());
+    LOG_INFO("JSON size:\t" << jsonBody.length());
     
     // Try to send
     WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(
         settings.waterius_host, settings.waterius_key, settings.waterius_email, jsonBody);
 
-    LOG_INFO(FPSTR(S_SND), "Send HTTP code:\t" << responseData.code);
-    LOG_INFO(FPSTR(S_SND), "-- END --");
+    LOG_INFO("Send HTTP code:\t" << responseData.code);
+    LOG_INFO("-- END --");
 
     return responseData.code == 200;
 }

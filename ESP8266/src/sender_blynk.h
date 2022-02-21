@@ -16,17 +16,14 @@
 bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
     if (strnlen(sett.blynk_key, BLYNK_KEY_LEN) == 0) {
-        LOG_INFO(FPSTR(S_BLK), F("SKIP"));
+        LOG_INFO(F("Blynk: SKIP"));
         return false;
     }
         
     Blynk.config(sett.blynk_key, sett.blynk_host, BLYNK_DEFAULT_PORT);
     if (Blynk.connect(SERVER_TIMEOUT)) {
         
-        LOG_INFO(FPSTR(S_BLK), F("Run"));
-
-        // LOG_INFO(FPSTR(S_BLK), "Delta0:" << cdata.delta0);
-        // LOG_INFO(FPSTR(S_BLK), "Delta1:" << cdata.delta1);
+        LOG_INFO(F("Blynk: Run"));
 
         Blynk.virtualWrite(V0, cdata.channel0);
         Blynk.virtualWrite(V1, cdata.channel1);
@@ -40,11 +37,11 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
         WidgetLED battery_led(V6);
         cdata.low_voltage ? battery_led.on() : battery_led.off();
 
-        LOG_INFO(FPSTR(S_BLK), F("virtualWrite OK"));
+        LOG_INFO(F("virtualWrite OK"));
         
         // Если заполнен параметр email отправим эл. письмо
         if (strnlen(sett.blynk_email, EMAIL_LEN) > 4) {
-            LOG_INFO(FPSTR(S_BLK), "send email: " << sett.blynk_email);
+            LOG_INFO("send email: " << sett.blynk_email);
 
             String msg = sett.blynk_email_template;
             String title = sett.blynk_email_title;
@@ -80,17 +77,17 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
 
             Blynk.email(sett.blynk_email, title, msg);
 
-            LOG_INFO(FPSTR(S_BLK), F("EMail was send"));
-            LOG_INFO(FPSTR(S_BLK), title);
-            LOG_INFO(FPSTR(S_BLK), msg);
+            LOG_INFO(F("EMail was send"));
+            LOG_INFO(title);
+            LOG_INFO(msg);
         }
 
         Blynk.disconnect();
-        LOG_INFO(FPSTR(S_BLK), F("Disconnected"));
+        LOG_INFO(F("Disconnected"));
 
         return true;
     } else {
-        LOG_ERROR(FPSTR(S_BLK), F("Connect error"));
+        LOG_ERROR(F("Connect error"));
     } 
 
     return false;
