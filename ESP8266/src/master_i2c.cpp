@@ -52,13 +52,13 @@ bool MasterI2C::sendData(uint8_t* buf, size_t size)
     for(i=0; i<size; i++)
     {
         if (Wire.write(buf[i]) != 1){
-            LOG_ERROR(FPSTR(S_I2C), F("I2C transmitting fail."));
+            LOG_ERROR(F("I2C transmitting fail."));
             return false;
         }
     }
     int err = Wire.endTransmission(true);
     if (err != 0) {
-        LOG_ERROR(FPSTR(S_I2C), "end error:" << err);
+        LOG_ERROR("end error:" << err);
         return false;
     }
 
@@ -68,7 +68,7 @@ bool MasterI2C::sendData(uint8_t* buf, size_t size)
 bool MasterI2C::getByte(uint8_t &value, uint8_t &crc) {
 
     if (Wire.requestFrom( I2C_SLAVE_ADDR, 1 ) != 1) {
-        LOG_ERROR(FPSTR(S_I2C), F("RequestFrom failed"));
+        LOG_ERROR(F("RequestFrom failed"));
         return false;
     }
     value = Wire.read();
@@ -111,21 +111,23 @@ bool MasterI2C::getMode(uint8_t &mode) {
     uint8_t crc; //not used
     mode = TRANSMIT_MODE;
     if (!sendCmd('M') || !getByte(mode, crc)) {
-        LOG_ERROR(FPSTR(S_I2C), F("GetMode failed. Check i2c line."));
+        LOG_ERROR(F("GetMode failed. Check i2c line."));
         return false;
     }
-    LOG_INFO(FPSTR(S_I2C), "mode: " << mode);
+    LOG_INFO("mode: " << mode);
     return true;
 }
 
-bool MasterI2C::    getSlaveData(SlaveData &data) {
+bool MasterI2C::getSlaveData(SlaveData &data) {
     sendCmd('B');
     data.diagnostic = WATERIUS_NO_LINK;
 
     uint8_t dummy, crc = 0;
     bool good = getByte(data.version, crc);
     good &= getByte(data.service, crc);
-    good &= getUint(data.voltage, crc);
+    good &= getUint16(data.reserved4, crc);
+    good &= getByte(data.reserved, crc);
+    good &= getByte(data.setup_started_counter, crc);
 
     good &= getByte(data.resets, crc);
     good &= getByte(data.model, crc);
@@ -146,23 +148,23 @@ bool MasterI2C::    getSlaveData(SlaveData &data) {
 
     switch (data.diagnostic) {
         case WATERIUS_BAD_CRC:
-            LOG_ERROR(FPSTR(S_I2C), F("CRC wrong"));
+            LOG_ERROR(F("CRC wrong"));
         case WATERIUS_OK:
-            LOG_INFO(FPSTR(S_I2C), F("version: ") << data.version);
-            LOG_INFO(FPSTR(S_I2C), F("service: ") << data.service);
-            LOG_INFO(FPSTR(S_I2C), F("voltage: ") << data.voltage);
-            LOG_INFO(FPSTR(S_I2C), F("resets: ") << data.resets);
-            LOG_INFO(FPSTR(S_I2C), F("MODEL: ") << data.model);
-            LOG_INFO(FPSTR(S_I2C), F("state0: ") << data.state0);
-            LOG_INFO(FPSTR(S_I2C), F("state1: ") << data.state1);
-            LOG_INFO(FPSTR(S_I2C), F("impulses0: ") << data.impulses0);
-            LOG_INFO(FPSTR(S_I2C), F("impulses1: ") << data.impulses1);
-            LOG_INFO(FPSTR(S_I2C), F("adc0: ") << data.adc0);
-            LOG_INFO(FPSTR(S_I2C), F("adc1: ") << data.adc1);
-            LOG_INFO(FPSTR(S_I2C), F("CRC ok"));
+            LOG_INFO(F("version: ") << data.version);
+            LOG_INFO(F("service: ") << data.service);
+            LOG_INFO(F("setup_started_counter: ") << data.setup_started_counter);
+            LOG_INFO(F("resets: ") << data.resets);
+            LOG_INFO(F("MODEL: ") << data.model);
+            LOG_INFO(F("state0: ") << data.state0);
+            LOG_INFO(F("state1: ") << data.state1);
+            LOG_INFO(F("impulses0: ") << data.impulses0);
+            LOG_INFO(F("impulses1: ") << data.impulses1);
+            LOG_INFO(F("adc0: ") << data.adc0);
+            LOG_INFO(F("adc1: ") << data.adc1);
+            LOG_INFO(F("CRC ok"));
         break;
         case WATERIUS_NO_LINK:
-            LOG_ERROR(FPSTR(S_I2C), F("Data failed"));
+            LOG_ERROR(F("Data failed"));
     };
 
     return data.diagnostic == WATERIUS_OK;

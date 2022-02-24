@@ -83,7 +83,7 @@ void update_data(String &message)
 
 WiFiManager wm;
 void handleStates(){
-  LOG_INFO(FPSTR(S_AP), F("/states request"));
+  LOG_INFO(F("/states request"));
   String message;
   message.reserve(300); //сейчас 200
   update_data(message);
@@ -91,7 +91,7 @@ void handleStates(){
 }
 
 void handleNetworks() {
-  LOG_INFO(FPSTR(S_AP), F("/networks request"));
+  LOG_INFO(F("/networks request"));
   String message;
   message.reserve(2000);
   wm.WiFi_scanNetworks(wm.server->hasArg(F("refresh")),false); //wifiscan, force if arg refresh
@@ -110,7 +110,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
 
-    LOG_INFO(FPSTR(S_AP), F("User requested captive portal"));
+    LOG_INFO(F("User requested captive portal"));
     
     // Настройки HTTP 
 
@@ -256,10 +256,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.setConfigPortalTimeout(SETUP_TIME_SEC);
     wm.setConnectTimeout(ESP_CONNECT_TIMEOUT);
     
-    LOG_INFO(FPSTR(S_AP), F("Start ConfigPortal"));
+    LOG_INFO(F("Start ConfigPortal"));
 
     // Запуск веб сервера на 192.168.4.1
-    LOG_INFO(FPSTR(S_AP), F("chip id:") << getChipId());
+    LOG_INFO(F("chip id:") << getChipId());
     
     /*
     String ap_name = AP_NAME "_" + String(getChipId(), HEX).substring(0, 4);
@@ -269,7 +269,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.startConfigPortal(AP_NAME);
 
     // Успешно подключились к Wi-Fi, можно засыпать
-    LOG_INFO(FPSTR(S_AP), F("Connected to wifi. Save settings, go to sleep"));
+    LOG_INFO(F("Connected to wifi. Save settings, go to sleep"));
 
     // Переписываем введенные пользователем значения в Конфигурацию
 
@@ -278,7 +278,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     // Генерируем ключ используя и введенную эл. почту
     if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0) {
-        LOG_INFO(FPSTR(S_CFG), F("Generate waterius key"));
+        LOG_INFO(F("Generate waterius key"));
         WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, 
                                            sett.waterius_email);
     }
@@ -301,11 +301,13 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     
     //период отправки данных
     sett.wakeup_per_min = param_wakeup_per.getValue();
-    LOG_INFO(FPSTR(S_AP), "wakeup period, min=" << sett.wakeup_per_min);
+    sett.set_wakeup = sett.wakeup_per_min;
+    LOG_INFO("wakeup period, min=" << sett.wakeup_per_min);
+    LOG_INFO("wakeup period, tick=" << sett.set_wakeup);
 
     //Веса импульсов
-    LOG_INFO(FPSTR(S_AP), "hot dropdown=" << dropdown_hot_factor.getValue());
-    LOG_INFO(FPSTR(S_AP), "cold dropdown=" << dropdown_cold_factor.getValue());
+    LOG_INFO("hot dropdown=" << dropdown_hot_factor.getValue());
+    LOG_INFO("cold dropdown=" << dropdown_cold_factor.getValue());
     
     uint8_t combobox_factor = dropdown_cold_factor.getValue();
     sett.factor1 = get_factor(combobox_factor, runtime_data.impulses1, data.impulses1, 1);
@@ -321,8 +323,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.channel1_start = param_channel1_start.getValue();
 
     //sett.liters_per_impuls_hot = 
-    LOG_INFO(FPSTR(S_AP), "factorHot=" << sett.factor0);
-    LOG_INFO(FPSTR(S_AP), "factorCold=" << sett.factor1);
+    LOG_INFO("factorHot=" << sett.factor0);
+    LOG_INFO("factorCold=" << sett.factor1);
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = runtime_data.impulses0;
@@ -332,11 +334,12 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.impulses0_previous = sett.impulses0_start;
     sett.impulses1_previous = sett.impulses1_start;
 
-    LOG_INFO(FPSTR(S_AP), "impulses0=" << sett.impulses0_start );
-    LOG_INFO(FPSTR(S_AP), "impulses1=" << sett.impulses1_start );
+    LOG_INFO("impulses0=" << sett.impulses0_start );
+    LOG_INFO("impulses1=" << sett.impulses1_start );
 
     sett.setup_time = millis();
-    
+    sett.setup_finished_counter++;
+
     sett.crc = FAKE_CRC; // todo: сделать нормальный crc16
     storeConfig(sett);
 }

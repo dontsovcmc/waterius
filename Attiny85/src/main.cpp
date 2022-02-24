@@ -17,10 +17,20 @@
 #endif
 
 
-#define FIRMWARE_VER 21    // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 24    // Передается в ESP и на сервер в данных.
   
 /*
 Версии прошивок 
+
+24 - 2022.02.22 - neitri, dontsovcmc
+	1. Передача флага о том, что пробуждение по кнопке
+	2. Передача количества включений режима настройки
+	3. Убрано измерение напряжение, пусть его считает ESP
+
+23 - ветка "8times" - 8 раз в секунду проверка входов
+
+22 - 2021.07.13 - dontsovcmc
+	1. переписана работа с watchdog: чип перезагрузится в случае сбоя
 
 21 - 2021.07.01 - dontsovcmc
     1. переписана работа с watchdog
@@ -106,14 +116,14 @@ static ButtonB  button(2);	   // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1);  // Питание на ESP 
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, WATERIUS_2C, 
+struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_2C, 
 					   {CounterState_e::CLOSE, CounterState_e::CLOSE},
 				       {0, 0},
 					   {0, 0},
 					    0, 0
 					 };
 
-uint16_t wakeup_period_min;
+uint32_t wakeup_period;
 
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
@@ -124,10 +134,10 @@ static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
 
 SlaveI2C slaveI2C;
 
-volatile uint16_t wdt_count;
+volatile uint32_t wdt_count;
 
 /* Вектор прерываний сторожевого таймера watchdog */
-ISR( WDT_vect ) { 
+ISR(WDT_vect) { 
 	++wdt_count;
 }  
 
@@ -140,16 +150,22 @@ inline void counting() {
 
 	if (counter0.is_impuls()) {
 		info.data.value0++;	  //нужен т.к. при пробуждении запрашиваем данные
+		info.adc.adc0 = counter0.adc;		
 		info.states.state0 = counter0.state;
-		info.adc.adc0 = counter0.adc;
 		storage.add(info.data);
 	}
 #ifndef LOG_ON
 	if (counter1.is_impuls()) {
 		info.data.value1++;
-		info.states.state1 = counter1.state;
 		info.adc.adc1 = counter1.adc;
+		info.states.state1 = counter1.state;
 		storage.add(info.data);
+
+		//delayMicroseconds(65000);
+		//delayMicroseconds(65000);
+		//delayMicroseconds(65000);
+		//delayMicroseconds(65000);
+		//delayMicroseconds(65000);
 	}
 #endif
 
@@ -162,92 +178,78 @@ inline void counting() {
 void setup() {
 
 	noInterrupts();
-	info.service = MCUSR; //причина перезагрузки
+	info.service = MCUSR; // причина перезагрузки
+	MCUSR = 0;            // без этого не работает после перезагрузки по watchdog
 	wdt_disable();
-	interrupts();
+    wdt_enable(WDTO_250MS);
+	interrupts(); 
 
+	set_sleep_mode( SLEEP_MODE_PWR_DOWN );
+
+	uint16_t size = storage.size();
 	if (storage.get(info.data)) { //не первая загрузка
-		info.resets = EEPROM.read(storage.size());
+		info.resets = EEPROM.read(size);
 		info.resets++;
-		EEPROM.write(storage.size(), info.resets);
+		EEPROM.write(size, info.resets);
 	} else {
-		EEPROM.write(storage.size(), 0);
+		EEPROM.write(size, info.resets);  // 0
+		EEPROM.write(size+1, info.setup_started_counter); // 0
 	}
 
-	wakeup_period_min = WAKEUP_DEFAULT_PER_MIN;
+	wakeup_period = WAKEUP_PERIOD_DEFAULT;
 
 	LOG_BEGIN(9600); 
 	LOG(F("==== START ===="));
-	LOG(F("MCUSR"));
-	LOG(info.service);
-	LOG(F("RESET"));
-	LOG(info.resets);
-	LOG(F("EEPROM used:"));
-	LOG(storage.size() + 1);
+	LOG(F("MCUSR")); LOG(info.service);
+	LOG(F("RESET")); LOG(info.resets);
+	LOG(F("EEPROM used:")); LOG(size + 2);
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
 }
 
 
-#define ONE_MINUTE 240  // 1 минута примерно равна 240 пробуждениям
-
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop() {
 	power_all_disable();  // Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
-
-	set_sleep_mode( SLEEP_MODE_PWR_DOWN );  // Режим сна
-
-	noInterrupts();
-	wdt_enable(WDTO_250MS); // разрешаем ватчдог 250 ms
-	interrupts(); 
-
-	// Цикл опроса входов
-	// Выход по прошествию wakeup_period_min минут или по нажатию кнопки
-	for (uint16_t i = 0; i < ONE_MINUTE && !button.pressed(); ++i)  {
-		wdt_count = 0;
-		
-		while (wdt_count < wakeup_period_min)
-		{
-			noInterrupts();
-
-			if (button.pressed()) { 
-				interrupts();  // Пользователь нажал кнопку
-				break;
-			} else 	{
-				counting(); //Опрос входов. Тут т.к. https://github.com/dontsovcmc/waterius/issues/76
-
-				wdt_reset();
-				WDTCR |= _BV(WDIE); 
-				interrupts();
-				sleep_mode();  // Спим (WDTCR)
-			}
-		}
-	}
-		
-	wdt_disable();        // disable watchdog
-	power_all_enable();   // power everything back on
-
-	storage.get(info.data);     // Берем из хранилища текущие значения импульсов
 	
+	wdt_count = 0;
+	while ((wdt_count < wakeup_period) && !button.pressed())
+	{		
+		counting(); 
+		WDTCR |= _BV(WDIE); 
+		sleep_mode();
+	}
+
+	power_all_enable();
+
 	LOG_BEGIN(9600);
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
 	
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит 
-	// иначе ESP запустится в режиме программирования (да-да кнопка на i2c и 2 пине ESP)
+	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания 
 	unsigned long wake_up_limit;
-	if (button.wait_release() > LONG_PRESS_MSEC) {
-
+	if (button.wait_release() > LONG_PRESS_MSEC) { //wdt_reset внутри wait_release
 		LOG(F("SETUP pressed"));
 		slaveI2C.begin(SETUP_MODE);
 		wake_up_limit = SETUP_TIME_MSEC; //10 мин при настройке
+
+		uint16_t setup_started_addr = storage.size() + 1;
+		info.setup_started_counter = EEPROM.read(setup_started_addr);
+		info.setup_started_counter++;
+		EEPROM.write(setup_started_addr, info.setup_started_counter);
 	} else {
 
-		LOG(F("wake up for transmitting"));
-		slaveI2C.begin(TRANSMIT_MODE);
+		if (wdt_count < wakeup_period){
+			LOG(F("Manual transmit wake up"));
+			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
+		}else{
+			LOG(F("wake up for transmitting"));
+			slaveI2C.begin(TRANSMIT_MODE);
+		}
 		wake_up_limit = WAIT_ESP_MSEC; //15 секунд при передаче данных
 	}
 
@@ -255,13 +257,14 @@ void loop() {
 	LOG(F("ESP turn on"));
 	
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit)) {
-
-		info.voltage = readVcc();   // Текущее напряжение
+		
+		wdt_reset(); 
 
 		counting();
+
 		delayMicroseconds(65000);
 
-		if (button.wait_release() > LONG_PRESS_MSEC) {
+		if (button.wait_release() > LONG_PRESS_MSEC) {  //wdt_reset внутри wait_release
 			break; // принудительно выключаем
 		}
 	}

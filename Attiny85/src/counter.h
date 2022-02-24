@@ -2,6 +2,7 @@
 #define _COUNTER_h
 
 #include <Arduino.h>
+#include <avr/wdt.h>
 
 // значения компаратора с pull-up
 //    : замкнут (0 ом) - намур-замкнут (1к5) - намур-разомкнут (5к5) - обрыв линии
@@ -103,8 +104,8 @@ struct ButtonB
     explicit ButtonB(uint8_t pin)  
       : _pin(pin)
     {
-       DDRB &= ~_BV(pin);      // INPUT
-       PORTB &= ~_BV(_pin);     // INPUT
+        DDRB &= ~_BV(pin);      // INPUT
+        PORTB &= ~_BV(_pin);    // INPUT
     }
 
     inline bool digBit() 
@@ -127,8 +128,9 @@ struct ButtonB
     unsigned long wait_release() {
 
         unsigned long press_time = millis();
-        while(pressed())
-            ;  
+        while(pressed()) {
+            wdt_reset();  
+        }
         return millis() - press_time;
     }
 };

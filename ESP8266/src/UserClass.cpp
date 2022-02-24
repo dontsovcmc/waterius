@@ -1,6 +1,7 @@
 #include "UserClass.h"
 #include "WateriusHttps.h"
 #include "Logging.h"
+#include "string.h"
 #include <ArduinoJson.h>
 
 
@@ -10,14 +11,14 @@
 bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, const CalculatedData &cdata)
 {
     constexpr char THIS_FUNC_DESCRIPTION[] = "Send new data";
-    LOG_INFO(FPSTR(S_SND), "-- START -- " << THIS_FUNC_DESCRIPTION);
+    LOG_INFO("HTTP: -- START -- " << THIS_FUNC_DESCRIPTION);
 
     if (strnlen(settings.waterius_key, WATERIUS_KEY_LEN) == 0) {
-        LOG_INFO(FPSTR(S_SND), F("SKIP"));
+        LOG_INFO(F("HTTP: SKIP"));
         return false;
     };
     if (strnlen(settings.waterius_host, WATERIUS_HOST_LEN) == 0) {
-        LOG_INFO(FPSTR(S_SND), F("SKIP"));
+        LOG_INFO(F("HTTP: SKIP"));
         return false;
     }
 
@@ -33,7 +34,7 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["imp0"] =          data.impulses0;
     root["imp1"] =          data.impulses1;
     root["version"] =       data.version;
-    root["voltage"] =       (float)(data.voltage/1000.0);
+    root["voltage"] =       (float)(cdata.voltage/1000.0);
     root["version_esp"] =   FIRMWARE_VERSION;
     root["key"] =           settings.waterius_key;
     root["resets"] =        data.resets;
@@ -50,17 +51,23 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["period_min"] =    settings.wakeup_per_min;
     root["serial0"] =       settings.serial0;
     root["serial1"] =       settings.serial1;
+    root["mode"] =          settings.mode;
+    root["setup_finished"] = settings.setup_finished_counter;
+    root["setup_started"] = data.setup_started_counter;
+    root["channel"] = cdata.channel;
+    root["mac"] = cdata.router_mac;
 
     serializeJson(root, jsonBody);
-    //JSON size:  355  0.10.3
-    LOG_INFO(FPSTR(S_SND), "JSON size:\t" << jsonBody.length());
+    //JSON size 0.10.3:  355  
+    //JSON size 0.10.6:  439
+    LOG_INFO("JSON size:\t" << jsonBody.length());
     
     // Try to send
     WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(
         settings.waterius_host, settings.waterius_key, settings.waterius_email, jsonBody);
 
-    LOG_INFO(FPSTR(S_SND), "Send HTTP code:\t" << responseData.code);
-    LOG_INFO(FPSTR(S_SND), "-- END --");
+    LOG_INFO("Send HTTP code:\t" << responseData.code);
+    LOG_INFO("-- END --");
 
     return responseData.code == 200;
 }

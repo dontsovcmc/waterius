@@ -12,6 +12,7 @@
 //attiny85
 #define SETUP_MODE 1
 #define TRANSMIT_MODE 2
+#define MANUAL_TRANSMIT_MODE 3
 
 //model
 #define WATERIUS_CLASSIC 0
@@ -30,8 +31,9 @@ struct SlaveData {
     // Header
     uint8_t  version;     //Версия ПО Attiny
     uint8_t  service;     //Причина загрузки Attiny
-    uint32_t voltage;     //Напряжение питания в мВ (после включения wi-fi под нагрузкой )
-
+    uint16_t reserved4;     //Напряжение питания в мВ (после включения wi-fi под нагрузкой )
+    uint8_t  reserved; 
+    uint8_t  setup_started_counter;
     uint8_t  resets;   
     uint8_t  model;       //WATERIUS_CLASSIC или  WATERIUS_4C2W 
     uint8_t  state0;      //Состояние, вход 0

@@ -6,9 +6,9 @@
 #define WATERIUS_2C 0    // attiny85 - 2 счетчика импульсов
 
 /* 
-	Включение логирования
-	3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
-	При логировании не работает счетчик2 на 3-м пине (Вход 2).
+    Включение логирования
+    3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
+    При логировании не работает счетчик2 на 3-м пине (Вход 2).
 
     #define LOG_ON
 */
@@ -26,20 +26,25 @@
     #define LOG(x) mySerial.print(millis()); mySerial.print(F(" : ")); mySerial.println(x);
 #endif
 
-/*
-    Период отправки данных на сервер, мин. 
-    Используется если пользователь не сконфигурировал waterius или произошла ошибка контрольной суммы при приеме периода.
+/* 
+   1 минута примерно равна 240 пробуждениям
 */
-#define WAKEUP_DEFAULT_PER_MIN 15
+#define ONE_MINUTE 240L  
 
 /*
-	Аварийное отключение, если ESP зависнет и не пришлет команду "сон".
+    Период отправки данных на сервер, мин. 
+*/
+#define WAKEUP_PERIOD_DEFAULT 15L * ONE_MINUTE
+
+
+/*
+    Аварийное отключение, если ESP зависнет и не пришлет команду "сон".
 */
 #define WAIT_ESP_MSEC    120000UL      
 
 /*
-	Сколько милисекунд пользователь может 
-	настраивать ESP. Если не закончил, питание ESP выключится.
+    Сколько милисекунд пользователь может 
+    настраивать ESP. Если не закончил, питание ESP выключится.
 */
 #define SETUP_TIME_MSEC  600000UL 
 
@@ -84,19 +89,24 @@ struct Header {
     10 - 1010 - WDRF + EXTRF
     */
     uint8_t       service; 
-
+    
     /*
-    Напряжение питания в мВ.
+    ver 24: убрал напряжение
     */
-    uint16_t      voltage;
+    uint16_t      reserved;
 
     /*
     Для совместимости с 0.10.0.
     */
-    uint16_t      reserved;
+    uint8_t       reserved2;
+
+    /*
+    Включение режима настройки
+    */
+    uint8_t       setup_started_counter;
     
     /*
-    Количество перезагрузок.
+    Количество перезагрузок
     */
     uint8_t       resets;
 
@@ -114,7 +124,7 @@ struct Header {
     // HEADER_DATA_SIZE
 
     uint8_t       crc;
-    uint8_t       reserved2;
+    uint8_t       reserved3;
 };  //24 байт
 
 #define HEADER_DATA_SIZE 22

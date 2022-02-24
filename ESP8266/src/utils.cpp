@@ -14,7 +14,7 @@ bool setClock(const char* ntp_server)
 {
 	configTime(0, 0, ntp_server);
 
-	LOG_INFO(F("NTP"), F("Waiting for NTP time sync: "));
+	LOG_INFO(F("Waiting for NTP time sync: "));
 	uint32_t start = millis();
 	time_t now = time(nullptr);
 	
@@ -35,7 +35,7 @@ bool setClock()
 		time_t now = time(nullptr);
 		struct tm timeinfo;
 		gmtime_r(&now, &timeinfo);
-		LOG_INFO(F("NTP"), F("Current time: ") << asctime(&timeinfo));
+		LOG_INFO(F("Current time: ") << asctime(&timeinfo));
 		return true;
 	}
 	return false;
@@ -48,16 +48,25 @@ void print_wifi_mode()
     WiFiPhyMode_t m = WiFi.getPhyMode();
 	switch (m) {
 		case WIFI_PHY_MODE_11B: 
-			LOG_INFO(FPSTR(S_WIF), F("mode B"));
+			LOG_INFO(F("mode B"));
 			break;
 		case WIFI_PHY_MODE_11G: 
-			LOG_INFO(FPSTR(S_WIF), F("mode G"));
+			LOG_INFO(F("mode G"));
 			break;
 		case WIFI_PHY_MODE_11N: 
-			LOG_INFO(FPSTR(S_WIF), F("mode N"));
+			LOG_INFO(F("mode N"));
 			break;
 		default:
-			LOG_INFO(FPSTR(S_WIF), F("mode ") << (int)m);
+			LOG_INFO(F("mode ") << (int)m);
 		break;
 	}
+}
+
+void set_hostname()
+{
+    String hostname = String("Waterius-"+String(ESP.getChipId(), HEX));
+
+    if(!WiFi.hostname(hostname.c_str())) 
+        LOG_INFO("set hostname fail");
+    LOG_INFO("hostname " + String(WiFi.hostname()));
 }
