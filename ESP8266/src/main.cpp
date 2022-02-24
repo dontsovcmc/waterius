@@ -189,8 +189,8 @@ void loop()
                 //Перерасчет времени пробуждения
                 if (mode == TRANSMIT_MODE) {
                     time_t now = time(nullptr);
-                    if (now > sett.lastsend){
-                        time_t t1 = (now - sett.lastsend) / 60;
+                    time_t t1 = (now - sett.lastsend) / 60;
+                    if (t1>1 && data.version>=24){
                         LOG_INFO(F("Minutes diff:") << t1);
                         sett.set_wakeup = sett.wakeup_per_min * sett.set_wakeup / t1;
                     } else {
