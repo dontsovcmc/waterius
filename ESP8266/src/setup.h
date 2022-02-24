@@ -240,7 +240,7 @@ struct Settings
     /*
     Время последней отправки по расписанию
     */
-    time_t lastsend;   //Size of time_t: 8
+    time_t last_send;   //Size of time_t: 8
     
     /*
     Режим пробуждения
