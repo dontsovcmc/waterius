@@ -1,3 +1,5 @@
+#define DEBUG_ESP_HTTP_CLIENT 1
+#define DEBUG_ESP_PORT Serial
 #include "ESP8266HTTPClient.h"
 
 /**
