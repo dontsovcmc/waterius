@@ -1,7 +1,6 @@
 #ifndef _WATERIUS_INIT_h
 #define _WATERIUS_INIT_h
 
-#include <Arduino.h>
 #include "c_types.h"
 #include "string.h"
 
@@ -20,7 +19,5 @@ bool setClock();
 void print_wifi_mode();
 
 void set_hostname();
-
-String printIP(uint32_t &address);
 
 #endif

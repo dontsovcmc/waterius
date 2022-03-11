@@ -8,16 +8,13 @@
 #include <ESP8266WiFi.h>
 #include "Logging.h"
 
-#include <StreamString.h>
-#include <Print.h>
-
 #define NTP_CONNECT_TIMEOUT 3000UL
 
 bool setClock(const char* ntp_server)
 {
 	configTime(0, 0, ntp_server);
 
-	LOG_INFO(F("Waiting for NTP time sync: ") << ntp_server);
+	LOG_INFO(F("Waiting for NTP time sync: "));
 	uint32_t start = millis();
 	time_t now = time(nullptr);
 	
@@ -72,18 +69,4 @@ void set_hostname()
     if(!WiFi.hostname(hostname.c_str())) 
         LOG_INFO("set hostname fail");
     LOG_INFO("hostname " + String(WiFi.hostname()));
-}
-
-String printIP(uint32_t &address)
-{
-    StreamString sstr;
-    sstr.reserve(16); // 4 bytes with 3 chars max + 3 dots + nullterm, or '(IP unset)'
-    uint8_t *ip = (uint8_t *)&address;
-    for (uint8_t i = 0; i < 4; i++, ip++)
-    {
-        sstr.print(*ip, DEC);
-        if (i != 3)
-            sstr.print('.');
-    }
-    return sstr;
 }
