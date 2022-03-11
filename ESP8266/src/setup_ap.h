@@ -29,6 +29,7 @@ public:
         return String(WiFiManagerParameter::getValue()).toInt();
     }
 };
+
 class ShortParameter : public WiFiManagerParameter {
     public:
     ShortParameter(const char *id,const char *placeholder, short value, const uint8_t length = 10)
@@ -39,6 +40,7 @@ class ShortParameter : public WiFiManagerParameter {
         return String(WiFiManagerParameter::getValue()).toInt();
     }
 };
+
 class FloatParameter : public WiFiManagerParameter {
 public:
 
@@ -54,6 +56,7 @@ public:
         return val.toFloat();
     }
 };
+
 class IPAddressParameter : public WiFiManagerParameter {
 public:
 
@@ -72,7 +75,6 @@ public:
         return ip;
     }
 };
-
 
 class DropdownParameter : public WiFiManagerParameter {
     public:
@@ -103,6 +105,15 @@ class DropdownParameter : public WiFiManagerParameter {
     }
 };
 
+class EmailParameter : public WiFiManagerParameter {
+public:
+
+    EmailParameter(const char *id, const char *label, const char *defaultValue, const uint8_t length = 50)
+        : WiFiManagerParameter("")
+    {
+        init(id, label, defaultValue, length, " type=\"email\" pattern=\"[^@\\s]+@[^@\\s]+\\.[^@\\s]+\"", WFM_LABEL_BEFORE);
+    }
+};
 
 #endif
 
