@@ -100,7 +100,7 @@ void loop()
             //не будет ли роутер блокировать повторное подключение?
             
             // ухищрения, чтобы не стереть SSID, pwd
-            if (WiFi.getPersistent() == true) 
+            if (WiFi.getPersistent()) 
                 WiFi.persistent(false);   //disable saving wifi config into SDK flash area
             WiFi.disconnect(true);
             WiFi.mode(WIFI_OFF); // отключаем WIFI

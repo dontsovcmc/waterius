@@ -93,7 +93,7 @@ bool loadConfig(struct Settings &sett)
 
     } else {    
         // Конфигурация не была сохранена в EEPROM, инициализируем с нуля
-        LOG_INFO(F("Configuration CRC failed=") << sett.crc );
+        LOG_INFO(F("ESP config CRC failed. Maybe first run. Init configuration."));
         
         // Заполняем нулями всю конфигурацию
         memset(&sett, 0, sizeof(sett));
@@ -162,9 +162,12 @@ bool loadConfig(struct Settings &sett)
 #if defined(SSID_PASS)
         #pragma message(VAR_NAME_VALUE(SSID_NAME))
         #pragma message(VAR_NAME_VALUE(SSID_PASS))
-        WiFi.begin(VALUE(SSID_NAME), VALUE(SSID_PASS), 0, NULL, false);  //connect=false, т.к. мы следом вызываем Wifi.begin
-        LOG_INFO(F("default ssid=") << VALUE(SSID_NAME) << F(", pwd=") << VALUE(SSID_PASS));
         
+        WiFi.persistent(true);  // begin() will save ssid, pwd to flash
+        WiFi.begin(VALUE(SSID_NAME), VALUE(SSID_PASS), 0, NULL, false);  //connect=false, т.к. мы следом вызываем Wifi.begin
+        WiFi.persistent(false); // don't save ssid, pwd to flash in this run
+        LOG_INFO(F("default ssid=") << VALUE(SSID_NAME) << F(", pwd=") << VALUE(SSID_PASS));
+
         sett.crc = FAKE_CRC; //чтобы больше не попадать сюда
         return true;
 #endif

@@ -3,11 +3,14 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.10.6"
+#define FIRMWARE_VERSION "0.10.7"
   
 
 /*
 Версии прошивки для ESP
+
+0.10.7 - 2022.04.20 - dontsovcmc
+                      1. issues/227: не работали ssid, pwd указанные при компиляции 
 
 0.10.6 - 2022.02.18 - neitri, dontsovcmc
                       1. espressif8266@3.2.0
