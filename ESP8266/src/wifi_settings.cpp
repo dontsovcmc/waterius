@@ -2,7 +2,6 @@
 #include "wifi_settings.h"
 #include "Logging.h"
 
-#include "Blynk/BlynkConfig.h"
 #include <ESP8266WiFi.h>
 #include <IPAddress.h>
 #include <EEPROM.h>
@@ -65,10 +64,6 @@ bool loadConfig(struct Settings &sett)
         LOG_INFO(F("host=") << sett.waterius_host << F(" key=") << sett.waterius_key);
         LOG_INFO(F("wakeup min=") << sett.wakeup_per_min);
         
-        LOG_INFO(F("--- Blynk.cc ---- "));
-        LOG_INFO(F("host=") << sett.blynk_host << F(" key=") << sett.blynk_key);
-        LOG_INFO(F("email=") << sett.blynk_email);
-
         LOG_INFO(F("--- MQTT ---- "));
         LOG_INFO(F("host=") << sett.mqtt_host << F(" port=") << sett.mqtt_port);
         LOG_INFO(F("login=") << sett.mqtt_login << F(" pass=") << sett.mqtt_password);
@@ -103,13 +98,11 @@ bool loadConfig(struct Settings &sett)
 
         strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, WATERIUS_HOST_LEN);
 
-        strncpy0(sett.blynk_host, BLYNK_DEFAULT_DOMAIN, BLYNK_HOST_LEN);
+        strncpy0(sett.blynk_host, "", BLYNK_HOST_LEN);
 
-        String email_title = F("Новые показания {DEVICE_NAME}");
-        strncpy0(sett.blynk_email_title, email_title.c_str(), BLYNK_EMAIL_TITLE_LEN);
+        strncpy0(sett.blynk_email_title, "", BLYNK_EMAIL_TITLE_LEN);
 
-        String email_template = F("Показания:<br>Холодная: {V1}м³(+{V4}л)<br>Горячая: {V0}м³ (+{V3}л)<hr>Питание: {V2}В<br>Resets: {V5}");
-        strncpy0(sett.blynk_email_template, email_template.c_str(), BLYNK_EMAIL_TEMPLATE_LEN);
+         strncpy0(sett.blynk_email_template, "", BLYNK_EMAIL_TEMPLATE_LEN);
 
         //strncpy0(sett.mqtt_host, MQTT_DEFAULT_HOST, MQTT_HOST_LEN);
         String defaultTopic = String(MQTT_DEFAULT_TOPIC_PREFIX) + String(getChipId()) + "/";
@@ -127,13 +120,6 @@ bool loadConfig(struct Settings &sett)
         sett.set_wakeup = DEFAULT_WAKEUP_PERIOD_MIN;
         
 //Можно задать константы при компиляции, чтобы Ватериус сразу заработал
-
-#ifdef BLYNK_KEY    
-        #pragma message(VAR_NAME_VALUE(BLYNK_KEY))
-        String key = VALUE(BLYNK_KEY);
-        strncpy0(sett.blynk_key, key.c_str(), BLYNK_KEY_LEN);
-        LOG_INFO(F("default Blynk key=") << key);
-#endif
 
 #ifdef WATERIUS_HOST
         #pragma message(VAR_NAME_VALUE(WATERIUS_HOST))

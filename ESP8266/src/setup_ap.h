@@ -44,10 +44,10 @@ class ShortParameter : public WiFiManagerParameter {
 class FloatParameter : public WiFiManagerParameter {
 public:
 
-    FloatParameter(const char *id, const char *placeholder, float value, const uint8_t length = 10)
+    FloatParameter(const char *id, const char *placeholder, float value, const uint8_t length = 10, int labelPlacement = WFM_LABEL_BEFORE)
         : WiFiManagerParameter("") {
             
-        init(id, placeholder, String(value,3).c_str(), length, " type=\"number\" step=\"0.001\" placeholder=\"0,000\"", WFM_LABEL_BEFORE);
+        init(id, placeholder, String(value,3).c_str(), length, " type=\"number\" step=\"0.001\" placeholder=\"0,000\"", labelPlacement);
     }
 
     float getValue() {

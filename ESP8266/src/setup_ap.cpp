@@ -13,7 +13,7 @@
 #include "master_i2c.h"
 #include "porting.h"
 
-#define AP_NAME "Waterius_" FIRMWARE_VERSION
+#define AP_NAME "watermer_" FIRMWARE_VERSION
 
 extern SlaveData data;
 extern MasterI2C masterI2C;
@@ -69,15 +69,26 @@ void update_data(String &message)
         message += state1bad;
         message += F(", \"elapsed\": ");
         message += String((uint32_t)(SETUP_TIME_SEC - millis()/1000.0));
-        message += F(", \"factor_cold_feedback\": ");
+        message += F(", \"fc_fb_control\": \"Вес импульса ");
         message += String(get_auto_factor(runtime_data.impulses1, data.impulses1));
-        message += F(", \"factor_hot_feedback\": ");
+        message += F(" л/имп\", \"fh_fb_control\": \"Вес импульса ");
         message += String(get_auto_factor(runtime_data.impulses0, data.impulses0));
-        message += F(", \"error\": \"\"");
+        message += F(" л/имп\", \"error\": \"\"");
         message += F("}");
     }
     else {
-        message = F("{\"error\": \"Ошибка связи с МК\", \"factor_cold_feedback\": 1, \"factor_hot_feedback\": 1}");
+        String state0good(F("\"\""));
+        String state0bad(F("\"Не подключён\""));
+        String state1good(F("\"\""));
+        String state1bad(F("\"Не подключён\""));
+        message = F("{\"error\": \"Ошибка связи с МК\","
+                    "\"elapsed\": 111,"
+                    "\"state0good\": \"\","
+                    "\"state1good\": \"Подключён\","
+                    "\"state0bad\": \"Не подключён\","
+                    "\"state1bad\": \"\","
+                    "\"fc_fb_control\": \"Вес импульса 1 л/имп\", "
+                    "\"fh_fb_control\": \"Вес импульса 1 л/имп\"}");
     }
 }
 
@@ -93,7 +104,7 @@ void handleStates(){
 void handleNetworks() {
   LOG_INFO(F("/networks request"));
   String message;
-  message.reserve(2000);
+  message.reserve(4000);
   wm.WiFi_scanNetworks(wm.server->hasArg(F("refresh")),false); //wifiscan, force if arg refresh
   wm.getScanItemOut(message);  
   wm.server->send(200, F("text/plain"), message);
@@ -114,7 +125,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     
     // Настройки HTTP 
 
-    WiFiManagerParameter title_email("<h3>Ваша электронная почта с сайта waterius.ru</h3><p>Заполните, чтобы увидеть показания на сайте</p>");
+    WiFiManagerParameter title_email("<h3>Электронная почта с watermer.ru</h3><div class='form-inner-wrap'><p class='text-light'>Заполните, email указанный при регистрации на сайте или в мобильном приложении, чтобы увидеть показания</p>");
     wm.addParameter(&title_email);
 
     EmailParameter param_waterius_email("wmail", "Электронная почта",  sett.waterius_email, EMAIL_LEN-1);
@@ -122,33 +133,18 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     // Чекбокс доп. настроек
 
-    WiFiManagerParameter checkbox("<br><br><br><label class='cnt'>Дополнительные настройки<input type='checkbox' id='chbox' name='chbox' onclick='advSett()'><span class='mrk'></span></label>");
+    WiFiManagerParameter checkbox("<label class='cnt cnt-toggle'>Дополнительные настройки<input type='checkbox' id='chbox' name='chbox' onclick='advSett()'><span class='mrk'></span></label>");
     wm.addParameter(&checkbox);
 
-    WiFiManagerParameter div_start("<div id='advanced' style='display:none'>");
+    WiFiManagerParameter div_start("<div id='advanced' style='display:none'>");  //form-inner-wrap
     wm.addParameter(&div_start);
 
     // Сервер http запроса 
     WiFiManagerParameter param_waterius_host( "whost", "Адрес сервера (включает отправку)",  sett.waterius_host, WATERIUS_HOST_LEN-1);
     wm.addParameter(&param_waterius_host);
 
-    ShortParameter param_wakeup_per("mperiod", "Период отправки показаний, мин.",  sett.wakeup_per_min);
-    wm.addParameter(&param_wakeup_per);
-
-    // Настройки Blynk.сс
-
-    WiFiManagerParameter label_blynk("<h3>Blynk.cc</h3>");
-    wm.addParameter(&label_blynk);
-    WiFiManagerParameter param_blynk_host( "bhost", "Адрес сервера",  sett.blynk_host, BLYNK_HOST_LEN-1);
-    wm.addParameter(&param_blynk_host);
-    WiFiManagerParameter param_blynk_key( "bkey", "Уникальный ключ (включает отправку)",  sett.blynk_key, BLYNK_KEY_LEN-1);
-    wm.addParameter(&param_blynk_key);
-    WiFiManagerParameter param_blynk_email( "bemail", "Адрес эл. почты (включает ежедневные письма)",  sett.blynk_email, EMAIL_LEN-1);
-    wm.addParameter(&param_blynk_email);
-    WiFiManagerParameter param_blynk_email_title( "btitle", "Тема письма",  sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN-1);
-    wm.addParameter(&param_blynk_email_title);
-    WiFiManagerParameter param_blynk_email_template( "btemplate", "Текст письма",  sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN-1);
-    wm.addParameter(&param_blynk_email_template);
+    //ShortParameter param_wakeup_per("mperiod", "Период отправки показаний, мин.",  sett.wakeup_per_min);
+    //wm.addParameter(&param_wakeup_per);
 
     // Настройки MQTT
     
@@ -179,15 +175,31 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     IPAddressParameter param_ip("ip", "Статический ip<br/>(DHCP, если равен 0.0.0.0)",  sett.ip);
     wm.addParameter(&param_ip);
+    
+    WiFiManagerParameter frm_row("<div class='frm-row'>");
+    wm.addParameter(&frm_row);
+
+    WiFiManagerParameter field_half1("<div class='frm-field field-half'>");
+    wm.addParameter(&field_half1);
     IPAddressParameter param_gw("gw", "Шлюз",  sett.gateway);
     wm.addParameter(&param_gw);
+    WiFiManagerParameter field_half1_end("</div>");
+    wm.addParameter(&field_half1_end);
+
+    WiFiManagerParameter field_half2("<div class='frm-field field-half'>");
+    wm.addParameter(&field_half2);
     IPAddressParameter param_mask("sn", "Маска подсети",  sett.mask);
     wm.addParameter(&param_mask);
+    WiFiManagerParameter field_half2_end("</div>");
+    wm.addParameter(&field_half2_end);
+
+    WiFiManagerParameter frm_row_end("</div>");
+    wm.addParameter(&frm_row_end);
 
     WiFiManagerParameter label_factor_settings("<h3>Параметры счетчиков</h3>");
     wm.addParameter(&label_factor_settings);
 
-    WiFiManagerParameter label_cold_factor("<b>Холодная вода л/имп</b>");
+    WiFiManagerParameter label_cold_factor("<div class='label'>Холодная вода л/имп</div>");
     wm.addParameter(&label_cold_factor);
     
     DropdownParameter dropdown_cold_factor("factorCold");
@@ -197,10 +209,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     dropdown_cold_factor.add_option(100, "100", sett.factor1);
     wm.addParameter(&dropdown_cold_factor);
 
-    WiFiManagerParameter label_factor_cold_feedback("<p id='fc_fb_control'>Вес импульса: <a id='factor_cold_feedback'></a> л/имп");
+    WiFiManagerParameter label_factor_cold_feedback("<div class='label' id='fc_fb_control'></div>");
     wm.addParameter(&label_factor_cold_feedback);
 
-    WiFiManagerParameter label_hot_factor("<p><b>Горячая вода л/имп</b>");
+    WiFiManagerParameter label_hot_factor("<div class='label'>Горячая вода л/имп</div>");
     wm.addParameter(&label_hot_factor);
     
     DropdownParameter dropdown_hot_factor("factorHot");
@@ -211,43 +223,43 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     dropdown_hot_factor.add_option(100, "100", sett.factor0);
     wm.addParameter(&dropdown_hot_factor);
 
-    WiFiManagerParameter label_factor_hot_feedback("<p id='fh_fb_control'>Вес импульса: <a id='factor_hot_feedback'></a> л/имп");
+    WiFiManagerParameter label_factor_hot_feedback("<div class='label' id='fh_fb_control'></div>");
     wm.addParameter( &label_factor_hot_feedback);
 
     // конец доп. настроек
-    WiFiManagerParameter div_end("</div>");
+    WiFiManagerParameter div_end("</div></div>");  //form-inner-wrap + id="advanced"
     wm.addParameter(&div_end);
     
     // Счетчиков
-    WiFiManagerParameter cold_water("<h3>Холодная вода</h3>");
+    WiFiManagerParameter cold_water("<h3><div class='elm-cold'></div>Холодная вода</h3>");
     wm.addParameter(&cold_water);
             
-    WiFiManagerParameter label_cold_info("<p>Во время первой настройки спустите унитаз 1&ndash;3 раза (или вылейте не&nbsp;меньше 4&nbsp;л.), пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;. Если статус &laquo;не&nbsp;подключен&raquo;, проверьте провод в&nbsp;разъёме. Ватериус так определяет тип счётчика. Счётчики не влияют на связь сервером.</p>");
+    WiFiManagerParameter label_cold_info("<p class='text-light'>Во время первой настройки спустите унитаз 1&ndash;3 раза (или вылейте не&nbsp;меньше 4&nbsp;л.), пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;.<br><br>Если статус &laquo;не&nbsp;подключен&raquo;, проверьте провод в&nbsp;разъёме. Ватериус так определяет тип счётчика. Счётчики не влияют на связь сервером.</p>");
     wm.addParameter( &label_cold_info);
 
-    WiFiManagerParameter label_cold_state("<b><p class='bad' id='state1bad'></p><p class='good' id='state1good'></p></b>");
+    WiFiManagerParameter label_cold_state("<b><p class='no-good' id='state1bad'></p><p class='good' id='state1good'></p></b>");
     wm.addParameter( &label_cold_state);
 
-    WiFiManagerParameter label_cold("<label class='cold label'>Показания холодной воды</label>");
+    WiFiManagerParameter label_cold("<label class='cold label' for='ch1'>Показания холодной воды</label>");
     wm.addParameter( &label_cold);
-    FloatParameter param_channel1_start( "ch1", "",  cdata.channel1);
+    FloatParameter param_channel1_start("ch1", "",  cdata.channel1);
     wm.addParameter( &param_channel1_start);
     
     WiFiManagerParameter param_serial_cold("serialCold", "серийный номер",  sett.serial1, SERIAL_LEN-1);
     wm.addParameter(&param_serial_cold);
 
-    WiFiManagerParameter hot_water("<h3>Горячая вода</h3>");
+    WiFiManagerParameter hot_water("<h3><div class='elm-hot'></div>Горячая вода</h3>");
     wm.addParameter(&hot_water);
             
-    WiFiManagerParameter label_hot_info("<p>Откройте кран горячей воды, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
+    WiFiManagerParameter label_hot_info("<p class='text-light'>Откройте кран горячей воды, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
     wm.addParameter( &label_hot_info);
     
-    WiFiManagerParameter label_hot_state("<b><p class='bad' id='state0bad'></p><p class='good' id='state0good'></p></b>");
+    WiFiManagerParameter label_hot_state("<b><p class='no-good' id='state0bad'></p><p class='good' id='state0good'></p></b>");
     wm.addParameter( &label_hot_state );
 
-    WiFiManagerParameter label_hot("<label class='hot label'>Показания горячей воды</label>");
+    WiFiManagerParameter label_hot("<label class='hot label' for='ch0'>Показания горячей воды</label>");
     wm.addParameter( &label_hot);
-    FloatParameter param_channel0_start( "ch0", "",  cdata.channel0);
+    FloatParameter param_channel0_start("ch0", "",  cdata.channel0);
     wm.addParameter( &param_channel0_start);
 
     WiFiManagerParameter param_serial_hot("serialHot", "серийный номер",  sett.serial0, SERIAL_LEN-1);
@@ -283,12 +295,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
                                            sett.waterius_email);
     }
 
-    strncpy0(sett.blynk_key, param_blynk_key.getValue(), BLYNK_KEY_LEN);
-    strncpy0(sett.blynk_host, param_blynk_host.getValue(), BLYNK_HOST_LEN);
-    strncpy0(sett.blynk_email, param_blynk_email.getValue(), EMAIL_LEN);
-    strncpy0(sett.blynk_email_title, param_blynk_email_title.getValue(), BLYNK_EMAIL_TITLE_LEN);
-    strncpy0(sett.blynk_email_template, param_blynk_email_template.getValue(), BLYNK_EMAIL_TEMPLATE_LEN);
-
     strncpy0(sett.mqtt_host, param_mqtt_host.getValue(), MQTT_HOST_LEN);
     strncpy0(sett.mqtt_login, param_mqtt_login.getValue(), MQTT_LOGIN_LEN);
     strncpy0(sett.mqtt_password, param_mqtt_password.getValue(), MQTT_PASSWORD_LEN);
@@ -300,10 +306,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.mask = param_mask.getValue();
     
     //период отправки данных
-    sett.wakeup_per_min = param_wakeup_per.getValue();
-    sett.set_wakeup = sett.wakeup_per_min;
-    LOG_INFO("wakeup period, min=" << sett.wakeup_per_min);
-    LOG_INFO("wakeup period, tick=" << sett.set_wakeup);
+    //sett.wakeup_per_min = param_wakeup_per.getValue();
+    //sett.set_wakeup = sett.wakeup_per_min;
+    //LOG_INFO("wakeup period, min=" << sett.wakeup_per_min);
+    //LOG_INFO("wakeup period, tick=" << sett.set_wakeup);
 
     //Веса импульсов
     LOG_INFO("hot dropdown=" << dropdown_hot_factor.getValue());

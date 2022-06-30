@@ -27,7 +27,7 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
     PubSubClient client(wclient);
     client.setServer(sett.mqtt_host, sett.mqtt_port);
 
-    String clientId = "waterius-" + String(ESP.getChipId());
+    String clientId = "watermer-" + String(ESP.getChipId());
 
     const char *login = strnlen(sett.mqtt_login, MQTT_LOGIN_LEN) ? sett.mqtt_login : NULL;
     const char *pass = strnlen(sett.mqtt_password, MQTT_PASSWORD_LEN) ? sett.mqtt_password : NULL;
