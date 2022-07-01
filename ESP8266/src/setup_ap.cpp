@@ -67,28 +67,24 @@ void update_data(String &message)
         message += state1good;
         message += F(", \"state1bad\": ");
         message += state1bad;
-        message += F(", \"elapsed\": ");
+        message += F(", \"elapsed\": \"");
         message += String((uint32_t)(SETUP_TIME_SEC - millis()/1000.0));
-        message += F(", \"fc_fb_control\": \"Вес импульса ");
+        message += F(" сек. \", \"fc_feedback\": \"Вес импульса ");
         message += String(get_auto_factor(runtime_data.impulses1, data.impulses1));
-        message += F(" л/имп\", \"fh_fb_control\": \"Вес импульса ");
+        message += F(" л/имп\", \"fh_feedback\": \"Вес импульса ");
         message += String(get_auto_factor(runtime_data.impulses0, data.impulses0));
         message += F(" л/имп\", \"error\": \"\"");
         message += F("}");
     }
     else {
-        String state0good(F("\"\""));
-        String state0bad(F("\"Не подключён\""));
-        String state1good(F("\"\""));
-        String state1bad(F("\"Не подключён\""));
         message = F("{\"error\": \"Ошибка связи с МК\","
-                    "\"elapsed\": 111,"
+                    "\"elapsed\": \"111 сек\","
                     "\"state0good\": \"\","
                     "\"state1good\": \"Подключён\","
                     "\"state0bad\": \"Не подключён\","
                     "\"state1bad\": \"\","
-                    "\"fc_fb_control\": \"Вес импульса 1 л/имп\", "
-                    "\"fh_fb_control\": \"Вес импульса 1 л/имп\"}");
+                    "\"fc_feedback\": \"Вес импульса 1 л/имп\", "
+                    "\"fh_feedback\": \"Вес импульса 1 л/имп\"}");
     }
 }
 
@@ -209,7 +205,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     dropdown_cold_factor.add_option(100, "100", sett.factor1);
     wm.addParameter(&dropdown_cold_factor);
 
-    WiFiManagerParameter label_factor_cold_feedback("<div class='label' id='fc_fb_control'></div>");
+    WiFiManagerParameter label_factor_cold_feedback("<div class='label' id='fc_fb_control'><div id='fc_feedback'></div></div>");
     wm.addParameter(&label_factor_cold_feedback);
 
     WiFiManagerParameter label_hot_factor("<div class='label'>Горячая вода л/имп</div>");
@@ -223,7 +219,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     dropdown_hot_factor.add_option(100, "100", sett.factor0);
     wm.addParameter(&dropdown_hot_factor);
 
-    WiFiManagerParameter label_factor_hot_feedback("<div class='label' id='fh_fb_control'></div>");
+    WiFiManagerParameter label_factor_hot_feedback("<div class='label' id='fh_fb_control'><div id='fh_feedback'></div></div>");
     wm.addParameter( &label_factor_hot_feedback);
 
     // конец доп. настроек
