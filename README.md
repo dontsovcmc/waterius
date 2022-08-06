@@ -1,5 +1,5 @@
 ### Автономное устройство для передачи показаний импульсных счётчиков воды по Wi-Fi
-
+Настройте передачу показаний в управляющую компанию на сайте <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">waterius.ru</a>. 112 сайтов УК по России и СНГ.
 # Ватериус 0.10.5
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
 
