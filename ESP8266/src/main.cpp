@@ -94,8 +94,26 @@ void loop()
         if (mode == SETUP_MODE) { 
             // Режим настройки - запускаем точку доступа на 192.168.4.1
             // Запускаем точку доступа с вебсервером
-            WiFi.mode(WIFI_AP_STA);
-            setup_ap(sett, data, cdata);
+            //WiFi.mode(WIFI_AP_STA);
+            unsigned long timeoutSC = millis()+60000;
+            LOG_INFO(F("Start SmartConfig"));
+            WiFi.beginSmartConfig();
+            while(!WiFi.smartConfigDone() && millis()<timeoutSC){
+                delay(1000);
+            }
+            if(!WiFi.smartConfigDone()){
+                LOG_INFO(F("Stop SmartConfig"));
+                WiFi.stopSmartConfig();
+                
+                LOG_INFO(F("WIFI_AP_STA"));
+                WiFi.mode(WIFI_AP_STA);
+                setup_ap(sett, data, cdata);
+            }else{
+                LOG_INFO(F("SmartConfig Success"));
+                
+                LOG_INFO(F("WIFI_STA"));
+                WiFi.mode(WIFI_STA);
+            }
             
             //не будет ли роутер блокировать повторное подключение?
             
