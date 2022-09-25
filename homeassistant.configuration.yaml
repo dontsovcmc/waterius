@@ -1,4 +1,5 @@
 # кусок конфигурации отсутствует
+# в актуальной версии настраивается через графический интерфейс
 mqtt:
   discovery: true
   discovery_prefix: homeassistant
@@ -7,112 +8,102 @@ mqtt:
     topic: 'homeassistant/status'
     payload: 'online'
 
-sensor:
-  # waterius на кухне
-  - platform: mqtt
-    name: "Kitchen Cold Water"
-    unique_id: wateriuskcwm
-    state_topic: "waterius/kitchen/ch1"
-    value_template: "{{ value }}"
-    unit_of_measurement: "м3"
-    icon: mdi:water
+# С недавнего времени появился домен mqtt в котором описываются все датчики
+mqtt: 
+    sensor:
+    # waterius на кухне
+      - name: "Kitchen Cold Water"
+        unique_id: wateriuskcwm
+        state_topic: "waterius/kitchen/ch1"
+        value_template: "{{ value }}"
+        unit_of_measurement: "м3"
+        icon: mdi:water
 
-  - platform: mqtt
-    name: "Kitchen Hot Water"
-    unique_id: wateriuskhwm
-    state_topic: "waterius/kitchen/ch0"
-    value_template: "{{ value }}"
-    unit_of_measurement: "м3"
-    icon: mdi:water
+      - name: "Kitchen Hot Water"
+        unique_id: wateriuskhwm
+        state_topic: "waterius/kitchen/ch0"
+        value_template: "{{ value }}"
+        unit_of_measurement: "м3"
+        icon: mdi:water
 
-  - platform: mqtt
-    name: "Kitchen Cold Day"
-    unique_id: wateriuskcwd
-    state_topic: "waterius/kitchen/delta1"
-    value_template: "{{ value }}"
-    unit_of_measurement: "литр"
-    icon: mdi:delta
+      - name: "Kitchen Cold Day"
+        unique_id: wateriuskcwd
+        state_topic: "waterius/kitchen/delta1"
+        value_template: "{{ value }}"
+        unit_of_measurement: "литр"
+        icon: mdi:delta
 
-  - platform: mqtt
-    name: "Kitchen Hot Day"
-    unique_id: wateriuskhwd
-    state_topic: "waterius/kitchen/delta0"
-    value_template: "{{ value }}"
-    unit_of_measurement: "литр"
-    icon: mdi:delta
+      - name: "Kitchen Hot Day"
+        unique_id: wateriuskhwd
+        state_topic: "waterius/kitchen/delta0"
+        value_template: "{{ value }}"
+        unit_of_measurement: "литр"
+        icon: mdi:delta
 
-  - platform: mqtt
-    name: "Kitchen Voltage"
-    unique_id: wateriuskv
-    state_topic: "waterius/kitchen/voltage"
-    value_template: "{{ value }}"
-    unit_of_measurement: "V"
-    icon: mdi:battery
+      - name: "Kitchen Voltage"
+        unique_id: wateriuskv
+        state_topic: "waterius/kitchen/voltage"
+        value_template: "{{ value }}"
+        unit_of_measurement: "V"
+        icon: mdi:battery
 
-  # waterius в ванной
+      # waterius в ванной
 
-  - platform: mqtt
-    name: "Bathroom Cold Water"
-    unique_id: wateriusbcwm
-    state_topic: "waterius/bathroom/ch1"
-    value_template: "{{ value }}"
-    unit_of_measurement: "м3"
-    icon: mdi:water
+      - name: "Bathroom Cold Water"
+        unique_id: wateriusbcwm
+        state_topic: "waterius/bathroom/ch1"
+        value_template: "{{ value }}"
+        unit_of_measurement: "м3"
+        icon: mdi:water
 
-  - platform: mqtt
-    name: "Bathroom Hot Water"
-    unique_id: wateriusbhwm
-    state_topic: "waterius/bathroom/ch0"
-    value_template: "{{ value }}"
-    unit_of_measurement: "м3"
-    icon: mdi:water
+      - name: "Bathroom Hot Water"
+        unique_id: wateriusbhwm
+        state_topic: "waterius/bathroom/ch0"
+        value_template: "{{ value }}"
+        unit_of_measurement: "м3"
+        icon: mdi:water
 
-  - platform: mqtt
-    name: "Bathroom Cold Day"
-    unique_id: wateriusbcwd
-    state_topic: "waterius/bathroom/delta1"
-    value_template: "{{ value }}"
-    unit_of_measurement: "литр"
-    icon: mdi:delta
+      - name: "Bathroom Cold Day"
+        unique_id: wateriusbcwd
+        state_topic: "waterius/bathroom/delta1"
+        value_template: "{{ value }}"
+        unit_of_measurement: "литр"
+        icon: mdi:delta
 
-  - platform: mqtt
-    name: "Bathroom Hot Day"
-    unique_id: wateriusbhwd
-    state_topic: "waterius/bathroom/delta0"
-    value_template: "{{ value }}"
-    unit_of_measurement: "литр"
-    icon: mdi:delta
+      - name: "Bathroom Hot Day"
+        unique_id: wateriusbhwd
+        state_topic: "waterius/bathroom/delta0"
+        value_template: "{{ value }}"
+        unit_of_measurement: "литр"
+        icon: mdi:delta
 
-  - platform: mqtt
-    name: "Bathroom Voltage"
-    unique_id: wateriusbv
-    state_topic: "waterius/bathroom/voltage"
-    value_template: "{{ value }}"
-    unit_of_measurement: "V"
-    icon: mdi:battery
-    
-    # Создаём сенсор низкого напряжения питания Ватериуса, для последующего использования в автоматизациях
-  - platform: mqtt
-    name: 'Напряжение питания ватериуса'
-    unique_id: wateriuskvlow
-    state_topic: 'waterius/kitchen/voltage_low'
-    value_template: > 
-      {%if value == 1 %}
-        'Низкое напряжение'
-      {% else %}
-        'Напряжение в порядке'
-      {% endif %}
-  
-  - platform: mqtt
-    name: 'Напряжение питания ватериуса'
-    unique_id: wateriusbvlow
-    state_topic: 'waterius/bathroom/voltage_low'
-    value_template: > 
-      {%if value == 1 %}
-        'Низкое напряжение'
-      {% else %}
-        'Напряжение в порядке'
-      {% endif %}
+      - name: "Bathroom Voltage"
+        unique_id: wateriusbv
+        state_topic: "waterius/bathroom/voltage"
+        value_template: "{{ value }}"
+        unit_of_measurement: "V"
+        icon: mdi:battery
+
+        # Создаём сенсор низкого напряжения питания Ватериуса, для последующего использования в автоматизациях
+      - name: 'Напряжение питания ватериуса'
+        unique_id: wateriuskvlow
+        state_topic: 'waterius/kitchen/voltage_low'
+        value_template: > 
+          {%if value == 1 %}
+            'Низкое напряжение'
+          {% else %}
+            'Напряжение в порядке'
+          {% endif %}
+
+      - name: 'Напряжение питания ватериуса'
+        unique_id: wateriusbvlow
+        state_topic: 'waterius/bathroom/voltage_low'
+        value_template: > 
+          {%if value == 1 %}
+            'Низкое напряжение'
+          {% else %}
+            'Напряжение в порядке'
+          {% endif %}
       
 
 
