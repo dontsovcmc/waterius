@@ -3,7 +3,7 @@
 
 class UserClass
 {
-    public:
+public:
     /**
      * Sends new data to server
      * true IF response code = 200

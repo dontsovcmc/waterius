@@ -6,7 +6,6 @@
 // email + subject + message length
 #define BLYNK_MAX_SENDBYTES 512
 
-
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
 
@@ -15,14 +14,16 @@
 
 bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
-    if (strnlen(sett.blynk_key, BLYNK_KEY_LEN) == 0) {
+    if (strnlen(sett.blynk_key, BLYNK_KEY_LEN) == 0)
+    {
         LOG_INFO(F("Blynk: SKIP"));
         return false;
     }
-        
+
     Blynk.config(sett.blynk_key, sett.blynk_host, BLYNK_DEFAULT_PORT);
-    if (Blynk.connect(SERVER_TIMEOUT)) {
-        
+    if (Blynk.connect(SERVER_TIMEOUT))
+    {
+
         LOG_INFO(F("Blynk: Run"));
 
         Blynk.virtualWrite(V0, cdata.channel0);
@@ -38,15 +39,16 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
         cdata.low_voltage ? battery_led.on() : battery_led.off();
 
         LOG_INFO(F("virtualWrite OK"));
-        
+
         // Если заполнен параметр email отправим эл. письмо
-        if (strnlen(sett.blynk_email, EMAIL_LEN) > 4) {
+        if (strnlen(sett.blynk_email, EMAIL_LEN) > 4)
+        {
             LOG_INFO("send email: " << sett.blynk_email);
 
             String msg = sett.blynk_email_template;
             String title = sett.blynk_email_title;
-            String v0(cdata.channel0, 1);   //.1 для образца СМС сообщения
-            String v1(cdata.channel1, 1);   //.1 для образца СМС сообщения
+            String v0(cdata.channel0, 1); //.1 для образца СМС сообщения
+            String v1(cdata.channel1, 1); //.1 для образца СМС сообщения
             String v2((float)(cdata.voltage / 1000.0), 3);
             String v3(cdata.delta0, DEC);
             String v4(cdata.delta1, DEC);
@@ -54,7 +56,7 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
             String v6(cdata.low_voltage, DEC);
             String v7((float)(cdata.voltage_diff / 1000.0), 3);
             String v8(cdata.rssi, DEC);
-            
+
             msg.replace(F("{V0}"), v0);
             msg.replace(F("{V1}"), v1);
             msg.replace(F("{V2}"), v2);
@@ -64,7 +66,7 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
             msg.replace(F("{V6}"), v6);
             msg.replace(F("{V7}"), v7);
             msg.replace(F("{V8}"), v8);
-            
+
             title.replace(F("{V0}"), v0);
             title.replace(F("{V1}"), v1);
             title.replace(F("{V2}"), v2);
@@ -86,11 +88,13 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
         LOG_INFO(F("Disconnected"));
 
         return true;
-    } else {
+    }
+    else
+    {
         LOG_ERROR(F("Connect error"));
-    } 
+    }
 
     return false;
-}        
+}
 
 #endif

@@ -5,7 +5,7 @@
  **/
 class WateriusHttps
 {
-    public:
+public:
     /**
      * Contains response data from request (REST API).
      **/
@@ -27,6 +27,6 @@ class WateriusHttps
     /**
      * Generate SHA256 Token from random & email.
      **/
-    static void generateSha256Token(char *token, const int token_len, 
+    static void generateSha256Token(char *token, const int token_len,
                                     const char *email);
 };
