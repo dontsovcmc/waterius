@@ -29,4 +29,8 @@ struct ESPPowerPin
     bool elapsed(const unsigned long msec);
 };
 
+#ifdef MODKAM_VERSION
+uint16_t readVcc();
+#endif
+
 #endif

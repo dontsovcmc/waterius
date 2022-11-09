@@ -42,7 +42,7 @@
 /*
     Аварийное отключение, если ESP зависнет и не пришлет команду "сон".
 */
-#define WAIT_ESP_MSEC 120000UL
+#define WAIT_ESP_MSEC 30000UL
 
 /*
     Сколько милисекунд пользователь может
@@ -53,7 +53,9 @@
 /*
     время долгого нажатия кнопки, милисекунд
 */
-#define LONG_PRESS_MSEC 3000
+#ifndef MODKAM_VERSION
+#define LONG_PRESS_MSEC  3000
+#endif
 
 struct Data
 {
@@ -94,6 +96,12 @@ struct Header
     */
     uint8_t service;
 
+#ifdef MODKAM_VERSION
+    /*
+    Напряжение питания в мВ.
+    */
+    uint32_t voltage;
+#else
     /*
     ver 24: убрал напряжение
     */
@@ -108,6 +116,7 @@ struct Header
     Включение режима настройки
     */
     uint8_t setup_started_counter;
+#endif
 
     /*
     Количество перезагрузок
@@ -128,7 +137,11 @@ struct Header
     // HEADER_DATA_SIZE
 
     uint8_t crc;
+#ifdef MODKAM_VERSION
+    uint8_t setup_started_counter;
+#else
     uint8_t reserved3;
+#endif
 }; // 24 байт
 
 #define HEADER_DATA_SIZE 22

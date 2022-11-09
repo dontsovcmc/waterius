@@ -1,7 +1,7 @@
 #include "Setup.h"
 
 #include <avr/pgmspace.h>
-#include <Wire.h>
+//#include <Wire.h>
 
 #include "Power.h"
 #include "SlaveI2C.h"
@@ -16,10 +16,13 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 24 // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 25 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
+
+25 - 2022.11.09 - dontsov
+    1. Единая прошивка Ватериуса и modkam zigbee версии
 
 24 - 2022.02.22 - neitri, dontsovcmc
 	1. Передача флага о том, что пробуждение по кнопке
@@ -115,9 +118,16 @@ static ButtonB button(2);  // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1); // Питание на ESP
 
 // Данные
+#ifdef MODKAM_VERSION
+struct Header info = {FIRMWARE_VER, 0, 0, 0, WATERIUS_2C, {CounterState_e::CLOSE, CounterState_e::CLOSE}, {0, 0}, {0, 0}, 0, 0};
+
+bool flag_new_counter_value = false;
+#else
 struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_2C, {CounterState_e::CLOSE, CounterState_e::CLOSE}, {0, 0}, {0, 0}, 0, 0};
+#endif
 
 uint32_t wakeup_period;
+
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
 //Кольцовой нужен для того, чтобы превысить лимит записи памяти в 100 000 раз
@@ -235,7 +245,7 @@ void loop()
 	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания
 	unsigned long wake_up_limit;
-	if (button.wait_release() > LONG_PRESS_MSEC)
+	if (button.long_pressed())
 	{ // wdt_reset внутри wait_release
 		LOG(F("SETUP pressed"));
 		slaveI2C.begin(SETUP_MODE);
@@ -270,11 +280,20 @@ void loop()
 
 		wdt_reset();
 
+#ifdef MODKAM_VERSION
+		info.voltage = readVcc(); // Текущее напряжение
+
+		if (flag_new_counter_value) {
+			flag_new_counter_value = false;
+
+			storage.add(info.data);  // вдруг записали новое значение
+		}
+#endif
 		counting();
 
 		delayMicroseconds(65000);
 
-		if (button.wait_release() > LONG_PRESS_MSEC)
+		if (button.long_pressed())
 		{		   // wdt_reset внутри wait_release
 			break; // принудительно выключаем
 		}

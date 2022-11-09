@@ -23,10 +23,23 @@ protected:
     static void receiveEvent(int howMany);
     static void getWakeUpPeriod();
 
+#ifdef MODKAM_VERSION
+    static void getCounterValue();
+#endif
+
 public:
     void begin(const uint8_t);
     static void end();
     bool masterGoingToSleep();
 };
+
+#ifdef MODKAM_VERSION
+union ArrayToUin32
+{
+	byte array[4];
+	uint32_t value;
+};
+extern bool flag_new_counter_value;
+#endif
 
 #endif

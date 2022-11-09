@@ -143,6 +143,15 @@ struct ButtonB
         }
         return millis() - press_time;
     }
+
+    bool long_pressed()
+    {
+#ifdef MODKAM_VERSION
+        return false;
+#else
+        return wait_release() > LONG_PRESS_MSEC;
+#endif
+    }
 };
 
 #endif
