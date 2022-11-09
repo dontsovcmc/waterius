@@ -1,13 +1,11 @@
 #ifndef _SENDERMQTT_h
 #define _SENDERMQTT_h
 
-
 #ifdef MQTT_SOCKET_TIMEOUT
 #undef MQTT_SOCKET_TIMEOUT
 #endif
 
 #define MQTT_SOCKET_TIMEOUT 5
-
 
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
@@ -15,15 +13,15 @@
 #include "master_i2c.h"
 #include "Logging.h"
 
-
 bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
-    if (strnlen(sett.mqtt_host, MQTT_HOST_LEN) == 0) {
+    if (strnlen(sett.mqtt_host, MQTT_HOST_LEN) == 0)
+    {
         LOG_INFO(F("MQTT: SKIP"));
         return false;
     }
 
-    WiFiClient wclient;   
+    WiFiClient wclient;
     PubSubClient client(wclient);
     client.setServer(sett.mqtt_host, sett.mqtt_port);
 
@@ -31,14 +29,15 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
 
     const char *login = strnlen(sett.mqtt_login, MQTT_LOGIN_LEN) ? sett.mqtt_login : NULL;
     const char *pass = strnlen(sett.mqtt_password, MQTT_PASSWORD_LEN) ? sett.mqtt_password : NULL;
-    
+
     String topic(sett.mqtt_topic);
     if (!topic.endsWith("/"))
         topic += '/';
-    
-    if (client.connect(clientId.c_str(), login, pass)) {
-        client.publish((topic + "ch0").c_str(), String((float)cdata.channel0,3).c_str(), true);
-        client.publish((topic + "ch1").c_str(), String((float)cdata.channel1,3).c_str(), true);
+
+    if (client.connect(clientId.c_str(), login, pass))
+    {
+        client.publish((topic + "ch0").c_str(), String((float)cdata.channel0, 3).c_str(), true);
+        client.publish((topic + "ch1").c_str(), String((float)cdata.channel1, 3).c_str(), true);
         client.publish((topic + "delta0").c_str(), String(cdata.delta0).c_str(), true);
         client.publish((topic + "delta1").c_str(), String(cdata.delta1).c_str(), true);
         client.publish((topic + "voltage").c_str(), String((float)(cdata.voltage / 1000.0), 3).c_str(), true);
@@ -67,14 +66,16 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "setup_started").c_str(), String(data.setup_started_counter).c_str(), true);
         client.publish((topic + "channel").c_str(), String(cdata.channel).c_str(), true);
         client.publish((topic + "mac").c_str(), String(cdata.router_mac).c_str(), true);
-        
+
         client.disconnect();
         return true;
-    }  else {
+    }
+    else
+    {
         LOG_ERROR(F("MQTT connect error"));
-    } 
+    }
 
     return false;
-}        
+}
 
 #endif

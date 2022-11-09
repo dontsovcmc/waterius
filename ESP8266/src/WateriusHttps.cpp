@@ -21,21 +21,25 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     LOG_INFO("-- START -- " << THIS_FUNC_DESCRIPTION);
     LOG_INFO("URL:\t" << url);
     LOG_INFO("Body:\t" << body);
-    
+
     // Set wc client
     WiFiClient *wc;
-    if (url.substring(0, 5) == "https") {
+    if (url.substring(0, 5) == "https")
+    {
         wc = &wifiTlsClient;
         certs.append(lets_encrypt_x3_ca);
         certs.append(lets_encrypt_x4_ca);
         certs.append(cloud_waterius_ru_ca);
         wifiTlsClient.setTrustAnchors(&certs);
 
-        if (!setClock()) {  
+        if (!setClock())
+        {
             LOG_ERROR("SetClock FAILED");
             return WateriusHttps::ResponseData();
         }
-    } else {
+    }
+    else
+    {
         wc = &wifiClient;
     }
     wc->setTimeout(SERVER_TIMEOUT);
@@ -44,26 +48,30 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     HTTPClient *hc = &httpClient;
     hc->setTimeout(SERVER_TIMEOUT);
     hc->setReuse(false);
-    
+
     // Check input data
-    if (url.substring(0, 4) != "http") {
+    if (url.substring(0, 4) != "http")
+    {
         LOG_ERROR(F("URL \"") << url << F("\" has not 'http' ('https')"));
     }
-    if (wc->available()) {
+    if (wc->available())
+    {
         LOG_ERROR(F("Wi-Fi client is not available"));
     }
-    
-    
+
     LOG_INFO(F("Begin client"));
     // Request
     int responseCode = 0;
     String responseBody;
-    if (hc->begin(*wc, url)) {
+    if (hc->begin(*wc, url))
+    {
         hc->addHeader(F("Content-Type"), F("application/json"));
-        if (strnlen(key, WATERIUS_KEY_LEN)) {
+        if (strnlen(key, WATERIUS_KEY_LEN))
+        {
             hc->addHeader(F("Waterius-Token"), key);
         }
-        if (strnlen(email, EMAIL_LEN)) {
+        if (strnlen(email, EMAIL_LEN))
+        {
             hc->addHeader(F("Waterius-Email"), email);
         }
         responseCode = hc->POST(body);
@@ -72,7 +80,9 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
         LOG_INFO(F("Response body:\t") << responseBody);
         hc->end();
         wc->stop();
-    } else {
+    }
+    else
+    {
         LOG_ERROR(F("Cannot begin HTTP client"));
     }
 
@@ -80,18 +90,18 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     return WateriusHttps::ResponseData(responseCode, responseBody);
 }
 
-
 void WateriusHttps::generateSha256Token(char *token, const int token_len,
                                         const char *email)
 {
     LOG_INFO(F("-- START -- ") << F("Generate SHA256 token from email"));
-    
+
     auto x = BearSSL::HashSHA256();
-    if (email != nullptr && strlen(email)) {
+    if (email != nullptr && strlen(email))
+    {
         LOG_INFO(F("E-mail:\t") << email);
         x.add(email, strlen(email));
     }
-    
+
     randomSeed(micros());
     uint32_t salt = rand();
     LOG_INFO(F("salt:\t") << salt);
@@ -100,7 +110,7 @@ void WateriusHttps::generateSha256Token(char *token, const int token_len,
     salt = getChipId();
     x.add(&salt, sizeof(salt));
     LOG_INFO(F("chip id: ") << salt);
-    
+
     salt = ESP.getFlashChipId();
     x.add(&salt, sizeof(salt));
     LOG_INFO(F("flash id: ") << salt);
@@ -109,9 +119,10 @@ void WateriusHttps::generateSha256Token(char *token, const int token_len,
 
     static const char digits[] = "0123456789ABCDEF";
 
-    for (int i=0; i < x.len() && i < token_len-1; i +=2, hash++) {
+    for (int i = 0; i < x.len() && i < token_len - 1; i += 2, hash++)
+    {
         token[i] = digits[*hash >> 4];
-        token[i+1] = digits[*hash & 0xF];
+        token[i + 1] = digits[*hash & 0xF];
     }
 
     LOG_INFO(F("SHA256 token: ") << token);

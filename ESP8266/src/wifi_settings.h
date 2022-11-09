@@ -20,4 +20,3 @@ void storeConfig(const Settings &sett);
 bool loadConfig(Settings &sett);
 
 #endif
-

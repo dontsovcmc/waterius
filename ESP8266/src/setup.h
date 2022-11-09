@@ -4,20 +4,19 @@
 #include <Arduino.h>
 
 #define FIRMWARE_VERSION "0.10.7"
-  
 
 /*
 Версии прошивки для ESP
 
 0.10.7 - 2022.04.20 - dontsovcmc
-                      1. issues/227: не работали ssid, pwd указанные при компиляции 
+                      1. issues/227: не работали ssid, pwd указанные при компиляции
 
 0.10.6 - 2022.02.18 - neitri, dontsovcmc
                       1. espressif8266@3.2.0
                       2. attiny версия 24
                       3. период отправки 24ч (корректируется по NTP. точность +-1 мин)
                       4. передача данных после настройки ESP
-                      5. добавлены параметры: 
+                      5. добавлены параметры:
                       - режим пробуждения. теперь видно, что вручную кнопка нажата
                       - число включения режима настройки
                       - число успешных подключений к роутеру после настройки
@@ -25,7 +24,7 @@
                       - MAC адрес производителя роутра (первые 3 байта)
                       6. чтение напряжения ESP
                       7. В списке подключенных устройств роутера теперь Waterius-X
-               
+
 0.10.5 - 2021.07.18 - attiny версия 22
 
 0.10.4 - 2021.06.20 - Добавил серийные номера
@@ -75,12 +74,12 @@
                    - Проверка подключения счётчика в веб интерфейсе
 0.6.1 - 2019.03.31 - Заголовки Waterius-Token, Waterius-Email
 0.6   - 2019.03.23 - Поддержка HTTPS
-0.5.4 - 2019.02.25 - обновил framework espressif8266 2.0.1 (arduino 2.5.0), blynk, json 
+0.5.4 - 2019.02.25 - обновил framework espressif8266 2.0.1 (arduino 2.5.0), blynk, json
 0.5.3 - 2019.01.22 - WifiManager 0.14 + hotfixes
 0.5.2 - 2018.09.22 - WifiManager 0.14
-*/ 
- 
-/* 
+*/
+
+/*
     Уровень логирования
 */
 #define LOGLEVEL 2
@@ -89,22 +88,21 @@
 
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 
-#define MQTT_DEFAULT_TOPIC_PREFIX "waterius/"  // Проверка: mosquitto_sub -h test.mosquitto.org -t "waterius/#" -v
+#define MQTT_DEFAULT_TOPIC_PREFIX "waterius/" // Проверка: mosquitto_sub -h test.mosquitto.org -t "waterius/#" -v
 #define MQTT_DEFAULT_PORT 1883
-
 
 #define ESP_CONNECT_TIMEOUT 15000UL // Время подключения к точке доступа, ms
 
 #define SERVER_TIMEOUT 12000UL // Время ответа сервера, ms
 
-#define I2C_SLAVE_ADDR 10  // i2c адрес Attiny85
+#define I2C_SLAVE_ADDR 10 // i2c адрес Attiny85
 
 #define VER_6 6
 #define CURRENT_VERSION VER_6
 
 #define EMAIL_LEN 40
 
-#define WATERIUS_KEY_LEN  34
+#define WATERIUS_KEY_LEN 34
 #define WATERIUS_HOST_LEN 64
 
 #define BLYNK_KEY_LEN 34
@@ -123,20 +121,21 @@
 #define DEFAULT_WAKEUP_PERIOD_MIN 1440
 
 #define AUTO_IMPULSE_FACTOR 2
-#define AS_COLD_CHANNEL     7
+#define AS_COLD_CHANNEL 7
 
-struct CalculatedData {
-    float    channel0;
-    float    channel1;
+struct CalculatedData
+{
+    float channel0;
+    float channel1;
 
     uint32_t delta0;
     uint32_t delta1;
 
     uint16_t voltage;
     uint16_t voltage_diff;
-    bool     low_voltage;
-    int8_t   rssi;
-    uint8_t  channel;
+    bool low_voltage;
+    int8_t rssi;
+    uint8_t channel;
     uint32_t router_mac;
 };
 
@@ -145,69 +144,68 @@ struct CalculatedData {
 */
 struct Settings
 {
-    uint8_t  version;      //Версия конфигурации
+    uint8_t version; //Версия конфигурации
 
-    uint8_t  reserved;
+    uint8_t reserved;
 
+    // SEND_WATERIUS
 
-    //SEND_WATERIUS
-    
-    //http/https сервер для отправки данных в виде JSON
+    // http/https сервер для отправки данных в виде JSON
     //вид: http://host[:port][/path]
-    //     https://host[:port][/path]
-    char     waterius_host[WATERIUS_HOST_LEN];
-    char     waterius_key[WATERIUS_KEY_LEN];
-    char     waterius_email[EMAIL_LEN];
+    //      https://host[:port][/path]
+    char waterius_host[WATERIUS_HOST_LEN];
+    char waterius_key[WATERIUS_KEY_LEN];
+    char waterius_email[EMAIL_LEN];
 
-    //SEND_BLYNK 
+    // SEND_BLYNK
 
     //уникальный ключ устройства blynk
-    char     blynk_key[BLYNK_KEY_LEN];
+    char blynk_key[BLYNK_KEY_LEN];
     //сервер blynk.com или свой blynk сервер
-    char     blynk_host[BLYNK_HOST_LEN];
+    char blynk_host[BLYNK_HOST_LEN];
 
     //Если email не пустой, то отсылается e-mail
     //Чтобы работало нужен виджет эл. почта в приложении
-    char     blynk_email[EMAIL_LEN];
-    //Заголовок письма. {V0}-{V4} заменяются на данные 
-    char     blynk_email_title[BLYNK_EMAIL_TITLE_LEN];
-    //Шаблон эл. письма. {V0}-{V4} заменяются на данные 
-    char     blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN];
+    char blynk_email[EMAIL_LEN];
+    //Заголовок письма. {V0}-{V4} заменяются на данные
+    char blynk_email_title[BLYNK_EMAIL_TITLE_LEN];
+    //Шаблон эл. письма. {V0}-{V4} заменяются на данные
+    char blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN];
 
-    char     mqtt_host[MQTT_HOST_LEN];
+    char mqtt_host[MQTT_HOST_LEN];
     uint16_t mqtt_port;
-    char     mqtt_login[MQTT_LOGIN_LEN];
-    char     mqtt_password[MQTT_PASSWORD_LEN];
-    char     mqtt_topic[MQTT_TOPIC_LEN];
+    char mqtt_login[MQTT_LOGIN_LEN];
+    char mqtt_password[MQTT_PASSWORD_LEN];
+    char mqtt_topic[MQTT_TOPIC_LEN];
 
     /*
-    Показания счетчиках в кубометрах, 
+    Показания счетчиках в кубометрах,
     введенные пользователем при настройке
     */
-    float    channel0_start;
-    float    channel1_start;
+    float channel0_start;
+    float channel1_start;
 
     /*
     Кол-во литров на 1 импульс
     */
-    uint8_t  factor0;
-    uint8_t  factor1;
-    
+    uint8_t factor0;
+    uint8_t factor1;
+
     /*
     Серийные номера счётчиков воды
     */
-    char     serial0[SERIAL_LEN];
-    char     serial1[SERIAL_LEN];
+    char serial0[SERIAL_LEN];
+    char serial1[SERIAL_LEN];
 
     /*
-    Кол-во импульсов Attiny85 соответствующие показаниям счетчиков, 
+    Кол-во импульсов Attiny85 соответствующие показаниям счетчиков,
     введенных пользователем при настройке
     */
     uint32_t impulses0_start;
     uint32_t impulses1_start;
 
     /*
-    Не понятно, как получить от Blynk прирост показаний, 
+    Не понятно, как получить от Blynk прирост показаний,
     поэтому сохраним их в памяти каждое включение
     */
     uint32_t impulses0_previous;
@@ -222,14 +220,14 @@ struct Settings
     За сколько времени настроили ватериус
     */
     uint32_t setup_time;
-    
+
     /*
     Статический адрес
     */
     uint32_t ip;
     uint32_t gateway;
     uint32_t mask;
-    
+
     /*
     Период пробуждение для отправки данных, мин
     */
@@ -243,8 +241,8 @@ struct Settings
     /*
     Время последней отправки по расписанию
     */
-    time_t last_send;   //Size of time_t: 8
-    
+    time_t last_send; // Size of time_t: 8
+
     /*
     Режим пробуждения
     */
@@ -259,12 +257,12 @@ struct Settings
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t  reserved2[154];
+    uint8_t reserved2[154];
 
     /*
     Контрольная сумма, чтобы гарантировать корректность чтения настроек
     */
     uint16_t crc;
-}; //976 байт
+}; // 976 байт
 
 #endif
