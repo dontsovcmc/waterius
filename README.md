@@ -9,7 +9,7 @@
 
 ### Где купить
 В России: [Yandex.market](https://market.yandex.ru/store--waterius/product/920451755?businessId=1106573&sku=101280435941) | [Aliexpress](https://s.click.aliexpress.com/e/_pujmcX9) | [Wildberries](https://www.wildberries.ru/catalog/26967283/detail.aspx) | [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github)
-Worldwide by Wildberries: [Armenia 🇦🇲](https://am.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Belarus 🇧🇾](https://by.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [France 🇫🇷](https://wildberries.fr/product?card=26967283) | [Germany 🇩🇪](https://de.wildberries.eu/product?card=26967283) | [Israel 🇮🇱](https://wildberries.co.il/product?card=26967283)  | [Italy 🇮🇹](https://it.wildberries.eu/product?card=26967283) | [Kazakhstan 🇰🇿](https://kz.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Kyrgyzstan 🇰🇬](https://kg.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Poland 🇵🇱](https://pl.wildberries.eu/product?card=26967283) | [Slovakia 🇸🇰](https://sk.wildberries.eu/product?card=26967283) | [Spain 🇪🇸](https://wildberries.es/product?card=26967283) | [Ukraine 🇺🇦](https://wildberries.ua/product?card=26967283) | [USA 🇺🇸](https://us.wildberries.ru/product?card=26967283)
+Worldwide by Wildberries (not works...): [Armenia 🇦🇲](https://am.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Belarus 🇧🇾](https://by.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [France 🇫🇷](https://wildberries.fr/product?card=26967283) | [Germany 🇩🇪](https://de.wildberries.eu/product?card=26967283) | [Israel 🇮🇱](https://wildberries.co.il/product?card=26967283)  | [Italy 🇮🇹](https://it.wildberries.eu/product?card=26967283) | [Kazakhstan 🇰🇿](https://kz.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Kyrgyzstan 🇰🇬](https://kg.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Poland 🇵🇱](https://pl.wildberries.eu/product?card=26967283) | [Slovakia 🇸🇰](https://sk.wildberries.eu/product?card=26967283) | [Spain 🇪🇸](https://wildberries.es/product?card=26967283) | [Ukraine 🇺🇦](https://wildberries.ua/product?card=26967283) | [USA 🇺🇸](https://us.wildberries.ru/product?card=26967283)
 
 ### Совместимые счётчики
 Все счётчики с импульсным выходом (провод торчит из корпуса)
@@ -118,6 +118,7 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://am.wildberries.ru/catalog/2
 - Олегу К. из Республики Беларусь за [инструкцию к MajorDoMo](https://mjdm.ru/forum/viewtopic.php?p=129000#p129000)
 - [Drafteed](https://github.com/Drafteed) за виджет карты России
 - [neitri](https://github.com/neitri) за доработки прошивки
+- [L2jLiga](https://github.com/L2jLiga) за обновление конфигурации Home Assistant
 
 Форумам: 
 - https://electronix.ru
