@@ -13,7 +13,7 @@ mqtt:
     sensor:
       # waterius на кухне
       - name: "Kitchen Cold Water"
-        unique_id: wateriuskcwm
+        object_id: wateriuskcwm
         state_topic: "waterius/kitchen/ch1"
         value_template: "{{ value }}"
         unit_of_measurement: "m³"
@@ -27,7 +27,7 @@ mqtt:
           suggested_area: Kitchen
 
       - name: "Kitchen Hot Water"
-        unique_id: wateriuskhwm
+        object_id: wateriuskhwm
         state_topic: "waterius/kitchen/ch0"
         value_template: "{{ value }}"
         unit_of_measurement: "m³"
@@ -38,7 +38,7 @@ mqtt:
           identifiers: [wateriusk]
 
       - name: "Kitchen Voltage"
-        unique_id: wateriuskv
+        object_id: wateriuskv
         state_topic: "waterius/kitchen/voltage"
         value_template: "{{ value }}"
         unit_of_measurement: "V"
@@ -50,7 +50,7 @@ mqtt:
           identifiers: [wateriusk]
 
       - name: "Kitchen Battery"
-        unique_id: wateriuskb
+        object_id: wateriuskb
         icon: mdi:battery
         device_class: battery
         state_class: measurement
@@ -74,7 +74,7 @@ mqtt:
 
       # waterius в ванной
       - name: "Bathroom Cold Water"
-        unique_id: wateriusbcwm
+        object_id: wateriusbcwm
         state_topic: "waterius/bathroom/ch1"
         value_template: "{{ value }}"
         unit_of_measurement: "m³"
@@ -88,7 +88,7 @@ mqtt:
           suggested_area: Bathroom
 
       - name: "Bathroom Hot Water"
-        unique_id: wateriusbhwm
+        object_id: wateriusbhwm
         state_topic: "waterius/bathroom/ch0"
         value_template: "{{ value }}"
         unit_of_measurement: "m³"
@@ -99,7 +99,7 @@ mqtt:
           identifiers: [wateriusb]
 
       - name: "Bathroom Voltage"
-        unique_id: wateriusbv
+        object_id: wateriusbv
         state_topic: "waterius/bathroom/voltage"
         value_template: "{{ value }}"
         unit_of_measurement: "V"
@@ -111,7 +111,7 @@ mqtt:
           identifiers: [wateriusb]
 
       - name: "Bathroom Battery"
-        unique_id: wateriusbb
+        object_id: wateriusbb
         icon: mdi:battery
         device_class: battery
         state_class: measurement
@@ -135,13 +135,12 @@ mqtt:
 
 
     # Создаём сенсор счётчик прошедшего времени с момента последнего обновления данных Ватериусом
-    # Используем время последнего обновления показаний холодной воды, так как этот сенсор обновляется
+    # Используем время последнего обновления показаний холодной воды (object_id: wateriuskcwm), так как этот сенсор обновляется
     # чаще, чем все остальные
   - platform: template
     sensors:
       vaterius_last_seen:
         friendly_name: 'Ватериус вне сети'
         value_template: >
-          {{(as_timestamp(now())-as_timestamp(states.sensor.kholodnaia_voda.last_updated))|int}}
-        unit_of_measurement: "сек."
+          {{(as_timestamp(now())-as_timestamp(states.sensor.wateriuskcwm.last_updated)) | timestamp_custom('%Hh %Mm %Ss',false)}}
 # кусок конфигурации отсутствует    
