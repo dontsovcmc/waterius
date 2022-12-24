@@ -6,12 +6,16 @@
 #endif
 
 #define MQTT_SOCKET_TIMEOUT 5
+#define MQTT_MAX_PACKET_SIZE 1024
 
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <ArduinoJson.h>
 
 #include "master_i2c.h"
 #include "Logging.h"
+
+#include "home_assistant.h"
 
 bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
@@ -23,6 +27,7 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
 
     WiFiClient wclient;
     PubSubClient client(wclient);
+    client.setBufferSize(MQTT_MAX_PACKET_SIZE);
     client.setServer(sett.mqtt_host, sett.mqtt_port);
 
     String clientId = "waterius-" + String(ESP.getChipId());
@@ -65,8 +70,13 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "setup_finished").c_str(), String(sett.setup_finished_counter).c_str(), true);
         client.publish((topic + "setup_started").c_str(), String(data.setup_started_counter).c_str(), true);
         client.publish((topic + "channel").c_str(), String(cdata.channel).c_str(), true);
-        client.publish((topic + "mac").c_str(), String(cdata.router_mac).c_str(), true);
-
+        client.publish((topic + "router_mac").c_str(), String(cdata.router_mac).c_str(), true);
+        client.publish((topic + "mac").c_str(), WiFi.macAddress().c_str(), true);
+        client.publish((topic + "esp_id").c_str(), String(ESP.getChipId()).c_str(), true);
+        
+        // Автоматическое добавления устройства в Home Assistant
+        homeassistant_config(client, topic, data);
+        
         client.disconnect();
         return true;
     }

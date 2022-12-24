@@ -3,10 +3,18 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.10.7"
+#define FIRMWARE_VERSION "0.10.8"
 
 /*
 Версии прошивки для ESP
+
+0.10.8 - 2022.04.20 - dontsovcmc Anat0liyBM
+                      1. PubSubClient 2.7.0 -> 2.8.0
+                      2. Отправка описания параметров в HomeAssistant
+                      3. В поля данных 
+                      - mac переименован в router_mac
+                      - mac - MAC адрес ESP 
+                      - esp_id - id ESP 
 
 0.10.7 - 2022.04.20 - dontsovcmc
                       1. issues/227: не работали ssid, pwd указанные при компиляции

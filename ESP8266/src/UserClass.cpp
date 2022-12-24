@@ -3,8 +3,9 @@
 #include "Logging.h"
 #include "string.h"
 #include <ArduinoJson.h>
+#include <ESP8266WiFi.h>
 
-#define JSON_BUFFER_SIZE 500
+#define JSON_BUFFER_SIZE 550
 
 bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, const CalculatedData &cdata)
 {
@@ -55,11 +56,14 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["setup_finished"] = settings.setup_finished_counter;
     root["setup_started"] = data.setup_started_counter;
     root["channel"] = cdata.channel;
-    root["mac"] = cdata.router_mac;
+    root["router_mac"] = cdata.router_mac;
+    root["mac"] = WiFi.macAddress();
+    root["esp_id"] = String(ESP.getChipId());
 
     serializeJson(root, jsonBody);
     // JSON size 0.10.3:  355
     // JSON size 0.10.6:  439
+    // JSON size 0.10.8:  
     LOG_INFO("JSON size:\t" << jsonBody.length());
 
     // Try to send
