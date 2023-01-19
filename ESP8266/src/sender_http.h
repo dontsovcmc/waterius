@@ -1,3 +1,12 @@
+/**
+ * @file sender_http.h
+ * @brief Функции отправки сведений по htpp/https
+ * @version 0.1
+ * @date 2023-01-20
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
 #ifndef _SENDERHTTP_h
 #define _SENDERHTTP_h
 

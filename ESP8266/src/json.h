@@ -1,3 +1,12 @@
+/**
+ * @file json.h
+ * @brief Формирование JSON с показаниями 
+ * @version 0.1
+ * @date 2023-01-20
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
 #ifndef _JSON_h
 #define _JSON_h
 
