@@ -1,15 +1,17 @@
-
-#include "utils.h"
-
-#include "Logging.h"
-#include "string.h"
-#include "time.h"
-
 #include <ESP8266WiFi.h>
+#include "utils.h"
 #include "Logging.h"
+#include "time.h"
+#include "porting.h"
 
 #define NTP_CONNECT_TIMEOUT 3000UL
-
+/**
+ * @brief Устанаваливает время по указанному серверу NTP
+ *
+ * @param ntp_server адрес сервера
+ * @return true
+ * @return false
+ */
 bool setClock(const char *ntp_server)
 {
 	configTime(0, 0, ntp_server);
@@ -18,7 +20,7 @@ bool setClock(const char *ntp_server)
 	uint32_t start = millis();
 	time_t now = time(nullptr);
 
-	while (now < 8 * 3600 * 2 && millis() - start < NTP_CONNECT_TIMEOUT)
+	while ((now < 8 * 3600 * 2) && ((millis() - start) < NTP_CONNECT_TIMEOUT))
 	{
 		delay(100);
 		now = time(nullptr);
@@ -27,16 +29,23 @@ bool setClock(const char *ntp_server)
 	return millis() - start < NTP_CONNECT_TIMEOUT;
 }
 
+/**
+ * @brief Устанаваливает время пока не удастся установить
+ * по следующим серверам "1.ru.pool.ntp.org", "2.ru.pool.ntp.org", "pool.ntp.org"
+ *
+ * @return true  если успешно
+ * @return false  усли завершилось ошибкой
+ */
 bool setClock()
 {
 	if (setClock("1.ru.pool.ntp.org") || setClock("2.ru.pool.ntp.org") || setClock("pool.ntp.org"))
 	{
-
-		time_t now = time(nullptr);
-		struct tm timeinfo;
-		gmtime_r(&now, &timeinfo);
-		LOG_INFO(F("Current time: ") << asctime(&timeinfo));
+		LOG_INFO(F("Current time: ") << get_current_time());
 		return true;
+	}
+	else
+	{
+		LOG_ERROR(F("SetClock FAILED"));
 	}
 	return false;
 }
@@ -64,9 +73,51 @@ void print_wifi_mode()
 
 void set_hostname()
 {
-	String hostname = String("Waterius-" + String(ESP.getChipId(), HEX));
+	String host_name = get_device_name();
+	if (!WiFi.hostname(host_name.c_str()))
+		LOG_ERROR(F("Set hostname failed"));
+	LOG_INFO(F("hostname ") + String(WiFi.hostname()));
+}
 
-	if (!WiFi.hostname(hostname.c_str()))
-		LOG_INFO("set hostname fail");
-	LOG_INFO("hostname " + String(WiFi.hostname()));
+/**
+ * @brief Форимрует строку с именем устройства
+ * в виде ИМЯ_БРЕНДА%-ИДЕНТИФИКАТОР_ЧИПА,
+ * пример waterius-12346
+ *
+ * @return строку с уникальным именем устройства
+ */
+String get_device_name()
+{
+	String deviceName = String(BRAND_NAME) + "-" + getChipId();
+	return deviceName;
+}
+
+/**
+ * @brief Получает текущее время
+ *
+ * @return строка с временем в формате C
+ */
+String get_current_time()
+{
+	char buf[100];
+	time_t now = time(nullptr);
+	struct tm timeinfo;
+	gmtime_r(&now, &timeinfo);
+	// ISO8601 date time string format (2019-11-29T23:29:55+0800).
+	strftime(buf, sizeof(buf), "%FT%T%z", &timeinfo);
+	return String(buf);
+}
+
+/**
+ * @brief Преобразует MAC адрес в шестнадцатиричный вид без разделителей. Например AABBCCDDEEFF
+ *
+ * @return строка с MAC адресом
+ */
+String get_mac_address_hex()
+{
+	uint8_t baseMac[6];
+	char baseMacChr[13] = {0};
+	WiFi.macAddress(baseMac);
+	sprintf(baseMacChr, "%02X%02X%02X%02X%02X%02X", baseMac[0], baseMac[1], baseMac[2], baseMac[3], baseMac[4], baseMac[5]);
+	return String(baseMacChr);
 }
