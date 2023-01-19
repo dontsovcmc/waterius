@@ -116,7 +116,7 @@ bool loadConfig(struct Settings &sett)
         strncpy0(sett.blynk_email_template, email_template.c_str(), BLYNK_EMAIL_TEMPLATE_LEN);
 
         // strncpy0(sett.mqtt_host, MQTT_DEFAULT_HOST, MQTT_HOST_LEN);
-        String defaultTopic = String(MQTT_DEFAULT_TOPIC_PREFIX) + String(getChipId()) + "/";
+        String defaultTopic = String(MQTT_DEFAULT_TOPIC_PREFIX) + "/" + String(getChipId()) + "/";
 
         strncpy0(sett.mqtt_topic, defaultTopic.c_str(), MQTT_TOPIC_LEN);
         sett.mqtt_port = MQTT_DEFAULT_PORT;
@@ -145,6 +145,28 @@ bool loadConfig(struct Settings &sett)
         strncpy0(sett.waterius_host, waterius_host.c_str(), WATERIUS_HOST_LEN);
         LOG_INFO("default waterius_host=" << waterius_host);
 #endif
+
+#ifdef MQTT_HOST
+#pragma message(VAR_NAME_VALUE(MQTT_HOST))
+        String mqtt_host = VALUE(MQTT_HOST);
+        strncpy0(sett.mqtt_host, mqtt_host.c_str(), MQTT_HOST_LEN);
+        LOG_INFO("default mqtt_host=" << mqtt_host);
+#endif
+
+#ifdef MQTT_LOGIN
+#pragma message(VAR_NAME_VALUE(MQTT_LOGIN))
+        String mqtt_login = VALUE(MQTT_LOGIN);
+        strncpy0(sett.mqtt_login, mqtt_login.c_str(), MQTT_HOST_LEN);
+        LOG_INFO("default mqtt_login=" << mqtt_login);
+#endif
+
+#ifdef MQTT_PASSWORD
+#pragma message(VAR_NAME_VALUE(MQTT_PASSWORD))
+        String mqtt_password = VALUE(MQTT_PASSWORD);
+        strncpy0(sett.mqtt_password, mqtt_password.c_str(), MQTT_HOST_LEN);
+        LOG_INFO("default mqtt_password=" << mqtt_password);
+#endif
+
 
 #ifdef WATERIUS_EMAIL
 #pragma message(VAR_NAME_VALUE(WATERIUS_EMAIL))
