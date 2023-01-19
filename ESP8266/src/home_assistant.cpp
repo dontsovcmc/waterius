@@ -1,13 +1,4 @@
 
-/**
- * @file home_assistant.cpp
- * @brief содерждит функции для формирвоания топиков MQTT для автоматического добавления в HomeAssistant
- * @version 0.1
- * @date 2023-01-18
- *
- * @copyright Copyright (c) 2023
- *
- */
 #include "home_assistant.h"
 #include <PubSubClient.h>
 #include <ArduinoJson.h>

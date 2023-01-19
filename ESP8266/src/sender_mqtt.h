@@ -1,3 +1,12 @@
+/**
+ * @file sender_mqtt.h
+ * @brief содержит функцию публикации данных в MQTT 
+ * @version 0.1
+ * @date 2023-01-20
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
 #ifndef _SENDERMQTT_h
 #define _SENDERMQTT_h
 
