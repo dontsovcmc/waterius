@@ -13,8 +13,6 @@
 #include "master_i2c.h"
 #include "porting.h"
 
-#define AP_NAME "Waterius_" FIRMWARE_VERSION
-
 extern SlaveData data;
 extern MasterI2C masterI2C;
 
@@ -41,7 +39,7 @@ uint8_t get_factor(uint8_t combobox_factor, uint32_t runtime_impulses, uint32_t 
     }
 }
 
-#define SETUP_TIME_SEC 600UL //На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
+#define SETUP_TIME_SEC 600UL // На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
 void update_data(String &message)
 {
     if (masterI2C.getSlaveData(runtime_data))
@@ -93,7 +91,7 @@ void handleStates()
 {
     LOG_INFO(F("/states request"));
     String message;
-    message.reserve(300); //сейчас 200
+    message.reserve(300); // сейчас 200
     update_data(message);
     wm.server->send(200, F("text/plain"), message);
 }
@@ -271,11 +269,11 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(F("chip id:") << getChipId());
 
     /*
-    String ap_name = AP_NAME "_" + String(getChipId(), HEX).substring(0, 4);
-    ap_name.toUpperCase();
-    wm.startConfigPortal(ap_name.c_str());
+    Имя точки доступа waterius-NNNNN-НОМЕРВЕРСИИ
     */
-    wm.startConfigPortal(AP_NAME);
+    String apName = get_device_name() + "-" + String(FIRMWARE_VERSION);
+    
+    wm.startConfigPortal(apName.c_str());
 
     // Успешно подключились к Wi-Fi, можно засыпать
     LOG_INFO(F("Connected to wifi. Save settings, go to sleep"));
@@ -309,13 +307,13 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.gateway = param_gw.getValue();
     sett.mask = param_mask.getValue();
 
-    //период отправки данных
+    // период отправки данных
     sett.wakeup_per_min = param_wakeup_per.getValue();
     sett.set_wakeup = sett.wakeup_per_min;
     LOG_INFO("wakeup period, min=" << sett.wakeup_per_min);
     LOG_INFO("wakeup period, tick=" << sett.set_wakeup);
 
-    //Веса импульсов
+    // Веса импульсов
     LOG_INFO("hot dropdown=" << dropdown_hot_factor.getValue());
     LOG_INFO("cold dropdown=" << dropdown_cold_factor.getValue());
 
