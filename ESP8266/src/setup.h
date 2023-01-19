@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.10.8"
+#define FIRMWARE_VERSION F("0.10.8")
 
 /*
 Версии прошивки для ESP
@@ -11,10 +11,18 @@
 0.10.8 - 2022.04.20 - dontsovcmc Anat0liyBM
                       1. PubSubClient 2.7.0 -> 2.8.0
                       2. Отправка описания параметров в HomeAssistant
-                      3. В поля данных 
-                      - mac переименован в router_mac
-                      - mac - MAC адрес ESP 
-                      - esp_id - id ESP 
+                      3. В поля данных
+                      - mac переименован в router_mac, формат шестнадцатиричный разделенный двоеточием
+                      - mac - MAC адрес ESP, формат шестнадцатиричный разделенный двоеточием
+                      - esp_id - id ESP, в десятичном формате
+                      - ip - IP адрес ESP
+                      4. ArduinoJson 6.15.1->6.18.3
+                      5. Формат имени точки доступа waterius-ИДЕНТИФИКАТОР_ЕСП-НОМЕР_ВЕРСИИ_ПРОШИВКИ
+                      6. Имя хоста изменено на waterius-ИДЕНТИФИКАТОР_ЕСП идентиификтр в десятисном виде
+                      7. Формирование одного JSON для публикации по MQTT и HTTP
+                      8. Возможность публиковать всю информацию в один топик MQTT в формате JSON
+                      9. Установка часов выполняется вне зависимости будет ли запрос по https. Время используется для MQTT.
+                      10. В класс Voltage добавлен метод измерения % батареи, немного исправлен признак севшей батареи.
 
 0.10.7 - 2022.04.20 - dontsovcmc
                       1. issues/227: не работали ssid, pwd указанные при компиляции
@@ -91,13 +99,12 @@
     Уровень логирования
 */
 #define LOGLEVEL 2
-//#define DEBUG_ESP_HTTP_CLIENT
-//#define DEBUG_ESP_PORT Serial
+// #define DEBUG_ESP_HTTP_CLIENT
+// #define DEBUG_ESP_PORT Serial
+
+#define BRAND_NAME "waterius"
 
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
-
-#define MQTT_DEFAULT_TOPIC_PREFIX "waterius/" // Проверка: mosquitto_sub -h test.mosquitto.org -t "waterius/#" -v
-#define MQTT_DEFAULT_PORT 1883
 
 #define ESP_CONNECT_TIMEOUT 15000UL // Время подключения к точке доступа, ms
 
@@ -124,6 +131,33 @@
 #define MQTT_PASSWORD_LEN 32
 #define MQTT_TOPIC_LEN 64
 
+#define MQTT_DEFAULT_TOPIC_PREFIX BRAND_NAME // Проверка: mosquitto_sub -h test.mosquitto.org -t "waterius/#" -v
+#define MQTT_DEFAULT_PORT 1883
+
+#ifndef DISCOVERY_TOPIC
+#define DISCOVERY_TOPIC "homeassistant"
+#endif
+
+#ifndef MQTT_AUTO_DISCOVERY
+#define MQTT_AUTO_DISCOVERY true // если true то публикуется автодискавери топик для Home Assistant
+#endif
+
+#ifndef MQTT_SINGLE_TOPIC
+#define MQTT_SINGLE_TOPIC true // если true то публикует все данные в один топик, если false то каждый показатель в одельный топик
+#endif
+
+#define CHANNEL_NUM 2
+
+#define HARDWARE_VERSION "1.0.0"
+#define MANUFACTURER "Waterius"
+
+#define JSON_DYNAMIC_MSG_BUFFER 1024
+#define JSON_STATIC_MSG_BUFFER 512
+
+#define ROUTER_MAC_LENGTH 8
+#define MAC_LENGTH 18
+#define IP_LENGTH 16
+
 #define SERIAL_LEN 16
 
 #define DEFAULT_WAKEUP_PERIOD_MIN 1440
@@ -138,13 +172,22 @@ struct CalculatedData
 
     uint32_t delta0;
     uint32_t delta1;
-
+    /* Напряжение на ESP */
     uint16_t voltage;
+    /* Разница напряждений за период измерений */
     uint16_t voltage_diff;
-    bool low_voltage;
+    /* Признак севшей батареи*/
+    bool low_voltage = false;
+    /* Уровень связи */
     int8_t rssi;
+    /* Wifi канал */
     uint8_t channel;
-    uint32_t router_mac;
+    /* Первые три октета мак адрес роутера */
+    char router_mac[MAC_LENGTH + 1] = {0};
+    /* IP адрес устройства */
+    char ip[IP_LENGTH + 1] = {0};
+    /* MAC адрес устройства */
+    char mac[MAC_LENGTH + 1] = {0};
 };
 
 /*
@@ -152,14 +195,14 @@ struct CalculatedData
 */
 struct Settings
 {
-    uint8_t version; //Версия конфигурации
+    uint8_t version; // Версия конфигурации
 
     uint8_t reserved;
 
     // SEND_WATERIUS
 
     // http/https сервер для отправки данных в виде JSON
-    //вид: http://host[:port][/path]
+    // вид: http://host[:port][/path]
     //      https://host[:port][/path]
     char waterius_host[WATERIUS_HOST_LEN];
     char waterius_key[WATERIUS_KEY_LEN];
@@ -167,24 +210,24 @@ struct Settings
 
     // SEND_BLYNK
 
-    //уникальный ключ устройства blynk
+    // уникальный ключ устройства blynk
     char blynk_key[BLYNK_KEY_LEN];
-    //сервер blynk.com или свой blynk сервер
+    // сервер blynk.com или свой blynk сервер
     char blynk_host[BLYNK_HOST_LEN];
 
-    //Если email не пустой, то отсылается e-mail
-    //Чтобы работало нужен виджет эл. почта в приложении
+    // Если email не пустой, то отсылается e-mail
+    // Чтобы работало нужен виджет эл. почта в приложении
     char blynk_email[EMAIL_LEN];
-    //Заголовок письма. {V0}-{V4} заменяются на данные
+    // Заголовок письма. {V0}-{V4} заменяются на данные
     char blynk_email_title[BLYNK_EMAIL_TITLE_LEN];
-    //Шаблон эл. письма. {V0}-{V4} заменяются на данные
+    // Шаблон эл. письма. {V0}-{V4} заменяются на данные
     char blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN];
 
-    char mqtt_host[MQTT_HOST_LEN];
+    char mqtt_host[MQTT_HOST_LEN] = {0};
     uint16_t mqtt_port;
-    char mqtt_login[MQTT_LOGIN_LEN];
-    char mqtt_password[MQTT_PASSWORD_LEN];
-    char mqtt_topic[MQTT_TOPIC_LEN];
+    char mqtt_login[MQTT_LOGIN_LEN] = {0};
+    char mqtt_password[MQTT_PASSWORD_LEN] = {0};
+    char mqtt_topic[MQTT_TOPIC_LEN] = {0};
 
     /*
     Показания счетчиках в кубометрах,

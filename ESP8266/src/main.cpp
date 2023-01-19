@@ -1,23 +1,23 @@
-
-#include "Logging.h"
 #include <user_interface.h>
 #include <ESP8266WiFi.h>
-
+#include <ArduinoJson.h>
+#include "Logging.h"
 #include "wifi_settings.h"
 #include "master_i2c.h"
 #include "setup_ap.h"
 #include "sender_blynk.h"
 #include "sender_mqtt.h"
-#include "UserClass.h"
+#include "sender_http.h"
 #include "voltage.h"
 #include "utils.h"
 #include "cert.h"
+#include "porting.h"
 
 MasterI2C masterI2C; // Для общения с Attiny85 по i2c
 
 SlaveData data;       // Данные от Attiny85
 Settings sett;        // Настройки соединения и предыдущие показания из EEPROM
-CalculatedData cdata; //вычисляемые данные
+CalculatedData cdata; // вычисляемые данные
 Voltage voltage;      // клас монитора питания
 ADC_MODE(ADC_VCC);
 
@@ -28,13 +28,13 @@ void setup()
 {
     memset(&cdata, 0, sizeof(cdata));
     memset(&data, 0, sizeof(data));
-    LOG_BEGIN(115200); //Включаем логгирование на пине TX, 115200 8N1
+    LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Booted"));
 
     LOG_INFO(F("Saved SSID: ") << WiFi.SSID());
     LOG_INFO(F("Saved password: ") << WiFi.psk());
 
-    masterI2C.begin(); //Включаем i2c master
+    masterI2C.begin(); // Включаем i2c master
     voltage.begin();
 }
 
@@ -45,11 +45,9 @@ void wifi_handle_event_cb(System_Event_t *evt)
     {
     case EVENT_STAMODE_CONNECTED:
         cdata.channel = evt->event_info.connected.channel;
-        cdata.router_mac = evt->event_info.connected.bssid[0];
-        cdata.router_mac = cdata.router_mac << 8;
-        cdata.router_mac |= evt->event_info.connected.bssid[1];
-        cdata.router_mac = cdata.router_mac << 8;
-        cdata.router_mac |= evt->event_info.connected.bssid[2];
+        sprintf(cdata.router_mac, "%02X:%02X:%02X:%02X:%02X:%02X",
+                evt->event_info.connected.bssid[0], evt->event_info.connected.bssid[1],
+                evt->event_info.connected.bssid[2], 0, 0, 0);
         break;
     }
 }
@@ -81,7 +79,7 @@ void loop()
     // спрашиваем у Attiny85 повод пробуждения и данные
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
     {
-        //Загружаем конфигурацию из EEPROM
+        // Загружаем конфигурацию из EEPROM
         bool success = loadConfig(sett);
         if (!success)
         {
@@ -90,7 +88,7 @@ void loop()
 
         sett.mode = mode;
 
-        //Вычисляем текущие показания
+        // Вычисляем текущие показания
         calculate_values(sett, data, cdata);
 
         if (mode == SETUP_MODE)
@@ -100,7 +98,7 @@ void loop()
             WiFi.mode(WIFI_AP_STA);
             setup_ap(sett, data, cdata);
 
-            //не будет ли роутер блокировать повторное подключение?
+            // не будет ли роутер блокировать повторное подключение?
 
             // ухищрения, чтобы не стереть SSID, pwd
             if (WiFi.getPersistent())
@@ -125,7 +123,7 @@ void loop()
         {
             if (mode != SETUP_MODE)
             {
-                //Проснулись для передачи показаний
+                // Проснулись для передачи показаний
                 LOG_INFO(F("Starting Wi-fi"));
 
                 wifi_set_event_handler_cb(wifi_handle_event_cb);
@@ -146,13 +144,13 @@ void loop()
                 if (success)
                 {
 
-                    WiFi.mode(WIFI_STA); //без этого не записывается hostname
+                    WiFi.mode(WIFI_STA); // без этого не записывается hostname
                     set_hostname();
 
                     // WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
                     WiFi.begin();
 
-                    //Ожидаем подключения к точке доступа
+                    // Ожидаем подключения к точке доступа
                     uint32_t start = millis();
                     while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT)
                     {
@@ -160,8 +158,8 @@ void loop()
                         delay(300);
 
                         voltage.update();
-                        //В будущем добавим success, означающее, что напряжение не критично изменяется, можно продолжать
-                        //иначе есть риск ошибки ESP и стирания конфигурации
+                        // В будущем добавим success, означающее, что напряжение не критично изменяется, можно продолжать
+                        // иначе есть риск ошибки ESP и стирания конфигурации
                     }
                     cdata.voltage = voltage.value();
                     cdata.voltage_diff = voltage.diff();
@@ -173,33 +171,57 @@ void loop()
             {
 
                 print_wifi_mode();
-                LOG_INFO(F("Connected, IP: ") << WiFi.localIP().toString());
+                
+                String ip = WiFi.localIP().toString();
+                ip.toCharArray(cdata.ip, sizeof(cdata.ip));
+                LOG_INFO(F("Connected, IP: ") << (const char *)cdata.ip);
 
                 cdata.rssi = WiFi.RSSI();
                 LOG_INFO(F("RSSI: ") << cdata.rssi);
-                LOG_INFO(F("channel: ") << cdata.channel);
-                LOG_INFO(F("MAC: ") << String(cdata.router_mac, HEX));
+                LOG_INFO(F("Channel: ") << cdata.channel);
+                LOG_INFO(F("Router MAC: ") << (const char *)cdata.router_mac);
+                uint8_t mac[6];
+                WiFi.macAddress(mac);
+                sprintf(cdata.mac, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+                LOG_INFO(F("MAC: ") << (const char *)cdata.mac);
+                
+                yield();
+                // TODO: устанавливать время только при использовани хттпс или мктт
+                // устанавливаем время
+                setClock();
+
+                yield();
+
+                DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
+                get_json_data(sett, data, cdata, voltage, json_data);
 
                 if (send_blynk(sett, data, cdata))
-                {
-                    LOG_INFO(F("Send OK"));
-                }
+                    LOG_INFO(F("BLYNK: Send OK"));
 
-                if (send_mqtt(sett, data, cdata))
-                {
-                    LOG_INFO(F("Send OK"));
-                }
+                yield();
+                
+                /* Пока добавил сюда потом нужно будет внести в настройки и хранить в EEPROM */
+                bool single_topic = MQTT_SINGLE_TOPIC;
+                bool auto_discovery = MQTT_AUTO_DISCOVERY;
 
-                UserClass::sendNewData(sett, data, cdata);
+                if (send_mqtt(sett, data, cdata, json_data, single_topic, auto_discovery))
+                    LOG_INFO(F("MQTT: Send OK"));
 
-                //Сохраним текущие значения в памяти.
+                yield();
+
+                if (send_http(sett, json_data))
+                    LOG_INFO(F("HTTP: Send OK"));
+
+                yield();
+
+                // Сохраним текущие значения в памяти.
                 sett.impulses0_previous = data.impulses0;
                 sett.impulses1_previous = data.impulses1;
 
-                //Перешлем время на сервер при след. включении
+                // Перешлем время на сервер при след. включении
                 sett.wake_time = millis();
 
-                //Перерасчет времени пробуждения
+                // Перерасчет времени пробуждения
                 if (mode == TRANSMIT_MODE)
                 {
                     time_t now = time(nullptr);

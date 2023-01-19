@@ -10,10 +10,7 @@
 
 BearSSL::X509List certs;
 HTTPClient httpClient;
-WiFiClient wifiClient;
-BearSSL::WiFiClientSecure wifiTlsClient;
-
-#define JSON_BUFFER_SIZE 500
+static void* eClient = nullptr;
 
 WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url, const char *key, const char *email, const String &body)
 {
@@ -23,38 +20,30 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     LOG_INFO("Body:\t" << body);
 
     // Set wc client
-    WiFiClient *wc;
     if (url.substring(0, 5) == "https")
     {
-        wc = &wifiTlsClient;
+        eClient = new BearSSL::WiFiClientSecure;
         certs.append(lets_encrypt_x3_ca);
         certs.append(lets_encrypt_x4_ca);
         certs.append(cloud_waterius_ru_ca);
-        wifiTlsClient.setTrustAnchors(&certs);
-
-        if (!setClock())
-        {
-            LOG_ERROR("SetClock FAILED");
-            return WateriusHttps::ResponseData();
-        }
+        ((BearSSL::WiFiClientSecure*)eClient)->setTrustAnchors(&certs);
     }
     else
     {
-        wc = &wifiClient;
+        eClient = new WiFiClient;
     }
-    wc->setTimeout(SERVER_TIMEOUT);
-
+    ((Client*)eClient)->setTimeout(SERVER_TIMEOUT);
+    
     // HTTP settings
-    HTTPClient *hc = &httpClient;
-    hc->setTimeout(SERVER_TIMEOUT);
-    hc->setReuse(false);
+    httpClient.setTimeout(SERVER_TIMEOUT);
+    httpClient.setReuse(false);
 
     // Check input data
     if (url.substring(0, 4) != "http")
     {
         LOG_ERROR(F("URL \"") << url << F("\" has not 'http' ('https')"));
     }
-    if (wc->available())
+    if (((Client*)eClient)->available())
     {
         LOG_ERROR(F("Wi-Fi client is not available"));
     }
@@ -63,23 +52,23 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     // Request
     int responseCode = 0;
     String responseBody;
-    if (hc->begin(*wc, url))
+    if (httpClient.begin(*(WiFiClient*)eClient, url))
     {
-        hc->addHeader(F("Content-Type"), F("application/json"));
+        httpClient.addHeader(F("Content-Type"), F("application/json"));
         if (strnlen(key, WATERIUS_KEY_LEN))
         {
-            hc->addHeader(F("Waterius-Token"), key);
+            httpClient.addHeader(F("Waterius-Token"), key);
         }
         if (strnlen(email, EMAIL_LEN))
         {
-            hc->addHeader(F("Waterius-Email"), email);
+            httpClient.addHeader(F("Waterius-Email"), email);
         }
-        responseCode = hc->POST(body);
+        responseCode = httpClient.POST(body);
         LOG_INFO(F("Response code:\t") << responseCode);
-        responseBody = hc->getString();
+        responseBody = httpClient.getString();
         LOG_INFO(F("Response body:\t") << responseBody);
-        hc->end();
-        wc->stop();
+        httpClient.end();
+        ((Client*)eClient)->stop();
     }
     else
     {
