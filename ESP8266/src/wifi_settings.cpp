@@ -40,7 +40,7 @@ bool loadConfig(struct Settings &sett)
     EEPROM.get(0, sett);
     EEPROM.end();
 
-    if (sett.crc == FAKE_CRC) // todo: сделать нормальный crc16
+    if ((sett.crc == get_checksum(sett)) || (sett.crc ==FAKE_CRC) )  // оставим для совместимости сравнение с FAKE_CRC
     {
         LOG_INFO(F("Configuration CRC ok"));
 

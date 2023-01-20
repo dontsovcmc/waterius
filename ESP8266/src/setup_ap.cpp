@@ -348,6 +348,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.setup_time = millis();
     sett.setup_finished_counter++;
 
-    sett.crc = FAKE_CRC; // todo: сделать нормальный crc16
+    sett.crc = get_checksum(sett); 
     storeConfig(sett);
 }

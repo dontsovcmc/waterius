@@ -1,6 +1,6 @@
 #ifndef _WATERIUS_INIT_h
 #define _WATERIUS_INIT_h
-
+#include "setup.h"
 /*
 Запишем 0 в конце буфера принудительно.
 */
@@ -22,5 +22,7 @@ extern String get_device_name();
 extern String get_mac_address_hex();
 
 extern  String get_current_time();
+
+extern uint16_t get_checksum(const Settings &sett);
 
 #endif

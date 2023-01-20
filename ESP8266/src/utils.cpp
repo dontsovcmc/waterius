@@ -121,3 +121,34 @@ String get_mac_address_hex()
 	sprintf(baseMacChr, "%02X%02X%02X%02X%02X%02X", baseMac[0], baseMac[1], baseMac[2], baseMac[3], baseMac[4], baseMac[5]);
 	return String(baseMacChr);
 }
+
+/**
+ * @brief Рассчитывает чексуму объекта настроек
+ *  за пример взят следующий код https://github.com/renatoaloi/EtherEncLib/blob/master/checksum.c
+ * @param  sett настройки программы
+ * @return возвращет чексуму объекта настроек
+ */
+uint16_t get_checksum(const Settings &sett)
+{
+	uint32_t checksum = 0;
+	uint8_t *buf = (uint8_t *)&sett;
+	int len = sizeof(sett);
+	len -= 2; // вычитаем саму чексуму из длины буфера
+	checksum += len;
+
+	// сумируем по 16 бит за раз
+	while (len > 1)
+	{
+		checksum += 0xFFFF & (*buf << 8 | *(buf + 1));
+		buf += 2;
+		len -= 2;
+	}
+	// Если количество байт было нечетным то добавим последний байт к сумме
+	if (len)
+	{
+		checksum += 0xFFFF & (*buf << 8 | 0x00);
+	}
+
+	// возвращаем только первые 16 бит и инвертируем их
+	return ((uint16_t)checksum ^ 0xFFFF);
+}
