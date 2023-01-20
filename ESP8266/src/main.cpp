@@ -171,7 +171,7 @@ void loop()
             {
 
                 print_wifi_mode();
-                
+
                 String ip = WiFi.localIP().toString();
                 ip.toCharArray(cdata.ip, sizeof(cdata.ip));
                 LOG_INFO(F("Connected, IP: ") << (const char *)cdata.ip);
@@ -184,13 +184,15 @@ void loop()
                 WiFi.macAddress(mac);
                 sprintf(cdata.mac, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
                 LOG_INFO(F("MAC: ") << (const char *)cdata.mac);
-                
-                yield();
-                // TODO: устанавливать время только при использовани хттпс или мктт
-                // устанавливаем время
-                setClock();
 
                 yield();
+
+                // устанавливать время только при использовани хттпс или мктт
+                if (sett.mqtt_host[0] || is_https(sett.waterius_host))
+                {
+                    setClock();
+                    yield();
+                }
 
                 DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
                 get_json_data(sett, data, cdata, voltage, json_data);
@@ -199,7 +201,7 @@ void loop()
                     LOG_INFO(F("BLYNK: Send OK"));
 
                 yield();
-                
+
                 /* Пока добавил сюда потом нужно будет внести в настройки и хранить в EEPROM */
                 bool single_topic = MQTT_SINGLE_TOPIC;
                 bool auto_discovery = MQTT_AUTO_DISCOVERY;

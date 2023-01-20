@@ -152,3 +152,21 @@ uint16_t get_checksum(const Settings &sett)
 	// возвращаем только первые 16 бит и инвертируем их
 	return ((uint16_t)checksum ^ 0xFFFF);
 }
+
+#define PROTO_HTTPS "https://"
+#define PROTO_HTTP "http://"
+
+bool is_http(const char *url)
+{
+	return strncmp(url, PROTO_HTTP, strlen(PROTO_HTTP)) != 0;
+}
+
+bool is_https(const char *url)
+{
+	return strncmp(url, PROTO_HTTPS, strlen(PROTO_HTTPS)) != 0;
+}
+
+bool is_valid_proto(const char *url)
+{
+	return is_http(url) || is_https(url);
+}

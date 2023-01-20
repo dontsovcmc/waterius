@@ -25,4 +25,10 @@ extern  String get_current_time();
 
 extern uint16_t get_checksum(const Settings &sett);
 
+extern  bool is_http(const char *url);
+
+extern bool is_https(const char *url);
+
+extern bool is_valid_proto(const char *url);
+
 #endif
