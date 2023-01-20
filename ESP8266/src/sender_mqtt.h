@@ -27,7 +27,7 @@
 #include "utils.h"
 
 PubSubClient mqtt_client;
-static void* eClient = nullptr;
+static void* pClient = nullptr;
 
 /**
  * @brief Отправляет показания на укзанный сервер MQTT и создает discovery топик HomeAssistant
@@ -49,8 +49,8 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         return false;
     }
 
-    eClient = new WiFiClient;
-    mqtt_client.setClient(*(Client*)eClient);
+    pClient = new WiFiClient;
+    mqtt_client.setClient(*(Client*)pClient);
     mqtt_client.setBufferSize(MQTT_MAX_PACKET_SIZE);
     mqtt_client.setServer(sett.mqtt_host, sett.mqtt_port);
 

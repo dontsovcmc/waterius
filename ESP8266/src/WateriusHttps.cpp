@@ -10,7 +10,7 @@
 
 BearSSL::X509List certs;
 HTTPClient httpClient;
-static void* eClient = nullptr;
+static void* pClient = nullptr;
 
 WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url, const char *key, const char *email, const String &body)
 {
@@ -22,17 +22,17 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     // Set wc client
     if (url.substring(0, 5) == "https")
     {
-        eClient = new BearSSL::WiFiClientSecure;
+        pClient = new BearSSL::WiFiClientSecure;
         certs.append(lets_encrypt_x3_ca);
         certs.append(lets_encrypt_x4_ca);
         certs.append(cloud_waterius_ru_ca);
-        ((BearSSL::WiFiClientSecure*)eClient)->setTrustAnchors(&certs);
+        ((BearSSL::WiFiClientSecure*)pClient)->setTrustAnchors(&certs);
     }
     else
     {
-        eClient = new WiFiClient;
+        pClient = new WiFiClient;
     }
-    ((Client*)eClient)->setTimeout(SERVER_TIMEOUT);
+    ((Client*)pClient)->setTimeout(SERVER_TIMEOUT);
     
     // HTTP settings
     httpClient.setTimeout(SERVER_TIMEOUT);
@@ -43,7 +43,7 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     {
         LOG_ERROR(F("URL \"") << url << F("\" has not 'http' ('https')"));
     }
-    if (((Client*)eClient)->available())
+    if (((Client*)pClient)->available())
     {
         LOG_ERROR(F("Wi-Fi client is not available"));
     }
@@ -52,7 +52,7 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     // Request
     int responseCode = 0;
     String responseBody;
-    if (httpClient.begin(*(WiFiClient*)eClient, url))
+    if (httpClient.begin(*(WiFiClient*)pClient, url))
     {
         httpClient.addHeader(F("Content-Type"), F("application/json"));
         if (strnlen(key, WATERIUS_KEY_LEN))
@@ -68,7 +68,7 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
         responseBody = httpClient.getString();
         LOG_INFO(F("Response body:\t") << responseBody);
         httpClient.end();
-        ((Client*)eClient)->stop();
+        ((Client*)pClient)->stop();
     }
     else
     {
