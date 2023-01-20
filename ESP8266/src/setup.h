@@ -204,27 +204,27 @@ struct Settings
     // http/https сервер для отправки данных в виде JSON
     // вид: http://host[:port][/path]
     //      https://host[:port][/path]
-    char waterius_host[WATERIUS_HOST_LEN];
-    char waterius_key[WATERIUS_KEY_LEN];
-    char waterius_email[EMAIL_LEN];
+    char waterius_host[WATERIUS_HOST_LEN] = {0};
+    char waterius_key[WATERIUS_KEY_LEN] = {0};
+    char waterius_email[EMAIL_LEN] = {0};
 
     // SEND_BLYNK
 
     // уникальный ключ устройства blynk
-    char blynk_key[BLYNK_KEY_LEN];
+    char blynk_key[BLYNK_KEY_LEN] = {0};
     // сервер blynk.com или свой blynk сервер
-    char blynk_host[BLYNK_HOST_LEN];
+    char blynk_host[BLYNK_HOST_LEN] = {0};
 
     // Если email не пустой, то отсылается e-mail
     // Чтобы работало нужен виджет эл. почта в приложении
     char blynk_email[EMAIL_LEN];
     // Заголовок письма. {V0}-{V4} заменяются на данные
-    char blynk_email_title[BLYNK_EMAIL_TITLE_LEN];
+    char blynk_email_title[BLYNK_EMAIL_TITLE_LEN] = {0};
     // Шаблон эл. письма. {V0}-{V4} заменяются на данные
-    char blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN];
+    char blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN] = {0};
 
     char mqtt_host[MQTT_HOST_LEN] = {0};
-    uint16_t mqtt_port;
+    uint16_t mqtt_port=MQTT_DEFAULT_PORT;
     char mqtt_login[MQTT_LOGIN_LEN] = {0};
     char mqtt_password[MQTT_PASSWORD_LEN] = {0};
     char mqtt_topic[MQTT_TOPIC_LEN] = {0};
@@ -245,8 +245,8 @@ struct Settings
     /*
     Серийные номера счётчиков воды
     */
-    char serial0[SERIAL_LEN];
-    char serial1[SERIAL_LEN];
+    char serial0[SERIAL_LEN]= {0};
+    char serial1[SERIAL_LEN] = {0};
 
     /*
     Кол-во импульсов Attiny85 соответствующие показаниям счетчиков,
@@ -308,7 +308,7 @@ struct Settings
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved2[154];
+    uint8_t reserved2[154] = {0};
 
     /*
     Контрольная сумма, чтобы гарантировать корректность чтения настроек
