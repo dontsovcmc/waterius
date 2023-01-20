@@ -110,7 +110,9 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
 
         yield();
 
-        if (auto_discovery)
+        // autodiscovery после настройки и по нажатию на кнопку
+        if (auto_discovery && (ALWAYS_MQTT_AUTO_DISCOVERY || 
+        (sett.mode==SETUP_MODE)  || (sett.mode==MANUAL_TRANSMIT_MODE)))
         {
             // Автоматическое добавления устройства в Home Assistant
             LOG_INFO(F("MQTT: Publish discovery topic"));

@@ -19,7 +19,7 @@ const char *GENERAL_SENSORS[][MQTT_PARAM_COUNT] PROGMEM = {
     // sensor_type, sensor_name, sensor_id, state_class, device_class,unit_of_meas,entity_category,icon
     {"sensor", "Battery Voltage", "voltage", "measurement", "voltage", "V", "diagnostic", ""},                    // voltage
     {"sensor", "Voltage diff", "voltage_diff", "measurement", "voltage", "V", "diagnostic", "mdi:battery-alert"}, // Просадка напряжения voltage_diff, В
-    {"sensor", "Battery low", "voltage_low", "", "battery", "", "diagnostic", "mdi:battery-alert"},               // voltage_low Батарейка разряжена >
+    {"sensor", "Battery low", "voltage_low", "", "", "", "diagnostic", "mdi:battery-alert"},                      // voltage_low Батарейка разряжена >
     {"sensor", "Battery", "battery", "measurement", "battery", "%", "diagnostic", ""},                            // процент зарядки батареи
     {"sensor", "RSSI", "rssi", "measurement", "signal_strength", "dBm", "diagnostic", "mdi:wifi"},                // rssi
     {"sensor", "Resets", "resets", "measurement", "", "", "diagnostic", "mdi:cog-refresh"},                       // resets
@@ -29,7 +29,7 @@ const char *GENERAL_SENSORS[][MQTT_PARAM_COUNT] PROGMEM = {
     {"sensor", "MAC Address", "mac", "", "", "", "diagnostic", ""},                                               // Мак ESP
     /* {"sensor", "ESP ID", "esp_id", "", "", "", "diagnostic", ""}, */                                           // ESP ID, уже будет в свойствах девайса
     {"sensor", "IP", "ip", "", "", "", "diagnostic", "mdi:ip-network"},                                           // IP
-    {"sensor", "Free Memory", "freemem", "", "", "", "diagnostic", "mdi:memory"},                                 // Свободная память
+    {"sensor", "Free Memory", "freemem", "", "data_size", "B", "diagnostic", "mdi:memory"},                       // Свободная память
     {"number", "Wake up period", "period_min", "", "duration", "min", "config", "mdi:bed-clock"}                  // Настройка для автоматического добавления времени пробуждения в Home Assistant
 };
 
@@ -46,6 +46,12 @@ const char *CHANNEL_SENSORS[][MQTT_PARAM_COUNT] PROGMEM = {
     {"sensor", "Serial Number", "serial", "", "", "", "diagnostic", "mdi:identifier"}, // adcN Аналоговый уровень
     {"number", "Factor", "f", "", "", "", "config", "mdi:numeric"}                     // fN  Вес импульса
 };
+
+/**
+ * @brief типы сенсоров ватериуса
+ *
+ */
+const char *SENSOR_TYPES[] PROGMEM = {"sensor", "number"};
 
 /**
  * @brief Названия каналов
@@ -208,6 +214,31 @@ void publish_sensor_discovery(PubSubClient &mqtt_client, const char *mqtt_topic,
     }
 }
 
+
+void clean_discovery_topics(PubSubClient &client, String &topic)
+{
+
+    int num_sensor_types = sizeof(SENSOR_TYPES) / sizeof(SENSOR_TYPES[0]);
+
+    for (int i = 1; i < num_sensor_types; i++)
+    {
+        yield();
+        String discovery_topic = String(DISCOVERY_TOPIC) + "/" + SENSOR_TYPES[i] + "/" + get_device_name();
+
+        if (client.connected())
+        {
+            if (!client.publish(discovery_topic.c_str(), "", true))
+            {
+                LOG_ERROR(F("FAILEDCLEAN MQTT DISCOVERY TOPIC ") << discovery_topic);
+            }
+        }
+        else
+        {
+            LOG_ERROR(F("FAILED CLEAN MQTT DISCOVERY TOPIC. Client not connected."));
+        }
+    }
+}
+
 void publish_discovery(PubSubClient &client, String &topic, const SlaveData &data, bool single_topic = true)
 {
     String device_id = String(getChipId());
@@ -217,6 +248,8 @@ void publish_discovery(PubSubClient &client, String &topic, const SlaveData &dat
     String sw_version = String(FIRMWARE_VERSION) + "." + String(data.version); // ESP_VERSION.ATTINY_VERSION
     String hw_version = String(HARDWARE_VERSION);                              // в дальнейшем можно модифицировать для гибкого определения версии hw
     String device_manufacturer = String(MANUFACTURER);
+
+    clean_discovery_topics(client, topic);
 
     // Общие сенсоры
     int num_general_sensors = sizeof(GENERAL_SENSORS) / sizeof(GENERAL_SENSORS[0]);

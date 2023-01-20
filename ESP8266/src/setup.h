@@ -142,6 +142,10 @@
 #define MQTT_AUTO_DISCOVERY true // если true то публикуется автодискавери топик для Home Assistant
 #endif
 
+#ifndef ALWAYS_MQTT_AUTO_DISCOVERY
+#define ALWAYS_MQTT_AUTO_DISCOVERY false // если true то публикуется автодискавери топик для Home Assistant
+#endif
+
 #ifndef MQTT_SINGLE_TOPIC
 #define MQTT_SINGLE_TOPIC true // если true то публикует все данные в один топик, если false то каждый показатель в одельный топик
 #endif
@@ -164,6 +168,8 @@
 
 #define AUTO_IMPULSE_FACTOR 2
 #define AS_COLD_CHANNEL 7
+
+
 
 struct CalculatedData
 {
