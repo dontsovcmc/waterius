@@ -5,6 +5,10 @@
 #include "porting.h"
 
 #define NTP_CONNECT_TIMEOUT 3000UL
+
+#define NTP_SERV1 "1.ru.pool.ntp.org"
+#define NTP_SERV2 "2.ru.pool.ntp.org"
+#define NTP_SERV3 "pool.ntp.org"
 /**
  * @brief Устанаваливает время по указанному серверу NTP
  *
@@ -38,15 +42,13 @@ bool setClock(const char *ntp_server)
  */
 bool setClock()
 {
-	if (setClock("1.ru.pool.ntp.org") || setClock("2.ru.pool.ntp.org") || setClock("pool.ntp.org"))
+	if (setClock(NTP_SERV1) || setClock(NTP_SERV2) || setClock(NTP_SERV3))
 	{
 		LOG_INFO(F("Current time: ") << get_current_time());
 		return true;
-	}
-	else
-	{
-		LOG_ERROR(F("SetClock FAILED"));
-	}
+	};
+
+	LOG_ERROR(F("SetClock FAILED"));
 	return false;
 }
 
@@ -104,7 +106,7 @@ String get_current_time()
 	struct tm timeinfo;
 	gmtime_r(&now, &timeinfo);
 	// ISO8601 date time string format (2019-11-29T23:29:55+0800).
-	strftime(buf, sizeof(buf), "%FT%T%z", &timeinfo);
+	strftime(buf, sizeof(buf), TIME_FORMAT, &timeinfo);
 	return String(buf);
 }
 
@@ -118,7 +120,7 @@ String get_mac_address_hex()
 	uint8_t baseMac[6];
 	char baseMacChr[13] = {0};
 	WiFi.macAddress(baseMac);
-	sprintf(baseMacChr, "%02X%02X%02X%02X%02X%02X", baseMac[0], baseMac[1], baseMac[2], baseMac[3], baseMac[4], baseMac[5]);
+	sprintf(baseMacChr, MAC_STR_HEX, baseMac[0], baseMac[1], baseMac[2], baseMac[3], baseMac[4], baseMac[5]);
 	return String(baseMacChr);
 }
 
@@ -153,20 +155,28 @@ uint16_t get_checksum(const Settings &sett)
 	return ((uint16_t)checksum ^ 0xFFFF);
 }
 
-#define PROTO_HTTPS "https://"
-#define PROTO_HTTP "http://"
-
-bool is_http(const char *url)
+/**
+ * @brief Возвращает протокол ссылки в нижнем регистре
+ *
+ * @param url ссылка
+ * @return строка содержащая название протокола в нижнем регистре http или https
+ */
+String get_proto(const String &url)
 {
-	return strncmp(url, PROTO_HTTP, strlen(PROTO_HTTP)) != 0;
+	String proto = "";
+	int index = url.indexOf(':');
+	if (index > 0)
+	{
+		proto = url.substring(0, index);
+		proto.toLowerCase();
+	}
+	return proto;
 }
 
-bool is_https(const char *url)
+bool is_waterius_site(const String &url)
 {
-	return strncmp(url, PROTO_HTTPS, strlen(PROTO_HTTPS)) != 0;
-}
-
-bool is_valid_proto(const char *url)
-{
-	return is_http(url) || is_https(url);
+	String temp_str = url;
+	temp_str.toLowerCase();
+	// специяльно не используется WATERIUS_DEFAULT_DOMAIN
+	return temp_str.startsWith(F("https://cloud.waterius.ru"));
 }
