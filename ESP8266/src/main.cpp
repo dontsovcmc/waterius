@@ -12,6 +12,7 @@
 #include "utils.h"
 #include "cert.h"
 #include "porting.h"
+#include "json.h"
 
 MasterI2C masterI2C; // Для общения с Attiny85 по i2c
 
@@ -169,7 +170,7 @@ void loop()
 
             if (success && WiFi.status() == WL_CONNECTED)
             {
-
+                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
                 print_wifi_mode();
 
                 String ip = WiFi.localIP().toString();
@@ -182,40 +183,59 @@ void loop()
                 LOG_INFO(F("Router MAC: ") << (const char *)cdata.router_mac);
                 uint8_t mac[6];
                 WiFi.macAddress(mac);
-                sprintf(cdata.mac, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+                sprintf(cdata.mac, MAC_STR, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
                 LOG_INFO(F("MAC: ") << (const char *)cdata.mac);
 
                 yield();
-
+                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
                 // устанавливать время только при использовани хттпс или мктт
-                if (sett.mqtt_host[0] || is_https(sett.waterius_host))
+                String url = "";
+                if (sett.waterius_host[0])
+                {
+                    url = sett.waterius_host;
+                }
+                String proto = get_proto(url);
+
+                if (sett.mqtt_host[0] || (proto == PROTO_HTTPS))
                 {
                     setClock();
                     yield();
                 }
-
+                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
                 DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
                 get_json_data(sett, data, cdata, voltage, json_data);
-
-                if (send_blynk(sett, data, cdata))
-                    LOG_INFO(F("BLYNK: Send OK"));
-
                 yield();
 
+#ifndef BLYNK_DISABLED
+                if (send_blynk(sett, data, cdata))
+                {
+                    LOG_INFO(F("BLYNK: Send OK"));
+                }
+                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
+                yield();
+#endif
+
+#ifndef MQTT_DISABLED
                 /* Пока добавил сюда потом нужно будет внести в настройки и хранить в EEPROM */
                 bool single_topic = MQTT_SINGLE_TOPIC;
                 bool auto_discovery = MQTT_AUTO_DISCOVERY;
 
                 if (send_mqtt(sett, data, cdata, json_data, single_topic, auto_discovery))
+                {
                     LOG_INFO(F("MQTT: Send OK"));
-
+                }
+                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
                 yield();
+#endif
 
-                if (send_http(sett, json_data))
+#ifndef HTTPS_DISABLED
+                if (send_http(url, sett, json_data))
+                {
                     LOG_INFO(F("HTTP: Send OK"));
+                }
 
                 yield();
-
+#endif
                 // Сохраним текущие значения в памяти.
                 sett.impulses0_previous = data.impulses0;
                 sett.impulses1_previous = data.impulses1;
