@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 
+#ifdef LOGLEVEL
 template <class T>
 inline Print &operator<<(Print &obj, T arg)
 {
@@ -28,6 +29,31 @@ inline Print &operator<<(Print &obj, T arg)
 		Serial << String(logFormattedTime);                                                           \
 	} while (0)
 
+// Depending on log level, add code for logging
+#define LOG_BEGIN(baud)                 \
+	do                                  \
+	{                                   \
+		Serial.begin(baud, SERIAL_8N1); \
+	} while (0)
+#define LOG_END()       \
+	do                  \
+	{                   \
+		Serial.flush(); \
+		Serial.end();   \
+	} while (0)
+#define LOG_ERROR(content)                           \
+	do                                               \
+	{                                                \
+		LOG_FORMAT_TIME;                             \
+		Serial << "  ERROR : " << content << "\r\n"; \
+	} while (0)
+#define LOG_INFO(content)                            \
+	do                                               \
+	{                                                \
+		LOG_FORMAT_TIME;                             \
+		Serial << "  INFO  : " << content << "\r\n"; \
+	} while (0)
+#else // LOGLEVEL >= 0
 // Default do no logging...
 #define LOG_BEGIN(baud) \
 	do                  \
@@ -42,35 +68,9 @@ inline Print &operator<<(Print &obj, T arg)
 	{                     \
 	} while (0)
 
-// Depending on log level, add code for logging
-#ifdef LOGLEVEL
-#undef LOG_BEGIN
-#define LOG_BEGIN(baud)                 \
-	do                                  \
-	{                                   \
-		Serial.begin(baud, SERIAL_8N1); \
+#define LOG_ERROR(content) \
+	do                     \
+	{                      \
 	} while (0)
-#undef LOG_END
-#define LOG_END()       \
-	do                  \
-	{                   \
-		Serial.flush(); \
-		Serial.end();   \
-	} while (0)
-#undef LOG_ERROR
-#define LOG_ERROR(content)                           \
-	do                                               \
-	{                                                \
-		LOG_FORMAT_TIME;                             \
-		Serial << "  ERROR : " << content << "\r\n"; \
-	} while (0)
-#undef LOG_INFO
-#define LOG_INFO(content)                            \
-	do                                               \
-	{                                                \
-		LOG_FORMAT_TIME;                             \
-		Serial << "  INFO  : " << content << "\r\n"; \
-	} while (0)
-#endif // LOGLEVEL >= 0
-
+#endif
 #endif
