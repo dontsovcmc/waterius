@@ -1,5 +1,4 @@
 #include "WateriusHttps.h"
-#include <utility>
 #include "time.h"
 #include "Logging.h"
 #include "cert.h"
@@ -8,73 +7,97 @@
 #include "setup.h"
 #include "porting.h"
 
-BearSSL::X509List certs;
-HTTPClient httpClient;
-static void* pClient = nullptr;
-
-WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url, const char *key, const char *email, const String &body)
+WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url, const char *key, const char *email, const String &payload)
 {
-    constexpr char THIS_FUNC_DESCRIPTION[] = "Send JSON POST request";
-    LOG_INFO("-- START -- " << THIS_FUNC_DESCRIPTION);
-    LOG_INFO("URL:\t" << url);
-    LOG_INFO("Body:\t" << body);
+    BearSSL::X509List certs;
+    HTTPClient httpClient;
+    void *pClient = nullptr;
+    BearSSL::CertStore certStore;
+    
+    LOG_INFO(F("-- START -- ") << F("Send JSON POST request"));
+    LOG_INFO(F("URL:\t") << url);
+    LOG_INFO(F("Body:\t") << payload);
+
+    String proto = get_proto(url);
+    LOG_INFO(F("Protocol:\t") << proto);
 
     // Set wc client
-    if (url.substring(0, 5) == "https")
+    if ((proto == PROTO_HTTP))
     {
+        LOG_INFO(F("Create insecure client"));
+        pClient = new WiFiClient;
+        LOG_INFO(F("Insecure client created"));
+    }
+    else if (proto == PROTO_HTTPS)
+    {
+        LOG_INFO(F("Create secure client"));
         pClient = new BearSSL::WiFiClientSecure;
-        certs.append(lets_encrypt_x3_ca);
-        certs.append(lets_encrypt_x4_ca);
-        certs.append(cloud_waterius_ru_ca);
-        ((BearSSL::WiFiClientSecure*)pClient)->setTrustAnchors(&certs);
+        if (is_waterius_site(url)) {
+            // проверяем валидность сертифкат сайта ватериуса
+            certs.append(cloud_waterius_ru_ca);
+            (*(BearSSL::WiFiClientSecure *)pClient).setTrustAnchors(&certs);
+            // если нужно будет добавить еще сертификатов то лучше их не добавлять в certs
+            // так как каждый из них будет дополнительно загружен в память
+            // а один сертификат занимает больше 1.5кБ
+            // нужно реализовывать через BearSSL::CertStore
+            // пример реализации https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WiFi/examples/BearSSL_CertStore/BearSSL_CertStore.ino
+        }
+        else {
+            // если не сайт ватериуса, то самоподписанные сертификаты будут работать
+            //(*(BearSSL::WiFiClientSecure *)pClient).allowSelfSignedCerts();
+    
+            (*(BearSSL::WiFiClientSecure *)pClient).setInsecure();
+        }
+
+        //The per-connection buffers are approximately 22KB in size
+        // https://github.com/esp8266/Arduino/blob/master/doc/esp8266wifi/bearssl-client-secure-class.rst
+        // поэтому обязательно нужно уменьшиить буферы 
+        // иначе клиент отъест большье 22 кб под буфер
+        // и вся память закончится и срабоатает ватчдог и перезапустит есп. 
+        (*(BearSSL::WiFiClientSecure *)pClient).setBufferSizes(1024, 1024); 
+                LOG_INFO(F("Secure client created"));
     }
     else
     {
-        pClient = new WiFiClient;
+        LOG_ERROR(F("URL \"") << url << F("\" has not 'http' ('https')"));
+        return WateriusHttps::ResponseData();
     }
-    ((Client*)pClient)->setTimeout(SERVER_TIMEOUT);
-    
+
+    (*(WiFiClient *)pClient).setTimeout(SERVER_TIMEOUT);
+
     // HTTP settings
     httpClient.setTimeout(SERVER_TIMEOUT);
     httpClient.setReuse(false);
 
-    // Check input data
-    if (url.substring(0, 4) != "http")
-    {
-        LOG_ERROR(F("URL \"") << url << F("\" has not 'http' ('https')"));
-    }
-    if (((Client*)pClient)->available())
-    {
-        LOG_ERROR(F("Wi-Fi client is not available"));
-    }
-
     LOG_INFO(F("Begin client"));
+    yield();
     // Request
     int responseCode = 0;
     String responseBody;
-    if (httpClient.begin(*(WiFiClient*)pClient, url))
+    if (httpClient.begin(*(WiFiClient *)pClient, url))
     {
+        LOG_INFO(F("Begin client succesfully"));
         httpClient.addHeader(F("Content-Type"), F("application/json"));
-        if (strnlen(key, WATERIUS_KEY_LEN))
+        if (key[0])
         {
             httpClient.addHeader(F("Waterius-Token"), key);
         }
-        if (strnlen(email, EMAIL_LEN))
+        if (email[0])
         {
             httpClient.addHeader(F("Waterius-Email"), email);
         }
-        responseCode = httpClient.POST(body);
+        LOG_INFO(F("Post request"));
+        responseCode = httpClient.POST(payload);
         LOG_INFO(F("Response code:\t") << responseCode);
         responseBody = httpClient.getString();
         LOG_INFO(F("Response body:\t") << responseBody);
         httpClient.end();
-        ((Client*)pClient)->stop();
+        (*(WiFiClient *)pClient).stop();
     }
     else
     {
         LOG_ERROR(F("Cannot begin HTTP client"));
     }
-
     LOG_INFO(F("-- END --"));
     return WateriusHttps::ResponseData(responseCode, responseBody);
 }
