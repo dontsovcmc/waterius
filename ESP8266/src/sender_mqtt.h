@@ -1,15 +1,15 @@
 /**
  * @file sender_mqtt.h
- * @brief содержит функцию публикации данных в MQTT 
+ * @brief содержит функцию публикации данных в MQTT
  * @version 0.1
  * @date 2023-01-20
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
-#ifndef _SENDERMQTT_h
-#define _SENDERMQTT_h
-
+#ifndef SENDERMQTT_H_
+#define SENDERMQTT_H_
+#ifndef MQTT_DISABLED
 #ifdef MQTT_SOCKET_TIMEOUT
 #undef MQTT_SOCKET_TIMEOUT
 #endif
@@ -23,11 +23,44 @@
 #include "master_i2c.h"
 #include "Logging.h"
 #include "json.h"
-#include "home_assistant.h"
+#include "ha_discovery.h"
 #include "utils.h"
+/**
+ * @brief Пубикует показания в один топик в формате json
+ * 
+ * @param mqtt_client клиент MQQT
+ * @param topic имя топика
+ * @param json_data данные в JSON
+ */
+void publish_to_single_topic(PubSubClient &mqtt_client, String &topic,DynamicJsonDocument &json_data)
+{
+            LOG_INFO(F("MQTT: Publish data to single topic"));
+            String payload = "";
+            serializeJson(json_data, payload);
+            publish(mqtt_client, topic, payload);
 
-PubSubClient mqtt_client;
-static void* pClient = nullptr;
+}
+/**
+ * @brief публикация показаний в отдельные топики 
+ * 
+ * @param mqtt_client клиент MQQT
+ * @param topic имя топика
+ * @param json_data данные в JSON
+ */
+void publish_to_multiple_topics(PubSubClient &mqtt_client, String &topic,DynamicJsonDocument &json_data)
+{
+            LOG_INFO(F("MQTT: Publish data to multiple topics"));
+            JsonObject root = json_data.as<JsonObject>();
+            for (JsonPair p : root)
+            {
+                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
+                String sensor_topic = topic + "/" + p.key().c_str();
+                String sensor_value = p.value().as<String>();
+                publish(mqtt_client, sensor_topic, sensor_value);
+            }
+
+}
+
 
 /**
  * @brief Отправляет показания на укзанный сервер MQTT и создает discovery топик HomeAssistant
@@ -49,8 +82,9 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         return false;
     }
 
-    pClient = new WiFiClient;
-    mqtt_client.setClient(*(Client*)pClient);
+    WiFiClient wifi_client;
+    PubSubClient mqtt_client(wifi_client);
+
     mqtt_client.setBufferSize(MQTT_MAX_PACKET_SIZE);
     mqtt_client.setServer(sett.mqtt_host, sett.mqtt_port);
 
@@ -58,8 +92,8 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
 
     String client_id = get_device_name();
 
-    const char *login = sett.mqtt_login[0] ? sett.mqtt_login : NULL;
-    const char *pass = sett.mqtt_password[0] ? sett.mqtt_password : NULL;
+    const char *login = sett.mqtt_login[0] ? sett.mqtt_login : nullptr;
+    const char *pass = sett.mqtt_password[0] ? sett.mqtt_password : nullptr;
 
     String topic = sett.mqtt_topic;
 
@@ -72,53 +106,29 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         unsigned long start = millis();
         if (single_topic)
         {
-            LOG_INFO(F("MQTT: Publish data to single topic"));
-            String payload = "";
-            serializeJson(json_data, payload);
-            LOG_INFO(F("MQTT: Topic: ") << topic << F(" Payload Length: ") << payload.length() << F(" Payload: ") << payload);
-            yield();
-            if (!mqtt_client.publish(topic.c_str(), payload.c_str(), true))
-            {
-                LOG_ERROR(F("MQTT: Publish failed to ") << topic);
-            }
+            publish_to_single_topic(mqtt_client, topic,json_data);
         }
         else
         {
-            LOG_INFO(F("MQTT: Publish data to multiple topics"));
-            JsonObject root = json_data.as<JsonObject>();
-            for (JsonPair p : root)
-            {
-                yield();
-                String sensor_topic = topic + "/" + p.key().c_str();
-                String sensor_value = p.value().as<String>();
-                LOG_INFO(F("MQTT: Topic: ") << sensor_topic << F(" Value: ") << sensor_value);
-                
-                if (mqtt_client.connected())
-                {
-                    if (!mqtt_client.publish(sensor_topic.c_str(), sensor_value.c_str(), true))
-                    {
-                        LOG_ERROR(F("MQTT: Publish failed to ") << topic);
-                    }
-                }
-                else
-                {
-                    LOG_ERROR(F("FAILED PUBLISHING. Client not connected."));
-                }
-            }
+            publish_to_multiple_topics(mqtt_client, topic,json_data);
         }
         LOG_INFO(F("MQTT: Publish data finished. ") << millis() - start << F(" milliseconds elapsed"));
 
         yield();
 
         // autodiscovery после настройки и по нажатию на кнопку
-        if (auto_discovery && (ALWAYS_MQTT_AUTO_DISCOVERY || 
-        (sett.mode==SETUP_MODE)  || (sett.mode==MANUAL_TRANSMIT_MODE)))
+        if (auto_discovery && (ALWAYS_MQTT_AUTO_DISCOVERY ||
+                               (sett.mode == SETUP_MODE) || 
+                               (sett.mode == MANUAL_TRANSMIT_MODE)))
         {
+
+            if (sett.mode == SETUP_MODE) {
+                // Если находимся в режиме настройки 
+                //то предварительно очищаем все предыдущие автодискавери топики
+                clean_discovery(mqtt_client, topic);
+            }
             // Автоматическое добавления устройства в Home Assistant
-            LOG_INFO(F("MQTT: Publish discovery topic"));
-            unsigned long start_discovery = millis();
             publish_discovery(mqtt_client, topic, data, single_topic);
-            LOG_INFO(F("MQTT: Discovery topic published: ") << millis() - start_discovery << F(" milliseconds elapsed"));
         }
 
         mqtt_client.disconnect();
@@ -133,4 +143,5 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
     return false;
 }
 
+#endif
 #endif
