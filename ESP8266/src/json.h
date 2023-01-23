@@ -7,8 +7,8 @@
  * @copyright Copyright (c) 2023
  * 
  */
-#ifndef _JSON_h
-#define _JSON_h
+#ifndef JSON_h_
+#define JSON_h_
 
 #include <ArduinoJson.h>
 #include "setup.h"
