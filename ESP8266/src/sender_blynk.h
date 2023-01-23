@@ -1,6 +1,7 @@
 #ifndef _SENDERBLYNK_h
 #define _SENDERBLYNK_h
 
+#ifndef BLYNK_DISABLED
 // http://docs.blynk.cc/#widgets-notifications-email
 // Максимальная длина тела электронного письма. М.б. до 1200
 // email + subject + message length
@@ -96,5 +97,5 @@ bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedDat
 
     return false;
 }
-
+#endif
 #endif
