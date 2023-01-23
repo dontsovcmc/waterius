@@ -9,7 +9,7 @@
  */
 #ifndef _SENDERHTTP_h
 #define _SENDERHTTP_h
-
+# ifndef HTTPS_DISABLED
 #include <ESP8266WiFi.h>
 #include "setup.h"
 #include "master_i2c.h"
@@ -17,36 +17,28 @@
 #include "Logging.h"
 #include "json.h"
 
-bool send_http(const Settings &sett, DynamicJsonDocument &jsonData)
+bool send_http(const String &url, const Settings &sett, DynamicJsonDocument &jsonData)
 {
-    constexpr char THIS_FUNC_DESCRIPTION[] = "Send new data";
-    LOG_INFO(F("HTTP: -- START -- ") << THIS_FUNC_DESCRIPTION);
+    LOG_INFO(F("HTTP: -- START -- ") << F("Send new data"));
 
-    if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0)
+    if(!(sett.waterius_host[0] && sett.waterius_key[0]))
     {
         LOG_INFO(F("HTTP: SKIP"));
         return false;
     };
 
-    if (strnlen(sett.waterius_host, WATERIUS_HOST_LEN) == 0)
-    {
-        LOG_INFO(F("HTTP: SKIP"));
-        return false;
-    }
-
-    String url = sett.waterius_host;
-
     String payload = "";
     serializeJson(jsonData, payload);
-
+    
     // Try to send
     WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(
-        sett.waterius_host, sett.waterius_key, sett.waterius_email, payload);
+        url, sett.waterius_key, sett.waterius_email, payload);
 
-    LOG_INFO("Send HTTP code:\t" << responseData.code);
-    LOG_INFO("-- END --");
+    LOG_INFO(F("Send HTTP code:\t") << responseData.code);
+    LOG_INFO(F("-- END --"));
 
     return responseData.code == 200;
 }
 
+#endif
 #endif
