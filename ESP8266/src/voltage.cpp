@@ -49,8 +49,8 @@ uint16_t Voltage::value()
  */
 bool Voltage::low_voltage()
 {
-    // если просдка больше 100 мВ и напряжение меньше 2.9В
-    return (diff() >= ALERT_POWER_DIFF_MV) && (voltage < BATTERY_LOW_THRESHOLD_MV);
+    // если просдка больше 100 мВ или напряжение меньше 2.9В
+    return (diff() >= ALERT_POWER_DIFF_MV) || (voltage < BATTERY_LOW_THRESHOLD_MV);
 }
 
 /**
@@ -72,15 +72,15 @@ uint8_t Voltage::get_battery_level()
     }
     else
     {
-        if (diff() > 50)
+        if (diff() > LOW_BATTERY_DIFF_MV)
         {
             // батарейка начала разряжаться
-            percent = int(round((100.0 - diff()) * 0.5));
+            percent = int(round((ALERT_POWER_DIFF_MV - diff()) * 0.5));
         }
         else
         {
             // батарейка заряжена
-            percent = int(25 + round((50.0 - diff()) * 1.5));
+            percent = int(25 + round((LOW_BATTERY_DIFF_MV - diff()) * 1.5));
         }
     }
 
