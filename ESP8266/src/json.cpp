@@ -37,15 +37,7 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
   root[F("email")] = sett.waterius_email;
   root[F("voltage_low")] = cdata.low_voltage;
   root[F("voltage_diff")] = (float)cdata.voltage_diff / 1000.0;
-
-  if (sett.factor0 == AS_COLD_CHANNEL)
-  {
-    root[F("f0")] = sett.factor1;
-  }
-  else
-  {
-    root[F("f0")] = sett.factor0;
-  }
+  root[F("f0")] = sett.factor0;
   root[F("f1")] = sett.factor1;
   root[F("rssi")] = cdata.rssi;
   root[F("waketime")] = sett.wake_time;
