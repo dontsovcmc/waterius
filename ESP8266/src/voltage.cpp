@@ -6,9 +6,12 @@ Voltage::~Voltage() {}
 
 void Voltage::begin()
 {
-    voltage = ESP.getVcc();
-    minimum = voltage;
-    maximum = voltage;
+    _voltage = ESP.getVcc();
+    _min = _voltage;
+    _max = _voltage;
+    _indx = 0;
+    _values[_indx] = _voltage;
+    _indx++;
 }
 
 /**
@@ -17,11 +20,13 @@ void Voltage::begin()
  */
 void Voltage::update()
 {
-    voltage = ESP.getVcc();
-    if (voltage < minimum)
-        minimum = voltage;
-    if (voltage > maximum)
-        maximum = voltage;
+    _voltage = ESP.getVcc();
+    if (_voltage < _min)
+        _min = _voltage;
+    if (_voltage > _max)
+        _max = _voltage;
+    _values[_indx % NUM_PROBES] = _voltage;
+    _indx++;
 }
 /**
  * @brief Разница между измеренными напряжениями  в миливольтах
@@ -30,7 +35,7 @@ void Voltage::update()
  */
 uint16_t Voltage::diff()
 {
-    return maximum - minimum;
+    return _max - _min;
 }
 /**
  * @brief Возвращает занчение последнего измеренного напряжение на системной шине в миливвольтах
@@ -39,7 +44,7 @@ uint16_t Voltage::diff()
  */
 uint16_t Voltage::value()
 {
-    return voltage;
+    return _voltage;
 }
 /**
  * @brief Возвращает признак, что батарейки требуют замены
@@ -50,7 +55,7 @@ uint16_t Voltage::value()
 bool Voltage::low_voltage()
 {
     // если просдка больше 100 мВ или напряжение меньше 2.9В
-    return (diff() >= ALERT_POWER_DIFF_MV) || (voltage < BATTERY_LOW_THRESHOLD_MV);
+    return (diff() >= ALERT_POWER_DIFF_MV) || (_voltage < BATTERY_LOW_THRESHOLD_MV);
 }
 
 /**
@@ -85,4 +90,27 @@ uint8_t Voltage::get_battery_level()
     }
 
     return percent;
+}
+
+/**
+ * @brief Среднее значение измерений
+ *
+ * @return uint16_t среднее значение напряжения в миливольтах
+ */
+uint16_t Voltage::average()
+{
+    uint32_t sum = 0;
+    uint8_t cnt = NUM_PROBES ? _indx >= NUM_PROBES : _indx;
+    uint16_t avrg = 0;
+    
+    for (int i = 0; i < cnt; i++)
+    {
+        sum += _values[i]; // суммируем
+    }
+    
+    if (cnt > 0)
+    {
+        avrg = (uint16_t)sum / cnt;
+    }
+    return avrg;
 }
