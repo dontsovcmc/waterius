@@ -143,7 +143,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&param_wakeup_per);
 
     // Настройки Blynk.сс
-
+#ifndef BLYNK_DISABLED
     WiFiManagerParameter label_blynk("<h3>Blynk.cc</h3>");
     wm.addParameter(&label_blynk);
     WiFiManagerParameter param_blynk_host("bhost", "Адрес сервера", sett.blynk_host, BLYNK_HOST_LEN - 1);
@@ -156,22 +156,35 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&param_blynk_email_title);
     WiFiManagerParameter param_blynk_email_template("btemplate", "Текст письма", sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN - 1);
     wm.addParameter(&param_blynk_email_template);
+#endif
 
     // Настройки MQTT
-
+    #ifndef MQTT_DISABLED
     WiFiManagerParameter label_mqtt("<h3>MQTT</h3>");
     wm.addParameter(&label_mqtt);
     WiFiManagerParameter param_mqtt_host("mhost", "Адрес сервера (включает отправку)<br/>Пример: broker.hivemq.com", sett.mqtt_host, MQTT_HOST_LEN - 1);
     wm.addParameter(&param_mqtt_host);
-
     LongParameter param_mqtt_port("mport", "Порт", sett.mqtt_port);
     wm.addParameter(&param_mqtt_port);
     WiFiManagerParameter param_mqtt_login("mlogin", "Логин", sett.mqtt_login, MQTT_LOGIN_LEN - 1);
     wm.addParameter(&param_mqtt_login);
     WiFiManagerParameter param_mqtt_password("mpassword", "Пароль", sett.mqtt_password, MQTT_PASSWORD_LEN - 1);
     wm.addParameter(&param_mqtt_password);
-    WiFiManagerParameter param_mqtt_topic("mtopic", "Topic", sett.mqtt_topic, MQTT_TOPIC_LEN - 1);
+    WiFiManagerParameter param_mqtt_topic("mtopic", "MQTT Топик показаний", sett.mqtt_topic, MQTT_TOPIC_LEN - 1);
     wm.addParameter(&param_mqtt_topic);
+    
+    String chkbox_auto_discovery(F("type=\"checkbox\""));
+    if (sett.mqtt_auto_discovery)
+    {
+        chkbox_auto_discovery += F(" checked");
+    }
+    WiFiManagerParameter param_mqtt_auto_discovery("auto_discovery_checkbox", "Автоматическое добавление в Home Assistant", "T", 2, chkbox_auto_discovery.c_str(),WFM_LABEL_AFTER);
+    wm.addParameter(&param_mqtt_auto_discovery);
+
+    WiFiManagerParameter param_mqtt_discovery_topic("discovery_topic", "MQTT Топик Home Assistant", sett.mqtt_discovery_topic, MQTT_TOPIC_LEN - 1);
+    wm.addParameter(&param_mqtt_discovery_topic);
+    #endif
+
 
     // Статический ip
 
@@ -272,7 +285,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     Имя точки доступа waterius-NNNNN-НОМЕРВЕРСИИ
     */
     String apName = get_device_name() + "-" + String(FIRMWARE_VERSION);
-    
+
     wm.startConfigPortal(apName.c_str());
 
     // Успешно подключились к Wi-Fi, можно засыпать
@@ -291,17 +304,29 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
                                            sett.waterius_email);
     }
 
+#ifndef BLYNK_DISABLED
     strncpy0(sett.blynk_key, param_blynk_key.getValue(), BLYNK_KEY_LEN);
     strncpy0(sett.blynk_host, param_blynk_host.getValue(), BLYNK_HOST_LEN);
     strncpy0(sett.blynk_email, param_blynk_email.getValue(), EMAIL_LEN);
     strncpy0(sett.blynk_email_title, param_blynk_email_title.getValue(), BLYNK_EMAIL_TITLE_LEN);
     strncpy0(sett.blynk_email_template, param_blynk_email_template.getValue(), BLYNK_EMAIL_TEMPLATE_LEN);
+#endif
 
+// MQTT
+#ifndef MQTT_DISABLED
     strncpy0(sett.mqtt_host, param_mqtt_host.getValue(), MQTT_HOST_LEN);
+    LOG_INFO(F("MQTT host=") << param_mqtt_host.getValue());
+    sett.mqtt_port = param_mqtt_port.getValue();
+    LOG_INFO(F("MQTT port=") << sett.mqtt_port);
     strncpy0(sett.mqtt_login, param_mqtt_login.getValue(), MQTT_LOGIN_LEN);
     strncpy0(sett.mqtt_password, param_mqtt_password.getValue(), MQTT_PASSWORD_LEN);
     strncpy0(sett.mqtt_topic, param_mqtt_topic.getValue(), MQTT_TOPIC_LEN);
-    sett.mqtt_port = param_mqtt_port.getValue();
+    LOG_INFO(F("MQTT topic=") << param_mqtt_topic.getValue());
+    sett.mqtt_auto_discovery = (strncmp(param_mqtt_auto_discovery.getValue(), "T", 1) == 0);
+    LOG_INFO(F("Auto Discovery=") << sett.mqtt_auto_discovery);
+    strncpy0(sett.mqtt_discovery_topic, param_mqtt_discovery_topic.getValue(), MQTT_TOPIC_LEN);
+    LOG_INFO(F("Auto Discovery Topic=") << param_mqtt_discovery_topic.getValue());
+#endif // MQTT
 
     sett.ip = param_ip.getValue();
     sett.gateway = param_gw.getValue();
@@ -310,12 +335,12 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     // период отправки данных
     sett.wakeup_per_min = param_wakeup_per.getValue();
     sett.set_wakeup = sett.wakeup_per_min;
-    LOG_INFO("wakeup period, min=" << sett.wakeup_per_min);
-    LOG_INFO("wakeup period, tick=" << sett.set_wakeup);
+    LOG_INFO(F("wakeup period, min=") << sett.wakeup_per_min);
+    LOG_INFO(F("wakeup period, tick=") << sett.set_wakeup);
 
     // Веса импульсов
-    LOG_INFO("hot dropdown=" << dropdown_hot_factor.getValue());
-    LOG_INFO("cold dropdown=" << dropdown_cold_factor.getValue());
+    LOG_INFO(F("hot dropdown=") << dropdown_hot_factor.getValue());
+    LOG_INFO(F("cold dropdown=") << dropdown_cold_factor.getValue());
 
     uint8_t combobox_factor = dropdown_cold_factor.getValue();
     sett.factor1 = get_factor(combobox_factor, runtime_data.impulses1, data.impulses1, 1);
@@ -331,8 +356,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.channel1_start = param_channel1_start.getValue();
 
     // sett.liters_per_impuls_hot =
-    LOG_INFO("factorHot=" << sett.factor0);
-    LOG_INFO("factorCold=" << sett.factor1);
+    LOG_INFO(F("factorHot=") << sett.factor0);
+    LOG_INFO(F("factorCold=") << sett.factor1);
 
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
     sett.impulses0_start = runtime_data.impulses0;
@@ -342,12 +367,12 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.impulses0_previous = sett.impulses0_start;
     sett.impulses1_previous = sett.impulses1_start;
 
-    LOG_INFO("impulses0=" << sett.impulses0_start);
-    LOG_INFO("impulses1=" << sett.impulses1_start);
+    LOG_INFO(F("impulses0=") << sett.impulses0_start);
+    LOG_INFO(F("impulses1=") << sett.impulses1_start);
 
     sett.setup_time = millis();
     sett.setup_finished_counter++;
 
-    sett.crc = get_checksum(sett); 
+    sett.crc = get_checksum(sett);
     storeConfig(sett);
 }
