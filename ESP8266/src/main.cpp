@@ -5,30 +5,28 @@
 #include "wifi_settings.h"
 #include "master_i2c.h"
 #include "setup_ap.h"
-#include "sender_blynk.h"
-#include "sender_mqtt.h"
 #include "sender_http.h"
 #include "voltage.h"
 #include "utils.h"
 #include "cert.h"
 #include "porting.h"
 #include "json.h"
+#include "sender_blynk.h"
+#include "sender_mqtt.h"
+#include "Ticker.h"
 
-MasterI2C masterI2C; // Для общения с Attiny85 по i2c
-
+MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 SlaveData data;       // Данные от Attiny85
 Settings sett;        // Настройки соединения и предыдущие показания из EEPROM
 CalculatedData cdata; // вычисляемые данные
-Voltage voltage;      // клас монитора питания
 ADC_MODE(ADC_VCC);
+Ticker volatage_ticker;
 
 /*
 Выполняется однократно при включении
 */
 void setup()
 {
-    memset(&cdata, 0, sizeof(cdata));
-    memset(&data, 0, sizeof(data));
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Booted"));
 
@@ -36,7 +34,10 @@ void setup()
     LOG_INFO(F("Saved password: ") << WiFi.psk());
 
     masterI2C.begin(); // Включаем i2c master
-    voltage.begin();
+    
+    get_voltage()->begin();
+    volatage_ticker.attach_ms(300, []()
+                              { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
 }
 
 void wifi_handle_event_cb(System_Event_t *evt)
@@ -158,18 +159,16 @@ void loop()
                         LOG_INFO(F("Status: ") << WiFi.status());
                         delay(300);
 
-                        voltage.update();
                         // В будущем добавим success, означающее, что напряжение не критично изменяется, можно продолжать
                         // иначе есть риск ошибки ESP и стирания конфигурации
                     }
-                    cdata.voltage = voltage.value();
-                    cdata.voltage_diff = voltage.diff();
-                    cdata.low_voltage = voltage.low_voltage();
                 }
             }
 
             if (success && WiFi.status() == WL_CONNECTED)
             {
+                LOG_INFO(F("Sketch Size: ") << ESP.getSketchSize());
+                LOG_INFO(F("Free Sketch Space: ") << ESP.getFreeSketchSpace());
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
                 print_wifi_mode();
 
@@ -201,13 +200,16 @@ void loop()
                     setClock();
                     yield();
                 }
+
+                volatage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными
+                yield();
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
                 DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
-                get_json_data(sett, data, cdata, voltage, json_data);
+                get_json_data(sett, data, cdata, json_data);
                 yield();
 
 #ifndef BLYNK_DISABLED
-                if (send_blynk(sett, data, cdata))
+                if (send_blynk(sett, json_data))
                 {
                     LOG_INFO(F("BLYNK: Send OK"));
                 }
@@ -216,11 +218,7 @@ void loop()
 #endif
 
 #ifndef MQTT_DISABLED
-                /* Пока добавил сюда потом нужно будет внести в настройки и хранить в EEPROM */
-                bool single_topic = MQTT_SINGLE_TOPIC;
-                bool auto_discovery = MQTT_AUTO_DISCOVERY;
-
-                if (send_mqtt(sett, data, cdata, json_data, single_topic, auto_discovery))
+                if (send_mqtt(sett, data, cdata, json_data, sett.mqtt_auto_discovery))
                 {
                     LOG_INFO(F("MQTT: Send OK"));
                 }
