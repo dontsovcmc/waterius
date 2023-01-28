@@ -177,6 +177,32 @@ bool is_waterius_site(const String &url)
 {
 	String temp_str = url;
 	temp_str.toLowerCase();
-	// специяльно не используется WATERIUS_DEFAULT_DOMAIN
+	// специально не используется WATERIUS_DEFAULT_DOMAIN
 	return temp_str.startsWith(F("https://cloud.waterius.ru"));
+}
+
+bool is_blynk(const Settings &sett)
+{
+#ifndef BLYNK_DISABLED
+	return sett.blynk_host[0] && sett.blynk_key[0];
+#else
+	return false;
+#endif
+}
+
+bool is_mqtt(const Settings &sett)
+{
+#ifndef MQTT_DISABLED
+	return sett.mqtt_host[0];
+#else
+	return false;
+#endif
+}
+bool is_ha(const Settings &sett)
+{
+#ifndef MQTT_DISABLED
+	return is_mqtt(sett) && sett.mqtt_auto_discovery;
+#else
+	return false;
+#endif
 }

@@ -35,4 +35,10 @@ extern String get_proto(const String &url);
 
 extern bool is_waterius_site(const String &url);
 
+extern bool is_mqtt(const Settings &sett);
+
+extern bool is_blynk(const Settings &sett);
+
+extern bool is_ha(const Settings &sett);
+
 #endif
