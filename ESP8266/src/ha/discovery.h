@@ -9,14 +9,13 @@
  * @copyright Copyright (c) 2023
  *
  */
-#ifndef HADISCOVERY_H_
-#define HADISCOVERY_H_
+#ifndef HA_DISCOVERY_H_
+#define HA_DISCOVERY_H_
 
 #include "master_i2c.h"
 #include <PubSubClient.h>
 
-extern void publish(PubSubClient &mqtt_client, String &topic, String &payload);
-extern void publish_discovery(PubSubClient &mqtt_client, String &topic, const SlaveData &data, bool single_topic);
-extern void clean_discovery(PubSubClient &mqtt_client, String &topic);
+extern void publish_discovery(PubSubClient &mqtt_client, String &topic, const SlaveData &data);
+
 
 #endif
