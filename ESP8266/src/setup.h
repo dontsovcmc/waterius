@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION F("0.10.8")
+#define FIRMWARE_VERSION F("0.11.0")
 
 /*
 Версии прошивки для ESP
@@ -26,9 +26,13 @@
                       11. Оптимизировано использование памяти при работе по https
                       12. Добавлена возможность использования самоподписанных сертификатов
                       13. После настройки устройства автодискавери топики будут удалены, т.к. пользователь мог именить форматы.
-                      14. Убраны глобальные переменные для https и mqtt чтобы сэкономить память 
-                      15. Добавлена публикация вспомогательных показаний через json_attributes при автодискавери в HA, что позволило сильно сократить кол-во запросов 
+                      14. Убраны глобальные переменные для https и mqtt чтобы сэкономить память
+                      15. Добавлена публикация вспомогательных показаний через json_attributes при автодискавери в HA, что позволило сильно сократить кол-во запросов
                       16. Добавлена опция для сенсовров в HA, force_update сенсор будет обновляться при получении сообщения даже если значение не изменилось
+                      17. Доработано измерение напряжения, теперь отправляются усредненные показания напряжения.
+                      18. Напряжение измеряется в фоне раз в 300мс
+                      19. Добавлены признаки интеграции с HA, MQTT, blynk
+                      20.
 
 0.10.7 - 2022.04.20 - dontsovcmc
                       1. issues/227: не работали ssid, pwd указанные при компиляции
@@ -115,8 +119,8 @@
 
 #define I2C_SLAVE_ADDR 10 // i2c адрес Attiny85
 
-#define VER_6 6
-#define CURRENT_VERSION VER_6
+#define VER_7 7
+#define CURRENT_VERSION VER_7
 
 #define EMAIL_LEN 40
 
@@ -146,11 +150,7 @@
 #endif
 
 #ifndef ALWAYS_MQTT_AUTO_DISCOVERY
-#define ALWAYS_MQTT_AUTO_DISCOVERY false // если true то публикуется автодискавери топик для Home Assistant
-#endif
-
-#ifndef MQTT_SINGLE_TOPIC
-#define MQTT_SINGLE_TOPIC true // если true то публикует все данные в один топик, если false то каждый показатель в одельный топик
+#define ALWAYS_MQTT_AUTO_DISCOVERY false // если true то всегда публикуется автодискавери топик для Home Assistant при отправке данных
 #endif
 
 #define MQTT_FORCE_UPDATE true // Сенсор в HA будет обновляться даже если значение не обновилось
@@ -175,25 +175,19 @@
 #define AUTO_IMPULSE_FACTOR 2
 #define AS_COLD_CHANNEL 7
 
-
-
 struct CalculatedData
 {
-    float channel0;
-    float channel1;
+    // Показания в кубометрах
+    float channel0 = 0.0;
+    // Показания в кубометрах
+    float channel1 = 0.0;
 
-    uint32_t delta0;
-    uint32_t delta1;
-    /* Напряжение на ESP */
-    uint16_t voltage;
-    /* Разница напряждений за период измерений */
-    uint16_t voltage_diff;
-    /* Признак севшей батареи*/
-    bool low_voltage = false;
+    uint32_t delta0 = 0;
+    uint32_t delta1 = 0;
     /* Уровень связи */
-    int8_t rssi;
+    int8_t rssi = 0;
     /* Wifi канал */
-    uint8_t channel;
+    uint8_t channel = 0;
     /* Первые три октета мак адрес роутера */
     char router_mac[MAC_LENGTH + 1] = {0};
     /* IP адрес устройства */
@@ -207,9 +201,9 @@ struct CalculatedData
 */
 struct Settings
 {
-    uint8_t version; // Версия конфигурации
+    uint8_t version = CURRENT_VERSION; // Версия конфигурации
 
-    uint8_t reserved;
+    uint8_t reserved = 0;
 
     // SEND_WATERIUS
 
@@ -221,7 +215,6 @@ struct Settings
     char waterius_email[EMAIL_LEN] = {0};
 
     // SEND_BLYNK
-
     // уникальный ключ устройства blynk
     char blynk_key[BLYNK_KEY_LEN] = {0};
     // сервер blynk.com или свой blynk сервер
@@ -229,14 +222,14 @@ struct Settings
 
     // Если email не пустой, то отсылается e-mail
     // Чтобы работало нужен виджет эл. почта в приложении
-    char blynk_email[EMAIL_LEN];
+    char blynk_email[EMAIL_LEN] = {0};
     // Заголовок письма. {V0}-{V4} заменяются на данные
     char blynk_email_title[BLYNK_EMAIL_TITLE_LEN] = {0};
     // Шаблон эл. письма. {V0}-{V4} заменяются на данные
     char blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN] = {0};
 
     char mqtt_host[MQTT_HOST_LEN] = {0};
-    uint16_t mqtt_port=MQTT_DEFAULT_PORT;
+    uint16_t mqtt_port = MQTT_DEFAULT_PORT;
     char mqtt_login[MQTT_LOGIN_LEN] = {0};
     char mqtt_password[MQTT_PASSWORD_LEN] = {0};
     char mqtt_topic[MQTT_TOPIC_LEN] = {0};
@@ -245,87 +238,93 @@ struct Settings
     Показания счетчиках в кубометрах,
     введенные пользователем при настройке
     */
-    float channel0_start;
-    float channel1_start;
+    float channel0_start = 0.0;
+    float channel1_start = 0.0;
 
     /*
     Кол-во литров на 1 импульс
     */
-    uint8_t factor0;
-    uint8_t factor1;
+    uint8_t factor0 = 0;
+    uint8_t factor1 = 0;
 
     /*
     Серийные номера счётчиков воды
     */
-    char serial0[SERIAL_LEN]= {0};
+    char serial0[SERIAL_LEN] = {0};
     char serial1[SERIAL_LEN] = {0};
 
     /*
     Кол-во импульсов Attiny85 соответствующие показаниям счетчиков,
     введенных пользователем при настройке
     */
-    uint32_t impulses0_start;
-    uint32_t impulses1_start;
+    uint32_t impulses0_start = 0;
+    uint32_t impulses1_start = 0;
 
     /*
     Не понятно, как получить от Blynk прирост показаний,
     поэтому сохраним их в памяти каждое включение
     */
-    uint32_t impulses0_previous;
-    uint32_t impulses1_previous;
+    uint32_t impulses0_previous = 0;
+    uint32_t impulses1_previous = 0;
 
     /*
     Время последнего пробуждения
     */
-    uint32_t wake_time;
+    uint32_t wake_time = 0;
 
     /*
     За сколько времени настроили ватериус
     */
-    uint32_t setup_time;
+    uint32_t setup_time = 0;
 
     /*
     Статический адрес
     */
-    uint32_t ip;
-    uint32_t gateway;
-    uint32_t mask;
+    uint32_t ip = 0;
+    uint32_t gateway = 0;
+    uint32_t mask = 0;
 
     /*
     Период пробуждение для отправки данных, мин
     */
-    uint16_t wakeup_per_min;
+    uint16_t wakeup_per_min = 0;
 
     /*
     Установленный период отправки с учетом погрешности
     */
-    uint16_t set_wakeup;
+    uint16_t set_wakeup = 0;
 
     /*
     Время последней отправки по расписанию
     */
-    time_t last_send; // Size of time_t: 8
+    time_t last_send = 0; // Size of time_t: 8
 
     /*
     Режим пробуждения
     */
-    uint8_t mode;
+    uint8_t mode = 0;
 
     /*
     Успешная настройка
     */
-    uint8_t setup_finished_counter;
+    uint8_t setup_finished_counter = 0;
 
+    /*
+    Публиковать данные для автоматического добавления в Homeassistant
+    */
+    bool mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
+
+    char mqtt_discovery_topic[MQTT_TOPIC_LEN] = DISCOVERY_TOPIC;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved2[154] = {0};
+    uint8_t reserved2[89] = {0}; // 154 -1-64
 
     /*
     Контрольная сумма, чтобы гарантировать корректность чтения настроек
     */
-    uint16_t crc;
+    uint16_t crc = 0;
 }; // 976 байт
 
 #endif
