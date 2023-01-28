@@ -34,14 +34,16 @@ void storeConfig(const Settings &sett)
 }
 
 /* Загружаем конфигурацию в EEPROM. true - успех. */
-bool loadConfig(struct Settings &sett)
+bool loadConfig(Settings &sett)
 {
-        EEPROM.begin(sizeof(sett)); //  4 до 4096 байт. с адреса 0x7b000.
-        EEPROM.get(0, sett);
+        Settings tmp_sett = {};  
+        EEPROM.begin(sizeof(tmp_sett)); //  4 до 4096 байт. с адреса 0x7b000.
+        EEPROM.get(0, tmp_sett);
         EEPROM.end();
 
-        if (sett.crc == get_checksum(sett)) 
+        if (tmp_sett.crc == get_checksum(tmp_sett))
         {
+                sett = tmp_sett;
                 LOG_INFO(F("Configuration CRC ok"));
 
                 // Для безопасной работы с буферами,  в библиотеках может не быть проверок
@@ -59,6 +61,7 @@ bool loadConfig(struct Settings &sett)
                 sett.mqtt_login[MQTT_LOGIN_LEN - 1] = '\0';
                 sett.mqtt_password[MQTT_PASSWORD_LEN - 1] = '\0';
                 sett.mqtt_topic[MQTT_TOPIC_LEN - 1] = '\0';
+                sett.mqtt_discovery_topic[MQTT_TOPIC_LEN - 1] = '\0';
 
                 LOG_INFO(F("--- Waterius.ru ---- "));
                 LOG_INFO(F("email=") << sett.waterius_email);
@@ -72,7 +75,8 @@ bool loadConfig(struct Settings &sett)
                 LOG_INFO(F("--- MQTT ---- "));
                 LOG_INFO(F("host=") << sett.mqtt_host << F(" port=") << sett.mqtt_port);
                 LOG_INFO(F("login=") << sett.mqtt_login << F(" pass=") << sett.mqtt_password);
-                LOG_INFO(F("topic=") << sett.mqtt_topic);
+                LOG_INFO(F("auto discovery=") << sett.mqtt_auto_discovery);
+                LOG_INFO(F("discovery topic=") << sett.mqtt_discovery_topic);
 
                 LOG_INFO(F("--- Network ---- "));
                 if (sett.ip)
@@ -97,10 +101,8 @@ bool loadConfig(struct Settings &sett)
         else
         {
                 // Конфигурация не была сохранена в EEPROM, инициализируем с нуля
-                LOG_INFO(F("ESP config CRC failed. Maybe first run. Init configuration."));
 
-                // Заполняем нулями всю конфигурацию
-                memset(&sett, 0, sizeof(sett));
+                LOG_INFO(F("ESP config CRC failed. Maybe first run. Init configuration."));
 
                 sett.version = CURRENT_VERSION; // для совместимости в будущем
                 LOG_INFO(F("cfg version=") << sett.version);
@@ -115,11 +117,13 @@ bool loadConfig(struct Settings &sett)
                 String email_template = F("Показания:<br>Холодная: {V1}м³(+{V4}л)<br>Горячая: {V0}м³ (+{V3}л)<hr>Питание: {V2}В<br>Resets: {V5}");
                 strncpy0(sett.blynk_email_template, email_template.c_str(), BLYNK_EMAIL_TEMPLATE_LEN);
 
-                // strncpy0(sett.mqtt_host, MQTT_DEFAULT_HOST, MQTT_HOST_LEN);
                 String defaultTopic = String(MQTT_DEFAULT_TOPIC_PREFIX) + "/" + String(getChipId()) + "/";
-
-                strncpy0(sett.mqtt_topic, defaultTopic.c_str(), MQTT_TOPIC_LEN);
+                defaultTopic.toCharArray(sett.mqtt_topic,MQTT_TOPIC_LEN);
                 sett.mqtt_port = MQTT_DEFAULT_PORT;
+
+                sett.mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
+                String discovery_topic(DISCOVERY_TOPIC);
+                discovery_topic.toCharArray(sett.mqtt_discovery_topic,MQTT_TOPIC_LEN);
 
                 sett.gateway = IPAddress(192, 168, 0, 1);
                 sett.mask = IPAddress(255, 255, 255, 0);
