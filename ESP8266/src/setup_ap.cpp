@@ -159,7 +159,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 #endif
 
     // Настройки MQTT
-    #ifndef MQTT_DISABLED
+#ifndef MQTT_DISABLED
     WiFiManagerParameter label_mqtt("<h3>MQTT</h3>");
     wm.addParameter(&label_mqtt);
     WiFiManagerParameter param_mqtt_host("mhost", "Адрес сервера (включает отправку)<br/>Пример: broker.hivemq.com", sett.mqtt_host, MQTT_HOST_LEN - 1);
@@ -173,13 +173,12 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter param_mqtt_topic("mtopic", "MQTT Топик показаний", sett.mqtt_topic, MQTT_TOPIC_LEN - 1);
     wm.addParameter(&param_mqtt_topic);
     
-    String chkbox_auto_discovery(F("type=\"checkbox\""));
-    if (sett.mqtt_auto_discovery)
-    {
-        chkbox_auto_discovery += F(" checked");
-    }
-    WiFiManagerParameter param_mqtt_auto_discovery("auto_discovery_checkbox", "Автоматическое добавление в Home Assistant", "T", 2, chkbox_auto_discovery.c_str(),WFM_LABEL_AFTER);
+    WiFiManagerParameter div_checkbox("<br><label class=\"cnt\">Автоматическое добавление в Home Assistant");
+    wm.addParameter(&div_checkbox);
+    CheckBoxParameter param_mqtt_auto_discovery("auto_discovery_checkbox", sett.mqtt_auto_discovery);
     wm.addParameter(&param_mqtt_auto_discovery);
+    WiFiManagerParameter div_end_checkbox("<span class=\"mrk\"></span></label>");
+    wm.addParameter(&div_end_checkbox);
 
     WiFiManagerParameter param_mqtt_discovery_topic("discovery_topic", "MQTT Топик Home Assistant", sett.mqtt_discovery_topic, MQTT_TOPIC_LEN - 1);
     wm.addParameter(&param_mqtt_discovery_topic);
@@ -322,7 +321,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     strncpy0(sett.mqtt_password, param_mqtt_password.getValue(), MQTT_PASSWORD_LEN);
     strncpy0(sett.mqtt_topic, param_mqtt_topic.getValue(), MQTT_TOPIC_LEN);
     LOG_INFO(F("MQTT topic=") << param_mqtt_topic.getValue());
-    sett.mqtt_auto_discovery = (strncmp(param_mqtt_auto_discovery.getValue(), "T", 1) == 0);
+    sett.mqtt_auto_discovery = param_mqtt_auto_discovery.getValue();
     LOG_INFO(F("Auto Discovery=") << sett.mqtt_auto_discovery);
     strncpy0(sett.mqtt_discovery_topic, param_mqtt_discovery_topic.getValue(), MQTT_TOPIC_LEN);
     LOG_INFO(F("Auto Discovery Topic=") << param_mqtt_discovery_topic.getValue());
@@ -373,6 +372,5 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.setup_time = millis();
     sett.setup_finished_counter++;
 
-    sett.crc = get_checksum(sett);
     storeConfig(sett);
 }

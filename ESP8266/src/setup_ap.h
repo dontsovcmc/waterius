@@ -127,4 +127,25 @@ public:
     }
 };
 
+class CheckBoxParameter : public WiFiManagerParameter
+{
+public:
+    CheckBoxParameter(const char *id, bool default_value)
+        : WiFiManagerParameter("")
+    {
+        if (default_value) {
+            init(id, "", "T", 2, " type=\"checkbox\" checked", WFM_NO_LABEL);
+        } else {
+            init(id, "", "T", 2, " type=\"checkbox\"", WFM_NO_LABEL);
+        }
+
+    }
+
+    bool getValue()
+    {
+        return strncmp(WiFiManagerParameter::getValue(), "D", 1) == 0;
+    }
+};
+
+
 #endif
