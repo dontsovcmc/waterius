@@ -20,7 +20,7 @@ SlaveData data;       // Данные от Attiny85
 Settings sett;        // Настройки соединения и предыдущие показания из EEPROM
 CalculatedData cdata; // вычисляемые данные
 ADC_MODE(ADC_VCC);
-Ticker volatage_ticker;
+Ticker voltage_ticker;
 
 /*
 Выполняется однократно при включении
@@ -36,8 +36,8 @@ void setup()
     masterI2C.begin(); // Включаем i2c master
     
     get_voltage()->begin();
-    volatage_ticker.attach_ms(300, []()
-                              { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
+    voltage_ticker.attach_ms(300, []()
+                             { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
 }
 
 void wifi_handle_event_cb(System_Event_t *evt)
@@ -201,7 +201,7 @@ void loop()
                     yield();
                 }
 
-                volatage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными
+                voltage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными
                 yield();
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
                 DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
