@@ -119,8 +119,8 @@
 
 #define I2C_SLAVE_ADDR 10 // i2c адрес Attiny85
 
-#define VER_7 7
-#define CURRENT_VERSION VER_7
+#define VER_8 8
+#define CURRENT_VERSION VER_8
 
 #define EMAIL_LEN 40
 
@@ -312,19 +312,18 @@ struct Settings
     /*
     Публиковать данные для автоматического добавления в Homeassistant
     */
-    bool mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
+    uint8_t mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
+    
+    uint8_t reserved2 = 0;
 
     char mqtt_discovery_topic[MQTT_TOPIC_LEN] = DISCOVERY_TOPIC;
+    
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved2[89] = {0}; // 154 -1-64
+    uint8_t reserved3[88] = {0}; // 154 -1-64
 
-    /*
-    Контрольная сумма, чтобы гарантировать корректность чтения настроек
-    */
-    uint16_t crc = 0;
-}; // 976 байт
+}; // 960 байт
 
 #endif

@@ -18,9 +18,11 @@
 
 /* Сохраняем конфигурацию в EEPROM */
 void storeConfig(const Settings &sett)
-{
-        EEPROM.begin(sizeof(sett));
+{       
+        uint16_t crc = get_checksum(sett);
+        EEPROM.begin(sizeof(sett) + sizeof(crc));
         EEPROM.put(0, sett);
+        EEPROM.put(sizeof(sett), crc);
 
         if (!EEPROM.commit())
         {
@@ -28,7 +30,7 @@ void storeConfig(const Settings &sett)
         }
         else
         {
-                LOG_INFO(F("Config stored OK"));
+                LOG_INFO(F("Config stored OK crc=") << crc);
         }
         EEPROM.end();
 }
@@ -36,12 +38,15 @@ void storeConfig(const Settings &sett)
 /* Загружаем конфигурацию в EEPROM. true - успех. */
 bool loadConfig(Settings &sett)
 {
+        uint16_t crc = 0;
         Settings tmp_sett = {};  
-        EEPROM.begin(sizeof(tmp_sett)); //  4 до 4096 байт. с адреса 0x7b000.
+        EEPROM.begin(sizeof(tmp_sett) + sizeof(crc)); //  4 до 4096 байт. с адреса 0x7b000.
         EEPROM.get(0, tmp_sett);
+        EEPROM.get(sizeof(tmp_sett), crc);
         EEPROM.end();
-
-        if (tmp_sett.crc == get_checksum(tmp_sett))
+        
+        uint16_t calculated_crc = get_checksum(tmp_sett);
+        if (crc == calculated_crc)
         {
                 sett = tmp_sett;
                 LOG_INFO(F("Configuration CRC ok"));
@@ -103,6 +108,7 @@ bool loadConfig(Settings &sett)
                 // Конфигурация не была сохранена в EEPROM, инициализируем с нуля
 
                 LOG_INFO(F("ESP config CRC failed. Maybe first run. Init configuration."));
+                LOG_INFO(F("Saved crc=") << crc << F(" calculated=") << calculated_crc);
 
                 sett.version = CURRENT_VERSION; // для совместимости в будущем
                 LOG_INFO(F("cfg version=") << sett.version);
@@ -197,7 +203,6 @@ bool loadConfig(Settings &sett)
                 WiFi.persistent(false);                                            // don't save ssid, pwd to flash in this run
                 LOG_INFO(F("default ssid=") << VALUE(SSID_NAME) << F(", pwd=") << VALUE(SSID_PASS));
 
-                sett.crc = get_checksum(sett); // чтобы больше не попадать сюда
                 return true;
 #endif
 #endif

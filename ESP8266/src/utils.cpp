@@ -132,27 +132,27 @@ String get_mac_address_hex()
  */
 uint16_t get_checksum(const Settings &sett)
 {
-	uint32_t checksum = 0;
 	uint8_t *buf = (uint8_t *)&sett;
-	int len = sizeof(sett);
-	len -= 2; // вычитаем саму чексуму из длины буфера
-	checksum += len;
+	uint16_t crc = 0xffff, poly = 0xa001;
+	uint16_t i = 0; 
+	uint16_t len = sizeof(sett) - 2;
 
-	// сумируем по 16 бит за раз
-	while (len > 1)
+	for(i=0; i<len; i++)
 	{
-		checksum += 0xFFFF & (*buf << 8 | *(buf + 1));
-		buf += 2;
-		len -= 2;
+		crc ^= buf[i];
+		for(uint8_t j=0; j<8; j++)
+		{
+			if(crc & 0x01)
+			{
+				crc >>= 1;
+				crc ^= poly;
+			}
+			else
+				crc >>= 1;
+		}
 	}
-	// Если количество байт было нечетным то добавим последний байт к сумме
-	if (len)
-	{
-		checksum += 0xFFFF & (*buf << 8 | 0x00);
-	}
-
-	// возвращаем только первые 16 бит и инвертируем их
-	return ((uint16_t)checksum ^ 0xFFFF);
+	LOG_INFO(F("get_checksum crc=") << crc);
+	return crc; 
 }
 
 /**
