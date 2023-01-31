@@ -50,9 +50,8 @@ void publish_sensor_discovery(PubSubClient &mqtt_client, const char *mqtt_topic,
                               const char *json_attributes_topic,
                               const char *json_attributes_template)
 {
-    yield();
     LOG_INFO(F("MQTT: DISCOVERY:  Sensor: ") << sensor_name);
-
+    
     StaticJsonDocument<JSON_STATIC_MSG_BUFFER> json_doc;
     JsonObject sensor = json_doc.to<JsonObject>();
 

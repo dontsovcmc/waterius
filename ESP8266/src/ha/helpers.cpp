@@ -12,15 +12,22 @@
  */
 void publish(PubSubClient &mqtt_client, String &topic, String &payload)
 {
-    if (mqtt_client.connected())
+    LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
+    LOG_INFO(F("MQTT: Publish Topic: ") << topic);
+    LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
+    LOG_INFO(F("MQTT: Payload: ") << payload);
+
+    if (mqtt_client.beginPublish(topic.c_str(), payload.length(), true))
     {
-        LOG_INFO(F("MQTT: Publish Topic: ") << topic);
-        if (!mqtt_client.publish(topic.c_str(), payload.c_str(), true))
+        mqtt_client.write((const uint8_t *)payload.c_str(), payload.length());
+        if (mqtt_client.endPublish())
         {
-            LOG_ERROR(F("MQTT: Publish failed") << topic << " Payload: " << payload);
+            LOG_INFO(F("MQTT: Published succesfully"));
         }
-        mqtt_client.loop();
-        yield();
+        else
+        {
+            LOG_ERROR(F("MQTT: Publish failed"));
+        }
     }
     else
     {
@@ -37,20 +44,25 @@ void publish(PubSubClient &mqtt_client, String &topic, String &payload)
 void clean(PubSubClient &mqtt_client, String &topic)
 {
     String payload = "";
-    if (mqtt_client.connected())
+    LOG_INFO(F("MQTT: Clean Topic: ") << topic);
+
+    if (mqtt_client.beginPublish(topic.c_str(), payload.length(), true))
     {
-        LOG_INFO(F("MQTT: Clean Topic: ") << topic);
-        if (!mqtt_client.publish(topic.c_str(), payload.c_str(), true))
+        mqtt_client.print(payload);
+        if (mqtt_client.endPublish())
         {
-            LOG_ERROR(F("MQTT: Clean failed") << topic);
+            LOG_INFO(F("MQTT: Cleaned succesfully"));
         }
-        mqtt_client.loop();
-        yield();
+        else
+        {
+            LOG_ERROR(F("MQTT: Clean failed"));
+        }
     }
     else
     {
         LOG_ERROR(F("MQTT: Client not connected."));
     }
+    
 }
 
 /**
@@ -65,7 +77,6 @@ void publish_data_to_single_topic(PubSubClient &mqtt_client, String &topic, Dyna
     LOG_INFO(F("MQTT: Publish data to single topic"));
     String payload = "";
     serializeJson(json_data, payload);
-    LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
     publish(mqtt_client, topic, payload);
 }
 
@@ -82,7 +93,6 @@ void publish_data_to_multiple_topics(PubSubClient &mqtt_client, String &topic, D
     JsonObject root = json_data.as<JsonObject>();
     for (JsonPair p : root)
     {
-        LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
         String sensor_topic = topic + "/" + p.key().c_str();
         String sensor_value = p.value().as<String>();
         publish(mqtt_client, sensor_topic, sensor_value);
