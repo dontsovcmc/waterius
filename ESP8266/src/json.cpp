@@ -38,6 +38,7 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
   root[F("rssi")] = cdata.rssi;
   root[F("mac")] = cdata.mac;
   root[F("ip")] = cdata.ip;
+  root[F("dhcp")] = sett.ip==0;
 
   // Общие сведения о приборе
   root[F("version")] = data.version;
@@ -65,6 +66,7 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
   root[F("mqtt")] = is_mqtt(sett);
   root[F("blynk")] = is_blynk(sett);
   root[F("ha")] = is_ha(sett);
+  
 
   LOG_INFO(F("JSON: Mem usage: ") << json_data.memoryUsage());
   LOG_INFO(F("JSON: Size: ") << measureJson(json_data));
