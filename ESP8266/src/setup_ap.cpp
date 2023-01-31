@@ -136,7 +136,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&div_start);
 
     // Сервер http запроса
-    WiFiManagerParameter param_waterius_host("whost", "Адрес сервера (включает отправку)", sett.waterius_host, WATERIUS_HOST_LEN - 1);
+    WiFiManagerParameter param_waterius_host("whost", "Адрес сервера (включает отправку)", sett.waterius_host, HOST_LEN - 1);
     wm.addParameter(&param_waterius_host);
 
     ShortParameter param_wakeup_per("mperiod", "Период отправки показаний, мин.", sett.wakeup_per_min);
@@ -146,7 +146,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 #ifndef BLYNK_DISABLED
     WiFiManagerParameter label_blynk("<h3>Blynk.cc</h3>");
     wm.addParameter(&label_blynk);
-    WiFiManagerParameter param_blynk_host("bhost", "Адрес сервера", sett.blynk_host, BLYNK_HOST_LEN - 1);
+    WiFiManagerParameter param_blynk_host("bhost", "Адрес сервера", sett.blynk_host, HOST_LEN - 1);
     wm.addParameter(&param_blynk_host);
     WiFiManagerParameter param_blynk_key("bkey", "Уникальный ключ (включает отправку)", sett.blynk_key, BLYNK_KEY_LEN - 1);
     wm.addParameter(&param_blynk_key);
@@ -162,7 +162,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 #ifndef MQTT_DISABLED
     WiFiManagerParameter label_mqtt("<h3>MQTT</h3>");
     wm.addParameter(&label_mqtt);
-    WiFiManagerParameter param_mqtt_host("mhost", "Адрес сервера (включает отправку)<br/>Пример: broker.hivemq.com", sett.mqtt_host, MQTT_HOST_LEN - 1);
+    WiFiManagerParameter param_mqtt_host("mhost", "Адрес сервера (включает отправку)<br/>Пример: broker.hivemq.com", sett.mqtt_host, HOST_LEN - 1);
     wm.addParameter(&param_mqtt_host);
     LongParameter param_mqtt_port("mport", "Порт", sett.mqtt_port);
     wm.addParameter(&param_mqtt_port);
@@ -293,7 +293,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     // Переписываем введенные пользователем значения в Конфигурацию
 
     strncpy0(sett.waterius_email, param_waterius_email.getValue(), EMAIL_LEN);
-    strncpy0(sett.waterius_host, param_waterius_host.getValue(), WATERIUS_HOST_LEN);
+    strncpy0(sett.waterius_host, param_waterius_host.getValue(), HOST_LEN);
 
     // Генерируем ключ используя и введенную эл. почту
     if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0)
@@ -305,7 +305,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
 #ifndef BLYNK_DISABLED
     strncpy0(sett.blynk_key, param_blynk_key.getValue(), BLYNK_KEY_LEN);
-    strncpy0(sett.blynk_host, param_blynk_host.getValue(), BLYNK_HOST_LEN);
+    strncpy0(sett.blynk_host, param_blynk_host.getValue(), HOST_LEN);
     strncpy0(sett.blynk_email, param_blynk_email.getValue(), EMAIL_LEN);
     strncpy0(sett.blynk_email_title, param_blynk_email_title.getValue(), BLYNK_EMAIL_TITLE_LEN);
     strncpy0(sett.blynk_email_template, param_blynk_email_template.getValue(), BLYNK_EMAIL_TEMPLATE_LEN);
@@ -313,7 +313,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
 // MQTT
 #ifndef MQTT_DISABLED
-    strncpy0(sett.mqtt_host, param_mqtt_host.getValue(), MQTT_HOST_LEN);
+    strncpy0(sett.mqtt_host, param_mqtt_host.getValue(), HOST_LEN);
     LOG_INFO(F("MQTT host=") << param_mqtt_host.getValue());
     sett.mqtt_port = param_mqtt_port.getValue();
     LOG_INFO(F("MQTT port=") << sett.mqtt_port);

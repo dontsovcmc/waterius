@@ -52,17 +52,17 @@ bool loadConfig(Settings &sett)
                 LOG_INFO(F("Configuration CRC ok"));
 
                 // Для безопасной работы с буферами,  в библиотеках может не быть проверок
-                sett.waterius_host[WATERIUS_HOST_LEN - 1] = '\0';
+                sett.waterius_host[HOST_LEN - 1] = '\0';
                 sett.waterius_key[WATERIUS_KEY_LEN - 1] = '\0';
                 sett.waterius_email[EMAIL_LEN - 1] = '\0';
 
                 sett.blynk_key[BLYNK_KEY_LEN - 1] = '\0';
-                sett.blynk_host[BLYNK_HOST_LEN - 1] = '\0';
+                sett.blynk_host[HOST_LEN - 1] = '\0';
                 sett.blynk_email[EMAIL_LEN - 1] = '\0';
                 sett.blynk_email_title[BLYNK_EMAIL_TITLE_LEN - 1] = '\0';
                 sett.blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN - 1] = '\0';
 
-                sett.mqtt_host[MQTT_HOST_LEN - 1] = '\0';
+                sett.mqtt_host[HOST_LEN - 1] = '\0';
                 sett.mqtt_login[MQTT_LOGIN_LEN - 1] = '\0';
                 sett.mqtt_password[MQTT_PASSWORD_LEN - 1] = '\0';
                 sett.mqtt_topic[MQTT_TOPIC_LEN - 1] = '\0';
@@ -113,9 +113,9 @@ bool loadConfig(Settings &sett)
                 sett.version = CURRENT_VERSION; // для совместимости в будущем
                 LOG_INFO(F("cfg version=") << sett.version);
 
-                strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, WATERIUS_HOST_LEN);
+                strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, HOST_LEN);
 
-                strncpy0(sett.blynk_host, BLYNK_DEFAULT_DOMAIN, BLYNK_HOST_LEN);
+                strncpy0(sett.blynk_host, BLYNK_DEFAULT_DOMAIN, HOST_LEN);
 
                 String email_title = F("Новые показания {DEVICE_NAME}");
                 strncpy0(sett.blynk_email_title, email_title.c_str(), BLYNK_EMAIL_TITLE_LEN);
@@ -159,7 +159,7 @@ bool loadConfig(Settings &sett)
 #ifdef MQTT_HOST
 #pragma message(VAR_NAME_VALUE(MQTT_HOST))
                 String mqtt_host = VALUE(MQTT_HOST);
-                strncpy0(sett.mqtt_host, mqtt_host.c_str(), MQTT_HOST_LEN);
+                strncpy0(sett.mqtt_host, mqtt_host.c_str(), HOST_LEN);
                 LOG_INFO("default mqtt_host=" << mqtt_host);
 #endif
 

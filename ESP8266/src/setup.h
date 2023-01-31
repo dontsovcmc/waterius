@@ -125,15 +125,13 @@
 #define EMAIL_LEN 40
 
 #define WATERIUS_KEY_LEN 34
-#define WATERIUS_HOST_LEN 64
+#define HOST_LEN 64
 
 #define BLYNK_KEY_LEN 34
-#define BLYNK_HOST_LEN 32
 
 #define BLYNK_EMAIL_TITLE_LEN 64
 #define BLYNK_EMAIL_TEMPLATE_LEN 200
 
-#define MQTT_HOST_LEN 64
 #define MQTT_LOGIN_LEN 32
 #define MQTT_PASSWORD_LEN 32
 #define MQTT_TOPIC_LEN 64
@@ -170,10 +168,14 @@
 
 #define SERIAL_LEN 16
 
+#ifndef DEFAULT_WAKEUP_PERIOD_MIN 
 #define DEFAULT_WAKEUP_PERIOD_MIN 1440
+#endif
 
 #define AUTO_IMPULSE_FACTOR 2
 #define AS_COLD_CHANNEL 7
+
+#define DEF_FALLBACK_DNS "8.8.8.8"
 
 struct CalculatedData
 {
@@ -210,7 +212,7 @@ struct Settings
     // http/https сервер для отправки данных в виде JSON
     // вид: http://host[:port][/path]
     //      https://host[:port][/path]
-    char waterius_host[WATERIUS_HOST_LEN] = {0};
+    char waterius_host[HOST_LEN] = {0};
     char waterius_key[WATERIUS_KEY_LEN] = {0};
     char waterius_email[EMAIL_LEN] = {0};
 
@@ -218,7 +220,7 @@ struct Settings
     // уникальный ключ устройства blynk
     char blynk_key[BLYNK_KEY_LEN] = {0};
     // сервер blynk.com или свой blynk сервер
-    char blynk_host[BLYNK_HOST_LEN] = {0};
+    char blynk_host[HOST_LEN] = {0};
 
     // Если email не пустой, то отсылается e-mail
     // Чтобы работало нужен виджет эл. почта в приложении
@@ -228,7 +230,7 @@ struct Settings
     // Шаблон эл. письма. {V0}-{V4} заменяются на данные
     char blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN] = {0};
 
-    char mqtt_host[MQTT_HOST_LEN] = {0};
+    char mqtt_host[HOST_LEN] = {0};
     uint16_t mqtt_port = MQTT_DEFAULT_PORT;
     char mqtt_login[MQTT_LOGIN_LEN] = {0};
     char mqtt_password[MQTT_PASSWORD_LEN] = {0};
@@ -283,7 +285,7 @@ struct Settings
     uint32_t ip = 0;
     uint32_t gateway = 0;
     uint32_t mask = 0;
-
+   
     /*
     Период пробуждение для отправки данных, мин
     */
@@ -318,11 +320,12 @@ struct Settings
 
     char mqtt_discovery_topic[MQTT_TOPIC_LEN] = DISCOVERY_TOPIC;
     
+
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved3[88] = {0}; // 154 -1-64
+    uint8_t reserved3[56] = {0}; // 154 -1-64 -32 
 
 }; // 960 байт
 
