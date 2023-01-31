@@ -6,9 +6,9 @@
 
 #define NTP_CONNECT_TIMEOUT 3000UL
 
-#define NTP_SERV1 "1.ru.pool.ntp.org"
-#define NTP_SERV2 "2.ru.pool.ntp.org"
-#define NTP_SERV3 "pool.ntp.org"
+#define NTP_SERV1 "0.ru.pool.ntp.org"
+#define NTP_SERV2 "1.ru.pool.ntp.org"
+#define NTP_SERV3 "ru.pool.ntp.org"
 /**
  * @brief Устанаваливает время по указанному серверу NTP
  *
@@ -24,13 +24,16 @@ bool setClock(const char *ntp_server)
 	uint32_t start = millis();
 	time_t now = time(nullptr);
 
-	while ((now < 8 * 3600 * 2) && ((millis() - start) < NTP_CONNECT_TIMEOUT))
+	while (now < 8 * 3600 * 2)
 	{
+		if ((millis() - start) > NTP_CONNECT_TIMEOUT) {
+			return false;
+		}
 		delay(100);
 		now = time(nullptr);
 	}
 
-	return millis() - start < NTP_CONNECT_TIMEOUT;
+	return true;
 }
 
 /**
