@@ -132,7 +132,7 @@ void loop()
 
                 if (sett.ip != 0)
                 {
-                    success = WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, IPAddress(8, 8, 8, 8));
+                    success = WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, IPAddress().fromString(DEF_FALLBACK_DNS));
                     if (success)
                     {
                         LOG_INFO(F("Static IP OK"));
