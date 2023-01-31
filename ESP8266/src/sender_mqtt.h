@@ -14,8 +14,9 @@
 #undef MQTT_SOCKET_TIMEOUT
 #endif
 
-#define MQTT_SOCKET_TIMEOUT 5
+#define MQTT_SOCKET_TIMEOUT 1
 #define MQTT_MAX_PACKET_SIZE 1024
+
 
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
@@ -53,6 +54,7 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
 
     mqtt_client.setBufferSize(MQTT_MAX_PACKET_SIZE);
     mqtt_client.setServer(sett.mqtt_host, sett.mqtt_port);
+    mqtt_client.setSocketTimeout(MQTT_SOCKET_TIMEOUT);
 
     yield();
 
