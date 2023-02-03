@@ -185,7 +185,7 @@ void loop()
                 sprintf(cdata.mac, MAC_STR, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
                 LOG_INFO(F("MAC: ") << (const char *)cdata.mac);
 
-                yield();
+                
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
                 // устанавливать время только при использовани хттпс или мктт
                 String url = "";
@@ -198,15 +198,12 @@ void loop()
                 if (sett.mqtt_host[0] || (proto == PROTO_HTTPS))
                 {
                     setClock();
-                    yield();
                 }
 
                 voltage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными
-                yield();
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
                 DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
                 get_json_data(sett, data, cdata, json_data);
-                yield();
 
 #ifndef BLYNK_DISABLED
                 if (send_blynk(sett, json_data))
@@ -214,16 +211,17 @@ void loop()
                     LOG_INFO(F("BLYNK: Send OK"));
                 }
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-                yield();
+                
 #endif
 
 #ifndef MQTT_DISABLED
-                if (send_mqtt(sett, data, cdata, json_data, sett.mqtt_auto_discovery))
+                if (send_mqtt(sett, data, cdata, json_data))
                 {
                     LOG_INFO(F("MQTT: Send OK"));
                 }
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-                yield();
+                
+                
 #endif
 
 #ifndef HTTPS_DISABLED
@@ -232,7 +230,7 @@ void loop()
                     LOG_INFO(F("HTTP: Send OK"));
                 }
 
-                yield();
+                
 #endif
                 // Сохраним текущие значения в памяти.
                 sett.impulses0_previous = data.impulses0;
