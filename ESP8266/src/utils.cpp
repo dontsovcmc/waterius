@@ -176,6 +176,26 @@ String get_proto(const String &url)
 	return proto;
 }
 
+/**
+ * @brief убирает в коце строки слэш
+ * 
+ * @param topic стркоа с MQTT топиком
+ */
+void remove_trailing_slash(String &topic){
+    if (topic.endsWith(F("/")))
+    {
+        topic.remove(topic.length() - 1);
+    }
+   
+}
+
+/**
+ * @brief Возвращает признак является ли адрес адресом сайта Ватериуса
+ * 
+ * @param url адрес сайта
+ * @return true сайт является сайтом Ватериуса
+ * @return false сайт НЕ является сайтом Ватериуса
+ */
 bool is_waterius_site(const String &url)
 {
 	String temp_str = url;
@@ -184,6 +204,13 @@ bool is_waterius_site(const String &url)
 	return temp_str.startsWith(F("https://cloud.waterius.ru"));
 }
 
+/**
+ * @brief Возвращает признак настроена ли интеграция с Blynk
+ * 
+ * @param sett настройки устройства
+ * @return true настроена интеграция с Blynk
+ * @return false НЕ настроена интеграция с Blynk
+ */
 bool is_blynk(const Settings &sett)
 {
 #ifndef BLYNK_DISABLED
@@ -193,6 +220,13 @@ bool is_blynk(const Settings &sett)
 #endif
 }
 
+/**
+ * @brief Возвращает признак настроена ли интеграция с MQTT
+ * 
+ * @param sett настройки устройства
+ * @return true настроена интеграция с MQTT
+ * @return false настроена интеграция с MQTT
+ */
 bool is_mqtt(const Settings &sett)
 {
 #ifndef MQTT_DISABLED
@@ -201,6 +235,14 @@ bool is_mqtt(const Settings &sett)
 	return false;
 #endif
 }
+
+/**
+ * @brief Возвращает признак настроена ли интеграция с HomeAssistant
+ * 
+ * @param sett настройки устройства
+ * @return true настроена интеграция с HomeAssistant
+ * @return false настроена интеграция с HomeAssistant
+ */
 bool is_ha(const Settings &sett)
 {
 #ifndef MQTT_DISABLED

@@ -33,6 +33,8 @@ extern uint16_t get_checksum(const Settings &sett);
 
 extern String get_proto(const String &url);
 
+extern void remove_trailing_slash(String &topic);
+
 extern bool is_waterius_site(const String &url);
 
 extern bool is_mqtt(const Settings &sett);
