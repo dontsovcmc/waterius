@@ -15,7 +15,6 @@
 #include "master_i2c.h"
 #include <PubSubClient.h>
 
-extern void publish_discovery(PubSubClient &mqtt_client, String &topic, const SlaveData &data);
-
+extern void publish_discovery(PubSubClient &mqtt_client, String &topic, String &discovery_topic, const SlaveData &data);
 
 #endif

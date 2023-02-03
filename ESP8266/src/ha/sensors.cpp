@@ -3,7 +3,7 @@
 #include "Logging.h"
 #include "utils.h"
 #include "helpers.h"
-
+#include "resources.h"
 
 /**
  * @brief Создает json для автоматического добавления сенсора в HomeAssistant и отправляет его на MQTT сервер
@@ -12,7 +12,8 @@
  * https://developers.home-assistant.io/docs/core/entity/sensor/
  *
  * @param mqtt_client mqtt клиент
- * @param mqtt_topic корневой топик для дискавери как правило /homeassistant.
+ * @param mqtt_topic корневой топик для публикации показаний как правил waterius-XXXXXX
+ * @param mqtt_discovery_topic корневой топик для дискавери как правило /homeassistant
  * @param sensor_type тип сенсора sensor, number и т.д.
  * @param sensor_name название сенсора
  * @param sensor_id идентификатор сенсора
@@ -30,7 +31,9 @@
  * @param sw_version Версия прошивки
  * @param hw_version Версия железа
  */
-void publish_sensor_discovery(PubSubClient &mqtt_client, const char *mqtt_topic,
+void publish_sensor_discovery(PubSubClient &mqtt_client,
+                              const char *mqtt_topic,
+                              const char *mqtt_discovery_topic,
                               const char *sensor_type,
                               const char *sensor_name,
                               const char *sensor_id,
@@ -51,7 +54,7 @@ void publish_sensor_discovery(PubSubClient &mqtt_client, const char *mqtt_topic,
                               const char *json_attributes_template)
 {
     LOG_INFO(F("MQTT: DISCOVERY:  Sensor: ") << sensor_name);
-    
+
     StaticJsonDocument<JSON_STATIC_MSG_BUFFER> json_doc;
     JsonObject sensor = json_doc.to<JsonObject>();
 
@@ -102,11 +105,6 @@ void publish_sensor_discovery(PubSubClient &mqtt_client, const char *mqtt_topic,
     if (MQTT_FORCE_UPDATE)
         sensor[F("force_update")] = true; // force_update
 
-    // TODO: Добавить топики для команд
-
-    // if (command_topic[0])
-    //     sensor["cmd_t"] = command_topic; // command_topic
-
     StaticJsonDocument<JSON_SMALL_STATIC_MSG_BUFFER> json_device_doc;
     JsonObject device = json_device_doc.to<JsonObject>();
     JsonArray identifiers = device.createNestedArray(F("identifiers")); // identifiers //ids
@@ -140,8 +138,7 @@ void publish_sensor_discovery(PubSubClient &mqtt_client, const char *mqtt_topic,
     String payload;
     serializeJson(sensor, payload);
 
-    String topic = String(DISCOVERY_TOPIC) + "/" + sensor_type + "/" + uniqueId_prefix + "/" + sensor_id + "/config";
+    String topic = String(mqtt_discovery_topic) + "/" + sensor_type + "/" + uniqueId_prefix + "/" + sensor_id + "/config";
 
     publish(mqtt_client, topic, payload);
 }
-
