@@ -166,14 +166,14 @@ bool loadConfig(Settings &sett)
 #ifdef MQTT_LOGIN
 #pragma message(VAR_NAME_VALUE(MQTT_LOGIN))
                 String mqtt_login = VALUE(MQTT_LOGIN);
-                strncpy0(sett.mqtt_login, mqtt_login.c_str(), MQTT_HOST_LEN);
+                strncpy0(sett.mqtt_login, mqtt_login.c_str(), MQTT_LOGIN_LEN);
                 LOG_INFO("default mqtt_login=" << mqtt_login);
 #endif
 
 #ifdef MQTT_PASSWORD
 #pragma message(VAR_NAME_VALUE(MQTT_PASSWORD))
                 String mqtt_password = VALUE(MQTT_PASSWORD);
-                strncpy0(sett.mqtt_password, mqtt_password.c_str(), MQTT_HOST_LEN);
+                strncpy0(sett.mqtt_password, mqtt_password.c_str(), MQTT_PASSWORD_LEN);
                 LOG_INFO("default mqtt_password=" << mqtt_password);
 #endif
 
@@ -197,7 +197,7 @@ bool loadConfig(Settings &sett)
 #if defined(SSID_PASS)
 #pragma message(VAR_NAME_VALUE(SSID_NAME))
 #pragma message(VAR_NAME_VALUE(SSID_PASS))
-
+                
                 WiFi.persistent(true);                                             // begin() will save ssid, pwd to flash
                 WiFi.begin(VALUE(SSID_NAME), VALUE(SSID_PASS), 0, nullptr, false); // connect=false, т.к. мы следом вызываем Wifi.begin
                 WiFi.persistent(false);                                            // don't save ssid, pwd to flash in this run
