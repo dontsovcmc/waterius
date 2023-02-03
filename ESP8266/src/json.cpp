@@ -73,5 +73,5 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
 
   // JSON size 0.10.3:  355
   // JSON size 0.10.6:  439
-  // JSON size 0.11: 633
+  // JSON size 0.11: 643
 }
