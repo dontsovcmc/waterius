@@ -70,7 +70,6 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     httpClient.setReuse(false);
 
     LOG_INFO(F("Begin client"));
-    yield();
     // Request
     int responseCode = 0;
     String responseBody;
