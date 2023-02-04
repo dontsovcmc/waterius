@@ -15,6 +15,7 @@
 #include "setup.h"
 
 #define MQTT_PARAM_COUNT 8
+#define NONE -1
 
 // строки хранятся во флэш
 // https://arduino-esp8266.readthedocs.io/en/latest/PROGMEM.html#how-do-i-declare-arrays-of-strings-in-progmem-and-retrieve-an-element-from-it
@@ -99,7 +100,6 @@ static const char *const GENERAL_SENSORS[][MQTT_PARAM_COUNT] PROGMEM = {
     {s_sensor, s_bat_name, s_battery, s_measurement, s_battery, s_perc, s_diagnostic, ""},            // процент зарядки батареи
     {s_sensor, s_resets_name, s_resets, s_measurement, "", "", s_diagnostic, s_icon_cog_refresh},     // resets
     {s_sensor, s_time_name, s_timestamp, "", s_timestamp, "", s_diagnostic, s_clock},                          // Время
-    {s_number, s_wake_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},         // Настройка для автоматического добавления времени пробуждения в Home Assistant
     /* Сенсор с атрибутами  Группа №1 */
     {s_sensor, s_bvolt_name, s_voltage, s_measurement, s_voltage, s_v, s_diagnostic, ""},             // voltage
     {s_sensor, s_vdiff_name, s_vdiff, s_measurement, s_voltage, s_v, s_diagnostic, s_icon_ba},        // Просадка напряжения voltage_diff, В
@@ -109,6 +109,12 @@ static const char *const GENERAL_SENSORS[][MQTT_PARAM_COUNT] PROGMEM = {
     {s_sensor, s_mac_name, s_mac, "", "", "", s_diagnostic, ""},                                      // Мак ESP
     {s_sensor, s_ip_name, s_ip, "", "", "", s_diagnostic, s_icon_ip},                                 // IP
 };
+
+
+static const char *const GENERAL_NUMBERS[][MQTT_PARAM_COUNT] PROGMEM = {
+    {s_number, s_wake_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},         // Настройка для автоматического добавления времени пробуждения в Home Assistant
+};
+
 
 /**
  * @brief массив с сенсорами для одного канала
@@ -122,8 +128,7 @@ static const char *const CHANNEL_SENSORS[][MQTT_PARAM_COUNT] PROGMEM = {
     {s_sensor, s_delta_name, s_delta, s_measurement, "", "", s_diagnostic, s_icon_delta}, // deltaN Разница с предыдущими показаниями, л
     {s_sensor, s_adc_name, s_adc, s_measurement, "", "", s_diagnostic, s_icon_counter},   // adcN Аналоговый уровень
     {s_sensor, s_serial_name, s_serial, "", "", "", s_diagnostic, s_icon_identifier},     // serialN Серийный номер счетчика
-    /* Одиночный сенсор */
-    {s_number, s_f_name, s_f, "", "", "", s_config, s_icon_numeric},                      // fN  Вес импульса
+    {s_sensor, s_f_name, s_f, "", "", "", s_config, s_icon_numeric},                      // fN  Вес импульса
 };
 
 static const char s_hot_wtr[] PROGMEM = "Hot Water";
