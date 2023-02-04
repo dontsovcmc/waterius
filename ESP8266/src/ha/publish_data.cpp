@@ -1,6 +1,6 @@
 #include "publish_data.h"
 #include "Logging.h"
-#include "helpers.h"
+#include "publish.h"
 
 /**
  * @brief Пубикует показания в один топик в формате json
@@ -11,7 +11,6 @@
  */
 void publish_data_to_single_topic(PubSubClient &mqtt_client, String &topic, DynamicJsonDocument &json_data)
 {
-    LOG_INFO(F("MQTT: Publish data to single topic"));
     String payload = "";
     serializeJson(json_data, payload);
     publish(mqtt_client, topic, payload);
@@ -26,13 +25,12 @@ void publish_data_to_single_topic(PubSubClient &mqtt_client, String &topic, Dyna
  */
 void publish_data_to_multiple_topics(PubSubClient &mqtt_client, String &topic, DynamicJsonDocument &json_data)
 {
-    LOG_INFO(F("MQTT: Publish data to multiple topics"));
     JsonObject root = json_data.as<JsonObject>();
     for (JsonPair p : root)
     {
         String sensor_topic = topic + "/" + p.key().c_str();
         String sensor_value = p.value().as<String>();
-        publish_simple(mqtt_client, sensor_topic, sensor_value);
+        publish(mqtt_client, sensor_topic, sensor_value);
     }
 }
 
@@ -52,11 +50,13 @@ void publish_data(PubSubClient &mqtt_client, String &topic, DynamicJsonDocument 
 
     if (auto_discovery)
     {
+        LOG_INFO(F("MQTT: Publish data to multiple topics"));
         // в один топик если настроена интеграция HomeAssistant
         publish_data_to_single_topic(mqtt_client, topic, json_data);
     }
     else
     {
+        LOG_INFO(F("MQTT: Publish data to single topic"));
         // в оотдельные топики
         publish_data_to_multiple_topics(mqtt_client, topic, json_data);
     }

@@ -90,16 +90,18 @@ static const char s_f[] PROGMEM = "f";
 static const char s_icon_numeric[] PROGMEM = "mdi:numeric";
 
 /**
- * @brief массив с ситемными сенсорами с указанием их атрибутов в MQTT
+ * @brief массив с общими сущностями с указанием их атрибутов в MQTT
  *
  */
-static const char *const GENERAL_SENSORS[][MQTT_PARAM_COUNT] PROGMEM = {
+static const char *const GENERAL_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
     // sensor_type, sensor_name, sensor_id, state_class, device_class,unit_of_meas,entity_category,icon
     /* Одиночные сенсоры */
     {s_sensor, s_bat_low_name, s_voltage_low, "", "", "", s_diagnostic, s_icon_ba},                               // voltage_low Батарейка разряжена >
     {s_sensor, s_bat_name, s_battery, s_measurement, s_battery, s_perc, s_diagnostic, ""},            // процент зарядки батареи
     {s_sensor, s_resets_name, s_resets, s_measurement, "", "", s_diagnostic, s_icon_cog_refresh},     // resets
     {s_sensor, s_time_name, s_timestamp, "", s_timestamp, "", s_diagnostic, s_clock},                          // Время
+    /*{s_sensor, s_wake_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},*/         // Настройка для автоматического добавления времени пробуждения в Home Assistant
+    {s_number, s_wake_name, s_period_min, "", "", "", s_config, s_icon_bed_clock},
     /* Сенсор с атрибутами  Группа №1 */
     {s_sensor, s_bvolt_name, s_voltage, s_measurement, s_voltage, s_v, s_diagnostic, ""},             // voltage
     {s_sensor, s_vdiff_name, s_vdiff, s_measurement, s_voltage, s_v, s_diagnostic, s_icon_ba},        // Просадка напряжения voltage_diff, В
@@ -110,17 +112,11 @@ static const char *const GENERAL_SENSORS[][MQTT_PARAM_COUNT] PROGMEM = {
     {s_sensor, s_ip_name, s_ip, "", "", "", s_diagnostic, s_icon_ip},                                 // IP
 };
 
-
-static const char *const GENERAL_NUMBERS[][MQTT_PARAM_COUNT] PROGMEM = {
-    {s_number, s_wake_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},         // Настройка для автоматического добавления времени пробуждения в Home Assistant
-};
-
-
 /**
- * @brief массив с сенсорами для одного канала
+ * @brief массив с сущностями для одного канала
  *
  */
-static const char *const CHANNEL_SENSORS[][MQTT_PARAM_COUNT] PROGMEM = {
+static const char *const CHANNEL_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
     // sensor_type, sensor_name, sensor_id, state_class, device_class,unit_of_meas,entity_category,icon
     /* Сенсор с атрибутами */
     {s_sensor, s_total_name, s_ch, s_total, s_water, s_m3, "", ""},                       // chN Показания

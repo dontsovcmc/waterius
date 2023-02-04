@@ -41,7 +41,7 @@ void publish_chunked(PubSubClient &mqtt_client, String &topic, String &payload, 
     LOG_INFO(F("MQTT: Publish Topic: ") << topic);
     LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
 
-    int len = payload.length();
+    unsigned int len = payload.length();
     const uint8_t *buf = (const uint8_t *)payload.c_str();
 
     if (mqtt_client.beginPublish(topic.c_str(), len, true))

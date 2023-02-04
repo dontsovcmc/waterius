@@ -28,10 +28,10 @@
 #include "master_i2c.h"
 #include "Logging.h"
 #include "json.h"
-#include "ha/discovery.h"
 #include "ha/publish_data.h"
+#include "ha/publish_discovery.h"
+#include "ha/subscribe.h"
 #include "utils.h"
-
 
 /**
  * @brief Отправляет показания на укзанный сервер MQTT и создает discovery топик HomeAssistant
@@ -44,7 +44,7 @@
  *
  * @returns true если успешно отправлены данные и false если не отправлено
  */
-bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
+bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
 {
     if (!is_mqtt(sett))
     {
@@ -61,7 +61,13 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
     mqtt_client.setBufferSize(MQTT_MAX_PACKET_SIZE);
     mqtt_client.setServer(sett.mqtt_host, sett.mqtt_port);
     mqtt_client.setSocketTimeout(MQTT_SOCKET_TIMEOUT);
-    
+
+    // устанавливаем callback для приема команд
+    // так как нужно будет изменять настройки устройства в функции
+    // то используем лямбду чтобы передать туда настройки
+    mqtt_client.setCallback([&sett](char *raw_topic, byte *raw_payload, unsigned int length)
+                            { mqtt_callback(sett, raw_topic, raw_payload, length); });
+
     String client_id = get_device_name();
 
     const char *login = sett.mqtt_login[0] ? sett.mqtt_login : NULL;
@@ -77,9 +83,14 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
 
     if (mqtt_client.connect(client_id.c_str(), login, pass))
     {
+        subscribe_to_topic(mqtt_client, mqtt_topic);
+
+        mqtt_client.loop();
 
         // публикация показаний в MQTT
         publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
+        
+        mqtt_client.loop();
 
         // autodiscovery после настройки и по нажатию на кнопку
         if (sett.mqtt_auto_discovery && (ALWAYS_MQTT_AUTO_DISCOVERY ||
