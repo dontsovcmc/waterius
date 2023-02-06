@@ -62,7 +62,7 @@ homeassistant:
 
 После перезагрузки Home Assistant свойства устройства будут выглядеть следующим образом
 
-![Русификация](files\ha_waterius_rus.jpg)
+![Русификация](files/ha_waterius_rus.jpg)
 
 
 ## Ручная настройка
