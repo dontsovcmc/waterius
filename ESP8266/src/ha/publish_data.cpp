@@ -17,7 +17,7 @@ void publish_data_to_single_topic(PubSubClient &mqtt_client, String &topic, Dyna
 }
 
 /**
- * @brief публикация показаний в отдельные топики
+ * @brief Публикация показаний в отдельные топики
  *
  * @param mqtt_client клиент MQTT
  * @param topic имя топика
@@ -35,7 +35,7 @@ void publish_data_to_multiple_topics(PubSubClient &mqtt_client, String &topic, D
 }
 
 /**
- * @brief публикация показаний устройства в MQTT
+ * @brief Публикация показаний устройства в MQTT
  *
  * @param mqtt_client клиент MQTT
  * @param topic имя топика
@@ -44,19 +44,17 @@ void publish_data_to_multiple_topics(PubSubClient &mqtt_client, String &topic, D
  */
 void publish_data(PubSubClient &mqtt_client, String &topic, DynamicJsonDocument &json_data, bool auto_discovery)
 {
-    LOG_INFO(F("MQTT: Connected."));
-    
     unsigned long start = millis();
 
     if (auto_discovery)
     {
-        LOG_INFO(F("MQTT: Publish data to multiple topics"));
+        LOG_INFO(F("MQTT: Publish data to single topic"));
         // в один топик если настроена интеграция HomeAssistant
         publish_data_to_single_topic(mqtt_client, topic, json_data);
     }
     else
     {
-        LOG_INFO(F("MQTT: Publish data to single topic"));
+        LOG_INFO(F("MQTT: Publish data to multiple topics"));
         // в оотдельные топики
         publish_data_to_multiple_topics(mqtt_client, topic, json_data);
     }

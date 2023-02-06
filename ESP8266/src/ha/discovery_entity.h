@@ -1,3 +1,12 @@
+/**
+ * @file discovery_entity.h
+ * @brief Создание строки для публикации автодискавери 
+ * @version 0.1
+ * @date 2023-02-06
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
 #ifndef HA_DISCOVERY_ENTITY_H_
 #define HA_DISCOVERY_ENTITY_H_
 

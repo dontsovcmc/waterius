@@ -21,6 +21,7 @@
 #undef MQTT_MAX_PACKET_SIZE
 #endif
 #define MQTT_MAX_PACKET_SIZE 256
+#define MQTT_DELAY_SUBSCRIPTION 100 // задержка для получения данных по подписке
 
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
@@ -51,8 +52,7 @@ bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdat
         LOG_INFO(F("MQTT: SKIP"));
         return false;
     }
-
-    LOG_INFO(F("MQTT: Creating MQTT Client..."));
+    unsigned long start = millis();
 
     WiFiClient wifi_client;
     PubSubClient mqtt_client(wifi_client);
@@ -62,34 +62,35 @@ bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdat
     mqtt_client.setServer(sett.mqtt_host, sett.mqtt_port);
     mqtt_client.setSocketTimeout(MQTT_SOCKET_TIMEOUT);
 
-    // устанавливаем callback для приема команд
-    // так как нужно будет изменять настройки устройства в функции
-    // то используем лямбду чтобы передать туда настройки
-    mqtt_client.setCallback([&sett](char *raw_topic, byte *raw_payload, unsigned int length)
-                            { mqtt_callback(sett, raw_topic, raw_payload, length); });
-
-    String client_id = get_device_name();
-
-    const char *login = sett.mqtt_login[0] ? sett.mqtt_login : NULL;
-    const char *pass = sett.mqtt_password[0] ? sett.mqtt_password : NULL;
-
     String mqtt_topic = sett.mqtt_topic;
-    String mqtt_discovery_topic = sett.mqtt_discovery_topic;
-
     remove_trailing_slash(mqtt_topic);
-    remove_trailing_slash(mqtt_discovery_topic);
 
-    LOG_INFO(F("MQTT: Connecting..."));
-
-    if (mqtt_client.connect(client_id.c_str(), login, pass))
+    if (sett.mqtt_auto_discovery)
     {
-        subscribe_to_topic(mqtt_client, mqtt_topic);
+        // устанавливаем callback для приема команд
+        // так как нужно будет изменять настройки устройства в функцие
+        // то используем лямбду чтобы передать туда настройки
+        // парамтеры в лямбду передаются "by reference"
 
+        mqtt_client.setCallback([&](char *raw_topic, byte *raw_payload, unsigned int length)
+                                { mqtt_callback(sett, json_data, mqtt_client, mqtt_topic, raw_topic, raw_payload, length); });
+        
+    }
+
+    if (mqtt_connect(sett, mqtt_client))
+    {
         mqtt_client.loop();
+        // подписываемся на изменения
+        if (sett.mqtt_auto_discovery)
+        {
+            mqtt_subscribe(mqtt_client, mqtt_topic);
+            mqtt_client.loop();
+            delay(MQTT_DELAY_SUBSCRIPTION); // задержка для получения данных по подписке
+            mqtt_client.loop();
+        }
 
         // публикация показаний в MQTT
         publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
-        
         mqtt_client.loop();
 
         // autodiscovery после настройки и по нажатию на кнопку
@@ -97,11 +98,17 @@ bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdat
                                          (sett.mode == SETUP_MODE) ||
                                          (sett.mode == MANUAL_TRANSMIT_MODE)))
         {
+            String mqtt_discovery_topic = sett.mqtt_discovery_topic;
+            remove_trailing_slash(mqtt_discovery_topic);
             publish_discovery(mqtt_client, mqtt_topic, mqtt_discovery_topic, data);
+            mqtt_client.loop();
+
         }
+        
+        mqtt_unsubscribe(mqtt_client,mqtt_topic);
         mqtt_client.loop();
         mqtt_client.disconnect();
-
+        LOG_INFO(F("MQTT: Disconnect. ") << millis() - start << F(" milliseconds elapsed"));
         return true;
     }
     else

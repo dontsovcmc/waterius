@@ -56,9 +56,9 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
     {
         device_name = get_device_name();
         device_model = FPSTR(MODEL_NAMES[data.model]);
-        sw_version = String(FIRMWARE_VERSION) + "." + data.version; // ESP_VERSION.ATTINY_VERSION
-        hw_version = HARDWARE_VERSION;                              // в дальнейшем можно модифицировать для гибкого определения версии hw
-        device_manufacturer = MANUFACTURER;
+        sw_version = String(F(FIRMWARE_VERSION)) + "." + data.version; // ESP_VERSION.ATTINY_VERSION
+        hw_version = F(HARDWARE_VERSION);                              // в дальнейшем можно модифицировать для гибкого определения версии hw
+        device_manufacturer = F(MANUFACTURER);
     }
 
     LOG_INFO(F("MQTT: DISCOVERY:  Sensor: ") << entity_name);

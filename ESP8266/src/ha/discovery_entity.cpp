@@ -54,7 +54,7 @@ String build_entity_discovery(const char *mqtt_topic,
     DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
     JsonObject entity = json_doc.to<JsonObject>();
 
-    entity[F("name")] = FPSTR(entity_name); // name
+    entity[F("name")] = entity_name; // name
 
     String uniqueId_prefix = get_device_name();
     String unique_id = uniqueId_prefix + "-" + entity_id;
@@ -138,6 +138,8 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("step")] = 1;    // step
 
         entity[F("optimistic")] = true; // optimistic
+        entity[F("retain")] = true; //retain
+        entity[F("qos")] = 1; //qos
     }
 
     LOG_INFO(F("MQTT: DISCOVERY SENSOR: JSON Mem usage: ") << json_doc.memoryUsage());
@@ -170,12 +172,12 @@ String get_attributes_template(const char *const attrs[][MQTT_PARAM_COUNT], int 
 
     for (int i = 0; i < count; i++)
     {
-        attribute_name = String(FPSTR(attrs[index + i][1]));
-        attribute_id = String(FPSTR(attrs[index + i][2]));
+        attribute_name = FPSTR(attrs[index + i][1]);
+        attribute_id = FPSTR(attrs[index + i][2]);
 
         update_channel_names(channel, attribute_id, attribute_name);
 
-        attribute_template = String(F("{{ value_json.")) + attribute_id + String(F(" | is_defined }}"));
+        attribute_template = String(F("{{ value_json.")) + attribute_id + F(" | is_defined }}");
 
         json_attributes[attribute_name] = attribute_template;
     }

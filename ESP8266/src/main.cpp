@@ -34,7 +34,7 @@ void setup()
     LOG_INFO(F("Saved password: ") << WiFi.psk());
 
     masterI2C.begin(); // Включаем i2c master
-    
+
     get_voltage()->begin();
     voltage_ticker.attach_ms(300, []()
                              { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
@@ -125,6 +125,7 @@ void loop()
         {
             if (mode != SETUP_MODE)
             {
+                WiFi.forceSleepWake();
                 // Проснулись для передачи показаний
                 LOG_INFO(F("Starting Wi-fi"));
 
@@ -185,7 +186,6 @@ void loop()
                 sprintf(cdata.mac, MAC_STR, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
                 LOG_INFO(F("MAC: ") << (const char *)cdata.mac);
 
-                
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
                 // устанавливать время только при использовани хттпс или мктт
                 String url = "";
@@ -211,7 +211,6 @@ void loop()
                     LOG_INFO(F("BLYNK: Send OK"));
                 }
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-                
 #endif
 
 #ifndef MQTT_DISABLED
@@ -220,8 +219,6 @@ void loop()
                     LOG_INFO(F("MQTT: Send OK"));
                 }
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-                
-                
 #endif
 
 #ifndef HTTPS_DISABLED
@@ -229,8 +226,6 @@ void loop()
                 {
                     LOG_INFO(F("HTTP: Send OK"));
                 }
-
-                
 #endif
                 // Сохраним текущие значения в памяти.
                 sett.impulses0_previous = data.impulses0;
@@ -275,5 +270,7 @@ void loop()
     masterI2C.sendCmd('Z'); // "Можешь идти спать, attiny"
     LOG_END();
 
+    WiFi.mode(WIFI_OFF); // отключаем WIFI
+    WiFi.forceSleepBegin();
     ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. Instant не ждет 92мс
 }
