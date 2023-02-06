@@ -34,6 +34,46 @@
 #include "ha/subscribe.h"
 #include "utils.h"
 
+WiFiClient wifi_client;
+PubSubClient mqtt_client(wifi_client);
+
+bool pre_send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
+{
+    String mqtt_topic = sett.mqtt_topic;
+    remove_trailing_slash(mqtt_topic);
+
+    wifi_client.setTimeout(MQTT_SOCKET_TIMEOUT * 1000);
+    mqtt_client.setBufferSize(MQTT_MAX_PACKET_SIZE);
+    mqtt_client.setServer(sett.mqtt_host, sett.mqtt_port);
+    mqtt_client.setSocketTimeout(MQTT_SOCKET_TIMEOUT);
+
+    if (sett.mqtt_auto_discovery)
+    {
+        // устанавливаем callback для приема команд
+        // так как нужно будет изменять настройки устройства в функцие
+        // то используем лямбду чтобы передать туда настройки
+        // парамтеры в лямбду передаются "by reference"
+
+        mqtt_client.setCallback([&](char *raw_topic, byte *raw_payload, unsigned int length)
+                                { mqtt_callback(sett, json_data, mqtt_client, mqtt_topic, raw_topic, raw_payload, length); });
+    }
+
+    if (mqtt_connect(sett, mqtt_client))
+    {
+        if (sett.mqtt_auto_discovery)
+        {
+            mqtt_subscribe(mqtt_client, mqtt_topic);
+            mqtt_client.loop();
+        }
+    }
+    else
+    {
+        LOG_ERROR(F("MQTT: Connecting failed"));
+        return false;
+    }
+    return true;
+}
+
 /**
  * @brief Отправляет показания на укзанный сервер MQTT и создает discovery топик HomeAssistant
  *
@@ -47,52 +87,13 @@
  */
 bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
 {
-    if (!is_mqtt(sett))
-    {
-        LOG_INFO(F("MQTT: SKIP"));
-        return false;
-    }
     unsigned long start = millis();
-
-    WiFiClient wifi_client;
-    PubSubClient mqtt_client(wifi_client);
-
-    wifi_client.setTimeout(MQTT_SOCKET_TIMEOUT * 1000);
-    mqtt_client.setBufferSize(MQTT_MAX_PACKET_SIZE);
-    mqtt_client.setServer(sett.mqtt_host, sett.mqtt_port);
-    mqtt_client.setSocketTimeout(MQTT_SOCKET_TIMEOUT);
-
     String mqtt_topic = sett.mqtt_topic;
     remove_trailing_slash(mqtt_topic);
 
-    if (sett.mqtt_auto_discovery)
-    {
-        // устанавливаем callback для приема команд
-        // так как нужно будет изменять настройки устройства в функцие
-        // то используем лямбду чтобы передать туда настройки
-        // парамтеры в лямбду передаются "by reference"
-
-        mqtt_client.setCallback([&](char *raw_topic, byte *raw_payload, unsigned int length)
-                                { mqtt_callback(sett, json_data, mqtt_client, mqtt_topic, raw_topic, raw_payload, length); });
-        
-    }
-
-    if (mqtt_connect(sett, mqtt_client))
+    if (mqtt_client.connected())
     {
         mqtt_client.loop();
-        // подписываемся на изменения
-        if (sett.mqtt_auto_discovery)
-        {
-            mqtt_subscribe(mqtt_client, mqtt_topic);
-            mqtt_client.loop();
-            delay(MQTT_DELAY_SUBSCRIPTION); // задержка для получения данных по подписке
-            mqtt_client.loop();
-        }
-
-        // публикация показаний в MQTT
-        publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
-        mqtt_client.loop();
-
         // autodiscovery после настройки и по нажатию на кнопку
         if (sett.mqtt_auto_discovery && (ALWAYS_MQTT_AUTO_DISCOVERY ||
                                          (sett.mode == SETUP_MODE) ||
@@ -102,10 +103,12 @@ bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdat
             remove_trailing_slash(mqtt_discovery_topic);
             publish_discovery(mqtt_client, mqtt_topic, mqtt_discovery_topic, data);
             mqtt_client.loop();
-
         }
-        
-        mqtt_unsubscribe(mqtt_client,mqtt_topic);
+
+        // публикация показаний в MQTT
+        publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
+        mqtt_client.loop();
+        mqtt_unsubscribe(mqtt_client, mqtt_topic);
         mqtt_client.loop();
         mqtt_client.disconnect();
         LOG_INFO(F("MQTT: Disconnect. ") << millis() - start << F(" milliseconds elapsed"));

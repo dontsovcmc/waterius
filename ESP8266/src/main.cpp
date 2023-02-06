@@ -195,15 +195,29 @@ void loop()
                 }
                 String proto = get_proto(url);
 
-                if (sett.mqtt_host[0] || (proto == PROTO_HTTPS))
+                String mqtt_topic;
+                DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
+
+                if (is_mqtt(sett))
+                {
+                    pre_send_mqtt(sett, data, cdata, json_data);
+                }
+
+                if (is_mqtt(sett) || (proto == PROTO_HTTPS))
                 {
                     setClock();
                 }
 
                 voltage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-                DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
                 get_json_data(sett, data, cdata, json_data);
+
+#ifndef HTTPS_DISABLED
+                if (send_http(url, sett, json_data))
+                {
+                    LOG_INFO(F("HTTP: Send OK"));
+                }
+#endif
 
 #ifndef BLYNK_DISABLED
                 if (send_blynk(sett, json_data))
@@ -214,19 +228,21 @@ void loop()
 #endif
 
 #ifndef MQTT_DISABLED
-                if (send_mqtt(sett, data, cdata, json_data))
+                if (is_mqtt(sett))
                 {
-                    LOG_INFO(F("MQTT: Send OK"));
+                    if (send_mqtt(sett, data, cdata, json_data))
+                    {
+                        LOG_INFO(F("MQTT: Send OK"));
+                    }
                 }
+                else
+                {
+                    LOG_INFO(F("MQTT: SKIP"));
+                }
+
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 #endif
 
-#ifndef HTTPS_DISABLED
-                if (send_http(url, sett, json_data))
-                {
-                    LOG_INFO(F("HTTP: Send OK"));
-                }
-#endif
                 // Сохраним текущие значения в памяти.
                 sett.impulses0_previous = data.impulses0;
                 sett.impulses1_previous = data.impulses1;
