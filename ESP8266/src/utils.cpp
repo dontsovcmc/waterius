@@ -4,57 +4,6 @@
 #include "time.h"
 #include "porting.h"
 
-#define NTP_CONNECT_TIMEOUT 3000UL
-
-#define NTP_SERV1 "0.ru.pool.ntp.org"
-#define NTP_SERV2 "1.ru.pool.ntp.org"
-#define NTP_SERV3 "ru.pool.ntp.org"
-/**
- * @brief Устанаваливает время по указанному серверу NTP
- *
- * @param ntp_server адрес сервера
- * @return true
- * @return false
- */
-bool setClock(const char *ntp_server)
-{
-	configTime(0, 0, ntp_server);
-
-	LOG_INFO(F("Waiting for NTP time sync: "));
-	uint32_t start = millis();
-	time_t now = time(nullptr);
-
-	while (now < 8 * 3600 * 2)
-	{
-		if ((millis() - start) > NTP_CONNECT_TIMEOUT) {
-			return false;
-		}
-		delay(100);
-		now = time(nullptr);
-	}
-
-	return true;
-}
-
-/**
- * @brief Устанаваливает время пока не удастся установить
- * по следующим серверам "1.ru.pool.ntp.org", "2.ru.pool.ntp.org", "pool.ntp.org"
- *
- * @return true  если успешно
- * @return false  усли завершилось ошибкой
- */
-bool setClock()
-{
-	if (setClock(NTP_SERV1) || setClock(NTP_SERV2) || setClock(NTP_SERV3))
-	{
-		LOG_INFO(F("Current time: ") << get_current_time());
-		return true;
-	};
-
-	LOG_ERROR(F("SetClock FAILED"));
-	return false;
-}
-
 void print_wifi_mode()
 {
 	// WiFi.setPhyMode(WIFI_PHY_MODE_11B = 1, WIFI_PHY_MODE_11G = 2, WIFI_PHY_MODE_11N = 3);
@@ -97,21 +46,6 @@ String get_device_name()
 	return deviceName;
 }
 
-/**
- * @brief Получает текущее время
- *
- * @return строка с временем в формате C
- */
-String get_current_time()
-{
-	char buf[100];
-	time_t now = time(nullptr);
-	struct tm timeinfo;
-	gmtime_r(&now, &timeinfo);
-	// ISO8601 date time string format (2019-11-29T23:29:55+0800).
-	strftime(buf, sizeof(buf), TIME_FORMAT, &timeinfo);
-	return String(buf);
-}
 
 /**
  * @brief Преобразует MAC адрес в шестнадцатиричный вид без разделителей. Например AABBCCDDEEFF

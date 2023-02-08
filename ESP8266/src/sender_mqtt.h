@@ -37,7 +37,7 @@
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
 
-bool pre_send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
+bool connect_and_subscribe_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
 {
     String mqtt_topic = sett.mqtt_topic;
     remove_trailing_slash(mqtt_topic);

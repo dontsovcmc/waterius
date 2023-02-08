@@ -14,6 +14,7 @@
 #include "sender_blynk.h"
 #include "sender_mqtt.h"
 #include "Ticker.h"
+#include "sync_time.h"
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 SlaveData data;       // Данные от Attiny85
@@ -149,20 +150,13 @@ void loop()
 
                     WiFi.mode(WIFI_STA); // без этого не записывается hostname
                     set_hostname();
-
-                    // WifiManager уже записал ssid & pass в Wifi, поэтому не надо самому заполнять
-                    WiFi.begin();
-
-                    // Ожидаем подключения к точке доступа
-                    uint32_t start = millis();
-                    while (WiFi.status() != WL_CONNECTED && millis() - start < ESP_CONNECT_TIMEOUT)
+                    int attempts = WIFI_CONNECT_ATTEMPTS;
+                    do
                     {
-                        LOG_INFO(F("Status: ") << WiFi.status());
-                        delay(300);
-
-                        // В будущем добавим success, означающее, что напряжение не критично изменяется, можно продолжать
-                        // иначе есть риск ошибки ESP и стирания конфигурации
-                    }
+                        WiFi.begin();
+                        WiFi.waitForConnectResult(ESP_CONNECT_TIMEOUT);
+                        attempts--;
+                    } while (WiFi.status() != WL_CONNECTED && attempts);
                 }
             }
 
@@ -200,12 +194,12 @@ void loop()
 
                 if (is_mqtt(sett))
                 {
-                    pre_send_mqtt(sett, data, cdata, json_data);
+                    connect_and_subscribe_mqtt(sett, data, cdata, json_data);
                 }
 
                 if (is_mqtt(sett) || (proto == PROTO_HTTPS))
                 {
-                    setClock();
+                    sync_ntp_time();
                 }
 
                 voltage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными

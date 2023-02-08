@@ -118,7 +118,7 @@
 
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 
-#define ESP_CONNECT_TIMEOUT 15000UL // Время подключения к точке доступа, ms
+#define ESP_CONNECT_TIMEOUT 10000UL // Время подключения к точке доступа, ms
 
 #define SERVER_TIMEOUT 12000UL // Время ответа сервера, ms
 
@@ -181,6 +181,8 @@
 #define AS_COLD_CHANNEL 7
 
 #define DEF_FALLBACK_DNS "8.8.8.8"
+
+#define WIFI_CONNECT_ATTEMPTS 3
 
 struct CalculatedData
 {

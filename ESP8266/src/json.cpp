@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "porting.h"
 #include "voltage.h"
+#include "sync_time.h"
 
 void get_json_data(const Settings &sett, const SlaveData &data, const CalculatedData &cdata,  DynamicJsonDocument &json_data)
 {
