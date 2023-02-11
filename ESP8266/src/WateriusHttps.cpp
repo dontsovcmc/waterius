@@ -7,7 +7,7 @@
 #include "setup.h"
 #include "porting.h"
 
-WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url, const char *key, const char *email, const String &payload)
+WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const char *url, const char *key, const char *email, const String &payload)
 {
     BearSSL::X509List certs;
     HTTPClient httpClient;
@@ -18,7 +18,7 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     LOG_INFO(F("URL:\t") << url);
     LOG_INFO(F("Body:\t") << payload);
 
-    String proto = get_proto(url);
+    String proto = get_proto(String(url));
     LOG_INFO(F("Protocol:\t") << proto);
 
     // Set wc client
@@ -32,7 +32,7 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     {
         LOG_INFO(F("Create secure client"));
         pClient = new BearSSL::WiFiClientSecure;
-        if (is_waterius_site(url)) {
+        if (is_waterius_site(String(url))) {
             // проверяем валидность сертифкат сайта ватериуса
             certs.append(cloud_waterius_ru_ca);
             (*(BearSSL::WiFiClientSecure *)pClient).setTrustAnchors(&certs);
@@ -73,9 +73,9 @@ WateriusHttps::ResponseData WateriusHttps::sendJsonPostRequest(const String &url
     // Request
     int responseCode = 0;
     String responseBody;
-    if (httpClient.begin(*(WiFiClient *)pClient, url))
+    if (httpClient.begin(*(WiFiClient *)pClient, String(url)))
     {
-        LOG_INFO(F("Begin client succesfully"));
+        LOG_INFO(F("Begin HTTP client succesfully"));
         httpClient.addHeader(F("Content-Type"), F("application/json"));
         if (key[0])
         {

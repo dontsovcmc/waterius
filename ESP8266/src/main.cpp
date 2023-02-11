@@ -15,6 +15,7 @@
 #include "sender_mqtt.h"
 #include "Ticker.h"
 #include "sync_time.h"
+#include "wifi_helpers.h"
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 SlaveData data;       // Данные от Attiny85
@@ -31,28 +32,11 @@ void setup()
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Booted"));
 
-    LOG_INFO(F("Saved SSID: ") << WiFi.SSID());
-    LOG_INFO(F("Saved password: ") << WiFi.psk());
-
     masterI2C.begin(); // Включаем i2c master
 
     get_voltage()->begin();
     voltage_ticker.attach_ms(300, []()
                              { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
-}
-
-void wifi_handle_event_cb(System_Event_t *evt)
-{
-
-    switch (evt->event)
-    {
-    case EVENT_STAMODE_CONNECTED:
-        cdata.channel = evt->event_info.connected.channel;
-        sprintf(cdata.router_mac, "%02X:%02X:%02X:%02X:%02X:%02X",
-                evt->event_info.connected.bssid[0], evt->event_info.connected.bssid[1],
-                evt->event_info.connected.bssid[2], 0, 0, 0);
-        break;
-    }
 }
 
 /*
@@ -61,6 +45,7 @@ void wifi_handle_event_cb(System_Event_t *evt)
 */
 void calculate_values(const Settings &sett, const SlaveData &data, CalculatedData &cdata)
 {
+    LOG_INFO(F("Calculating values..."));
     LOG_INFO(F("new impulses=") << data.impulses0 << " " << data.impulses1);
 
     if ((sett.factor1 > 0) && (sett.factor0 > 0))
@@ -75,6 +60,39 @@ void calculate_values(const Settings &sett, const SlaveData &data, CalculatedDat
     }
 }
 
+void update_values(Settings &sett, const SlaveData &data, const CalculatedData &cdata)
+{
+    LOG_INFO(F("Updateing values...")); 
+    // Сохраним текущие значения в памяти.
+    sett.impulses0_previous = data.impulses0;
+    sett.impulses1_previous = data.impulses1;
+
+    // Перешлем время на сервер при след. включении
+    sett.wake_time = millis();
+
+    // Перерасчет времени пробуждения
+    if (sett.mode == TRANSMIT_MODE)
+    {
+        // TODO: нужно удстовериться что время было устанаовлено в прошлом и сейчас
+        //  т.е. перерасчет можно делать только если оба установлены или ооба не установлены
+        //  т.е. time должно быть или 1970 или настоящее в обоих случаях
+        //  иначе коэффициенты будут такими что никогда не выйдет на связь
+        time_t now = time(nullptr);
+        time_t t1 = (now - sett.last_send) / 60;
+        if (t1 > 1 && data.version >= 24)
+        {
+            LOG_INFO(F("Minutes diff:") << t1);
+            sett.set_wakeup = sett.wakeup_per_min * sett.set_wakeup / t1;
+        }
+        else
+        {
+            sett.set_wakeup = sett.wakeup_per_min;
+        }
+    }
+    sett.last_send = time(nullptr);
+}
+
+
 void loop()
 {
     uint8_t mode = SETUP_MODE; // TRANSMIT_MODE;
@@ -82,135 +100,78 @@ void loop()
     // спрашиваем у Attiny85 повод пробуждения и данные
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
     {
+        
         // Загружаем конфигурацию из EEPROM
-        bool success = loadConfig(sett);
-        if (!success)
-        {
-            LOG_ERROR(F("Error loading config"));
-        }
-
+        bool config_loaded = loadConfig(sett);
         sett.mode = mode;
+        LOG_INFO(F("Startup mode: ") << mode);
 
         // Вычисляем текущие показания
         calculate_values(sett, data, cdata);
 
         if (mode == SETUP_MODE)
         {
+            LOG_INFO(F("Entering in setup mode..."));
             // Режим настройки - запускаем точку доступа на 192.168.4.1
             // Запускаем точку доступа с вебсервером
-            WiFi.mode(WIFI_AP_STA);
+            
+            WiFi.persistent(false);
+            WiFi.disconnect(); 
+
+            wifi_set_mode(WIFI_AP_STA);
+
             setup_ap(sett, data, cdata);
-
-            // не будет ли роутер блокировать повторное подключение?
-
-            // ухищрения, чтобы не стереть SSID, pwd
-            if (WiFi.getPersistent())
-                WiFi.persistent(false); // disable saving wifi config into SDK flash area
-            WiFi.disconnect(true);
-            WiFi.mode(WIFI_OFF);   // отключаем WIFI
-            WiFi.persistent(true); // enable saving wifi config into SDK flash area
+            
+            wifi_shutdown();
 
             LOG_INFO(F("Set mode MANUAL_TRANSMIT to attiny"));
             masterI2C.sendCmd('T'); // Режим "Передача"
 
             LOG_INFO(F("Restart ESP"));
             LOG_END();
-            WiFi.forceSleepBegin();
-            delay(1000);
+
+            wifi_set_mode(WIFI_OFF);
+            LOG_INFO(F("Finish setup mode..."));
             ESP.restart();
 
-            // never happend here
-            success = false;
+            return; // сюда не должно дойти никогда
         }
-        if (success)
+
+        if (config_loaded)
         {
-            if (mode != SETUP_MODE)
+            if (wifi_connect(sett))
             {
-                WiFi.forceSleepWake();
-                // Проснулись для передачи показаний
-                LOG_INFO(F("Starting Wi-fi"));
-
-                wifi_set_event_handler_cb(wifi_handle_event_cb);
-
-                if (sett.ip != 0)
-                {
-                    success = WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, IPAddress().fromString(DEF_FALLBACK_DNS));
-                    if (success)
-                    {
-                        LOG_INFO(F("Static IP OK"));
-                    }
-                    else
-                    {
-                        LOG_ERROR(F("Static IP FAILED"));
-                    }
-                }
-
-                if (success)
-                {
-
-                    WiFi.mode(WIFI_STA); // без этого не записывается hostname
-                    set_hostname();
-                    int attempts = WIFI_CONNECT_ATTEMPTS;
-                    do
-                    {
-                        WiFi.begin();
-                        WiFi.waitForConnectResult(ESP_CONNECT_TIMEOUT);
-                        attempts--;
-                    } while (WiFi.status() != WL_CONNECTED && attempts);
-                }
-            }
-
-            if (success && WiFi.status() == WL_CONNECTED)
-            {
-                LOG_INFO(F("Sketch Size: ") << ESP.getSketchSize());
-                LOG_INFO(F("Free Sketch Space: ") << ESP.getFreeSketchSpace());
-                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-                print_wifi_mode();
-
-                String ip = WiFi.localIP().toString();
-                ip.toCharArray(cdata.ip, sizeof(cdata.ip));
-                LOG_INFO(F("Connected, IP: ") << (const char *)cdata.ip);
-
-                cdata.rssi = WiFi.RSSI();
-                LOG_INFO(F("RSSI: ") << cdata.rssi);
-                LOG_INFO(F("Channel: ") << cdata.channel);
-                LOG_INFO(F("Router MAC: ") << (const char *)cdata.router_mac);
-                uint8_t mac[6];
-                WiFi.macAddress(mac);
-                sprintf(cdata.mac, MAC_STR, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-                LOG_INFO(F("MAC: ") << (const char *)cdata.mac);
-
-                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-                // устанавливать время только при использовани хттпс или мктт
-                String url = "";
-                if (sett.waterius_host[0])
-                {
-                    url = sett.waterius_host;
-                }
-                String proto = get_proto(url);
+                log_system_info();
 
                 String mqtt_topic;
                 DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
 
+                // Подключаемся и подписываемся на мктт
                 if (is_mqtt(sett))
                 {
                     connect_and_subscribe_mqtt(sett, data, cdata, json_data);
                 }
 
-                if (is_mqtt(sett) || (proto == PROTO_HTTPS))
+                // устанавливать время только при использовани хттпс или мктт
+                if (is_mqtt(sett) || is_https(sett.waterius_host))
                 {
                     sync_ntp_time();
                 }
 
                 voltage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
+
+                // Формироуем JSON
                 get_json_data(sett, data, cdata, json_data);
 
+                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
+
 #ifndef HTTPS_DISABLED
-                if (send_http(url, sett, json_data))
+                if (send_http(sett, json_data))
                 {
                     LOG_INFO(F("HTTP: Send OK"));
                 }
+                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 #endif
 
 #ifndef BLYNK_DISABLED
@@ -236,36 +197,16 @@ void loop()
 
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 #endif
+                // Все уже отправили,  wifi не нужен - выключаем
+                wifi_shutdown();
 
-                // Сохраним текущие значения в памяти.
-                sett.impulses0_previous = data.impulses0;
-                sett.impulses1_previous = data.impulses1;
-
-                // Перешлем время на сервер при след. включении
-                sett.wake_time = millis();
-
-                // Перерасчет времени пробуждения
-                if (mode == TRANSMIT_MODE)
-                {
-                    time_t now = time(nullptr);
-                    time_t t1 = (now - sett.last_send) / 60;
-                    if (t1 > 1 && data.version >= 24)
-                    {
-                        LOG_INFO(F("Minutes diff:") << t1);
-                        sett.set_wakeup = sett.wakeup_per_min * sett.set_wakeup / t1;
-                    }
-                    else
-                    {
-                        sett.set_wakeup = sett.wakeup_per_min;
-                    }
-                }
-                sett.last_send = time(nullptr);
+                update_values(sett, data, cdata);
 
                 if (!masterI2C.setWakeUpPeriod(sett.set_wakeup))
                 {
                     LOG_ERROR(F("Wakeup period wasn't set"));
-                } //"Разбуди меня через..."
-                else
+                }
+                else //"Разбуди меня через..."
                 {
                     LOG_INFO(F("Wakeup period, min:") << sett.wakeup_per_min);
                     LOG_INFO(F("Wakeup period, tick:") << sett.set_wakeup);
@@ -276,11 +217,7 @@ void loop()
         }
     }
     LOG_INFO(F("Going to sleep"));
-
     masterI2C.sendCmd('Z'); // "Можешь идти спать, attiny"
     LOG_END();
-
-    WiFi.mode(WIFI_OFF); // отключаем WIFI
-    WiFi.forceSleepBegin();
     ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. Instant не ждет 92мс
 }

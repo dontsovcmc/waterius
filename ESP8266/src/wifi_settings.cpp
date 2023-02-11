@@ -18,7 +18,7 @@
 
 /* Сохраняем конфигурацию в EEPROM */
 void storeConfig(const Settings &sett)
-{       
+{
         uint16_t crc = get_checksum(sett);
         EEPROM.begin(sizeof(sett) + sizeof(crc));
         EEPROM.put(0, sett);
@@ -38,13 +38,14 @@ void storeConfig(const Settings &sett)
 /* Загружаем конфигурацию в EEPROM. true - успех. */
 bool loadConfig(Settings &sett)
 {
+        LOG_INFO(F("Loading Config..."));
         uint16_t crc = 0;
-        Settings tmp_sett = {};  
+        Settings tmp_sett = {};
         EEPROM.begin(sizeof(tmp_sett) + sizeof(crc)); //  4 до 4096 байт. с адреса 0x7b000.
         EEPROM.get(0, tmp_sett);
         EEPROM.get(sizeof(tmp_sett), crc);
         EEPROM.end();
-        
+
         uint16_t calculated_crc = get_checksum(tmp_sett);
         if (crc == calculated_crc)
         {
@@ -87,20 +88,25 @@ bool loadConfig(Settings &sett)
                 if (sett.ip)
                 {
                         LOG_INFO(F("DHCP turn off"));
+                        LOG_INFO(F("static_ip=") << IPAddress(sett.ip).toString());
+                        LOG_INFO(F("gateway=") << IPAddress(sett.gateway).toString());
+                        LOG_INFO(F("mask=") << IPAddress(sett.mask).toString());
                 }
                 else
                 {
                         LOG_INFO(F("DHCP is on"));
                 }
-                LOG_INFO(F("static_ip=") << IPAddress(sett.ip).toString());
-                LOG_INFO(F("gateway=") << IPAddress(sett.gateway).toString());
-                LOG_INFO(F("mask=") << IPAddress(sett.mask).toString());
+                LOG_INFO(F("--- WIFI ---- "));
+                LOG_INFO(F("wifi_ssid=") << sett.wifi_ssid);
+                LOG_INFO(F("wifi_channel=") << sett.wifi_channel);
+                LOG_INFO(F("wifi_ntp_server=") << sett.ntp_server);
 
                 // Всегда одно и тоже будет
                 LOG_INFO(F("--- Counters ---- "));
                 LOG_INFO(F("channel0 start=") << sett.channel0_start << F(", impulses=") << sett.impulses0_start << F(", factor=") << sett.factor0);
                 LOG_INFO(F("channel1 start=") << sett.channel1_start << F(", impulses=") << sett.impulses1_start << F(", factor=") << sett.factor1);
 
+                LOG_INFO(F("Config succesfully loaded"));
                 return true;
         }
         else
@@ -124,12 +130,12 @@ bool loadConfig(Settings &sett)
                 strncpy0(sett.blynk_email_template, email_template.c_str(), BLYNK_EMAIL_TEMPLATE_LEN);
 
                 String defaultTopic = String(MQTT_DEFAULT_TOPIC_PREFIX) + "/" + String(getChipId()) + "/";
-                defaultTopic.toCharArray(sett.mqtt_topic,MQTT_TOPIC_LEN);
+                defaultTopic.toCharArray(sett.mqtt_topic, MQTT_TOPIC_LEN);
                 sett.mqtt_port = MQTT_DEFAULT_PORT;
 
                 sett.mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
                 String discovery_topic(DISCOVERY_TOPIC);
-                discovery_topic.toCharArray(sett.mqtt_discovery_topic,MQTT_TOPIC_LEN);
+                discovery_topic.toCharArray(sett.mqtt_discovery_topic, MQTT_TOPIC_LEN);
 
                 sett.gateway = IPAddress(192, 168, 0, 1);
                 sett.mask = IPAddress(255, 255, 255, 0);
@@ -193,16 +199,10 @@ bool loadConfig(Settings &sett)
                                                    sett.waterius_email);
 #endif
 
-#if defined(SSID_NAME)
-#if defined(SSID_PASS)
-#pragma message(VAR_NAME_VALUE(SSID_NAME))
-#pragma message(VAR_NAME_VALUE(SSID_PASS))
-                
-                WiFi.persistent(true);                                             // begin() will save ssid, pwd to flash
-                WiFi.begin(VALUE(SSID_NAME), VALUE(SSID_PASS), 0, nullptr, false); // connect=false, т.к. мы следом вызываем Wifi.begin
-                WiFi.persistent(false);                                            // don't save ssid, pwd to flash in this run
-                LOG_INFO(F("default ssid=") << VALUE(SSID_NAME) << F(", pwd=") << VALUE(SSID_PASS));
-
+#ifdef WIFI_SSID
+#ifdef WIFI_PASS
+                strncpy0(sett.wifi_ssid, VALUE(WIFI_SSID), WIFI_SSID_LEN);
+                strncpy0(sett.wifi_password, VALUE(WIFI_PASS), WIFI_PWD_LEN);
                 return true;
 #endif
 #endif

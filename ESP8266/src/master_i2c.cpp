@@ -121,7 +121,6 @@ bool MasterI2C::getMode(uint8_t &mode)
 {
 
     uint8_t crc; // not used
-    mode = TRANSMIT_MODE;
     if (!sendCmd('M') || !getByte(mode, crc))
     {
         LOG_ERROR(F("GetMode failed. Check i2c line."));

@@ -16,12 +16,9 @@ inline void strncpy0(char *dest, const char *src, const size_t len)
     dest[len - 1] = '\0';
 }
 
-
-extern void print_wifi_mode();
-
-extern void set_hostname();
-
 extern String get_device_name();
+
+extern String get_ap_name();
 
 extern String get_mac_address_hex();
 
@@ -38,5 +35,11 @@ extern bool is_mqtt(const Settings &sett);
 extern bool is_blynk(const Settings &sett);
 
 extern bool is_ha(const Settings &sett);
+
+extern bool is_dhcp(const Settings &sett);
+
+extern bool is_https(const char* url);
+
+extern void log_system_info();
 
 #endif

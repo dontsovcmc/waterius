@@ -34,11 +34,16 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
   root[F("battery")] = voltage->get_battery_level();
 
   // Wifi и сеть
-  root[F("channel")] = cdata.channel;
-  root[F("router_mac")] = cdata.router_mac;
-  root[F("rssi")] = cdata.rssi;
-  root[F("mac")] = cdata.mac;
-  root[F("ip")] = cdata.ip;
+  root[F("channel")] = WiFi.channel();
+  
+  uint8_t* bssid = WiFi.BSSID();
+  char router_mac[18] = { 0 };
+  sprintf(router_mac, MAC_STR, bssid[0], bssid[1], bssid[2], 0, 0, 0); // последние три октета затираем
+
+  root[F("router_mac")] = String(router_mac);
+  root[F("rssi")] = WiFi.RSSI();
+  root[F("mac")] = WiFi.macAddress();
+  root[F("ip")] = WiFi.localIP();
   root[F("dhcp")] = sett.ip==0;
 
   // Общие сведения о приборе

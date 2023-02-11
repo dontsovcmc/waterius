@@ -283,14 +283,17 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     /*
     Имя точки доступа waterius-NNNNN-НОМЕРВЕРСИИ
     */
-    String apName = get_device_name() + "-" + String(FIRMWARE_VERSION);
-
+    String apName = get_ap_name();
     wm.startConfigPortal(apName.c_str());
 
     // Успешно подключились к Wi-Fi, можно засыпать
     LOG_INFO(F("Connected to wifi. Save settings, go to sleep"));
 
     // Переписываем введенные пользователем значения в Конфигурацию
+    
+    // Сохраняем название сети и пароль к ней
+    strncpy0(sett.wifi_ssid, wm.getWiFiSSID().c_str(), WIFI_SSID_LEN);
+    strncpy0(sett.wifi_password,wm.getWiFiPass().c_str(), WIFI_PWD_LEN);
 
     strncpy0(sett.waterius_email, param_waterius_email.getValue(), EMAIL_LEN);
     strncpy0(sett.waterius_host, param_waterius_host.getValue(), HOST_LEN);

@@ -33,6 +33,9 @@
                       18. Напряжение измеряется в фоне раз в 300мс
                       19. Добавлены признаки интеграции с HA, MQTT, blynk
                       20. Добавлена подписка на изменения параметров в HA
+                      21. Добавлена кастомная реализация синхронизации времени по NTP
+                      22. Добавлены функции по корректному подключению/отключением от WIFI при режиме глубокого сна
+                      23. Сохраняется послений успешный  BSSID и канал точки доступа для быстрого подключения к WIFI
 
 0.10.7 - 2022.04.20 - dontsovcmc
                       1. issues/227: не работали ssid, pwd указанные при компиляции
@@ -184,6 +187,10 @@
 
 #define WIFI_CONNECT_ATTEMPTS 3
 
+#define WIFI_SSID_LEN 32+1
+#define WIFI_PWD_LEN 64+1
+ 
+
 struct CalculatedData
 {
     // Показания в кубометрах
@@ -193,16 +200,6 @@ struct CalculatedData
 
     uint32_t delta0 = 0;
     uint32_t delta1 = 0;
-    /* Уровень связи */
-    int8_t rssi = 0;
-    /* Wifi канал */
-    uint8_t channel = 0;
-    /* Первые три октета мак адрес роутера */
-    char router_mac[MAC_LENGTH + 1] = {0};
-    /* IP адрес устройства */
-    char ip[IP_LENGTH + 1] = {0};
-    /* MAC адрес устройства */
-    char mac[MAC_LENGTH + 1] = {0};
 };
 
 /*
@@ -311,28 +308,38 @@ struct Settings
     /*
     Режим пробуждения
     */
-    uint8_t mode = 0;
+    uint8_t mode = 1; //SETUP_MODE
 
     /*
     Успешная настройка
     */
     uint8_t setup_finished_counter = 0;
 
-    /*
-    Публиковать данные для автоматического добавления в Homeassistant
-    */
+    /* Публиковать данные для автоматического добавления в Homeassistant */
     uint8_t mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
-    
-    uint8_t reserved2 = 0;
-
+    uint8_t reserved2 = 0; 
+     
+    /* Топик MQTT*/
     char mqtt_discovery_topic[MQTT_TOPIC_LEN] = DISCOVERY_TOPIC;
-    
 
+    /* пользовательский NTP сервер */
+    char ntp_server[HOST_LEN] = {0};
+
+    /* имя сети Wifi */
+    char wifi_ssid[WIFI_SSID_LEN] = {0};
+    /* пароль к Wifi сети */
+    char wifi_password[WIFI_PWD_LEN] = {0};
+    /* mac сети Wifi */
+    uint8_t wifi_bssid[6] = {0};
+    /* Wifi канал */
+    uint8_t wifi_channel = 0;
+    uint8_t reserved3 = 0; // выравниваем по границе
+   
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved3[56] = {0}; // 154 -1-64 -32 
+    uint8_t reserved4[64] = {0}; 
 
 }; // 960 байт
 

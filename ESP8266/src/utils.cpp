@@ -3,35 +3,7 @@
 #include "Logging.h"
 #include "time.h"
 #include "porting.h"
-
-void print_wifi_mode()
-{
-	// WiFi.setPhyMode(WIFI_PHY_MODE_11B = 1, WIFI_PHY_MODE_11G = 2, WIFI_PHY_MODE_11N = 3);
-	WiFiPhyMode_t m = WiFi.getPhyMode();
-	switch (m)
-	{
-	case WIFI_PHY_MODE_11B:
-		LOG_INFO(F("mode B"));
-		break;
-	case WIFI_PHY_MODE_11G:
-		LOG_INFO(F("mode G"));
-		break;
-	case WIFI_PHY_MODE_11N:
-		LOG_INFO(F("mode N"));
-		break;
-	default:
-		LOG_INFO(F("mode ") << (int)m);
-		break;
-	}
-}
-
-void set_hostname()
-{
-	String host_name = get_device_name();
-	if (!WiFi.hostname(host_name.c_str()))
-		LOG_ERROR(F("Set hostname failed"));
-	LOG_INFO(F("hostname ") + String(WiFi.hostname()));
-}
+#include "wifi_helpers.h"
 
 /**
  * @brief Форимрует строку с именем устройства
@@ -46,6 +18,18 @@ String get_device_name()
 	return deviceName;
 }
 
+/**
+ * @brief Форимрует строку с названием точки доступа
+ * в виде ИМЯ_БРЕНДА%-ИДЕНТИФИКАТОР_ЧИПА-ВЕРСИЯ_ПРОШИВКИ,
+ * пример waterius-12346-0.11.0
+ *
+ * @return строку с названием точки доступа
+ */
+
+String get_ap_name()
+{
+	return get_device_name() + "-" + String(FIRMWARE_VERSION);
+}
 
 /**
  * @brief Преобразует MAC адрес в шестнадцатиричный вид без разделителей. Например AABBCCDDEEFF
@@ -71,15 +55,15 @@ uint16_t get_checksum(const Settings &sett)
 {
 	uint8_t *buf = (uint8_t *)&sett;
 	uint16_t crc = 0xffff, poly = 0xa001;
-	uint16_t i = 0; 
+	uint16_t i = 0;
 	uint16_t len = sizeof(sett) - 2;
 
-	for(i=0; i<len; i++)
+	for (i = 0; i < len; i++)
 	{
 		crc ^= buf[i];
-		for(uint8_t j=0; j<8; j++)
+		for (uint8_t j = 0; j < 8; j++)
 		{
-			if(crc & 0x01)
+			if (crc & 0x01)
 			{
 				crc >>= 1;
 				crc ^= poly;
@@ -89,7 +73,7 @@ uint16_t get_checksum(const Settings &sett)
 		}
 	}
 	LOG_INFO(F("get_checksum crc=") << crc);
-	return crc; 
+	return crc;
 }
 
 /**
@@ -111,21 +95,39 @@ String get_proto(const String &url)
 }
 
 /**
+ * @brief Возвращает признак является ли ссылка https
+ *
+ * @param url ссылка
+ * @return true если ссылка https,
+ * @return false если ссылка НЕ https
+ *
+ */
+extern bool is_https(const char *url)
+{
+	if (url[0])
+	{
+		String urlStr = String(url);
+		return get_proto(urlStr) == PROTO_HTTPS;
+	}
+	return false;
+}
+
+/**
  * @brief убирает в коце строки слэш
- * 
+ *
  * @param topic стркоа с MQTT топиком
  */
-void remove_trailing_slash(String &topic){
-    if (topic.endsWith(F("/")))
-    {
-        topic.remove(topic.length() - 1);
-    }
-   
+void remove_trailing_slash(String &topic)
+{
+	if (topic.endsWith(F("/")))
+	{
+		topic.remove(topic.length() - 1);
+	}
 }
 
 /**
  * @brief Возвращает признак является ли адрес адресом сайта Ватериуса
- * 
+ *
  * @param url адрес сайта
  * @return true сайт является сайтом Ватериуса
  * @return false сайт НЕ является сайтом Ватериуса
@@ -140,7 +142,7 @@ bool is_waterius_site(const String &url)
 
 /**
  * @brief Возвращает признак настроена ли интеграция с Blynk
- * 
+ *
  * @param sett настройки устройства
  * @return true настроена интеграция с Blynk
  * @return false НЕ настроена интеграция с Blynk
@@ -156,7 +158,7 @@ bool is_blynk(const Settings &sett)
 
 /**
  * @brief Возвращает признак настроена ли интеграция с MQTT
- * 
+ *
  * @param sett настройки устройства
  * @return true настроена интеграция с MQTT
  * @return false настроена интеграция с MQTT
@@ -172,7 +174,7 @@ bool is_mqtt(const Settings &sett)
 
 /**
  * @brief Возвращает признак настроена ли интеграция с HomeAssistant
- * 
+ *
  * @param sett настройки устройства
  * @return true настроена интеграция с HomeAssistant
  * @return false настроена интеграция с HomeAssistant
@@ -184,4 +186,44 @@ bool is_ha(const Settings &sett)
 #else
 	return false;
 #endif
+}
+
+/**
+ * @brief Возвращает признак будет ли использоваться DHCP
+ *
+ * @param sett настройки устройства
+ * @return true используется DHCP
+ * @return false
+ */
+
+bool is_dhcp(const Settings &sett)
+{
+	return sett.ip != 0;
+}
+
+/**
+ * @brief Выводит информацию о системе
+ *
+ */
+void log_system_info()
+{
+	// System info
+	LOG_INFO(F("------------ System Info ------------"));
+	LOG_INFO(F("Sketch Size: ") << ESP.getSketchSize());
+	LOG_INFO(F("Free Sketch Space: ") << ESP.getFreeSketchSpace());
+	LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
+	LOG_INFO(F("Settings size: ") << sizeof(Settings));
+	LOG_INFO(F("------------ WiFi Info ------------"));
+	LOG_INFO(F("WIFI: SSID: ") << WiFi.SSID());
+	LOG_INFO(F("WIFI: BSID: ") << WiFi.BSSIDstr());
+	LOG_INFO(F("WIFI: Channel: ") << WiFi.channel());
+	LOG_INFO(F("WIFI: Mode: ") << wifi_mode());
+	LOG_INFO(F("WIFI: RSSI: ") << WiFi.RSSI() << F("dBm"));
+	LOG_INFO(F("------------ IP Info ------------"));
+	LOG_INFO(F("IP: Host name: ") << WiFi.hostname());
+	LOG_INFO(F("IP: IP adress: ") << WiFi.localIP().toString());
+	LOG_INFO(F("IP: Subnet mask: ") << WiFi.subnetMask());
+	LOG_INFO(F("IP: Gateway IP: ") << WiFi.gatewayIP().toString());
+	LOG_INFO(F("IP: DNS IP: ") << WiFi.dnsIP(0).toString());
+	LOG_INFO(F("IP: MAC Address: ") << WiFi.macAddress());
 }

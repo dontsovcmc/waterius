@@ -17,7 +17,7 @@
 #include "Logging.h"
 #include "json.h"
 
-bool send_http(const String &url, const Settings &sett, DynamicJsonDocument &jsonData)
+bool send_http(const Settings &sett, DynamicJsonDocument &jsonData)
 {
     LOG_INFO(F("HTTP: -- START -- ") << F("Send new data"));
 
@@ -32,7 +32,7 @@ bool send_http(const String &url, const Settings &sett, DynamicJsonDocument &jso
     
     // Try to send
     WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(
-        url, sett.waterius_key, sett.waterius_email, payload);
+        sett.waterius_host, sett.waterius_key, sett.waterius_email, payload);
 
     LOG_INFO(F("Send HTTP code:\t") << responseData.code);
     LOG_INFO(F("-- END --"));
