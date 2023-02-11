@@ -7,8 +7,6 @@
 #include <IPAddress.h>
 #include <EEPROM.h>
 #include "utils.h"
-#include "WateriusHttps.h"
-
 #include "porting.h"
 
 // Конвертируем значение переменных компиляции в строк
@@ -195,8 +193,8 @@ bool loadConfig(Settings &sett)
                 LOG_INFO(F("default waterius key=") << VALUE(WATERIUS_KEY));
 #else
                 LOG_INFO(F("Generate waterius key"));
-                WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN,
-                                                   sett.waterius_email);
+                generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
+                LOG_INFO(F("waterius key=") << sett.waterius_key);
 #endif
 
 #ifdef WIFI_SSID

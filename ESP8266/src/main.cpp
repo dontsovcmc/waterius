@@ -8,7 +8,6 @@
 #include "sender_http.h"
 #include "voltage.h"
 #include "utils.h"
-#include "cert.h"
 #include "porting.h"
 #include "json.h"
 #include "sender_blynk.h"

@@ -2,42 +2,62 @@
  * @file sender_http.h
  * @brief Функции отправки сведений по htpp/https
  * @version 0.1
- * @date 2023-01-20
+ * @date 2023-02-11
  * 
  * @copyright Copyright (c) 2023
  * 
  */
-#ifndef _SENDERHTTP_h
-#define _SENDERHTTP_h
-# ifndef HTTPS_DISABLED
+#ifndef SENDERHTTP_h_
+#define SENDERHTTP_h_
+#ifndef HTTPS_DISABLED
 #include <ESP8266WiFi.h>
 #include "setup.h"
 #include "master_i2c.h"
-#include "WateriusHttps.h"
 #include "Logging.h"
 #include "json.h"
+#include "https_helpers.h"
+
+#define HTTP_SEND_ATTEMPTS 3
 
 bool send_http(const Settings &sett, DynamicJsonDocument &jsonData)
 {
-    LOG_INFO(F("HTTP: -- START -- ") << F("Send new data"));
 
-    if(!(sett.waterius_host[0] && sett.waterius_key[0]))
+    if (!(sett.waterius_host[0] && sett.waterius_key[0]))
     {
         LOG_INFO(F("HTTP: SKIP"));
         return false;
     };
 
+    uint32_t start_time = millis();
+
+    LOG_INFO(F("-- START -- "));
+    LOG_INFO(F("HTTP: Send new data"));
+
     String payload = "";
     serializeJson(jsonData, payload);
-    
-    // Try to send
-    WateriusHttps::ResponseData responseData = WateriusHttps::sendJsonPostRequest(
-        sett.waterius_host, sett.waterius_key, sett.waterius_email, payload);
+    String url = sett.waterius_host;
 
-    LOG_INFO(F("Send HTTP code:\t") << responseData.code);
+    int attempts = HTTP_SEND_ATTEMPTS;
+    bool result = false;
+    do
+    {
+        result = post_data(url, sett.waterius_key, sett.waterius_email, payload);
+        attempts--;
+    } while (!result && attempts);
+
+    if (result)
+    {
+        LOG_INFO(F("HTTP: Data sent. Time ") << millis() - start_time << F(" ms"));
+    }
+    else
+    {
+        LOG_ERROR(F("HTTP: Failed send data. Time ") << millis() - start_time << F(" ms"));
+    }
+
+
     LOG_INFO(F("-- END --"));
 
-    return responseData.code == 200;
+    return result;
 }
 
 #endif

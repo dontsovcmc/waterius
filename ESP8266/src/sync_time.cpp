@@ -20,7 +20,7 @@
 #define MSEC 1000UL
 #define TIME_FORMAT "%FT%T%z"
 #define UDP_PORT_ATTEMPTS 3
-#define NTP_ATTEMPTS 4
+#define NTP_ATTEMPTS 5
 
 const uint32_t NTP_PACKET_SIZE = 48;    // NTP time is in the first 48 bytes of message
 uint8_t packet_buffer[NTP_PACKET_SIZE]; // Buffer to hold incoming & outgoing packets

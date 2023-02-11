@@ -227,3 +227,41 @@ void log_system_info()
 	LOG_INFO(F("IP: DNS IP: ") << WiFi.dnsIP(0).toString());
 	LOG_INFO(F("IP: MAC Address: ") << WiFi.macAddress());
 }
+
+extern void generateSha256Token(char *token, const int token_len, const char *email)
+{
+	LOG_INFO(F("-- START -- ") << F("Generate SHA256 token from email"));
+
+	auto x = BearSSL::HashSHA256();
+	if (email != nullptr && strlen(email))
+	{
+		LOG_INFO(F("E-mail: ") << email);
+		x.add(email, strlen(email));
+	}
+
+	randomSeed(micros());
+	uint32_t salt = rand();
+	LOG_INFO(F("salt: ") << salt);
+	x.add(&salt, sizeof(salt));
+
+	salt = getChipId();
+	x.add(&salt, sizeof(salt));
+	LOG_INFO(F("chip id: ") << salt);
+
+	salt = ESP.getFlashChipId();
+	x.add(&salt, sizeof(salt));
+	LOG_INFO(F("flash id: ") << salt);
+	x.end();
+	unsigned char *hash = (unsigned char *)x.hash();
+
+	static const char digits[] = "0123456789ABCDEF";
+
+	for (int i = 0; i < x.len() && i < token_len - 1; i += 2, hash++)
+	{
+		token[i] = digits[*hash >> 4];
+		token[i + 1] = digits[*hash & 0xF];
+	}
+
+	LOG_INFO(F("SHA256 token: ") << token);
+	LOG_INFO(F("-- END --"));
+}

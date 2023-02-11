@@ -9,7 +9,6 @@
 #include <WiFiClient.h>
 #include <EEPROM.h>
 #include "utils.h"
-#include "WateriusHttps.h"
 #include "master_i2c.h"
 #include "porting.h"
 
@@ -302,8 +301,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0)
     {
         LOG_INFO(F("Generate waterius key"));
-        WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN,
-                                           sett.waterius_email);
+        generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
     }
 
 #ifndef BLYNK_DISABLED

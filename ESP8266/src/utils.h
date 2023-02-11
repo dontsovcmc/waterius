@@ -42,4 +42,5 @@ extern bool is_https(const char* url);
 
 extern void log_system_info();
 
+extern void generateSha256Token(char *token, const int token_len, const char *email);
 #endif
