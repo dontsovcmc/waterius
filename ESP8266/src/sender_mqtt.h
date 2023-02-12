@@ -91,35 +91,32 @@ bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdat
     String mqtt_topic = sett.mqtt_topic;
     remove_trailing_slash(mqtt_topic);
 
-    if (mqtt_client.connected())
+    if (!mqtt_client.connected())
     {
-        mqtt_client.loop();
-        // autodiscovery после настройки и по нажатию на кнопку
-        if (sett.mqtt_auto_discovery && (ALWAYS_MQTT_AUTO_DISCOVERY ||
-                                         (sett.mode == SETUP_MODE) ||
-                                         (sett.mode == MANUAL_TRANSMIT_MODE)))
-        {
-            String mqtt_discovery_topic = sett.mqtt_discovery_topic;
-            remove_trailing_slash(mqtt_discovery_topic);
-            publish_discovery(mqtt_client, mqtt_topic, mqtt_discovery_topic, data);
-            mqtt_client.loop();
-        }
-
-        // публикация показаний в MQTT
-        publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
-        mqtt_client.loop();
-        mqtt_unsubscribe(mqtt_client, mqtt_topic);
-        mqtt_client.loop();
-        mqtt_client.disconnect();
-        LOG_INFO(F("MQTT: Disconnect. ") << millis() - start << F(" milliseconds elapsed"));
-        return true;
-    }
-    else
-    {
-        LOG_ERROR(F("MQTT: Connecting failed"));
+        LOG_ERROR(F("MQTT: Not connected"));
+        return false;
     }
 
-    return false;
+    mqtt_client.loop();
+    // autodiscovery после настройки и по нажатию на кнопку
+    if (sett.mqtt_auto_discovery && (ALWAYS_MQTT_AUTO_DISCOVERY ||
+                                     (sett.mode == SETUP_MODE) ||
+                                     (sett.mode == MANUAL_TRANSMIT_MODE)))
+    {
+        String mqtt_discovery_topic = sett.mqtt_discovery_topic;
+        remove_trailing_slash(mqtt_discovery_topic);
+        publish_discovery(mqtt_client, mqtt_topic, mqtt_discovery_topic, data);
+        mqtt_client.loop();
+    }
+
+    // публикация показаний в MQTT
+    publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
+    mqtt_client.loop();
+    mqtt_unsubscribe(mqtt_client, mqtt_topic);
+    mqtt_client.loop();
+    mqtt_client.disconnect();
+    LOG_INFO(F("MQTT: Disconnect. ") << millis() - start << F(" milliseconds elapsed"));
+    return true;
 }
 
 #endif

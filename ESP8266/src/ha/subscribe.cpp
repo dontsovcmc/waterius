@@ -4,7 +4,7 @@
 #include "utils.h"
 
 #define MQTT_MAX_TRIES 5
-#define MQTT_CONNECT_DELAY 300
+#define MQTT_CONNECT_DELAY 100
 #define MQTT_SUBSCRIPTION_TOPIC "/#"
 
 /**
@@ -37,7 +37,9 @@ bool update_settings(String &topic, String &payload, Settings &sett, DynamicJson
                 {
                     LOG_INFO(F("MQTT: CALLBACK: Old Settings.wakeup_per_min: ") << sett.wakeup_per_min);
                     sett.wakeup_per_min = period_min;
-                    if (json_data.containsKey("period_min")) { // если есть ключ то время уже получено и json уже сформирован, можно отправлять
+                    // если есть ключ то время уже получено и json уже сформирован, можно отправлять
+                    if (json_data.containsKey("period_min"))
+                    {
                         json_data[F("period_min")] = period_min;
                         updated = true;
                     }
@@ -95,24 +97,18 @@ bool mqtt_connect(Settings &sett, PubSubClient &mqtt_client)
     const char *login = sett.mqtt_login[0] ? sett.mqtt_login : NULL;
     const char *pass = sett.mqtt_password[0] ? sett.mqtt_password : NULL;
     LOG_INFO(F("MQTT: Connecting..."));
-    int tries = 1;
-    while (!mqtt_client.connected())
+    int attempts = MQTT_MAX_TRIES;
+    do
     {
-        tries++;
-        if (!mqtt_client.connect(client_id.c_str(), login, pass))
+        LOG_INFO(F("MQTT: Tries #") << attempts << F(" from ") << MQTT_MAX_TRIES);
+        if (mqtt_client.connect(client_id.c_str(), login, pass))
         {
-            LOG_ERROR(F("MQTT: Connect failed with state ") << mqtt_client.state());
-            if (tries > MQTT_MAX_TRIES)
-            {
-                return false;
-            }
-
-            delay(MQTT_CONNECT_DELAY);
-            LOG_INFO(F("MQTT: Tries #") << tries);
+            LOG_INFO(F("MQTT: Connected."));
+            return true;
         }
-    }
-
-    LOG_INFO(F("MQTT: Connected."));
+        LOG_ERROR(F("MQTT: Connect failed with state ") << mqtt_client.state());
+        delay(MQTT_CONNECT_DELAY);
+    } while (attempts--);
     return true;
 }
 

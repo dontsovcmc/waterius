@@ -2,6 +2,8 @@
 #include "Logging.h"
 #include "utils.h"
 
+#define WIFI_SET_MODE_ATTEMPTS 2
+
 // Adoption of Tasmota wifi module
 // https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_support/support_wifi.ino
 
@@ -18,8 +20,8 @@ void wifi_set_mode(WiFiMode_t wifi_mode)
     delay(100);
   }
 
-  uint32_t retry = 2;
-  while (!WiFi.mode(wifi_mode) && retry--)
+  uint32_t attempts = WIFI_SET_MODE_ATTEMPTS;
+  while (!WiFi.mode(wifi_mode) && attempts--)
   {
     LOG_INFO(F("WIFI: Retry set Mode..."));
     delay(100);
@@ -121,11 +123,10 @@ bool wifi_connect(Settings &sett)
       LOG_INFO(F("WIFI: Time spent ") << millis() - start_time << F(" ms"));
       return true;
     }
-    attempts--;
     sett.wifi_channel = 0;
     LOG_ERROR(F("WIFI: Connection failed."));
-    LOG_INFO(F("WIFI: Tries #") << WIFI_CONNECT_ATTEMPTS - attempts + 1 << F(" from ") << WIFI_CONNECT_ATTEMPTS);
-  } while (attempts);
+    LOG_ERROR(F("WIFI: Tries #") << WIFI_CONNECT_ATTEMPTS - attempts + 1 << F(" from ") << WIFI_CONNECT_ATTEMPTS);
+  } while (attempts--);
   
   LOG_ERROR(F("WIFI: Connection failed.") << millis() - start_time << F(" ms"));
   return false;

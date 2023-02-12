@@ -11,8 +11,8 @@
 // https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_support/support_wifi.ino
 
 #define START_VALID_TIME 1577826000UL // Wed Jan 01 2020 00:00:00
-#define DNS_TIMEOUT 3000              // 3 секунды
-#define NTP_TIMEOUT 1000
+#define DNS_TIMEOUT 1000              // 1 секунда
+#define NTP_TIMEOUT 300                 // обычно ответ приходит за 30-50 мсек
 #define NTP_PORT 123
 #define SEVENTY_YEARS 2208988800UL // от 1900 до 1970 в секундах
 #define NSEC 1000000000UL
@@ -74,15 +74,15 @@ bool begin_udp_random_port(WiFiUDP &udp)
 {
     unsigned int attempts = UDP_PORT_ATTEMPTS;
 
-    while (attempts > 0)
+    do 
     {
-        --attempts;
         long port = random(1025, 65535);
         if (udp.begin(port) != 0)
         {
             return true;
         }
-    }
+    } while (attempts--);
+
     return false;
 }
 
@@ -94,9 +94,9 @@ bool begin_udp_random_port(WiFiUDP &udp)
  */
 uint64_t get_ntp_response(WiFiUDP &udp)
 {
-    uint32_t beginWait = millis();
+    uint32_t begin_wait = millis();
 
-    while (millis() - beginWait < NTP_TIMEOUT)
+    while (millis() - begin_wait < NTP_TIMEOUT)
     {
         uint32_t size = udp.parsePacket();
         uint32_t remote_port = udp.remotePort();
@@ -134,7 +134,7 @@ uint64_t get_ntp_response(WiFiUDP &udp)
 
             uint64_t ntp_nanos = (((uint64_t)secs_since_1900) - SEVENTY_YEARS) * NSEC + fraction;
 
-            uint32_t total_delay = millis() - beginWait;
+            uint32_t total_delay = millis() - begin_wait;
 
             // compensate for the delay by adding half the total delay
             uint32_t delay_compensation = total_delay / 2;
@@ -205,7 +205,7 @@ bool sync_ntp_time()
     
     int attempts = NTP_ATTEMPTS;
 
-    while (attempts)
+    do 
     {
         ntp_server_name = get_next_ntp_server_name();
         if (sync_ntp_time(ntp_server_name))
@@ -213,27 +213,26 @@ bool sync_ntp_time()
             LOG_INFO(F("NTP: Time successfully synced. Total time spent ") << millis() - start_time << F(" msec"));
             return true;
         };
-        attempts--;
-    };
+    } while (attempts--);
+
     LOG_ERROR(F("NTP: Time could not synced. Total time spent ") << millis() - start_time << F(" msec"));
     return false;
 }
+
 /**
- * @brief Синхронизирует время c указанным сервером
+ * @brief Возвращает текущее время с сервера NTP в наносекундах
  * 
- * @param ntp_server_name имя сервера
- * @return true время синхронизировано
- * @return false время НЕ синхронизировано
+ * @param ntp_server_name  имя сервера NTP
+ * @return uint_64t  время с сервера NTP в наносекундах
  */
-bool sync_ntp_time(String &ntp_server_name)
+uint64_t get_ntp_nanos(String &ntp_server_name)
 {
-    uint32_t start_time = millis();
     IPAddress ntp_server_ip;
 
     if (WiFi.hostByName(ntp_server_name.c_str(), ntp_server_ip, DNS_TIMEOUT) != 1)
     {
         LOG_ERROR(F("NTP: Unable to resolve ") << ntp_server_name);
-        return false;
+        return 0;
     }
 
     LOG_INFO(F("NTP: NtpServer ") << ntp_server_name << F(" IP ") << ntp_server_ip.toString());
@@ -245,7 +244,7 @@ bool sync_ntp_time(String &ntp_server_name)
     if (!begin_udp_random_port(udp))
     {
         LOG_ERROR(F("NTP: Unable to open udp port "));
-        return false;
+        return 0;
     }
 
     yield();
@@ -253,7 +252,7 @@ bool sync_ntp_time(String &ntp_server_name)
     if (!send_ntp_request(udp, ntp_server_ip))
     {
         LOG_ERROR(F("NTP: Unable to send"));
-        return false;
+        return 0;
     }
 
     yield();
@@ -262,11 +261,29 @@ bool sync_ntp_time(String &ntp_server_name)
 
     yield();
 
-    if (ntp_nanos / 1000000 > START_VALID_TIME)
+    return ntp_nanos;
+}
+
+
+/**
+ * @brief Синхронизирует время c указанным сервером
+ * 
+ * @param ntp_server_name имя сервера
+ * @return true время синхронизировано
+ * @return false время НЕ синхронизировано
+ */
+bool sync_ntp_time(String &ntp_server_name)
+{
+    uint32_t start_time = millis();
+
+    uint64_t ntp_nanos=get_ntp_nanos(ntp_server_name);
+
+    struct timeval tv;
+    tv.tv_sec = ntp_nanos / NSEC;
+    tv.tv_usec = (ntp_nanos % NSEC) / 1000;
+
+    if (tv.tv_sec > START_VALID_TIME)
     {
-        struct timeval tv;
-        tv.tv_sec = ntp_nanos / NSEC;
-        tv.tv_usec = ntp_nanos % 1000;
         settimeofday(&tv, NULL);
         LOG_INFO(F("NTP: Time synced ") << millis() - start_time << F(" msec"));
         LOG_INFO(F("NTP: Current time ") << get_current_time());

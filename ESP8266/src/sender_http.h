@@ -42,8 +42,7 @@ bool send_http(const Settings &sett, DynamicJsonDocument &jsonData)
     do
     {
         result = post_data(url, sett.waterius_key, sett.waterius_email, payload);
-        attempts--;
-    } while (!result && attempts);
+    } while (!result && attempts--);
 
     if (result)
     {
