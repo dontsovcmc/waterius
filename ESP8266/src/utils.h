@@ -13,7 +13,7 @@
 inline void strncpy0(char *dest, const char *src, const size_t len)
 {
     strncpy(dest, src, len - 1);
-    dest[len - 1] = '\0';
+    dest[len - 1] = 0;
 }
 
 extern String get_device_name();
@@ -38,7 +38,7 @@ extern bool is_ha(const Settings &sett);
 
 extern bool is_dhcp(const Settings &sett);
 
-extern bool is_https(const char* url);
+extern bool is_https(const char *url);
 
 extern void log_system_info();
 

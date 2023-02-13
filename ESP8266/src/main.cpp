@@ -2,7 +2,7 @@
 #include <ESP8266WiFi.h>
 #include <ArduinoJson.h>
 #include "Logging.h"
-#include "wifi_settings.h"
+#include "config.h"
 #include "master_i2c.h"
 #include "setup_ap.h"
 #include "sender_http.h"
@@ -15,6 +15,7 @@
 #include "Ticker.h"
 #include "sync_time.h"
 #include "wifi_helpers.h"
+#include "config.h"
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 SlaveData data;       // Данные от Attiny85
@@ -38,60 +39,6 @@ void setup()
                              { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
 }
 
-/*
-Берем начальные показания и кол-во импульсов,
-вычисляем текущие показания по новому кол-ву импульсов
-*/
-void calculate_values(const Settings &sett, const SlaveData &data, CalculatedData &cdata)
-{
-    LOG_INFO(F("Calculating values..."));
-    LOG_INFO(F("new impulses=") << data.impulses0 << " " << data.impulses1);
-
-    if ((sett.factor1 > 0) && (sett.factor0 > 0))
-    {
-        cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.factor0;
-        cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.factor1;
-        LOG_INFO(F("new value0=") << cdata.channel0 << F(" value1=") << cdata.channel1);
-
-        cdata.delta0 = (data.impulses0 - sett.impulses0_previous) * sett.factor0;
-        cdata.delta1 = (data.impulses1 - sett.impulses1_previous) * sett.factor1;
-        LOG_INFO(F("delta0=") << cdata.delta0 << F(" delta1=") << cdata.delta1);
-    }
-}
-
-void update_values(Settings &sett, const SlaveData &data, const CalculatedData &cdata)
-{
-    LOG_INFO(F("Updateing values...")); 
-    // Сохраним текущие значения в памяти.
-    sett.impulses0_previous = data.impulses0;
-    sett.impulses1_previous = data.impulses1;
-
-    // Перешлем время на сервер при след. включении
-    sett.wake_time = millis();
-
-    // Перерасчет времени пробуждения
-    if (sett.mode == TRANSMIT_MODE)
-    {
-        // TODO: нужно удстовериться что время было устанаовлено в прошлом и сейчас
-        //  т.е. перерасчет можно делать только если оба установлены или ооба не установлены
-        //  т.е. time должно быть или 1970 или настоящее в обоих случаях
-        //  иначе коэффициенты будут такими что никогда не выйдет на связь
-        time_t now = time(nullptr);
-        time_t t1 = (now - sett.last_send) / 60;
-        if (t1 > 1 && data.version >= 24)
-        {
-            LOG_INFO(F("Minutes diff:") << t1);
-            sett.set_wakeup = sett.wakeup_per_min * sett.set_wakeup / t1;
-        }
-        else
-        {
-            sett.set_wakeup = sett.wakeup_per_min;
-        }
-    }
-    sett.last_send = time(nullptr);
-}
-
-
 void loop()
 {
     uint8_t mode = SETUP_MODE; // TRANSMIT_MODE;
@@ -99,9 +46,9 @@ void loop()
     // спрашиваем у Attiny85 повод пробуждения и данные
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
     {
-        
+
         // Загружаем конфигурацию из EEPROM
-        bool config_loaded = loadConfig(sett);
+        bool config_loaded = load_config(sett);
         sett.mode = mode;
         LOG_INFO(F("Startup mode: ") << mode);
 
@@ -113,14 +60,14 @@ void loop()
             LOG_INFO(F("Entering in setup mode..."));
             // Режим настройки - запускаем точку доступа на 192.168.4.1
             // Запускаем точку доступа с вебсервером
-            
+
             WiFi.persistent(false);
-            WiFi.disconnect(); 
+            WiFi.disconnect();
 
             wifi_set_mode(WIFI_AP_STA);
 
             setup_ap(sett, data, cdata);
-            
+
             wifi_shutdown();
 
             LOG_INFO(F("Set mode MANUAL_TRANSMIT to attiny"));
@@ -199,7 +146,7 @@ void loop()
                 // Все уже отправили,  wifi не нужен - выключаем
                 wifi_shutdown();
 
-                update_values(sett, data, cdata);
+                update_config(sett, data, cdata);
 
                 if (!masterI2C.setWakeUpPeriod(sett.set_wakeup))
                 {
@@ -208,10 +155,10 @@ void loop()
                 else //"Разбуди меня через..."
                 {
                     LOG_INFO(F("Wakeup period, min:") << sett.wakeup_per_min);
-                    LOG_INFO(F("Wakeup period, tick:") << sett.set_wakeup);
+                    LOG_INFO(F("Wakeup period (adjusted), min:") << sett.set_wakeup);
                 }
 
-                storeConfig(sett);
+                store_config(sett);
             }
         }
     }

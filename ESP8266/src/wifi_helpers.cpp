@@ -56,7 +56,9 @@ void wifi_begin(Settings &sett)
 
   if (is_dhcp(sett))
   {
-    WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, IPAddress().fromString(DEF_FALLBACK_DNS));
+    IPAddress fallback_dns_server;
+    fallback_dns_server.fromString(DEF_FALLBACK_DNS); 
+    WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, fallback_dns_server);
   }
 
   WiFi.hostname(get_device_name());
@@ -112,6 +114,7 @@ bool wifi_connect(Settings &sett)
   int attempts = WIFI_CONNECT_ATTEMPTS;
   do
   {
+    LOG_INFO(F("WIFI: Attempt #") << WIFI_CONNECT_ATTEMPTS - attempts + 1 << F(" from ") << WIFI_CONNECT_ATTEMPTS);
     wifi_begin(sett);
     if (WiFi.isConnected())
     {
@@ -125,7 +128,6 @@ bool wifi_connect(Settings &sett)
     }
     sett.wifi_channel = 0;
     LOG_ERROR(F("WIFI: Connection failed."));
-    LOG_ERROR(F("WIFI: Tries #") << WIFI_CONNECT_ATTEMPTS - attempts + 1 << F(" from ") << WIFI_CONNECT_ATTEMPTS);
   } while (attempts--);
   
   LOG_ERROR(F("WIFI: Connection failed.") << millis() - start_time << F(" ms"));

@@ -37,6 +37,7 @@
                       22. Добавлены функции по корректному подключению/отключением от WIFI при режиме глубокого сна
                       23. Сохраняется послений успешный  BSSID и канал точки доступа для быстрого подключения к WIFI
                       24. Рефакторинг функции отправки на сайт
+                      25. Добавлена возможность пользователю указать свой NTP сервер, если не удалось с этого сервера получить время то будет браться время по серврам из пула
 
 0.10.7 - 2022.04.20 - dontsovcmc
                       1. issues/227: не работали ssid, pwd указанные при компиляции
@@ -114,7 +115,7 @@
 */
 
 // уровни логирования WifiManager
-#ifndef DWM_DEBUG_LEVEL 
+#ifndef DWM_DEBUG_LEVEL
 #define DWM_DEBUG_LEVEL 0
 #endif
 
@@ -177,7 +178,7 @@
 
 #define SERIAL_LEN 16
 
-#ifndef DEFAULT_WAKEUP_PERIOD_MIN 
+#ifndef DEFAULT_WAKEUP_PERIOD_MIN
 #define DEFAULT_WAKEUP_PERIOD_MIN 1440
 #endif
 
@@ -188,9 +189,12 @@
 
 #define WIFI_CONNECT_ATTEMPTS 3
 
-#define WIFI_SSID_LEN 32+1
-#define WIFI_PWD_LEN 64+1
+#define WIFI_SSID_LEN 32 + 1
+#define WIFI_PWD_LEN 64 + 1
 
+#define DEFAULT_GATEWAY "192.168.0.1"
+#define DEFAULT_MASK "255.255.255.0"
+#define DEFAULT_NTP_SERVER "ru.pool.ntp.org"
 
 struct CalculatedData
 {
@@ -290,7 +294,7 @@ struct Settings
     uint32_t ip = 0;
     uint32_t gateway = 0;
     uint32_t mask = 0;
-   
+
     /*
     Период пробуждение для отправки данных, мин
     */
@@ -309,7 +313,7 @@ struct Settings
     /*
     Режим пробуждения
     */
-    uint8_t mode = 1; //SETUP_MODE
+    uint8_t mode = 1; // SETUP_MODE
 
     /*
     Успешная настройка
@@ -318,8 +322,8 @@ struct Settings
 
     /* Публиковать данные для автоматического добавления в Homeassistant */
     uint8_t mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
-    uint8_t reserved2 = 0; 
-     
+    uint8_t reserved2 = 0;
+
     /* Топик MQTT*/
     char mqtt_discovery_topic[MQTT_TOPIC_LEN] = DISCOVERY_TOPIC;
 
@@ -335,12 +339,12 @@ struct Settings
     /* Wifi канал */
     uint8_t wifi_channel = 0;
     uint8_t reserved3 = 0; // выравниваем по границе
-   
+
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved4[64] = {0}; 
+    uint8_t reserved4[64] = {0};
 
 }; // 960 байт
 

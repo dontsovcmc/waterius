@@ -100,7 +100,7 @@ bool mqtt_connect(Settings &sett, PubSubClient &mqtt_client)
     int attempts = MQTT_MAX_TRIES;
     do
     {
-        LOG_INFO(F("MQTT: Tries #") << attempts << F(" from ") << MQTT_MAX_TRIES);
+        LOG_INFO(F("MQTT: Attempt #") << MQTT_MAX_TRIES - attempts + 1 << F(" from ") << MQTT_MAX_TRIES);
         if (mqtt_client.connect(client_id.c_str(), login, pass))
         {
             LOG_INFO(F("MQTT: Connected."));

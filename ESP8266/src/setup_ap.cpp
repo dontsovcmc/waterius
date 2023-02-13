@@ -1,7 +1,7 @@
 
 #include "setup_ap.h"
 #include "Logging.h"
-#include "wifi_settings.h"
+#include "config.h"
 
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>        // Local DNS Server used for redirecting all requests to the configuration portal
@@ -171,7 +171,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&param_mqtt_password);
     WiFiManagerParameter param_mqtt_topic("mtopic", "MQTT Топик показаний", sett.mqtt_topic, MQTT_TOPIC_LEN - 1);
     wm.addParameter(&param_mqtt_topic);
-    
+
     WiFiManagerParameter div_checkbox("<br><label class=\"cnt\">Автоматическое добавление в Home Assistant");
     wm.addParameter(&div_checkbox);
     CheckBoxParameter param_mqtt_auto_discovery("auto_discovery_checkbox", sett.mqtt_auto_discovery);
@@ -181,10 +181,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     WiFiManagerParameter param_mqtt_discovery_topic("discovery_topic", "MQTT Топик Home Assistant", sett.mqtt_discovery_topic, MQTT_TOPIC_LEN - 1);
     wm.addParameter(&param_mqtt_discovery_topic);
-    #endif
+#endif
 
-
-    // Статический ip
+    // Настройки сети
 
     WiFiManagerParameter label_network("<h3>Сетевые настройки</h3>");
     wm.addParameter(&label_network);
@@ -195,12 +194,15 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label_mac(mac.c_str());
     wm.addParameter(&label_mac);
 
-    IPAddressParameter param_ip("ip", "Статический ip<br/>(DHCP, если равен 0.0.0.0)", sett.ip);
+    IPAddressParameter param_ip("ip", "Статический ip<br/>(DHCP, если равен 0.0.0.0)", IPAddress(sett.ip));
     wm.addParameter(&param_ip);
-    IPAddressParameter param_gw("gw", "Шлюз", sett.gateway);
+    IPAddressParameter param_gw("gw", "Шлюз", IPAddress(sett.gateway));
     wm.addParameter(&param_gw);
-    IPAddressParameter param_mask("sn", "Маска подсети", sett.mask);
+    IPAddressParameter param_mask("sn", "Маска подсети", IPAddress(sett.mask));
     wm.addParameter(&param_mask);
+
+    WiFiManagerParameter param_ntp("ntp", "Сервер времени (NTP)", sett.ntp_server, HOST_LEN - 1);
+    wm.addParameter(&param_ntp);
 
     WiFiManagerParameter label_factor_settings("<h3>Параметры счетчиков</h3>");
     wm.addParameter(&label_factor_settings);
@@ -289,10 +291,10 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(F("Connected to wifi. Save settings, go to sleep"));
 
     // Переписываем введенные пользователем значения в Конфигурацию
-    
+
     // Сохраняем название сети и пароль к ней
     strncpy0(sett.wifi_ssid, wm.getWiFiSSID().c_str(), WIFI_SSID_LEN);
-    strncpy0(sett.wifi_password,wm.getWiFiPass().c_str(), WIFI_PWD_LEN);
+    strncpy0(sett.wifi_password, wm.getWiFiPass().c_str(), WIFI_PWD_LEN);
 
     strncpy0(sett.waterius_email, param_waterius_email.getValue(), EMAIL_LEN);
     strncpy0(sett.waterius_host, param_waterius_host.getValue(), HOST_LEN);
@@ -319,6 +321,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.mqtt_port = param_mqtt_port.getValue();
     LOG_INFO(F("MQTT port=") << sett.mqtt_port);
     strncpy0(sett.mqtt_login, param_mqtt_login.getValue(), MQTT_LOGIN_LEN);
+    LOG_INFO(F("MQTT login=") << param_mqtt_login.getValue());
     strncpy0(sett.mqtt_password, param_mqtt_password.getValue(), MQTT_PASSWORD_LEN);
     strncpy0(sett.mqtt_topic, param_mqtt_topic.getValue(), MQTT_TOPIC_LEN);
     LOG_INFO(F("MQTT topic=") << param_mqtt_topic.getValue());
@@ -328,9 +331,25 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(F("Auto Discovery Topic=") << param_mqtt_discovery_topic.getValue());
 #endif // MQTT
 
+    // Сетевые настройки
+
     sett.ip = param_ip.getValue();
-    sett.gateway = param_gw.getValue();
-    sett.mask = param_mask.getValue();
+    if (sett.ip)
+    {
+        LOG_INFO(F("DHCP is OFF"));
+        LOG_INFO(F("IP=") << IPAddress(sett.ip).toString());
+        sett.gateway = param_gw.getValue();
+        LOG_INFO(F("Gateway=") << IPAddress(sett.gateway).toString());
+        sett.mask = param_mask.getValue();
+        LOG_INFO(F("Network Mask=") << IPAddress(sett.mask).toString());
+    }
+    else
+    {
+        LOG_INFO(F("DHCP is ON"));
+    }
+
+    strncpy0(sett.ntp_server, param_ntp.getValue(), HOST_LEN);
+    LOG_INFO(F("NTP Server=") << param_ntp.getValue());
 
     // период отправки данных
     sett.wakeup_per_min = param_wakeup_per.getValue();
@@ -373,5 +392,5 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.setup_time = millis();
     sett.setup_finished_counter++;
 
-    storeConfig(sett);
+    store_config(sett);
 }

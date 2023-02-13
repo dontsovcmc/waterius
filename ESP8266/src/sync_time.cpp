@@ -12,7 +12,7 @@
 
 #define START_VALID_TIME 1577826000UL // Wed Jan 01 2020 00:00:00
 #define DNS_TIMEOUT 1000              // 1 секунда
-#define NTP_TIMEOUT 300                 // обычно ответ приходит за 30-50 мсек
+#define NTP_TIMEOUT 300               // обычно ответ приходит за 30-50 мсек
 #define NTP_PORT 123
 #define SEVENTY_YEARS 2208988800UL // от 1900 до 1970 в секундах
 #define NSEC 1000000000UL
@@ -27,8 +27,8 @@ uint8_t packet_buffer[NTP_PACKET_SIZE]; // Buffer to hold incoming & outgoing pa
 
 /**
  * @brief Получает следующий ижентификатор в пуле серверов
- * 
- * @return int 
+ *
+ * @return int
  */
 int get_next_ntp_server_id()
 {
@@ -52,7 +52,7 @@ int get_next_ntp_server_id()
 
 /**
  * @brief Получает имя следующего в пуле сервера
- * 
+ *
  * @return String имя сервера
  */
 String get_next_ntp_server_name()
@@ -65,7 +65,7 @@ String get_next_ntp_server_name()
 
 /**
  * @brief Открывает UDP порт для начала передачи
- * 
+ *
  * @param udp класс для работы с UDP
  * @return true удалось открыть порт
  * @return false Не удалось открыть порт
@@ -74,7 +74,7 @@ bool begin_udp_random_port(WiFiUDP &udp)
 {
     unsigned int attempts = UDP_PORT_ATTEMPTS;
 
-    do 
+    do
     {
         long port = random(1025, 65535);
         if (udp.begin(port) != 0)
@@ -88,9 +88,9 @@ bool begin_udp_random_port(WiFiUDP &udp)
 
 /**
  * @brief Парсинг ответа NTP сервера
- * 
- * @param udp 
- * @return uint64_t 
+ *
+ * @param udp
+ * @return uint64_t
  */
 uint64_t get_ntp_response(WiFiUDP &udp)
 {
@@ -155,11 +155,11 @@ uint64_t get_ntp_response(WiFiUDP &udp)
 
 /**
  * @brief Формирование и отправка запроса на получение времени с сервера
- * 
- * @param udp 
- * @param ntp_server_ip 
- * @return true 
- * @return false 
+ *
+ * @param udp
+ * @param ntp_server_ip
+ * @return true
+ * @return false
  */
 bool send_ntp_request(WiFiUDP &udp, IPAddress &ntp_server_ip)
 {
@@ -192,40 +192,12 @@ bool send_ntp_request(WiFiUDP &udp, IPAddress &ntp_server_ip)
 }
 
 /**
- * @brief Синхронизация времени по протоколу NTP
- * 
- * @return true время синхронизировано
- * @return false время НЕ синхронизировано
- */
-bool sync_ntp_time()
-{
-    uint32_t start_time = millis();
-    LOG_INFO(F("NTP: Sync time..."));
-    String ntp_server_name;
-    
-    int attempts = NTP_ATTEMPTS;
-
-    do 
-    {
-        ntp_server_name = get_next_ntp_server_name();
-        if (sync_ntp_time(ntp_server_name))
-        {
-            LOG_INFO(F("NTP: Time successfully synced. Total time spent ") << millis() - start_time << F(" msec"));
-            return true;
-        };
-    } while (attempts--);
-
-    LOG_ERROR(F("NTP: Time could not synced. Total time spent ") << millis() - start_time << F(" msec"));
-    return false;
-}
-
-/**
  * @brief Возвращает текущее время с сервера NTP в наносекундах
- * 
+ *
  * @param ntp_server_name  имя сервера NTP
  * @return uint_64t  время с сервера NTP в наносекундах
  */
-uint64_t get_ntp_nanos(String &ntp_server_name)
+uint64_t get_ntp_nanos(const String &ntp_server_name)
 {
     IPAddress ntp_server_ip;
 
@@ -264,25 +236,24 @@ uint64_t get_ntp_nanos(String &ntp_server_name)
     return ntp_nanos;
 }
 
-
 /**
  * @brief Синхронизирует время c указанным сервером
- * 
+ *
  * @param ntp_server_name имя сервера
  * @return true время синхронизировано
  * @return false время НЕ синхронизировано
  */
-bool sync_ntp_time(String &ntp_server_name)
+bool sync_ntp_time(const String &ntp_server_name)
 {
     uint32_t start_time = millis();
 
-    uint64_t ntp_nanos=get_ntp_nanos(ntp_server_name);
+    uint64_t ntp_nanos = get_ntp_nanos(ntp_server_name);
 
     struct timeval tv;
     tv.tv_sec = ntp_nanos / NSEC;
     tv.tv_usec = (ntp_nanos % NSEC) / 1000;
 
-    if (tv.tv_sec > START_VALID_TIME)
+    if (is_valid_time(tv.tv_sec))
     {
         settimeofday(&tv, NULL);
         LOG_INFO(F("NTP: Time synced ") << millis() - start_time << F(" msec"));
@@ -294,6 +265,60 @@ bool sync_ntp_time(String &ntp_server_name)
         LOG_ERROR(F("NTP: Unable to sync time"));
         return false;
     }
+}
+
+/**
+ * @brief Синхронизация времени по протоколу NTP
+ *
+ * @return true время синхронизировано
+ * @return false время НЕ синхронизировано
+ */
+bool sync_ntp_time()
+{
+    uint32_t start_time = millis();
+    LOG_INFO(F("NTP: Sync time..."));
+    String ntp_server_name;
+
+    int attempts = NTP_ATTEMPTS;
+
+    do
+    {
+        LOG_INFO(F("NTP: Attempt #") << NTP_ATTEMPTS - attempts + 1 << F(" from ") << NTP_ATTEMPTS);
+        ntp_server_name = get_next_ntp_server_name();
+        if (sync_ntp_time(ntp_server_name))
+        {
+            LOG_INFO(F("NTP: Time successfully synced. Total time spent ") << millis() - start_time << F(" msec"));
+            return true;
+        };
+    } while (attempts--);
+
+    LOG_ERROR(F("NTP: Time could not synced. Total time spent ") << millis() - start_time << F(" msec"));
+    return false;
+}
+
+/**
+ * @brief Синхронизирует время по настройкам пользователя
+ * 
+ * @param sett настройки устройства
+ * @return true время синхронизировано
+ * @return false время НЕ синхронизировано
+ */
+bool sync_ntp_time(const Settings &sett)
+{
+    
+    String ntp_server = sett.ntp_server;
+
+    if (sett.ntp_server[0] && !ntp_server.equalsIgnoreCase(String(DEFAULT_NTP_SERVER))) //проверяем что сервер указан и не равняется по умолчанию
+    {
+        // Пробуем получить время с пользовательского сервера
+        if (sync_ntp_time(ntp_server))
+        {
+            return true;
+        }
+    }
+    // если не удалось с пользовательского сервера получить время
+    // то берем время по серврам из пула
+    return sync_ntp_time();
 }
 
 /**
@@ -310,4 +335,17 @@ String get_current_time()
     // ISO8601 date time string format (2019-11-29T23:29:55+0800).
     strftime(buf, sizeof(buf), TIME_FORMAT, &timeinfo);
     return String(buf);
+}
+
+/**
+ * @brief Проверка валидно ли время,
+ * дата должна быть больше чем 1 Января 2020 года 
+ * 
+ * @param time 
+ * @return true время валидно 
+ * @return false время невалидно
+ */
+bool is_valid_time(time_t time)
+{
+    return time > START_VALID_TIME;
 }

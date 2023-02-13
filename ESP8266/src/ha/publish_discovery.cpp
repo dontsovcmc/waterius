@@ -62,23 +62,21 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
     }
 
     LOG_INFO(F("MQTT: DISCOVERY:  Sensor: ") << entity_name);
-    
+
     if ((attrs_index != NONE) && (attrs_count != NONE))
     {
         json_attributes_topic = topic;
         json_attributes_template = get_attributes_template(entities, attrs_index, attrs_count, channel);
     }
 
-    
     String payload = build_entity_discovery(topic.c_str(),
-                                entity_type.c_str(), entity_name.c_str(), entity_id.c_str(),
-                                state_class.c_str(), device_class.c_str(), unit_of_meas.c_str(),
-                                entity_category.c_str(), icon.c_str(),
-                                device_id.c_str(), device_mac.c_str(),
-                                true, device_name.c_str(), device_manufacturer.c_str(),
-                                device_model.c_str(), sw_version.c_str(), hw_version.c_str(),
-                                json_attributes_topic.c_str(),json_attributes_template.c_str());
-
+                                            entity_type.c_str(), entity_name.c_str(), entity_id.c_str(),
+                                            state_class.c_str(), device_class.c_str(), unit_of_meas.c_str(),
+                                            entity_category.c_str(), icon.c_str(),
+                                            device_id.c_str(), device_mac.c_str(),
+                                            true, device_name.c_str(), device_manufacturer.c_str(),
+                                            device_model.c_str(), sw_version.c_str(), hw_version.c_str(),
+                                            json_attributes_topic.c_str(), json_attributes_template.c_str());
 
     String entity_discovery_topic = String(discovery_topic) + "/" + entity_type + "/" + uniqueId_prefix + "/" + entity_id + "/config";
     publish(mqtt_client, entity_discovery_topic, payload);
@@ -137,7 +135,7 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client, String &topic
 void publish_discovery(PubSubClient &mqtt_client, String &topic, String &discovery_topic, const SlaveData &data)
 {
     LOG_INFO(F("MQTT: Publishing discovery topic"));
-    unsigned long start = millis();
+    unsigned long start_time = millis();
 
     String device_id = String(getChipId());
     String device_mac = get_mac_address_hex();
@@ -148,5 +146,5 @@ void publish_discovery(PubSubClient &mqtt_client, String &topic, String &discove
     LOG_INFO(F("MQTT: Channel entities"));
     publish_discovery_channel_entities(mqtt_client, topic, discovery_topic, data, device_id, device_mac);
 
-    LOG_INFO(F("MQTT: Discovery topic published: ") << millis() - start << F(" milliseconds elapsed"));
+    LOG_INFO(F("MQTT: Discovery topic published: ") << millis() - start_time << F(" milliseconds elapsed"));
 }

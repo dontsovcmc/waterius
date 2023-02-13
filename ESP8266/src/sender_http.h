@@ -3,9 +3,9 @@
  * @brief Функции отправки сведений по htpp/https
  * @version 0.1
  * @date 2023-02-11
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #ifndef SENDERHTTP_h_
 #define SENDERHTTP_h_
@@ -41,7 +41,9 @@ bool send_http(const Settings &sett, DynamicJsonDocument &jsonData)
     bool result = false;
     do
     {
+        LOG_INFO(F("HTTP: Attempt #") << HTTP_SEND_ATTEMPTS - attempts + 1 << F(" from ") << HTTP_SEND_ATTEMPTS);
         result = post_data(url, sett.waterius_key, sett.waterius_email, payload);
+
     } while (!result && attempts--);
 
     if (result)
@@ -52,7 +54,6 @@ bool send_http(const Settings &sett, DynamicJsonDocument &jsonData)
     {
         LOG_ERROR(F("HTTP: Failed send data. Time ") << millis() - start_time << F(" ms"));
     }
-
 
     LOG_INFO(F("-- END --"));
 
