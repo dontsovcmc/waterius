@@ -9,13 +9,19 @@
  */
 #ifndef SENDERMQTT_H_
 #define SENDERMQTT_H_
+
 #ifndef MQTT_DISABLED
+
 #ifdef MQTT_SOCKET_TIMEOUT
 #undef MQTT_SOCKET_TIMEOUT
 #endif
+#define MQTT_SOCKET_TIMEOUT 3 // в секундах
 
-#define MQTT_SOCKET_TIMEOUT 5
-#define MQTT_MAX_PACKET_SIZE 1024
+#ifdef MQTT_MAX_PACKET_SIZE
+#undef MQTT_MAX_PACKET_SIZE
+#endif
+#define MQTT_MAX_PACKET_SIZE 256
+#define MQTT_DELAY_SUBSCRIPTION 100 // задержка для получения данных по подписке
 
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
@@ -23,11 +29,50 @@
 #include "master_i2c.h"
 #include "Logging.h"
 #include "json.h"
-#include "ha/discovery.h"
-#include "ha/clean.h"
-#include "ha/helpers.h"
+#include "ha/publish_data.h"
+#include "ha/publish_discovery.h"
+#include "ha/subscribe.h"
 #include "utils.h"
 
+WiFiClient wifi_client;
+PubSubClient mqtt_client(wifi_client);
+
+bool connect_and_subscribe_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
+{
+    String mqtt_topic = sett.mqtt_topic;
+    remove_trailing_slash(mqtt_topic);
+
+    wifi_client.setTimeout(MQTT_SOCKET_TIMEOUT * 1000);
+    mqtt_client.setBufferSize(MQTT_MAX_PACKET_SIZE);
+    mqtt_client.setServer(sett.mqtt_host, sett.mqtt_port);
+    mqtt_client.setSocketTimeout(MQTT_SOCKET_TIMEOUT);
+
+    if (sett.mqtt_auto_discovery)
+    {
+        // устанавливаем callback для приема команд
+        // так как нужно будет изменять настройки устройства в функцие
+        // то используем лямбду чтобы передать туда настройки
+        // парамтеры в лямбду передаются "by reference"
+
+        mqtt_client.setCallback([&](char *raw_topic, byte *raw_payload, unsigned int length)
+                                { mqtt_callback(sett, json_data, mqtt_client, mqtt_topic, raw_topic, raw_payload, length); });
+    }
+
+    if (mqtt_connect(sett, mqtt_client))
+    {
+        if (sett.mqtt_auto_discovery)
+        {
+            mqtt_subscribe(mqtt_client, mqtt_topic);
+            mqtt_client.loop();
+        }
+    }
+    else
+    {
+        LOG_ERROR(F("MQTT: Connecting failed"));
+        return false;
+    }
+    return true;
+}
 
 /**
  * @brief Отправляет показания на укзанный сервер MQTT и создает discovery топик HomeAssistant
@@ -40,74 +85,41 @@
  *
  * @returns true если успешно отправлены данные и false если не отправлено
  */
-bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data, bool auto_discovery = true)
+bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
 {
-    if (!is_mqtt(sett))
+    unsigned long start_time = millis();
+    String mqtt_topic = sett.mqtt_topic;
+    remove_trailing_slash(mqtt_topic);
+
+    if (!mqtt_client.connected())
     {
-        LOG_INFO(F("MQTT: SKIP"));
+        LOG_ERROR(F("MQTT: Not connected"));
         return false;
     }
 
-    WiFiClient wifi_client;
-    PubSubClient mqtt_client(wifi_client);
-
-    mqtt_client.setBufferSize(MQTT_MAX_PACKET_SIZE);
-    mqtt_client.setServer(sett.mqtt_host, sett.mqtt_port);
-
-    yield();
-
-    String client_id = get_device_name();
-
-    const char *login = sett.mqtt_login[0] ? sett.mqtt_login : nullptr;
-    const char *pass = sett.mqtt_password[0] ? sett.mqtt_password : nullptr;
-
-    String mqtt_topic = sett.mqtt_topic;
-
-    // Убираем слэш в конце
-    if (mqtt_topic.endsWith(F("/"))){
-        mqtt_topic.remove(mqtt_topic.length() - 1);
-    }
-        
-    if (mqtt_client.connect(client_id.c_str(), login, pass))
+    mqtt_client.loop();
+    // autodiscovery после настройки и по нажатию на кнопку
+    if (sett.mqtt_auto_discovery && (ALWAYS_MQTT_AUTO_DISCOVERY ||
+                                     (sett.mode == SETUP_MODE) ||
+                                     (sett.mode == MANUAL_TRANSMIT_MODE)))
     {
-        unsigned long start = millis();
-        if (auto_discovery)
-        {
-            publish_data_to_single_topic(mqtt_client, mqtt_topic,json_data);
-        }
-        else
-        {
-            publish_data_to_multiple_topics(mqtt_client, mqtt_topic,json_data);
-        }
-        LOG_INFO(F("MQTT: Publish data finished. ") << millis() - start << F(" milliseconds elapsed"));
-
-        yield();
-
-        // autodiscovery после настройки и по нажатию на кнопку
-        if (auto_discovery && (ALWAYS_MQTT_AUTO_DISCOVERY ||
-                               (sett.mode == SETUP_MODE) || 
-                               (sett.mode == MANUAL_TRANSMIT_MODE)))
-        {
-
-            if (sett.mode == SETUP_MODE) {
-                // Если находимся в режиме настройки 
-                //то предварительно очищаем все предыдущие автодискавери топики
-                clean_discovery(mqtt_client, mqtt_topic);
-            }
-            // Автоматическое добавления устройства в Home Assistant
-            publish_discovery(mqtt_client, mqtt_topic, data);
-        }
-
-        mqtt_client.disconnect();
-
-        return true;
-    }
-    else
-    {
-        LOG_ERROR(F("MQTT connect error"));
+        String mqtt_discovery_topic = sett.mqtt_discovery_topic;
+        remove_trailing_slash(mqtt_discovery_topic);
+        publish_discovery(mqtt_client, mqtt_topic, mqtt_discovery_topic, data);
+        mqtt_client.loop();
     }
 
-    return false;
+    // публикация показаний в MQTT
+    publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
+
+    mqtt_client.loop();
+    mqtt_unsubscribe(mqtt_client, mqtt_topic);
+
+    mqtt_client.loop();
+    mqtt_client.disconnect();
+
+    LOG_INFO(F("MQTT: Disconnect. ") << millis() - start_time << F(" milliseconds elapsed"));
+    return true;
 }
 
 #endif

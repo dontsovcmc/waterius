@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION F("0.11.0")
+#define FIRMWARE_VERSION "0.11.0"
 
 /*
 Версии прошивки для ESP
@@ -32,7 +32,12 @@
                       17. Доработано измерение напряжения, теперь отправляются усредненные показания напряжения.
                       18. Напряжение измеряется в фоне раз в 300мс
                       19. Добавлены признаки интеграции с HA, MQTT, blynk
-                      20.
+                      20. Добавлена подписка на изменения параметров в HA
+                      21. Добавлена кастомная реализация синхронизации времени по NTP
+                      22. Добавлены функции по корректному подключению/отключением от WIFI при режиме глубокого сна
+                      23. Сохраняется послений успешный  BSSID и канал точки доступа для быстрого подключения к WIFI
+                      24. Рефакторинг функции отправки на сайт
+                      25. Добавлена возможность пользователю указать свой NTP сервер, если не удалось с этого сервера получить время то будет браться время по серврам из пула
 
 0.10.7 - 2022.04.20 - dontsovcmc
                       1. issues/227: не работали ssid, pwd указанные при компиляции
@@ -109,11 +114,16 @@
     Уровень логирования
 */
 
+// уровни логирования WifiManager
+#ifndef DWM_DEBUG_LEVEL
+#define DWM_DEBUG_LEVEL 0
+#endif
+
 #define BRAND_NAME "waterius"
 
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 
-#define ESP_CONNECT_TIMEOUT 15000UL // Время подключения к точке доступа, ms
+#define ESP_CONNECT_TIMEOUT 10000UL // Время подключения к точке доступа, ms
 
 #define SERVER_TIMEOUT 12000UL // Время ответа сервера, ms
 
@@ -125,15 +135,13 @@
 #define EMAIL_LEN 40
 
 #define WATERIUS_KEY_LEN 34
-#define WATERIUS_HOST_LEN 64
+#define HOST_LEN 64
 
 #define BLYNK_KEY_LEN 34
-#define BLYNK_HOST_LEN 32
 
 #define BLYNK_EMAIL_TITLE_LEN 64
 #define BLYNK_EMAIL_TEMPLATE_LEN 200
 
-#define MQTT_HOST_LEN 64
 #define MQTT_LOGIN_LEN 32
 #define MQTT_PASSWORD_LEN 32
 #define MQTT_TOPIC_LEN 64
@@ -170,10 +178,23 @@
 
 #define SERIAL_LEN 16
 
+#ifndef DEFAULT_WAKEUP_PERIOD_MIN
 #define DEFAULT_WAKEUP_PERIOD_MIN 1440
+#endif
 
 #define AUTO_IMPULSE_FACTOR 2
 #define AS_COLD_CHANNEL 7
+
+#define DEF_FALLBACK_DNS "8.8.8.8"
+
+#define WIFI_CONNECT_ATTEMPTS 3
+
+#define WIFI_SSID_LEN 32 + 1
+#define WIFI_PWD_LEN 64 + 1
+
+#define DEFAULT_GATEWAY "192.168.0.1"
+#define DEFAULT_MASK "255.255.255.0"
+#define DEFAULT_NTP_SERVER "ru.pool.ntp.org"
 
 struct CalculatedData
 {
@@ -184,16 +205,6 @@ struct CalculatedData
 
     uint32_t delta0 = 0;
     uint32_t delta1 = 0;
-    /* Уровень связи */
-    int8_t rssi = 0;
-    /* Wifi канал */
-    uint8_t channel = 0;
-    /* Первые три октета мак адрес роутера */
-    char router_mac[MAC_LENGTH + 1] = {0};
-    /* IP адрес устройства */
-    char ip[IP_LENGTH + 1] = {0};
-    /* MAC адрес устройства */
-    char mac[MAC_LENGTH + 1] = {0};
 };
 
 /*
@@ -210,7 +221,7 @@ struct Settings
     // http/https сервер для отправки данных в виде JSON
     // вид: http://host[:port][/path]
     //      https://host[:port][/path]
-    char waterius_host[WATERIUS_HOST_LEN] = {0};
+    char waterius_host[HOST_LEN] = {0};
     char waterius_key[WATERIUS_KEY_LEN] = {0};
     char waterius_email[EMAIL_LEN] = {0};
 
@@ -218,7 +229,7 @@ struct Settings
     // уникальный ключ устройства blynk
     char blynk_key[BLYNK_KEY_LEN] = {0};
     // сервер blynk.com или свой blynk сервер
-    char blynk_host[BLYNK_HOST_LEN] = {0};
+    char blynk_host[HOST_LEN] = {0};
 
     // Если email не пустой, то отсылается e-mail
     // Чтобы работало нужен виджет эл. почта в приложении
@@ -228,7 +239,7 @@ struct Settings
     // Шаблон эл. письма. {V0}-{V4} заменяются на данные
     char blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN] = {0};
 
-    char mqtt_host[MQTT_HOST_LEN] = {0};
+    char mqtt_host[HOST_LEN] = {0};
     uint16_t mqtt_port = MQTT_DEFAULT_PORT;
     char mqtt_login[MQTT_LOGIN_LEN] = {0};
     char mqtt_password[MQTT_PASSWORD_LEN] = {0};
@@ -302,27 +313,38 @@ struct Settings
     /*
     Режим пробуждения
     */
-    uint8_t mode = 0;
+    uint8_t mode = 1; // SETUP_MODE
 
     /*
     Успешная настройка
     */
     uint8_t setup_finished_counter = 0;
 
-    /*
-    Публиковать данные для автоматического добавления в Homeassistant
-    */
+    /* Публиковать данные для автоматического добавления в Homeassistant */
     uint8_t mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
-    
     uint8_t reserved2 = 0;
 
+    /* Топик MQTT*/
     char mqtt_discovery_topic[MQTT_TOPIC_LEN] = DISCOVERY_TOPIC;
-    
+
+    /* пользовательский NTP сервер */
+    char ntp_server[HOST_LEN] = {0};
+
+    /* имя сети Wifi */
+    char wifi_ssid[WIFI_SSID_LEN] = {0};
+    /* пароль к Wifi сети */
+    char wifi_password[WIFI_PWD_LEN] = {0};
+    /* mac сети Wifi */
+    uint8_t wifi_bssid[6] = {0};
+    /* Wifi канал */
+    uint8_t wifi_channel = 0;
+    uint8_t reserved3 = 0; // выравниваем по границе
+
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved3[88] = {0}; // 154 -1-64
+    uint8_t reserved4[64] = {0};
 
 }; // 960 байт
 

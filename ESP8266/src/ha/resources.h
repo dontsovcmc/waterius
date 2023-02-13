@@ -15,6 +15,7 @@
 #include "setup.h"
 
 #define MQTT_PARAM_COUNT 8
+#define NONE -1
 
 // строки хранятся во флэш
 // https://arduino-esp8266.readthedocs.io/en/latest/PROGMEM.html#how-do-i-declare-arrays-of-strings-in-progmem-and-retrieve-an-element-from-it
@@ -34,8 +35,8 @@ static const char s_bvolt_name[] PROGMEM = "Battery Voltage";
 static const char s_vdiff_name[] PROGMEM = "Voltage Diff";
 static const char s_vdiff[] PROGMEM = "voltage_diff";
 static const char s_icon_ba[] PROGMEM = "mdi:battery-alert";
-static const char s_blow_name[] PROGMEM = "Battery Low";
-static const char s_vl[] PROGMEM = "voltage_low";
+static const char s_bat_low_name[] PROGMEM = "Battery Low";
+static const char s_voltage_low[] PROGMEM = "voltage_low";
 static const char s_battery[] PROGMEM = "battery";
 static const char s_bat_name[] PROGMEM = "Battery";
 static const char s_perc[] PROGMEM = "%";
@@ -46,7 +47,7 @@ static const char s_dbm[] PROGMEM = "dBm";
 static const char s_resets_name[] PROGMEM = "Resets";
 static const char s_resets[] PROGMEM = "resets";
 static const char s_icon_cog_refresh[] PROGMEM = "mdi:cog-refresh";
-static const char s_time_name[] PROGMEM = "Time";
+static const char s_time_name[] PROGMEM = "Last seen";
 static const char s_timestamp[] PROGMEM = "timestamp";
 static const char s_clock[] PROGMEM = "mdi:clock";
 static const char s_router_mac[] PROGMEM = "router_mac";
@@ -88,39 +89,42 @@ static const char s_f_name[] PROGMEM = "Factor";
 static const char s_f[] PROGMEM = "f";
 static const char s_icon_numeric[] PROGMEM = "mdi:numeric";
 
-
 /**
- * @brief массив с ситемными сенсорами с указанием их атрибутов в MQTT
+ * @brief массив с общими сущностями с указанием их атрибутов в MQTT
  *
  */
-static const char *const PROGMEM GENERAL_SENSORS[][MQTT_PARAM_COUNT] = {
+static const char *const GENERAL_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
     // sensor_type, sensor_name, sensor_id, state_class, device_class,unit_of_meas,entity_category,icon
-    {s_sensor, s_bvolt_name, s_voltage, s_measurement, s_voltage, s_v, s_diagnostic, ""},         // voltage
-    {s_sensor, s_vdiff_name, s_vdiff, s_measurement, s_voltage, s_v, s_diagnostic, s_icon_ba},    // Просадка напряжения voltage_diff, В
-    {s_sensor, s_blow_name, s_vl, "", "", "", s_diagnostic, s_icon_ba},                           // voltage_low Батарейка разряжена >
-    {s_sensor, s_bat_name, s_battery, s_measurement, s_battery, s_perc, s_diagnostic, ""},        // процент зарядки батареи
-    {s_sensor, s_resets_name, s_resets, s_measurement, "", "", s_diagnostic, s_icon_cog_refresh}, // resets
-    {s_sensor, s_time_name, s_timestamp, "", "", "", s_diagnostic, s_clock},                      // Время    
-//    {s_sensor, s_freemem_name, s_freemem, "", s_data_size, s_byte, s_diagnostic, s_icon_memory},  // Свободная память
-    {s_sensor, s_wake_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},      // Настройка для автоматического добавления времени пробуждения в Home Assistant
-    {s_sensor, s_rssi_name, s_rssi, s_measurement, s_signal_strength, s_dbm, s_diagnostic, ""},   // rssi
-    {s_sensor, s_router_mac_name, s_router_mac, "", "", "", s_diagnostic, ""},                    // Мак роутера
-    {s_sensor, s_mac_name, s_mac, "", "", "", s_diagnostic, ""},                                  // Мак ESP
-    {s_sensor, s_ip_name, s_ip, "", "", "", s_diagnostic, s_icon_ip},                            // IP
+    /* Одиночные сенсоры */
+    {s_sensor, s_bat_low_name, s_voltage_low, "", "", "", s_diagnostic, s_icon_ba},                               // voltage_low Батарейка разряжена >
+    {s_sensor, s_bat_name, s_battery, s_measurement, s_battery, s_perc, s_diagnostic, ""},            // процент зарядки батареи
+    {s_sensor, s_resets_name, s_resets, s_measurement, "", "", s_diagnostic, s_icon_cog_refresh},     // resets
+    {s_sensor, s_time_name, s_timestamp, "", s_timestamp, "", s_diagnostic, s_clock},                          // Время
+    /*{s_sensor, s_wake_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},*/         // Настройка для автоматического добавления времени пробуждения в Home Assistant
+    {s_number, s_wake_name, s_period_min, "", "", "", s_config, s_icon_bed_clock},
+    /* Сенсор с атрибутами  Группа №1 */
+    {s_sensor, s_bvolt_name, s_voltage, s_measurement, s_voltage, s_v, s_diagnostic, ""},             // voltage
+    {s_sensor, s_vdiff_name, s_vdiff, s_measurement, s_voltage, s_v, s_diagnostic, s_icon_ba},        // Просадка напряжения voltage_diff, В
+    /* Сенсор с атрибутами  Группа №2 */
+    {s_sensor, s_rssi_name, s_rssi, s_measurement, s_signal_strength, s_dbm, s_diagnostic, ""},       // rssi
+    {s_sensor, s_router_mac_name, s_router_mac, "", "", "", s_diagnostic, ""},                        // Мак роутера
+    {s_sensor, s_mac_name, s_mac, "", "", "", s_diagnostic, ""},                                      // Мак ESP
+    {s_sensor, s_ip_name, s_ip, "", "", "", s_diagnostic, s_icon_ip},                                 // IP
 };
 
 /**
- * @brief массив с сенсорами для одного канала
+ * @brief массив с сущностями для одного канала
  *
  */
-static const char *const PROGMEM CHANNEL_SENSORS[][MQTT_PARAM_COUNT] = {
+static const char *const CHANNEL_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
     // sensor_type, sensor_name, sensor_id, state_class, device_class,unit_of_meas,entity_category,icon
+    /* Сенсор с атрибутами */
     {s_sensor, s_total_name, s_ch, s_total, s_water, s_m3, "", ""},                       // chN Показания
     {s_sensor, s_imp_name, s_imp, s_measurement, "", "", s_diagnostic, s_icon_pulse},     // impN Количество импульсов
     {s_sensor, s_delta_name, s_delta, s_measurement, "", "", s_diagnostic, s_icon_delta}, // deltaN Разница с предыдущими показаниями, л
     {s_sensor, s_adc_name, s_adc, s_measurement, "", "", s_diagnostic, s_icon_counter},   // adcN Аналоговый уровень
     {s_sensor, s_serial_name, s_serial, "", "", "", s_diagnostic, s_icon_identifier},     // serialN Серийный номер счетчика
-    {s_sensor, s_f_name, s_f, "", "", "", s_config, s_icon_numeric},                       // fN  Вес импульса    
+    {s_sensor, s_f_name, s_f, "", "", "", s_config, s_icon_numeric},                      // fN  Вес импульса
 };
 
 static const char s_hot_wtr[] PROGMEM = "Hot Water";
@@ -129,7 +133,7 @@ static const char s_cold_wtr[] PROGMEM = "Cold Water";
  * @brief Названия каналов
  *
  */
-static const char *const PROGMEM CHANNEL_NAMES[CHANNEL_NUM] = {s_hot_wtr, s_cold_wtr};
+static const char *const CHANNEL_NAMES[CHANNEL_NUM] PROGMEM = {s_hot_wtr, s_cold_wtr};
 
 static const char s_classic[] PROGMEM = "Classic";
 static const char s_4c2w[] PROGMEM = "4C2W";
@@ -138,6 +142,6 @@ static const char s_4c2w[] PROGMEM = "4C2W";
  * @brief Название моделей
  *
  */
-static const char *const PROGMEM MODEL_NAMES[] = {s_classic, s_4c2w};
+static const char *const MODEL_NAMES[] PROGMEM = {s_classic, s_4c2w};
 
 #endif

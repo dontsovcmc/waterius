@@ -63,7 +63,7 @@ bool MasterI2C::sendData(uint8_t *buf, size_t size)
     int err = Wire.endTransmission(true);
     if (err != 0)
     {
-        LOG_ERROR("end error:" << err);
+        LOG_ERROR(F("end error:") << err);
         return false;
     }
 
@@ -121,7 +121,6 @@ bool MasterI2C::getMode(uint8_t &mode)
 {
 
     uint8_t crc; // not used
-    mode = TRANSMIT_MODE;
     if (!sendCmd('M') || !getByte(mode, crc))
     {
         LOG_ERROR(F("GetMode failed. Check i2c line."));

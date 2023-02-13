@@ -143,7 +143,7 @@ public:
 
     bool getValue()
     {
-        return strncmp(WiFiManagerParameter::getValue(), "D", 1) == 0;
+        return strncmp(WiFiManagerParameter::getValue(), "T", 1) == 0;
     }
 };
 

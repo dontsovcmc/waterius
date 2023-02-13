@@ -1,7 +1,7 @@
 
 #include "setup_ap.h"
 #include "Logging.h"
-#include "wifi_settings.h"
+#include "config.h"
 
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>        // Local DNS Server used for redirecting all requests to the configuration portal
@@ -9,7 +9,6 @@
 #include <WiFiClient.h>
 #include <EEPROM.h>
 #include "utils.h"
-#include "WateriusHttps.h"
 #include "master_i2c.h"
 #include "porting.h"
 
@@ -136,7 +135,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&div_start);
 
     // Сервер http запроса
-    WiFiManagerParameter param_waterius_host("whost", "Адрес сервера (включает отправку)", sett.waterius_host, WATERIUS_HOST_LEN - 1);
+    WiFiManagerParameter param_waterius_host("whost", "Адрес сервера (включает отправку)", sett.waterius_host, HOST_LEN - 1);
     wm.addParameter(&param_waterius_host);
 
     ShortParameter param_wakeup_per("mperiod", "Период отправки показаний, мин.", sett.wakeup_per_min);
@@ -146,7 +145,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 #ifndef BLYNK_DISABLED
     WiFiManagerParameter label_blynk("<h3>Blynk.cc</h3>");
     wm.addParameter(&label_blynk);
-    WiFiManagerParameter param_blynk_host("bhost", "Адрес сервера", sett.blynk_host, BLYNK_HOST_LEN - 1);
+    WiFiManagerParameter param_blynk_host("bhost", "Адрес сервера", sett.blynk_host, HOST_LEN - 1);
     wm.addParameter(&param_blynk_host);
     WiFiManagerParameter param_blynk_key("bkey", "Уникальный ключ (включает отправку)", sett.blynk_key, BLYNK_KEY_LEN - 1);
     wm.addParameter(&param_blynk_key);
@@ -162,7 +161,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 #ifndef MQTT_DISABLED
     WiFiManagerParameter label_mqtt("<h3>MQTT</h3>");
     wm.addParameter(&label_mqtt);
-    WiFiManagerParameter param_mqtt_host("mhost", "Адрес сервера (включает отправку)<br/>Пример: broker.hivemq.com", sett.mqtt_host, MQTT_HOST_LEN - 1);
+    WiFiManagerParameter param_mqtt_host("mhost", "Адрес сервера (включает отправку)<br/>Пример: broker.hivemq.com", sett.mqtt_host, HOST_LEN - 1);
     wm.addParameter(&param_mqtt_host);
     LongParameter param_mqtt_port("mport", "Порт", sett.mqtt_port);
     wm.addParameter(&param_mqtt_port);
@@ -172,7 +171,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&param_mqtt_password);
     WiFiManagerParameter param_mqtt_topic("mtopic", "MQTT Топик показаний", sett.mqtt_topic, MQTT_TOPIC_LEN - 1);
     wm.addParameter(&param_mqtt_topic);
-    
+
     WiFiManagerParameter div_checkbox("<br><label class=\"cnt\">Автоматическое добавление в Home Assistant");
     wm.addParameter(&div_checkbox);
     CheckBoxParameter param_mqtt_auto_discovery("auto_discovery_checkbox", sett.mqtt_auto_discovery);
@@ -182,10 +181,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     WiFiManagerParameter param_mqtt_discovery_topic("discovery_topic", "MQTT Топик Home Assistant", sett.mqtt_discovery_topic, MQTT_TOPIC_LEN - 1);
     wm.addParameter(&param_mqtt_discovery_topic);
-    #endif
+#endif
 
-
-    // Статический ip
+    // Настройки сети
 
     WiFiManagerParameter label_network("<h3>Сетевые настройки</h3>");
     wm.addParameter(&label_network);
@@ -196,12 +194,15 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label_mac(mac.c_str());
     wm.addParameter(&label_mac);
 
-    IPAddressParameter param_ip("ip", "Статический ip<br/>(DHCP, если равен 0.0.0.0)", sett.ip);
+    IPAddressParameter param_ip("ip", "Статический ip<br/>(DHCP, если равен 0.0.0.0)", IPAddress(sett.ip));
     wm.addParameter(&param_ip);
-    IPAddressParameter param_gw("gw", "Шлюз", sett.gateway);
+    IPAddressParameter param_gw("gw", "Шлюз", IPAddress(sett.gateway));
     wm.addParameter(&param_gw);
-    IPAddressParameter param_mask("sn", "Маска подсети", sett.mask);
+    IPAddressParameter param_mask("sn", "Маска подсети", IPAddress(sett.mask));
     wm.addParameter(&param_mask);
+
+    WiFiManagerParameter param_ntp("ntp", "Сервер времени (NTP)", sett.ntp_server, HOST_LEN - 1);
+    wm.addParameter(&param_ntp);
 
     WiFiManagerParameter label_factor_settings("<h3>Параметры счетчиков</h3>");
     wm.addParameter(&label_factor_settings);
@@ -283,8 +284,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     /*
     Имя точки доступа waterius-NNNNN-НОМЕРВЕРСИИ
     */
-    String apName = get_device_name() + "-" + String(FIRMWARE_VERSION);
-
+    String apName = get_ap_name();
     wm.startConfigPortal(apName.c_str());
 
     // Успешно подключились к Wi-Fi, можно засыпать
@@ -292,20 +292,23 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     // Переписываем введенные пользователем значения в Конфигурацию
 
+    // Сохраняем название сети и пароль к ней
+    strncpy0(sett.wifi_ssid, wm.getWiFiSSID().c_str(), WIFI_SSID_LEN);
+    strncpy0(sett.wifi_password, wm.getWiFiPass().c_str(), WIFI_PWD_LEN);
+
     strncpy0(sett.waterius_email, param_waterius_email.getValue(), EMAIL_LEN);
-    strncpy0(sett.waterius_host, param_waterius_host.getValue(), WATERIUS_HOST_LEN);
+    strncpy0(sett.waterius_host, param_waterius_host.getValue(), HOST_LEN);
 
     // Генерируем ключ используя и введенную эл. почту
     if (strnlen(sett.waterius_key, WATERIUS_KEY_LEN) == 0)
     {
         LOG_INFO(F("Generate waterius key"));
-        WateriusHttps::generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN,
-                                           sett.waterius_email);
+        generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
     }
 
 #ifndef BLYNK_DISABLED
     strncpy0(sett.blynk_key, param_blynk_key.getValue(), BLYNK_KEY_LEN);
-    strncpy0(sett.blynk_host, param_blynk_host.getValue(), BLYNK_HOST_LEN);
+    strncpy0(sett.blynk_host, param_blynk_host.getValue(), HOST_LEN);
     strncpy0(sett.blynk_email, param_blynk_email.getValue(), EMAIL_LEN);
     strncpy0(sett.blynk_email_title, param_blynk_email_title.getValue(), BLYNK_EMAIL_TITLE_LEN);
     strncpy0(sett.blynk_email_template, param_blynk_email_template.getValue(), BLYNK_EMAIL_TEMPLATE_LEN);
@@ -313,11 +316,12 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
 // MQTT
 #ifndef MQTT_DISABLED
-    strncpy0(sett.mqtt_host, param_mqtt_host.getValue(), MQTT_HOST_LEN);
+    strncpy0(sett.mqtt_host, param_mqtt_host.getValue(), HOST_LEN);
     LOG_INFO(F("MQTT host=") << param_mqtt_host.getValue());
     sett.mqtt_port = param_mqtt_port.getValue();
     LOG_INFO(F("MQTT port=") << sett.mqtt_port);
     strncpy0(sett.mqtt_login, param_mqtt_login.getValue(), MQTT_LOGIN_LEN);
+    LOG_INFO(F("MQTT login=") << param_mqtt_login.getValue());
     strncpy0(sett.mqtt_password, param_mqtt_password.getValue(), MQTT_PASSWORD_LEN);
     strncpy0(sett.mqtt_topic, param_mqtt_topic.getValue(), MQTT_TOPIC_LEN);
     LOG_INFO(F("MQTT topic=") << param_mqtt_topic.getValue());
@@ -327,9 +331,25 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(F("Auto Discovery Topic=") << param_mqtt_discovery_topic.getValue());
 #endif // MQTT
 
+    // Сетевые настройки
+
     sett.ip = param_ip.getValue();
-    sett.gateway = param_gw.getValue();
-    sett.mask = param_mask.getValue();
+    if (sett.ip)
+    {
+        LOG_INFO(F("DHCP is OFF"));
+        LOG_INFO(F("IP=") << IPAddress(sett.ip).toString());
+        sett.gateway = param_gw.getValue();
+        LOG_INFO(F("Gateway=") << IPAddress(sett.gateway).toString());
+        sett.mask = param_mask.getValue();
+        LOG_INFO(F("Network Mask=") << IPAddress(sett.mask).toString());
+    }
+    else
+    {
+        LOG_INFO(F("DHCP is ON"));
+    }
+
+    strncpy0(sett.ntp_server, param_ntp.getValue(), HOST_LEN);
+    LOG_INFO(F("NTP Server=") << param_ntp.getValue());
 
     // период отправки данных
     sett.wakeup_per_min = param_wakeup_per.getValue();
@@ -372,5 +392,5 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     sett.setup_time = millis();
     sett.setup_finished_counter++;
 
-    storeConfig(sett);
+    store_config(sett);
 }
