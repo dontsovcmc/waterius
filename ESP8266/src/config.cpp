@@ -263,12 +263,16 @@ void update_config(Settings &sett, const SlaveData &data, const CalculatedData &
         //  иначе коэффициенты будут расчитаны неправильно
         if (is_valid_time(now) == is_valid_time(sett.last_send))
         {
-            time_t t1 = (now - sett.last_send) / 60;
-            if (t1 > 1 && data.version >= 24)
+            if (now > sett.last_send)
             {
-                LOG_INFO(F("Minutes diff:") << t1);
-                sett.set_wakeup = sett.wakeup_per_min * sett.set_wakeup / t1;
-                return;
+                time_t t1 = (now - sett.last_send) / 60;
+                if (t1 > 1 && data.version >= 24)
+                {
+                    LOG_INFO(F("Minutes diff:") << t1);
+                    sett.set_wakeup = sett.wakeup_per_min * sett.set_wakeup / t1;
+                    sett.last_send = now;
+                    return;
+                }
             }
         }
     }
