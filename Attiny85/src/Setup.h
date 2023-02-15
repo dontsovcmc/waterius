@@ -39,6 +39,7 @@
 */
 #define WAKEUP_PERIOD_DEFAULT 15L * ONE_MINUTE
 
+
 /*
     Аварийное отключение, если ESP зависнет и не пришлет команду "сон".
 */
@@ -54,6 +55,12 @@
     время долгого нажатия кнопки, милисекунд
 */
 #define LONG_PRESS_MSEC 3000
+
+/*
+    время перехода в сон
+*/
+#define DELAY_SENT_SLEEP 2000
+       
 
 struct Data
 {
