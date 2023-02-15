@@ -115,6 +115,21 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 {
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
+    
+    // Если настройки есть в конфиге то присваиваем их 
+    if (sett.wifi_ssid[0]) {
+        struct station_config conf;
+        conf.bssid_set = 0;
+        memcpy(conf.ssid, sett.wifi_ssid, sizeof(sett.wifi_ssid));
+        conf.ssid[32] = 0; 
+        if (sett.wifi_password[0]) {
+            memcpy(conf.password, sett.wifi_password, sizeof(sett.wifi_password));
+            conf.password[64] = 0; 
+        } else {
+            conf.password[0] = 0;
+        }    
+        wifi_station_set_config(&conf);
+    }
 
     LOG_INFO(F("User requested captive portal"));
 
