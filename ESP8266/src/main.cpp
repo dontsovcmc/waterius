@@ -42,13 +42,14 @@ void setup()
 void loop()
 {
     uint8_t mode = SETUP_MODE; // TRANSMIT_MODE;
+    bool config_loaded = false;
 
     // спрашиваем у Attiny85 повод пробуждения и данные
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
     {
 
         // Загружаем конфигурацию из EEPROM
-        bool config_loaded = load_config(sett);
+        config_loaded = load_config(sett);
         sett.mode = mode;
         LOG_INFO(F("Startup mode: ") << mode);
 
@@ -163,7 +164,16 @@ void loop()
         }
     }
     LOG_INFO(F("Going to sleep"));
-    masterI2C.sendCmd('Z'); // "Можешь идти спать, attiny"
     LOG_END();
+
+    if (!config_loaded) {
+        delay(500);
+        blink_led(3,1000,500);
+    }
+    
+    masterI2C.sendCmd('Z'); // "Можешь идти спать, attiny"
+
     ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. Instant не ждет 92мс
+
+    
 }

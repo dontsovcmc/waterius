@@ -195,6 +195,10 @@
 #define DEFAULT_GATEWAY "192.168.0.1"
 #define DEFAULT_MASK "255.255.255.0"
 #define DEFAULT_NTP_SERVER "ru.pool.ntp.org"
+#ifndef LED_PIN 
+#define LED_PIN 1    
+#endif
+
 
 struct CalculatedData
 {
