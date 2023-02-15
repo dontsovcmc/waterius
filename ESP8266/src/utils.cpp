@@ -4,6 +4,7 @@
 #include "time.h"
 #include "porting.h"
 #include "wifi_helpers.h"
+#include "setup.h"
 
 /**
  * @brief Форимрует строку с именем устройства
@@ -264,4 +265,19 @@ extern void generateSha256Token(char *token, const int token_len, const char *em
 
 	LOG_INFO(F("SHA256 token: ") << token);
 	LOG_INFO(F("-- END --"));
+}
+
+
+void blink_led(int count, int period, int duty)
+{
+	pinMode(LED_PIN, OUTPUT);
+	for (int i = 0; i < count; i++)
+	{
+		digitalWrite(LED_PIN, HIGH); 
+		delay(period-duty); 
+		digitalWrite(LED_PIN, LOW); 
+		delay(duty); 
+	}
+	
+
 }
