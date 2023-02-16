@@ -17,6 +17,8 @@ protected:
     static uint8_t setup_mode;
 
     static bool masterSentSleep;
+    //Время включения Wi-Fi
+    static unsigned long SentSleep_timestamp; 
 
     static void requestEvent();
     static void newCommand();
