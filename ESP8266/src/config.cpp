@@ -204,9 +204,17 @@ bool load_config(Settings &sett)
         strncpy0(sett.waterius_key, VALUE(WATERIUS_KEY), WATERIUS_KEY_LEN);
         LOG_INFO(F("default waterius key=") << VALUE(WATERIUS_KEY));
 #else
-        LOG_INFO(F("Generate waterius key"));
-        generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
-        LOG_INFO(F("waterius key=") << sett.waterius_key);
+        if (tmp_sett.version < VER_8) {
+            // предыдущая версия
+            // извлекаем старый ключ
+            LOG_INFO(F("Old key found"));
+            strncpy0(sett.waterius_key, tmp_sett.waterius_key, WATERIUS_KEY_LEN);
+            LOG_INFO(F("waterius key=") << sett.waterius_key);
+        } else {
+            LOG_INFO(F("Generate waterius key"));
+            generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
+            LOG_INFO(F("waterius key=") << sett.waterius_key);
+        }
 #endif
 
 #ifdef WIFI_SSID
