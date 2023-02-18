@@ -1,10 +1,6 @@
 #include "voltage.h"
 #include "Logging.h"
 
-Voltage::Voltage() {}
-
-Voltage::~Voltage() {}
-
 void Voltage::begin()
 {
     _voltage = ESP.getVcc();

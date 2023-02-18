@@ -20,8 +20,8 @@ private:
 
 
 public:
-    Voltage();
-    ~Voltage();
+    Voltage() = default;
+    ~Voltage() = default;
     void begin();
     void update();
     uint16_t value();
