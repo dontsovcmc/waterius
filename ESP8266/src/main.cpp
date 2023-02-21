@@ -1,10 +1,11 @@
 #include <user_interface.h>
 #include <ESP8266WiFi.h>
 #include <ArduinoJson.h>
+#include "LittleFS.h"
 #include "Logging.h"
 #include "config.h"
 #include "master_i2c.h"
-#include "setup_ap.h"
+//#include "setup_ap.h"
 #include "sender_http.h"
 #include "voltage.h"
 #include "utils.h"
@@ -16,6 +17,7 @@
 #include "sync_time.h"
 #include "wifi_helpers.h"
 #include "config.h"
+#include "portal.h"
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 SlaveData data;       // Данные от Attiny85
@@ -33,6 +35,7 @@ void setup()
     LOG_INFO(F("Booted"));
 
     masterI2C.begin(); // Включаем i2c master
+    LittleFS.begin();
 
     get_voltage()->begin();
     voltage_ticker.attach_ms(300, []()
@@ -65,9 +68,23 @@ void loop()
             WiFi.persistent(false);
             WiFi.disconnect();
 
-            wifi_set_mode(WIFI_AP_STA);
+            wifi_set_mode(WIFI_AP);
+            String apName = get_ap_name();
+            WiFi.softAP(apName.c_str());
 
-            setup_ap(sett, data, cdata);
+
+            //setup_ap(sett, data, cdata);
+            //запускаем сервер
+            Portal portal = Portal();
+            portal.begin();
+
+            WiFi.scanNetworks(true);
+            while (!portal.doneettings())
+            {
+                yield();
+            };
+            portal.end();
+            portal.~Portal();
 
             wifi_shutdown();
 
