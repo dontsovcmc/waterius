@@ -20,6 +20,7 @@
 #include "ESPAsyncTCP.h"
 #include "ESPAsyncWebServer.h"
 #include <LittleFS.h>
+#include <DNSServer.h> 
 
 uint8_t get_auto_factor(uint32_t runtime_impulses, uint32_t impulses);
 uint8_t get_factor(uint8_t combobox_factor, uint32_t runtime_impulses, uint32_t impulses, uint8_t cold_factor);
@@ -61,6 +62,7 @@ public:
 
 private:
     AsyncWebServer* server;
+    DNSServer* dns;
     bool _donesettings;
     bool _fail;
     void onGetRoot(AsyncWebServerRequest *request);

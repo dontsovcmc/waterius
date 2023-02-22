@@ -402,6 +402,7 @@ void Portal::onNotFound(AsyncWebServerRequest *request)
 
 bool Portal::doneettings()
 {
+    dns->processNextRequest();
     return _donesettings;
 }
 
@@ -414,6 +415,7 @@ void Portal::begin()
 
 void Portal::end()
 {
+    dns->stop();
     server->end();
 }
 
@@ -430,9 +432,12 @@ Portal::Portal()
     server->on("/states", HTTP_GET, std::bind(&Portal::onGetStates, this, std::placeholders::_1));
     server->on("/config", HTTP_GET, std::bind(&Portal::onGetConfig, this, std::placeholders::_1));
     server->onNotFound(std::bind(&Portal::onNotFound, this, std::placeholders::_1));
+    dns = new DNSServer();
+    dns->start(53, "*", WiFi.softAPIP());
 }
 
 Portal::~Portal()
 {
+    dns->~DNSServer();
     server->~AsyncWebServer();
 }
