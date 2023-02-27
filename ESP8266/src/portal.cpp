@@ -386,9 +386,10 @@ void Portal::onPostWifiSave(AsyncWebServerRequest *request)
         sett.setup_finished_counter++;
 
         store_config(sett);
+        _delaydonesettings = millis() + 10000;
         _donesettings = true;
-        AsyncWebServerResponse * response = request->beginResponse(200, "", "ok");
-        response->addHeader("Refresh","5; url=/");
+        AsyncWebServerResponse * response = request->beginResponse(200, "", F("Save configuration - Successfully."));
+        response->addHeader("Refresh","2; url=/exit");
         request->send(response);
     }
     else
@@ -407,6 +408,7 @@ void Portal::onExit(AsyncWebServerRequest *request)
 {
     request->redirect("/");
     _donesettings = true;
+    _delaydonesettings = millis();
 };
 
 void Portal::onErase(AsyncWebServerRequest *request)
@@ -414,17 +416,19 @@ void Portal::onErase(AsyncWebServerRequest *request)
     request->redirect("/");
     code=2;
     _donesettings=true;
+    _donesettings = millis();
 };
 
 bool Portal::doneettings()
 {
     dns->processNextRequest();
-    return _donesettings;
+    return _donesettings && _delaydonesettings < millis();
 }
 
 void Portal::begin()
 {
     _donesettings = false;
+    _delaydonesettings = millis();
     _fail = false;
     code=0;
     server->begin();

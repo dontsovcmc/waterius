@@ -64,6 +64,7 @@ public:
 private:
     AsyncWebServer* server;
     DNSServer* dns;
+    uint32_t _delaydonesettings;
     bool _donesettings;
     bool _fail;
     void onGetRoot(AsyncWebServerRequest *request);
