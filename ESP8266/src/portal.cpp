@@ -401,11 +401,13 @@ void Portal::onPostWifiSave(AsyncWebServerRequest *request)
 
 void Portal::onNotFound(AsyncWebServerRequest *request)
 {
+    LOG_INFO(F("AsyncWebServer 404 ")<<request->url());
     request->send(404);
 };
 
 void Portal::onExit(AsyncWebServerRequest *request)
 {
+    LOG_INFO(F("AsyncWebServer GET /exit"));
     request->redirect("/");
     _donesettings = true;
     _delaydonesettings = millis();
@@ -413,6 +415,7 @@ void Portal::onExit(AsyncWebServerRequest *request)
 
 void Portal::onErase(AsyncWebServerRequest *request)
 {
+    LOG_INFO(F("AsyncWebServer GET /erase"));
     request->redirect("/");
     code=2;
     _donesettings=true;
