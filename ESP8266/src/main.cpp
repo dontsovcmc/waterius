@@ -83,9 +83,18 @@ void loop()
             {
                 yield();
             };
+            int8_t retCode=portal.code;
             portal.end();
             portal.~Portal();
-
+            if(retCode==2){
+                LOG_INFO(F("ESP erase config"));
+                ESP.eraseConfig();
+                delay(100);
+                LOG_INFO(F("EEPROM erase"));
+                ESP.flashEraseSector(((EEPROM_start - 0x40200000) / SPI_FLASH_SEC_SIZE));
+                delay(1000);
+                ESP.reset();
+            }
             wifi_shutdown();
 
             LOG_INFO(F("Set mode MANUAL_TRANSMIT to attiny"));

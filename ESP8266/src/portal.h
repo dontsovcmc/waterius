@@ -59,6 +59,7 @@ public:
     bool doneettings();
     void begin();
     void end();
+    int8_t code;
 
 private:
     AsyncWebServer* server;
@@ -73,6 +74,7 @@ private:
     void onPostWifiSave(AsyncWebServerRequest *request);
     void onNotFound(AsyncWebServerRequest *request);
     void onExit(AsyncWebServerRequest *request);
+    void onErase(AsyncWebServerRequest *request);
     bool SetParamStr(AsyncWebServerRequest *request, const char* param_name, char* dest, size_t size);
     bool UpdateParamStr(AsyncWebServerRequest *request, const char* param_name, char* dest, size_t size);
     bool SetParamIP(AsyncWebServerRequest *request, const char* param_name, uint32_t* dest);

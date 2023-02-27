@@ -406,6 +406,13 @@ void Portal::onExit(AsyncWebServerRequest *request)
     _donesettings = true;
 };
 
+void Portal::onErase(AsyncWebServerRequest *request)
+{
+    request->redirect("/");
+    code=2;
+    _donesettings=true;
+};
+
 bool Portal::doneettings()
 {
     dns->processNextRequest();
@@ -416,6 +423,7 @@ void Portal::begin()
 {
     _donesettings = false;
     _fail = false;
+    code=0;
     server->begin();
 }
 
@@ -438,6 +446,7 @@ Portal::Portal()
     server->on("/states", HTTP_GET, std::bind(&Portal::onGetStates, this, std::placeholders::_1));
     server->on("/config", HTTP_GET, std::bind(&Portal::onGetConfig, this, std::placeholders::_1));
     server->on("/exit", HTTP_GET, std::bind(&Portal::onExit, this, std::placeholders::_1));
+    server->on("/erase", HTTP_GET, std::bind(&Portal::onErase, this, std::placeholders::_1));
     server->onNotFound(std::bind(&Portal::onNotFound, this, std::placeholders::_1));
     dns = new DNSServer();
     dns->start(53, "*", WiFi.softAPIP());
