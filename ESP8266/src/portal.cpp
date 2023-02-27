@@ -3,6 +3,7 @@
 #include "master_i2c.h"
 #include "utils.h"
 #include "config.h"
+#include "ESPAsyncWebServer.h"
 
 extern SlaveData data;
 extern MasterI2C masterI2C;
@@ -386,7 +387,9 @@ void Portal::onPostWifiSave(AsyncWebServerRequest *request)
 
         store_config(sett);
         _donesettings = true;
-        request->send(200, "", "ok");
+        AsyncWebServerResponse * response = request->beginResponse(200, "", "ok");
+        response->addHeader("Refresh","5; url=/");
+        request->send(response);
     }
     else
     {
