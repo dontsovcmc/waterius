@@ -26,6 +26,8 @@ CalculatedData cdata; // вычисляемые данные
 ADC_MODE(ADC_VCC);
 Ticker voltage_ticker;
 
+extern "C" uint32_t __crc_val;
+
 /*
 Выполняется однократно при включении
 */
@@ -33,6 +35,9 @@ void setup()
 {
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Booted"));
+    char firmware_crc32[9] = { 0 };
+    sprintf(firmware_crc32, "%08X", __crc_val);
+    LOG_INFO(F("Firmware CRC32: ")<<firmware_crc32);
 
     masterI2C.begin(); // Включаем i2c master
     LittleFS.begin();

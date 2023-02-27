@@ -9,6 +9,8 @@
 #include "voltage.h"
 #include "sync_time.h"
 
+extern "C" uint32_t __crc_val;
+
 void get_json_data(const Settings &sett, const SlaveData &data, const CalculatedData &cdata,  DynamicJsonDocument &json_data)
 {
   Voltage *voltage = get_voltage();
@@ -47,11 +49,14 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
   root[F("dhcp")] = sett.ip==0;
 
   // Общие сведения о приборе
+  char fw_crc32[9] = { 0 };
+  sprintf(fw_crc32, "%08X", __crc_val);
   root[F("version")] = data.version;
   root[F("version_esp")] = FIRMWARE_VERSION;
   root[F("esp_id")] = getChipId();
   root[F("freemem")] = ESP.getFreeHeap();
   root[F("timestamp")] = get_current_time();
+  root[F("fw_crc")] = String(fw_crc32);
 
   // настройки и события
   root[F("waketime")] = sett.wake_time;
