@@ -150,6 +150,8 @@ void Portal::onGetConfig(AsyncWebServerRequest *request)
     } else {
         response->print("0.0.0.0");
     }
+    response->print("\", \"ntp\":\"");
+    response->print(sett.ntp_server);
     LOG_INFO(F("config counters"));
     response->print("\", \"factorCold\":\"");
     response->print(sett.factor1);
@@ -346,6 +348,7 @@ void Portal::onPostWifiSave(AsyncWebServerRequest *request)
     SetParamIP(request, PARAM_IP, &sett.ip);
     SetParamIP(request, PARAM_GW, &sett.gateway);
     SetParamIP(request, PARAM_SN, &sett.mask);
+    SetParamStr(request, PARAM_NTP, sett.ntp_server, HOST_LEN);
 
     uint8_t combobox_factor = -1;
     if (SetParamByte(request, PARAM_FACTORCOLD, &combobox_factor))

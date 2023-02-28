@@ -44,6 +44,7 @@ const char PARAM_MDTOPIC[]       PROGMEM = "discovery_topic";
 const char PARAM_IP[]       PROGMEM = "ip";
 const char PARAM_GW[]       PROGMEM = "gw";
 const char PARAM_SN[]       PROGMEM = "sn";
+const char PARAM_NTP[]      PROGMEM = "ntp";
 const char PARAM_FACTORCOLD[]       PROGMEM = "factorCold";
 const char PARAM_FACTORHOT[]       PROGMEM = "factorHot";
 const char PARAM_SERIALCOLD[]       PROGMEM = "serialCold";
