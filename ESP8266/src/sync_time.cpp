@@ -25,6 +25,8 @@
 const uint32_t NTP_PACKET_SIZE = 48;    // NTP time is in the first 48 bytes of message
 uint8_t packet_buffer[NTP_PACKET_SIZE]; // Buffer to hold incoming & outgoing packets
 
+extern Settings sett;
+
 /**
  * @brief Получает следующий ижентификатор в пуле серверов
  *
@@ -277,19 +279,19 @@ bool sync_ntp_time()
 {
     uint32_t start_time = millis();
     LOG_INFO(F("NTP: Sync time..."));
-    String ntp_server_name;
+    String ntp_server_name=sett.ntp_server;
 
     int attempts = NTP_ATTEMPTS;
 
     do
     {
         LOG_INFO(F("NTP: Attempt #") << NTP_ATTEMPTS - attempts + 1 << F(" from ") << NTP_ATTEMPTS);
-        ntp_server_name = get_next_ntp_server_name();
         if (sync_ntp_time(ntp_server_name))
         {
             LOG_INFO(F("NTP: Time successfully synced. Total time spent ") << millis() - start_time << F(" msec"));
             return true;
         };
+        ntp_server_name = get_next_ntp_server_name();
     } while (attempts--);
 
     LOG_ERROR(F("NTP: Time could not synced. Total time spent ") << millis() - start_time << F(" msec"));
