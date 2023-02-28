@@ -3,12 +3,15 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.11.0"
+#define FIRMWARE_VERSION "0.11.1"
 
 /*
 Версии прошивки для ESP
 
-00.11.0 - 2023.01.23 - dontsovcmc Anat0liyBM vzagorovskiy
+0.11.1 - 2023.02.28 - neitri, dontsovcmc
+                      1. Указанный пользователем NTP сервер используется. 
+
+0.11.0 - 2023.01.23 - dontsovcmc Anat0liyBM vzagorovskiy
                       1. PubSubClient 2.7.0 -> 2.8.0
                       2. Отправка описания параметров в HomeAssistant
                       3. В поля данных
