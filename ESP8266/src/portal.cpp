@@ -467,6 +467,6 @@ Portal::Portal()
 
 Portal::~Portal()
 {
-    dns->~DNSServer();
-    server->~AsyncWebServer();
+    delete dns;
+    delete server;
 }
