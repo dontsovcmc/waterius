@@ -89,7 +89,7 @@ void Portal::onGetNetworks(AsyncWebServerRequest *request)
 void Portal::onGetConfig(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("AsyncWebServer GET /config"));
-    AsyncResponseStream *response = request->beginResponseStream("text/html");
+    AsyncResponseStream *response = request->beginResponseStream(F("application/json"));
     response->addHeader("Server", "ESP Async Web Server");
     response->print("{ \"wmail\": \"");
     response->print(sett.waterius_email);
@@ -223,7 +223,7 @@ void Portal::onGetStates(AsyncWebServerRequest *request)
     {
         message = F("{\"error\": \"Ошибка связи с МК\", \"factor_cold_feedback\": 1, \"factor_hot_feedback\": 1}");
     };
-    request->send(200, "", message);
+    request->send(200, F("application/json"), message);
 };
 
 bool Portal::UpdateParamStr(AsyncWebServerRequest *request, const char *param_name, char *dest, size_t size)
