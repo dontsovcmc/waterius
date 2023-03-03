@@ -37,7 +37,7 @@
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
 
-bool connect_and_subscribe_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
+bool connect_and_subscribe_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, JsonDocument &json_data)
 {
     String mqtt_topic = sett.mqtt_topic;
     remove_trailing_slash(mqtt_topic);
@@ -85,7 +85,7 @@ bool connect_and_subscribe_mqtt(Settings &sett, const SlaveData &data, const Cal
  *
  * @returns true если успешно отправлены данные и false если не отправлено
  */
-bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
+bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, JsonDocument &json_data)
 {
     unsigned long start_time = millis();
     String mqtt_topic = sett.mqtt_topic;

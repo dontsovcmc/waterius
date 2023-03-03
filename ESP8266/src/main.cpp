@@ -121,7 +121,7 @@ void loop()
             {
                 log_system_info();
 
-                String mqtt_topic;
+                //String mqtt_topic;
                 DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
 
                 // Подключаемся и подписываемся на мктт

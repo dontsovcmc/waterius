@@ -15,7 +15,7 @@
  * @param sett настройки
  * @param json_data данные в JSON
  */
-bool update_settings(String &topic, String &payload, Settings &sett, DynamicJsonDocument &json_data)
+bool update_settings(String &topic, String &payload, Settings &sett, JsonDocument &json_data)
 {
     bool updated = false;
     if (topic.endsWith(F("/set"))) // пришла команда на изменение
@@ -61,7 +61,7 @@ bool update_settings(String &topic, String &payload, Settings &sett, DynamicJson
  * @param raw_payload  данные из топика
  * @param length длина сообщения
  */
-void mqtt_callback(Settings &sett, DynamicJsonDocument &json_data, PubSubClient &mqtt_client, String &mqtt_topic, char *raw_topic, byte *raw_payload, unsigned int length)
+void mqtt_callback(Settings &sett, JsonDocument &json_data, PubSubClient &mqtt_client, String &mqtt_topic, char *raw_topic, byte *raw_payload, unsigned int length)
 {
     String topic = raw_topic;
     String payload;

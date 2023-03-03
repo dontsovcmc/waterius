@@ -19,7 +19,7 @@
 
 #define HTTP_SEND_ATTEMPTS 3
 
-bool send_http(const Settings &sett, DynamicJsonDocument &jsonData)
+bool send_http(const Settings &sett, JsonDocument &jsonData)
 {
 
     if (!(sett.waterius_host[0] && sett.waterius_key[0]))

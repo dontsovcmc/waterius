@@ -11,7 +11,7 @@
 
 extern "C" uint32_t __crc_val;
 
-void get_json_data(const Settings &sett, const SlaveData &data, const CalculatedData &cdata,  DynamicJsonDocument &json_data)
+void get_json_data(const Settings &sett, const SlaveData &data, const CalculatedData &cdata,  JsonDocument &json_data)
 {
   Voltage *voltage = get_voltage();
   JsonObject root = json_data.to<JsonObject>();

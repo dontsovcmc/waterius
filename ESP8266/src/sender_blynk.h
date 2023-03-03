@@ -16,7 +16,7 @@
 #include "voltage.h"
 
 
-bool send_blynk(const Settings &sett, DynamicJsonDocument &jsonData)
+bool send_blynk(const Settings &sett, JsonDocument &jsonData)
 {
     if (!is_blynk(sett))
     {
