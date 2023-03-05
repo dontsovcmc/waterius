@@ -27,6 +27,7 @@ private:
     uint16_t write(uint32_t value);
     uint16_t write(double value, uint8_t size=2);
     uint16_t write(float value, uint8_t size=2);
+    uint16_t write(bool value);
     uint16_t writeIP(uint32_t value);
     void insert(bool str=true);
 public:
@@ -53,6 +54,7 @@ public:
     void push(const char* name, int8_t value);
     void push(const char* name, double value, uint8_t size = 2);
     void push(const char* name, float value, uint8_t size = 2);
+    void push(const char* name, bool value);
     void pushIP(const char* name, uint32_t value);
 
     
@@ -67,6 +69,7 @@ public:
     void push(const __FlashStringHelper* name, int8_t value);
     void push(const __FlashStringHelper* name, double value, uint8_t size);
     void push(const __FlashStringHelper* name, float value, uint8_t size);
+    void push(const __FlashStringHelper* name, bool value);
     void pushIP(const __FlashStringHelper* name, uint32_t value);
     void push(const char* value);
     void push(const __FlashStringHelper* value);

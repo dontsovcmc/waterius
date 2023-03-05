@@ -120,6 +120,13 @@ uint16_t JsonConstructor::write(float value, uint8_t size)
     return write((double)value, size);
 }
 
+uint16_t JsonConstructor::write(bool value)
+{
+    if(value)
+        return write(F("true"));
+    return write(F("false"));
+}
+
 uint16_t JsonConstructor::writeIP(uint32_t value)
 {
     uint16_t ret = 0;
@@ -303,6 +310,22 @@ void JsonConstructor::push(const __FlashStringHelper *name, float value, uint8_t
     write(name);
     write(F("\":"));
     write(value, size);
+}
+
+void JsonConstructor::push(const char *name, bool value)
+{
+    insert();
+    write(name);
+    write(F("\":"));
+    write(value);
+}
+
+void JsonConstructor::push(const __FlashStringHelper *name, bool value)
+{
+    insert();
+    write(name);
+    write(F("\":"));
+    write(value);
 }
 
 void JsonConstructor::pushIP(const char *name, uint32_t value)
