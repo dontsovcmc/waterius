@@ -4,6 +4,7 @@
 #include "utils.h"
 #include "config.h"
 #include "ESPAsyncWebServer.h"
+#include "json_constructor.h"
 
 extern SlaveData data;
 extern MasterI2C masterI2C;
@@ -84,88 +85,45 @@ void Portal::onGetNetworks(AsyncWebServerRequest *request)
 /**
  * @brief Возвращает конфигурацию прибора в формате JSON для заполнения полей настройки
  *
- * @return 
+ * @return
  */
 void Portal::onGetConfig(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("AsyncWebServer GET /config"));
+    JsonConstructor json(2048);
+    json.begin();
+    json.push(F("wmail"), sett.waterius_email);
+    json.push(F("whost"), sett.waterius_host);
+    json.push(F("mperiod"), sett.wakeup_per_min);
+    json.push(F("s"), WiFi.SSID().c_str());
+    json.push(F("p"), WiFi.psk().c_str());
+    json.push(F("bhost"), sett.blynk_host);
+    json.push(F("bkey"), sett.blynk_key);
+    json.push(F("bemail"), sett.blynk_email);
+    json.push(F("btitle"), sett.blynk_email_title);
+    json.push(F("btemplate"), sett.blynk_email_template);
+    json.push(F("mhost"), sett.mqtt_host);
+    json.push(F("mport"), sett.mqtt_port);
+    json.push(F("mlogin"), sett.mqtt_login);
+    json.push(F("mpassword"), sett.mqtt_password);
+    json.push(F("mtopic"), sett.mqtt_topic);
+    json.push(F("auto_discovery_checkbox"), sett.mqtt_auto_discovery);
+    json.push(F("discovery_topic"), sett.mqtt_discovery_topic);
+    json.push(F("mac"), WiFi.macAddress().c_str());
+    json.pushIP(F("ip"), sett.ip);
+    json.pushIP(F("sn"), sett.mask);
+    json.pushIP(F("gw"), sett.gateway);
+    json.push(F("ntp"), sett.ntp_server);
+    json.push(F("factorCold"), sett.factor1);
+    json.push(F("factorHot"), sett.factor0);
+    json.push(F("serialCold"), sett.serial0);
+    json.push(F("serialHot"), sett.serial1);
+    json.push(F("ch0"), cdata.channel0, 3);
+    json.push(F("ch1"), cdata.channel1, 3);
+    json.end();
     AsyncResponseStream *response = request->beginResponseStream(F("application/json"));
     response->addHeader("Server", "ESP Async Web Server");
-    response->print("{ \"wmail\": \"");
-    response->print(sett.waterius_email);
-    response->print("\", \"whost\":\"");
-    response->print(sett.waterius_host);
-    response->print("\", \"mperiod\":\"");
-    response->print(sett.wakeup_per_min);
-    LOG_INFO(F("config WiFi"));
-    response->print("\", \"s\":\"");
-    response->print(WiFi.SSID().c_str());
-    response->print("\", \"p\":\"");
-    response->print(WiFi.psk().c_str());
-    LOG_INFO(F("config Blynk"));
-    response->print("\", \"bhost\":\"");
-    response->print(sett.blynk_host);
-    response->print("\", \"bkey\":\"");
-    response->print(sett.blynk_key);
-    response->print("\", \"bemail\":\"");
-    response->print(sett.blynk_email);
-    response->print("\", \"btitle\":\"");
-    response->print(sett.blynk_email_title);
-    response->print("\", \"btemplate\":\"");
-    response->print(sett.blynk_email_template);
-    LOG_INFO(F("config MQTT"));
-    response->print("\", \"mhost\":\"");
-    response->print(sett.mqtt_host);
-    response->print("\", \"mport\":\"");
-    response->print(sett.mqtt_port);
-    response->print("\", \"mlogin\":\"");
-    response->print(sett.mqtt_login);
-    response->print("\", \"mpassword\":\"");
-    response->print(sett.mqtt_password);
-    response->print("\", \"mtopic\":\"");
-    response->print(sett.mqtt_topic);
-    response->print("\", \"auto_discovery_checkbox\":\"");
-    response->print(sett.mqtt_auto_discovery);
-    response->print("\", \"discovery_topic\":\"");
-    response->print(sett.mqtt_discovery_topic);
-    LOG_INFO(F("config IP"));
-    response->print("\", \"mac\":\"");
-    response->print(WiFi.macAddress());
-    response->print("\", \"ip\":\"");
-    String ip;
-    if (IPAddress(sett.ip).isSet()){
-        response->print(IPAddress(sett.ip).toString());
-    } else {
-        response->print("0.0.0.0");
-    }
-    response->print("\", \"sn\":\"");
-    if (IPAddress(sett.mask).isSet()){
-        response->print(IPAddress(sett.mask).toString());
-    } else {
-        response->print("0.0.0.0");
-    }
-    response->print("\", \"gw\":\"");
-    if (IPAddress(sett.gateway).isSet()){
-        response->print(IPAddress(sett.gateway).toString());
-    } else {
-        response->print("0.0.0.0");
-    }
-    response->print("\", \"ntp\":\"");
-    response->print(sett.ntp_server);
-    LOG_INFO(F("config counters"));
-    response->print("\", \"factorCold\":\"");
-    response->print(sett.factor1);
-    response->print("\", \"factorHot\":\"");
-    response->print(sett.factor0);
-    response->print("\", \"serialCold\":\"");
-    response->print(sett.serial0);
-    response->print("\", \"serialHot\":\"");
-    response->print(sett.serial1);
-    response->print("\", \"ch0\":\"");
-    response->print(cdata.channel0, 3);
-    response->print("\", \"ch1\":\"");
-    response->print(cdata.channel1, 3);
-    response->print("\"}");
+    response->print(json.c_str());
     request->send(response);
 };
 
@@ -178,52 +136,51 @@ void Portal::onGetStates(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("AsyncWebServer GET /states"));
     SlaveData runtime_data;
-    String message;
+    JsonConstructor json(1024);
+    json.begin();
     if (masterI2C.getSlaveData(runtime_data))
     {
-        String state0good(F("\"\""));
-        String state0bad(F("\"Не подключён\""));
-        String state1good(F("\"\""));
-        String state1bad(F("\"Не подключён\""));
-
-        uint32_t delta0 = runtime_data.impulses0 - data.impulses0;
-        uint32_t delta1 = runtime_data.impulses1 - data.impulses1;
-
-        if (delta0 > 0)
+        if (runtime_data.impulses0 > data.impulses0)
         {
-            state0good = F("\"Подключён\"");
-            state0bad = F("\"\"");
+            json.push(F("state0good"), F("Подключён"));
+            json.push(F("state0bad"), F(""));
         }
-        if (delta1 > 0)
+        else
         {
-            state1good = F("\"Подключён\"");
-            state1bad = F("\"\"");
+            json.push(F("state0good"), F(""));
+            json.push(F("state0bad"), F("Подключён"));
         }
-
-        message = F("{\"state0good\": ");
-        message += state0good;
-        message += F(", \"state0bad\": ");
-        message += state0bad;
-        message += F(", \"state1good\": ");
-        message += state1good;
-        message += F(", \"state1bad\": ");
-        message += state1bad;
-        message += F(", \"elapsed\": ");
-        message += String((uint32_t)(SETUP_TIME_SEC - millis() / 1000.0));
-        message += F(", \"factor_cold_feedback\": ");
-        message += String(get_auto_factor(runtime_data.impulses1, data.impulses1));
-        message += F(", \"factor_hot_feedback\": ");
-        message += String(get_auto_factor(runtime_data.impulses0, data.impulses0));
-        message += F(", \"error\": \"");
-        message += F("\", \"fail\":\"");
-        message += _fail ? "1" : "";
-        message += F("\"}");
+        if (runtime_data.impulses1 > data.impulses1)
+        {
+            json.push(F("state1good"), F("Подключён"));
+            json.push(F("state1bad"), F(""));
+        }
+        else
+        {
+            json.push(F("state1good"), F(""));
+            json.push(F("state1bad"), F("Подключён"));
+        }
+        json.push(F("elapsed"), (uint32_t)(SETUP_TIME_SEC - millis() / 1000.0));
+        json.push(F("factor_cold_feedback"), get_auto_factor(runtime_data.impulses1, data.impulses1));
+        json.push(F("factor_hot_feedback"), get_auto_factor(runtime_data.impulses0, data.impulses0));
+        if (_fail)
+        {
+            json.push(F("fail"), F("1"));
+        }
+        else
+        {
+            json.push(F("fail"), F(""));
+        }
+        json.push(F("error"), F(""));
     }
     else
     {
-        message = F("{\"error\": \"Ошибка связи с МК\", \"factor_cold_feedback\": 1, \"factor_hot_feedback\": 1}");
-    };
-    request->send(200, F("application/json"), message);
+        json.push(F("error"), F("Ошибка связи с МК"));
+        json.push(F("factor_cold_feedback"), 1);
+        json.push(F("factor_hot_feedback"), 1);
+    }
+    json.end();
+    request->send(200, F("application/json"), json.c_str());
 };
 
 bool Portal::UpdateParamStr(AsyncWebServerRequest *request, const char *param_name, char *dest, size_t size)
@@ -232,8 +189,10 @@ bool Portal::UpdateParamStr(AsyncWebServerRequest *request, const char *param_na
     {
         if (strcmp(dest, request->getParam(param_name, true)->value().c_str()) != 0)
         {
-            return SetParamStr(request, param_name,dest,size);
-        }else{
+            return SetParamStr(request, param_name, dest, size);
+        }
+        else
+        {
             LOG_INFO(F("No modify ") << param_name << F("=") << dest);
             return false;
         }
@@ -322,22 +281,22 @@ void Portal::onPostWifiSave(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("AsyncWebServer POST /wifisave"));
     _fail = false;
-    UpdateParamStr(request, "s", sett.wifi_ssid, WIFI_SSID_LEN-1);
-    UpdateParamStr(request, "p", sett.wifi_password, WIFI_PWD_LEN-1);
+    UpdateParamStr(request, "s", sett.wifi_ssid, WIFI_SSID_LEN - 1);
+    UpdateParamStr(request, "p", sett.wifi_password, WIFI_PWD_LEN - 1);
     if (UpdateParamStr(request, PARAM_WMAIL, sett.waterius_email, EMAIL_LEN))
     {
         generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
     }
-    SetParamStr(request, PARAM_WHOST, sett.waterius_host, HOST_LEN-1);
+    SetParamStr(request, PARAM_WHOST, sett.waterius_host, HOST_LEN - 1);
     SetParamUInt(request, PARAM_MPERIOD, &sett.wakeup_per_min);
 
-    SetParamStr(request, PARAM_BHOST, sett.blynk_host, HOST_LEN-1);
+    SetParamStr(request, PARAM_BHOST, sett.blynk_host, HOST_LEN - 1);
     SetParamStr(request, PARAM_BKEY, sett.blynk_key, BLYNK_KEY_LEN);
     SetParamStr(request, PARAM_BMAIL, sett.blynk_email, EMAIL_LEN);
     SetParamStr(request, PARAM_BTITLE, sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN);
     SetParamStr(request, PARAM_BTEMPLATE, sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN);
 
-    SetParamStr(request, PARAM_MHOST, sett.mqtt_host, HOST_LEN-1);
+    SetParamStr(request, PARAM_MHOST, sett.mqtt_host, HOST_LEN - 1);
     SetParamUInt(request, PARAM_MPORT, &sett.mqtt_port);
     SetParamStr(request, PARAM_MLOGIN, sett.mqtt_login, MQTT_LOGIN_LEN);
     SetParamStr(request, PARAM_MPASSWORD, sett.mqtt_password, MQTT_PASSWORD_LEN);
@@ -391,8 +350,8 @@ void Portal::onPostWifiSave(AsyncWebServerRequest *request)
         store_config(sett);
         _delaydonesettings = millis() + 10000;
         _donesettings = true;
-        AsyncWebServerResponse * response = request->beginResponse(200, "", F("Save configuration - Successfully."));
-        response->addHeader("Refresh","2; url=/exit");
+        AsyncWebServerResponse *response = request->beginResponse(200, "", F("Save configuration - Successfully."));
+        response->addHeader("Refresh", "2; url=/exit");
         request->send(response);
     }
     else
@@ -404,7 +363,7 @@ void Portal::onPostWifiSave(AsyncWebServerRequest *request)
 
 void Portal::onNotFound(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("AsyncWebServer 404 ")<<request->url());
+    LOG_INFO(F("AsyncWebServer 404 ") << request->url());
     request->send(404);
 };
 
@@ -420,8 +379,8 @@ void Portal::onErase(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("AsyncWebServer GET /erase"));
     request->redirect("/");
-    code=2;
-    _donesettings=true;
+    code = 2;
+    _donesettings = true;
     _donesettings = millis();
 };
 
@@ -436,7 +395,7 @@ void Portal::begin()
     _donesettings = false;
     _delaydonesettings = millis();
     _fail = false;
-    code=0;
+    code = 0;
     server->begin();
 }
 
@@ -449,7 +408,7 @@ void Portal::end()
 Portal::Portal()
 {
     _donesettings = false;
-    _fail=false;
+    _fail = false;
     /* web server*/
     server = new AsyncWebServer(80);
     server->on("/", HTTP_GET, std::bind(&Portal::onGetRoot, this, std::placeholders::_1));
