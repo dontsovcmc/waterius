@@ -4,7 +4,7 @@ void JsonConstructor::begin()
 {
     _pos = 0;
     _init = false;
-    *_buffer='\0';
+    *_buffer = '\0';
     write(F("{"));
 }
 
@@ -17,7 +17,7 @@ uint16_t JsonConstructor::write(const __FlashStringHelper *value)
 {
     PGM_P src = reinterpret_cast<PGM_P>(value);
     char *dst = _buffer + _pos;
-    if (strlen_P(src) + _pos < _size)
+    if ((_buffer) && (strlen_P(src) + _pos < _size))
     {
         strcpy_P(dst, src);
         _pos += strlen_P(src);
@@ -30,7 +30,7 @@ uint16_t JsonConstructor::write(const char *value)
 {
     const char *src = value;
     char *dst = _buffer + _pos;
-    if (strlen(value) + _pos < _size)
+    if ((_buffer) && (strlen(value) + _pos < _size))
     {
         strcpy(dst, src);
         _pos += strlen(value);
@@ -43,7 +43,7 @@ uint16_t JsonConstructor::write(const char *value, size_t size)
 {
     const char *src = value;
     char *dst = _buffer + _pos;
-    if (size + _pos < _size)
+    if ((_buffer) && (size + _pos < _size))
     {
         strncpy(dst, src, size);
         _pos += size;
@@ -80,12 +80,12 @@ uint16_t JsonConstructor::write(float value, uint8_t size)
 
 uint16_t JsonConstructor::writeIP(uint32_t value)
 {
-    uint16_t ret=0;
+    uint16_t ret = 0;
     for (uint8_t i = 0; i < 4; i++)
     {
-        ret+=write((uint32_t)((uint8_t *)&value)[i]);
+        ret += write((uint32_t)((uint8_t *)&value)[i]);
         if (i != 3)
-            ret+=write(F("."));
+            ret += write(F("."));
     }
     return ret;
 }
@@ -281,25 +281,24 @@ void JsonConstructor::pushIP(const __FlashStringHelper *name, uint32_t value)
 
 void JsonConstructor::setSize(size_t size)
 {
-    if (_buffer)
+    char *t = (char *)realloc(_buffer, size);
+    if (t)
     {
-        _buffer = (char *)realloc(_buffer, size);
+        _buffer = t;
+        *_buffer = '\0';
     }
-    else
-    {
-        _buffer = (char *)malloc(size);
-    }
-    *_buffer = '\0';
     _pos = 0;
     _size = size;
 }
 
 JsonConstructor::JsonConstructor(size_t size)
 {
-    _buffer = (char *)malloc(size);
-    *_buffer = '\0';
     _pos = 0;
     _size = size;
+    _init = false;
+    _buffer = (char *)malloc(size);
+    if (_buffer)
+        *_buffer = '\0';
 }
 
 JsonConstructor::~JsonConstructor()

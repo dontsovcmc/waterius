@@ -19,7 +19,7 @@ class JsonConstructor
 private:
     char *_buffer;
     bool _init;
-    uint16_t _size, _pos;
+    size_t _size, _pos;
     uint16_t write(const char* value);
     uint16_t write(const __FlashStringHelper* value);
     uint16_t write(const char *value, size_t size);
