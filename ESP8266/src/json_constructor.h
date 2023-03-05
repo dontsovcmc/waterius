@@ -28,13 +28,19 @@ private:
     uint16_t write(double value, uint8_t size=2);
     uint16_t write(float value, uint8_t size=2);
     uint16_t writeIP(uint32_t value);
-    void insert();
+    void insert(bool str=true);
 public:
     JsonConstructor() = default;
     JsonConstructor(size_t size);
     ~JsonConstructor();
     void begin();
+    void beginObject(const char* name);
+    void beginObject(const __FlashStringHelper* name);
+    void beginArray(const char* name);
+    void beginArray(const __FlashStringHelper* name);
     void end();
+    void endObject();
+    void endArray();
     void setSize(size_t size);
     void push(const char* name, const char* value);
     void push(const char* name, const char* value, size_t size);
@@ -62,6 +68,16 @@ public:
     void push(const __FlashStringHelper* name, double value, uint8_t size);
     void push(const __FlashStringHelper* name, float value, uint8_t size);
     void pushIP(const __FlashStringHelper* name, uint32_t value);
+    void push(const char* value);
+    void push(const __FlashStringHelper* value);
+    void push(uint32_t value);
+    void push(uint16_t value);
+    void push(uint8_t value);
+    void push(int32_t value);
+    void push(int16_t value);
+    void push(int8_t value);
+    void push(double value, uint8_t size);
+    void push(float value, uint8_t size);
     const char* c_str(){
         return _buffer;
     }
