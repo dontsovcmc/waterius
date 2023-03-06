@@ -60,7 +60,7 @@ bool MasterI2C::sendData(uint8_t *buf, size_t size)
             return false;
         }
     }
-    int err = Wire.endTransmission(true);
+    uint8_t err = Wire.endTransmission((uint8_t)true);
     if (err != 0)
     {
         LOG_ERROR(F("end error:") << err);

@@ -136,7 +136,7 @@ bool load_config(Settings &sett)
         strncpy0(sett.mqtt_topic, default_topic.c_str(), default_topic.length() + 1);
         sett.mqtt_port = MQTT_DEFAULT_PORT;
 
-        sett.mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
+        sett.mqtt_auto_discovery = (uint8_t)MQTT_AUTO_DISCOVERY;
         String discovery_topic(DISCOVERY_TOPIC);
         strncpy0(sett.mqtt_discovery_topic, discovery_topic.c_str(), discovery_topic.length() + 1);
 

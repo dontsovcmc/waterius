@@ -189,8 +189,8 @@
 
 #define WIFI_CONNECT_ATTEMPTS 3
 
-#define WIFI_SSID_LEN 32 + 1
-#define WIFI_PWD_LEN 64 + 1
+#define WIFI_SSID_LEN (32 + 1)
+#define WIFI_PWD_LEN (64 + 1)
 
 #define DEFAULT_GATEWAY "192.168.0.1"
 #define DEFAULT_MASK "255.255.255.0"
@@ -325,7 +325,7 @@ struct Settings
     uint8_t setup_finished_counter = 0;
 
     /* Публиковать данные для автоматического добавления в Homeassistant */
-    uint8_t mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
+    uint8_t mqtt_auto_discovery = (uint8_t)MQTT_AUTO_DISCOVERY;
     uint8_t reserved2 = 0;
 
     /* Топик MQTT*/

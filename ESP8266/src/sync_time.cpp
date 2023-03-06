@@ -113,7 +113,7 @@ uint64_t get_ntp_response(WiFiUDP &udp)
                 // Leap-Indicator: unknown (clock unsynchronized)
                 // See: https://github.com/letscontrolit/ESPEasy/issues/2886#issuecomment-586656384
                 LOG_ERROR(F("NTP: unsynced IP"));
-                return false;
+                return 0;
             }
 
             // convert four bytes starting at location 40 to a long integer
@@ -125,7 +125,7 @@ uint64_t get_ntp_response(WiFiUDP &udp)
             if (0 == secs_since_1900) // No time stamp received
             {
                 LOG_ERROR(F("NTP: No time stamp received"));
-                return false;
+                return 0;
             }
 
             uint32_t tmp_fraction = (uint32_t)packet_buffer[44] << 24;
