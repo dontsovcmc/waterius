@@ -3,7 +3,7 @@
 #include "Logging.h"
 #include "utils.h"
 
-bool post_data(String &url, const char *key, const char *email, String &payload)
+bool post_data(String &url, const char *key, const char *email, const char *payload)
 {
     void *pClient = nullptr;
     HTTPClient httpClient;
@@ -45,7 +45,7 @@ bool post_data(String &url, const char *key, const char *email, String &payload)
         }
         LOG_INFO(F("HTTP: Post request"));
 
-        int response_code = httpClient.POST(payload);
+        int response_code = httpClient.POST((const uint8_t*)payload, strlen(payload));
         LOG_INFO(F("HTTP: Response code: ") << response_code);
         result = response_code == 200;
         String response_body = httpClient.getString();

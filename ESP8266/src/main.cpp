@@ -143,9 +143,12 @@ void loop()
                 get_json_data(sett, data, cdata, json_data);
 
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
+                
+                String payload = "";
+                serializeJson(json_data, payload);
 
 #ifndef HTTPS_DISABLED
-                if (send_http(sett, json_data))
+                if (send_http(sett, payload.c_str()))
                 {
                     LOG_INFO(F("HTTP: Send OK"));
                 }
@@ -163,8 +166,6 @@ void loop()
 #ifndef MQTT_DISABLED
                 if (is_mqtt(sett))
                 {
-                    String payload = "";
-                    serializeJson(json_data, payload);
                     if (send_mqtt(sett, data, cdata, payload.c_str()))
                     {
                         LOG_INFO(F("MQTT: Send OK"));
