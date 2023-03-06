@@ -57,6 +57,8 @@ void JsonConstructor::endArray()
 
 uint16_t JsonConstructor::write(const __FlashStringHelper *value)
 {
+    if (value == nullptr)
+        return 0;
     PGM_P src = reinterpret_cast<PGM_P>(value);
     char *dst = _buffer + _pos;
     if ((_buffer) && (strlen_P(src) + _pos < _size))
@@ -70,6 +72,8 @@ uint16_t JsonConstructor::write(const __FlashStringHelper *value)
 
 uint16_t JsonConstructor::write(const char *value)
 {
+    if (value == nullptr)
+        return 0;
     const char *src = value;
     char *dst = _buffer + _pos;
     if ((_buffer) && (strlen(value) + _pos < _size))
@@ -83,6 +87,8 @@ uint16_t JsonConstructor::write(const char *value)
 
 uint16_t JsonConstructor::write(const char *value, size_t size)
 {
+    if (value == nullptr)
+        return 0;
     const char *src = value;
     char *dst = _buffer + _pos;
     if ((_buffer) && (size + _pos < _size))
@@ -129,6 +135,8 @@ uint16_t JsonConstructor::write(bool value)
 
 uint16_t JsonConstructor::quoted(const char *value, size_t size)
 {
+    if (value == nullptr)
+        return 0;
     const char *src = value;
     char *dst = _buffer + _pos;
     if ((_buffer) && (size + _pos < _size))
@@ -143,7 +151,7 @@ uint16_t JsonConstructor::quoted(const char *value, size_t size)
             }
             *dst++ = *src++;
         }
-        _pos+=size+q;
+        _pos += size + q;
         return size + q;
     }
     return 0;
@@ -156,6 +164,8 @@ uint16_t JsonConstructor::quoted(const char *value)
 
 uint16_t JsonConstructor::quoted(const __FlashStringHelper *value, size_t size)
 {
+    if (value == nullptr)
+        return 0;
     PGM_P src = reinterpret_cast<PGM_P>(value);
     char *dst = _buffer + _pos;
     if ((_buffer) && (size + _pos < _size))
@@ -172,7 +182,7 @@ uint16_t JsonConstructor::quoted(const __FlashStringHelper *value, size_t size)
             }
             *dst++ = c;
         }
-        _pos+=size+q;
+        _pos += size + q;
         return size + q;
     }
     return 0;
