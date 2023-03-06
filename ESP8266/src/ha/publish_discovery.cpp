@@ -1,4 +1,3 @@
-#include <ArduinoJson.h>
 #include "publish_discovery.h"
 #include "resources.h"
 #include "utils.h"
@@ -49,13 +48,13 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
 
     String uniqueId_prefix = get_device_name();
     String unique_id = uniqueId_prefix + "-" + entity_id;
-    json.push(F("uniq_id"),unique_id.c_str()); // unique_id
-    json.push(F("obj_id"),unique_id.c_str()); // object_id
-    json.push(F("stat_t"),topic.c_str()); // state_topic
+    json.push(F("uniq_id"), unique_id.c_str()); // unique_id
+    json.push(F("obj_id"), unique_id.c_str());  // object_id
+    json.push(F("stat_t"), topic.c_str());      // state_topic
 
     String value_template;
     value_template = String("{{ value_json.") + entity_id + String(" | is_defined }}");
-    json.push(F("val_tpl"),value_template.c_str());
+    json.push(F("val_tpl"), value_template.c_str());
 
     if (state_class)
         json.push(F("stat_cla"), state_class); // state_class https://developers.home-assistant.io/docs/core/entity/sensor/#available-state-classes
@@ -78,7 +77,7 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
     if (MQTT_FORCE_UPDATE)
         json.push(F("force_update"), true); // force_update
 
-    json.beginObject(F("device")); // device //dv
+    json.beginObject(F("device"));     // device //dv
     json.beginArray(F("identifiers")); // identifiers //ids
     json.push(device_id.c_str());
     json.push(device_mac.c_str());
@@ -86,12 +85,12 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
 
     if (extended)
     {
-        json.push(F("name"),get_device_name().c_str()); // name
-        json.push(F("manufacturer"),F(MANUFACTURER)); // manufacturer //mf
-        json.push(F("model"),FPSTR(MODEL_NAMES[data.model])); // model //mdl
+        json.push(F("name"), get_device_name().c_str());               // name
+        json.push(F("manufacturer"), F(MANUFACTURER));                 // manufacturer //mf
+        json.push(F("model"), FPSTR(MODEL_NAMES[data.model]));         // model //mdl
         sw_version = String(F(FIRMWARE_VERSION)) + "." + data.version; // ESP_VERSION.ATTINY_VERSION
-        json.push(F("sw_version"),sw_version.c_str()); // sw_version //sw
-        json.push(F("hw_version"),F(HARDWARE_VERSION)); // hw_version //hw // в дальнейшем можно модифицировать для гибкого определения версии hw
+        json.push(F("sw_version"), sw_version.c_str());                // sw_version //sw
+        json.push(F("hw_version"), F(HARDWARE_VERSION));               // hw_version //hw // в дальнейшем можно модифицировать для гибкого определения версии hw
     }
     json.endObject();
 
@@ -99,8 +98,28 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
     // device["via_device"] = BSSID;
     if ((attrs_index != NONE) && (attrs_count != NONE))
     {
+        JsonConstructor json_attributes(JSON_DYNAMIC_MSG_BUFFER);
+
+        String attribute_name;
+        String attribute_id;
+        String attribute_template;
+
+        json_attributes.begin();
+        for (int i = 0; i < attrs_count; i++)
+        {
+            attribute_name = FPSTR(entities[attrs_index + i][1]);
+            attribute_id = FPSTR(entities[attrs_index + i][2]);
+
+            update_channel_names(channel, attribute_id, attribute_name);
+
+            attribute_template = String(F("{{ value_json.")) + attribute_id + F(" | is_defined }}");
+
+            json_attributes.push(attribute_name.c_str(), attribute_template.c_str());
+        }
+        json_attributes.end();
         json.push(F("json_attributes_topic"), topic.c_str());
-        json.push(F("json_attributes_template"), get_attributes_template(entities, attrs_index, attrs_count, channel).c_str());
+        json.push(F("json_attributes_template"), json_attributes.c_str());//
+        //get_attributes_template(entities, attrs_index, attrs_count, channel).c_str());
     }
 
     if (strcmp(entity_type.c_str(), "number") == 0)
@@ -118,8 +137,8 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
         json.push(F("step"), 1);    // step
 
         json.push(F("optimistic"), true); // optimistic
-        json.push(F("retain"), true); //retain
-        json.push(F("qos"), 1); //qos
+        json.push(F("retain"), true);     // retain
+        json.push(F("qos"), 1);           // qos
     }
     json.end();
 

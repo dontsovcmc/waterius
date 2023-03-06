@@ -11,7 +11,6 @@
 #define HA_PUBLISH_H_
 
 #include <PubSubClient.h>
-#include <ArduinoJson.h>
 
 #define MQTT_CHUNK_SIZE 128
 #define PUBLISH_MODE_BIG 0

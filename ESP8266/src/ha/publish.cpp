@@ -1,7 +1,6 @@
 #include "publish.h"
 #include "Logging.h"
 #include <PubSubClient.h>
-#include <ArduinoJson.h>
 
 /**
  * @brief Публикация топика в MQTT в различных режимах

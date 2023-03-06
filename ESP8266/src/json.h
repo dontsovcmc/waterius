@@ -10,7 +10,6 @@
 #ifndef JSON_h_
 #define JSON_h_
 
-#include <ArduinoJson.h>
 #include "setup.h"
 #include "voltage.h"
 #include "master_i2c.h"

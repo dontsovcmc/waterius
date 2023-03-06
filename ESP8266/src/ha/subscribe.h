@@ -12,7 +12,6 @@
 
 #include <Arduino.h>
 #include <PubSubClient.h>
-#include <ArduinoJson.h>
 #include "setup.h"
 
 extern void mqtt_callback(Settings &sett, char *raw_topic, byte *raw_payload, unsigned int length);

@@ -11,11 +11,9 @@
 #define HA_DISCOVERY_ENTITY_H_
 
 #include <PubSubClient.h>
-#include <ArduinoJson.h>
 #include "resources.h"
+#include "json_constructor.h"
 
 extern void update_channel_names(int channel, String &entity_id, String &entity_name);
-
-extern String get_attributes_template(const char *const attrs[][MQTT_PARAM_COUNT], int index, int count, int channel);
 
 #endif

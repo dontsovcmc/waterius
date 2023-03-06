@@ -25,7 +25,6 @@
 
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-#include <ArduinoJson.h>
 #include "master_i2c.h"
 #include "Logging.h"
 #include "json.h"
