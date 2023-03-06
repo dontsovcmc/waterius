@@ -122,9 +122,63 @@ uint16_t JsonConstructor::write(float value, uint8_t size)
 
 uint16_t JsonConstructor::write(bool value)
 {
-    if(value)
+    if (value)
         return write(F("true"));
     return write(F("false"));
+}
+
+uint16_t JsonConstructor::quoted(const char *value, size_t size)
+{
+    const char *src = value;
+    char *dst = _buffer + _pos;
+    if ((_buffer) && (size + _pos < _size))
+    {
+        size_t q = 0;
+        for (size_t i = size; i > 0; i--)
+        {
+            if (*src == '\"')
+            {
+                *dst++ = '\\';
+                q++;
+            }
+            *dst++ = *src++;
+        }
+        return size + q;
+    }
+    return 0;
+}
+
+uint16_t JsonConstructor::quoted(const char *value)
+{
+    return quoted(value, strlen(value));
+}
+
+uint16_t JsonConstructor::quoted(const __FlashStringHelper *value, size_t size)
+{
+    PGM_P src = reinterpret_cast<PGM_P>(value);
+    char *dst = _buffer + _pos;
+    if ((_buffer) && (size + _pos < _size))
+    {
+        size_t q = 0;
+        for (size_t i = size; i > 0; i--)
+        {
+            char c;
+            strncpy_P(&c, src++, 1);
+            if (c == '\"')
+            {
+                *dst++ = '\\';
+                q++;
+            }
+            *dst++ = c;
+        }
+        return size + q;
+    }
+    return 0;
+}
+
+uint16_t JsonConstructor::quoted(const __FlashStringHelper *value)
+{
+    return quoted(value, strlen_P(reinterpret_cast<PGM_P>(value)));
 }
 
 uint16_t JsonConstructor::writeIP(uint32_t value)
@@ -149,7 +203,8 @@ void JsonConstructor::insert(bool str)
     {
         _init = true;
     }
-    if(str){
+    if (str)
+    {
         write(F("\""));
     }
 }
@@ -159,7 +214,7 @@ void JsonConstructor::push(const char *name, const char *value)
     insert();
     write(name);
     write(F("\":\""));
-    write(value);
+    quoted(value, strlen(value));
     write(F("\""));
 }
 
@@ -168,7 +223,7 @@ void JsonConstructor::push(const __FlashStringHelper *name, const char *value)
     insert();
     write(name);
     write(F("\":\""));
-    write(value);
+    quoted(value, strlen(value));
     write(F("\""));
 }
 
@@ -177,7 +232,7 @@ void JsonConstructor::push(const char *name, const __FlashStringHelper *value)
     insert();
     write(name);
     write(F("\":\""));
-    write(value);
+    quoted(value, strlen_P(reinterpret_cast<PGM_P>(value)));
     write(F("\""));
 }
 
@@ -186,7 +241,7 @@ void JsonConstructor::push(const __FlashStringHelper *name, const __FlashStringH
     insert();
     write(name);
     write(F("\":\""));
-    write(value);
+    quoted(value, strlen_P(reinterpret_cast<PGM_P>(value)));
     write(F("\""));
 }
 
@@ -267,7 +322,7 @@ void JsonConstructor::push(const char *name, const char *value, size_t size)
     insert();
     write(name);
     write(F("\":\""));
-    write(value, size);
+    quoted(value, size);
     write(F("\""));
 }
 
@@ -276,7 +331,7 @@ void JsonConstructor::push(const __FlashStringHelper *name, const char *value, s
     insert();
     write(name);
     write(F("\":\""));
-    write(value, size);
+    quoted(value, size);
     write(F("\""));
 }
 

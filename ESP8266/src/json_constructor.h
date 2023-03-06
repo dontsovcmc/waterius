@@ -29,6 +29,10 @@ private:
     uint16_t write(float value, uint8_t size=2);
     uint16_t write(bool value);
     uint16_t writeIP(uint32_t value);
+    uint16_t quoted(const char* value);
+    uint16_t quoted(const __FlashStringHelper *value);
+    uint16_t quoted(const char* value, size_t size);
+    uint16_t quoted(const __FlashStringHelper *value, size_t size);
     void insert(bool str=true);
 public:
     JsonConstructor() = default;
