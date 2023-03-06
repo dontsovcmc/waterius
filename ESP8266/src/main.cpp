@@ -153,7 +153,7 @@ void loop()
 #endif
 
 #ifndef BLYNK_DISABLED
-                if (send_blynk(sett, json_data))
+                if (send_blynk(sett, data, cdata))
                 {
                     LOG_INFO(F("BLYNK: Send OK"));
                 }

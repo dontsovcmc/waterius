@@ -9,14 +9,13 @@
 
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
-#include <ArduinoJson.h>
 #include "master_i2c.h"
 #include "Logging.h"
 #include "utils.h"
 #include "voltage.h"
 
 
-bool send_blynk(const Settings &sett, JsonDocument &jsonData)
+bool send_blynk(const Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
     if (!is_blynk(sett))
     {
@@ -29,18 +28,19 @@ bool send_blynk(const Settings &sett, JsonDocument &jsonData)
     {
 
         LOG_INFO(F("Blynk: Run"));
+        Voltage *voltage = get_voltage();
 
-        Blynk.virtualWrite(V0, jsonData[F("ch0")].as<float>());
-        Blynk.virtualWrite(V1, jsonData[F("ch1")].as<float>());
-        Blynk.virtualWrite(V2, jsonData[F("voltage")].as<float>()); 
-        Blynk.virtualWrite(V3, jsonData[F("delta0")].as<int>());
-        Blynk.virtualWrite(V4, jsonData[F("delta1")].as<int>());
-        Blynk.virtualWrite(V5, jsonData[F("resets")].as<int>());
-        Blynk.virtualWrite(V7, jsonData[F("voltage_diff")].as<float>());
-        Blynk.virtualWrite(V8, jsonData[F("rssi")].as<signed int>());
+        Blynk.virtualWrite(V0, cdata.channel0);
+        Blynk.virtualWrite(V1, cdata.channel1);
+        Blynk.virtualWrite(V2, (float)voltage->average() / 1000.0); 
+        Blynk.virtualWrite(V3, cdata.delta0);
+        Blynk.virtualWrite(V4, cdata.delta1);
+        Blynk.virtualWrite(V5, data.resets);
+        Blynk.virtualWrite(V7, (float)voltage->diff() / 1000.0);
+        Blynk.virtualWrite(V8, WiFi.RSSI());
 
         WidgetLED battery_led(V6);
-        jsonData[F("voltage_low")].as<bool>() ? battery_led.on() : battery_led.off();
+        voltage->low_voltage() ? battery_led.on() : battery_led.off();
 
         LOG_INFO(F("virtualWrite OK"));
 
@@ -51,15 +51,15 @@ bool send_blynk(const Settings &sett, JsonDocument &jsonData)
 
             String msg = sett.blynk_email_template;
             String title = sett.blynk_email_title;
-            String v0(jsonData[F("ch0")].as<float>(), 1); //.1 для образца СМС сообщения
-            String v1(jsonData[F("ch1")].as<float>(), 1); //.1 для образца СМС сообщения
-            String v2(jsonData[F("voltage")].as<float>(), 3);
-            String v3(jsonData[F("delta0")].as<unsigned int>(), DEC);
-            String v4(jsonData[F("delta1")].as<unsigned int>(), DEC);
-            String v5(jsonData[F("resets")].as<unsigned int>(), DEC);
-            String v6(jsonData[F("voltage_low")].as<bool>(),DEC);
-            String v7(jsonData[F("voltage_diff")].as<float>(), 3);
-            String v8(jsonData[F("rssi")].as<signed int>(), DEC);
+            String v0(cdata.channel0, 1); //.1 для образца СМС сообщения
+            String v1(cdata.channel1, 1); //.1 для образца СМС сообщения
+            String v2((float)voltage->average() / 1000.0, 3);
+            String v3(cdata.delta0, DEC);
+            String v4(cdata.delta1, DEC);
+            String v5(data.resets, DEC);
+            String v6(voltage->low_voltage(), DEC);
+            String v7((float)voltage->diff() / 1000.0, 3);
+            String v8(WiFi.RSSI(), DEC);
 
             msg.replace(F("{V0}"), v0);
             msg.replace(F("{V1}"), v1);
