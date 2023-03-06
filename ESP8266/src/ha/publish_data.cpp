@@ -13,7 +13,7 @@ void publish_data_to_single_topic(PubSubClient &mqtt_client, String &topic, Json
 {
     String payload = "";
     serializeJson(json_data, payload);
-    publish(mqtt_client, topic, payload);
+    publish(mqtt_client, topic.c_str(), payload.c_str());
 }
 
 /**
@@ -30,7 +30,7 @@ void publish_data_to_multiple_topics(PubSubClient &mqtt_client, String &topic, J
     {
         String sensor_topic = topic + "/" + p.key().c_str();
         String sensor_value = p.value().as<String>();
-        publish(mqtt_client, sensor_topic, sensor_value);
+        publish(mqtt_client, sensor_topic.c_str(), sensor_value.c_str());
     }
 }
 

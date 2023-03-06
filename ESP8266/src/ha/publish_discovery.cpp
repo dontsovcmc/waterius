@@ -122,10 +122,9 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
         json.push(F("qos"), 1); //qos
     }
     json.end();
-    String payload=String(json.c_str());
 
     String entity_discovery_topic = String(discovery_topic) + "/" + entity_type + "/" + uniqueId_prefix + "/" + entity_id + "/config";
-    publish(mqtt_client, entity_discovery_topic, payload);
+    publish(mqtt_client, entity_discovery_topic.c_str(), json.c_str());
 }
 
 /**

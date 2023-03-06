@@ -11,7 +11,7 @@
  * @param payload содержимое топика
  * @param mode режим публикации, режим по умолчанию PUBLISH_MODE_BIG
  */
-void publish(PubSubClient &mqtt_client, String &topic, String &payload, int mode)
+void publish(PubSubClient &mqtt_client, const char *topic, const char *payload, int mode)
 {
     switch (mode)
     {
@@ -35,16 +35,16 @@ void publish(PubSubClient &mqtt_client, String &topic, String &payload, int mode
  * @param topic строка с топиком
  * @param payload содержимое топика
  */
-void publish_chunked(PubSubClient &mqtt_client, String &topic, String &payload, unsigned int chunk_size)
+void publish_chunked(PubSubClient &mqtt_client, const char *topic, const char *payload, unsigned int chunk_size)
 {
     LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
     LOG_INFO(F("MQTT: Publish Topic: ") << topic);
-    LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
+    LOG_INFO(F("MQTT: Payload Size: ") << strlen(payload));
 
-    unsigned int len = payload.length();
-    const uint8_t *buf = (const uint8_t *)payload.c_str();
+    unsigned int len = strlen(payload);
+    const uint8_t *buf = (const uint8_t *)payload;
 
-    if (mqtt_client.beginPublish(topic.c_str(), len, true))
+    if (mqtt_client.beginPublish(topic, len, true))
     {
         while (len > 0)
         {
@@ -86,16 +86,16 @@ void publish_chunked(PubSubClient &mqtt_client, String &topic, String &payload, 
  * @param topic строка с топиком
  * @param payload содержимое топика
  */
-void publish_big(PubSubClient &mqtt_client, String &topic, String &payload)
+void publish_big(PubSubClient &mqtt_client, const char *topic, const char *payload)
 {
     LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
     LOG_INFO(F("MQTT: Publish Topic: ") << topic);
-    LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
+    LOG_INFO(F("MQTT: Payload Size: ") << strlen(payload));
 
-    unsigned int len = payload.length();
-    if (mqtt_client.beginPublish(topic.c_str(), len, true))
+    unsigned int len = strlen(payload);
+    if (mqtt_client.beginPublish(topic, len, true))
     {
-        if (mqtt_client.print(payload.c_str()) == len)
+        if (mqtt_client.print(payload) == len)
         {
             LOG_INFO(F("MQTT: Published succesfully"));
         }
@@ -118,15 +118,15 @@ void publish_big(PubSubClient &mqtt_client, String &topic, String &payload)
  * @param topic строка с топиком
  * @param payload содержимое топика
  */
-void publish_simple(PubSubClient &mqtt_client, String &topic, String &payload)
+void publish_simple(PubSubClient &mqtt_client, const char *topic, const char *payload)
 {
     LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
     LOG_INFO(F("MQTT: Publish Topic: ") << topic);
-    LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
+    LOG_INFO(F("MQTT: Payload Size: ") << strlen(payload));
 
     if (mqtt_client.connected())
     {
-        if (mqtt_client.publish(topic.c_str(), payload.c_str(), true))
+        if (mqtt_client.publish(topic, payload, true))
         {
             LOG_INFO(F("MQTT: Published succesfully"));
         }
