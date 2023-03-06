@@ -163,7 +163,9 @@ void loop()
 #ifndef MQTT_DISABLED
                 if (is_mqtt(sett))
                 {
-                    if (send_mqtt(sett, data, cdata, json_data))
+                    String payload = "";
+                    serializeJson(json_data, payload);
+                    if (send_mqtt(sett, data, cdata, payload.c_str()))
                     {
                         LOG_INFO(F("MQTT: Send OK"));
                     }

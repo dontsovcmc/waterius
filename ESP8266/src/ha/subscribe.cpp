@@ -78,7 +78,9 @@ void mqtt_callback(Settings &sett, JsonDocument &json_data, PubSubClient &mqtt_c
     if (update_settings(topic, payload, sett, json_data))
     {
         // если данные изменились то переопубликуем их сразу не ожидая следующего сеанса связи
-        publish_data(mqtt_client, mqtt_topic, json_data, true);
+        String json="";
+        serializeJson(json_data, json);
+        publish_data(mqtt_client, mqtt_topic, json.c_str(), true);
     }
 }
 

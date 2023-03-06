@@ -85,7 +85,7 @@ bool connect_and_subscribe_mqtt(Settings &sett, const SlaveData &data, const Cal
  *
  * @returns true если успешно отправлены данные и false если не отправлено
  */
-bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, JsonDocument &json_data)
+bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, const char *json)
 {
     unsigned long start_time = millis();
     String mqtt_topic = sett.mqtt_topic;
@@ -110,7 +110,7 @@ bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdat
     }
 
     // публикация показаний в MQTT
-    publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
+    publish_data(mqtt_client, mqtt_topic, json, sett.mqtt_auto_discovery);
 
     mqtt_client.loop();
     mqtt_unsubscribe(mqtt_client, mqtt_topic);

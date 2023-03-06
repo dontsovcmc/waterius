@@ -13,7 +13,7 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
-extern void publish_data(PubSubClient &mqtt_client, String &topic, JsonDocument &json_data, bool auto_discovery);
+extern void publish_data(PubSubClient &mqtt_client, String &topic, const char *json, bool auto_discovery);
 
 #endif
 

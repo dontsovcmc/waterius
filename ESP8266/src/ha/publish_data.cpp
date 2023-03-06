@@ -9,11 +9,9 @@
  * @param topic имя топика
  * @param json_data данные в JSON
  */
-void publish_data_to_single_topic(PubSubClient &mqtt_client, String &topic, JsonDocument &json_data)
+void publish_data_to_single_topic(PubSubClient &mqtt_client, const char *topic, const char *payload)
 {
-    String payload = "";
-    serializeJson(json_data, payload);
-    publish(mqtt_client, topic.c_str(), payload.c_str());
+    publish(mqtt_client, topic, payload);
 }
 
 /**
@@ -42,7 +40,7 @@ void publish_data_to_multiple_topics(PubSubClient &mqtt_client, String &topic, J
  * @param json_data данные в JSON
  * @param auto_discovery настроена ли интеграция с HomeAssistant
  */
-void publish_data(PubSubClient &mqtt_client, String &topic, JsonDocument &json_data, bool auto_discovery)
+void publish_data(PubSubClient &mqtt_client, String &topic, const char *json, bool auto_discovery)
 {
     unsigned long start = millis();
 
@@ -50,12 +48,14 @@ void publish_data(PubSubClient &mqtt_client, String &topic, JsonDocument &json_d
     {
         LOG_INFO(F("MQTT: Publish data to single topic"));
         // в один топик если настроена интеграция HomeAssistant
-        publish_data_to_single_topic(mqtt_client, topic, json_data);
+        publish_data_to_single_topic(mqtt_client, topic.c_str(), json);
     }
     else
     {
         LOG_INFO(F("MQTT: Publish data to multiple topics"));
         // в оотдельные топики
+        DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
+        deserializeJson(json_data, json);
         publish_data_to_multiple_topics(mqtt_client, topic, json_data);
     }
 
