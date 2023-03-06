@@ -2,54 +2,13 @@
 #include "Logging.h"
 #include "publish_data.h"
 #include "utils.h"
+#include "string.h"
 
 #define MQTT_MAX_TRIES 5
 #define MQTT_CONNECT_DELAY 100
 #define MQTT_SUBSCRIPTION_TOPIC "/#"
 
-/**
- * @brief Обновление настроек по сообщению MQTT
- *
- * @param topic топик
- * @param payload данные из топика
- * @param sett настройки
- * @param json_data данные в JSON
- */
-bool update_settings(String &topic, String &payload, Settings &sett, JsonDocument &json_data)
-{
-    bool updated = false;
-    if (topic.endsWith(F("/set"))) // пришла команда на изменение
-    {
-        // извлекаем имя параметра
-        int endslash = topic.lastIndexOf('/');
-        int prevslash = topic.lastIndexOf('/', endslash - 1);
-        String param = topic.substring(prevslash + 1, endslash);
-        LOG_INFO(F("MQTT CALLBACK: Parameter ") << param);
-
-        // period_min
-        if (param.equals(F("period_min")))
-        {
-            int period_min = payload.toInt();
-            if (period_min > 0)
-            {
-                // обновили в настройках
-                if (sett.wakeup_per_min != period_min)
-                {
-                    LOG_INFO(F("MQTT: CALLBACK: Old Settings.wakeup_per_min: ") << sett.wakeup_per_min);
-                    sett.wakeup_per_min = period_min;
-                    // если есть ключ то время уже получено и json уже сформирован, можно отправлять
-                    if (json_data.containsKey("period_min"))
-                    {
-                        json_data[F("period_min")] = period_min;
-                        updated = true;
-                    }
-                    LOG_INFO(F("MQTT: CALLBACK: New Settings.wakeup_per_min: ") << sett.wakeup_per_min);
-                }
-            }
-        }
-    }
-    return updated;
-}
+extern "C" bool periodUpdated;
 
 /**
  * @brief Обработка пришедшего сообщения по подписке
@@ -61,27 +20,41 @@ bool update_settings(String &topic, String &payload, Settings &sett, JsonDocumen
  * @param raw_payload  данные из топика
  * @param length длина сообщения
  */
-void mqtt_callback(Settings &sett, JsonDocument &json_data, PubSubClient &mqtt_client, String &mqtt_topic, char *raw_topic, byte *raw_payload, unsigned int length)
+void mqtt_callback(Settings &sett, char *raw_topic, byte *raw_payload, unsigned int length)
 {
-    String topic = raw_topic;
-    String payload;
-    payload.reserve(length);
-
-    LOG_INFO(F("MQTT: CALLBACK: Message arrived to: ") << topic);
-    LOG_INFO(F("MQTT: CALLBACK: Message length: ") << length);
-
-    for (unsigned int i = 0; i < length; i++)
+    char *i[3] = {nullptr};
+    char *topic = (char *)malloc(strlen(raw_topic));
+    if (!topic)
+        return;
+    strcpy(topic, raw_topic);
+    char *ind = strstr(topic, "/");
+    while (ind)
     {
-        payload += (char)raw_payload[i];
+        i[2] = i[1];
+        i[1] = i[0];
+        *ind++ = '\0';
+        i[0] = ind;
+        ind = strstr(ind, "/");
     }
-    LOG_INFO(F("MQTT: CALLBACK: Message payload: ") << payload);
-    if (update_settings(topic, payload, sett, json_data))
+    LOG_INFO(F("MQTT: CALLBACK: i[0]: ") << i[0]);
+    LOG_INFO(F("MQTT: CALLBACK: i[1]: ") << i[1]);
+    LOG_INFO(F("MQTT: CALLBACK: i[2]: ") << i[2]);
+    if ((strcmp(i[0], "set") == 0) && (strcmp(i[1], "period_min") == 0))
     {
-        // если данные изменились то переопубликуем их сразу не ожидая следующего сеанса связи
-        String json="";
-        serializeJson(json_data, json);
-        publish_data(mqtt_client, mqtt_topic, json.c_str(), true);
+        uint16_t period_min = atoi((char *)raw_payload);
+        if (period_min > 0)
+        {
+            // обновили в настройках
+            if (sett.wakeup_per_min != period_min)
+            {
+                LOG_INFO(F("MQTT: CALLBACK: Old Settings.wakeup_per_min: ") << sett.wakeup_per_min);
+                sett.wakeup_per_min = period_min;
+                periodUpdated = true;
+                LOG_INFO(F("MQTT: CALLBACK: New Settings.wakeup_per_min: ") << sett.wakeup_per_min);
+            }
+        }
     }
+    free(topic);
 }
 
 /**

@@ -26,6 +26,7 @@ Settings sett;        // Настройки соединения и предыд
 CalculatedData cdata; // вычисляемые данные
 ADC_MODE(ADC_VCC);
 Ticker voltage_ticker;
+volatile bool periodUpdated=false;
 
 extern "C" uint32_t __crc_val;
 
@@ -130,6 +131,16 @@ void loop()
                 if (is_mqtt(sett))
                 {
                     connect_and_subscribe_mqtt(sett, data, cdata, json_data);
+                    LOG_INFO(F("MQTT: while(){ loop();}"));
+                    uint32_t t=millis()+100;
+                    uint32_t c=0;
+                    while((millis()<t) && (!periodUpdated))
+                    {
+                        mqtt_client.loop();
+                        c++;
+                        delay(2);
+                    }
+                    LOG_INFO(F("MQTT: loop count ")<<c);
                 }
 
                 // устанавливать время только при использовани хттпс или мктт
