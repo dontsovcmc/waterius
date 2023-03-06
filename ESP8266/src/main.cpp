@@ -1,6 +1,5 @@
 #include <user_interface.h>
 #include <ESP8266WiFi.h>
-#include <ArduinoJson.h>
 #include "LittleFS.h"
 #include "Logging.h"
 #include "config.h"
@@ -123,14 +122,12 @@ void loop()
             {
                 log_system_info();
 
-                //String mqtt_topic;
-                DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
                 JsonConstructor json(JSON_DYNAMIC_MSG_BUFFER);
 
                 // Подключаемся и подписываемся на мктт
                 if (is_mqtt(sett))
                 {
-                    connect_and_subscribe_mqtt(sett, data, cdata, json_data);
+                    connect_and_subscribe_mqtt(sett);
                     LOG_INFO(F("MQTT: while(){ loop();}"));
                     uint32_t t=millis()+100;
                     uint32_t c=0;
@@ -176,7 +173,7 @@ void loop()
 #ifndef MQTT_DISABLED
                 if (is_mqtt(sett))
                 {
-                    if (send_mqtt(sett, data, cdata, json.c_str()))
+                    if (send_mqtt(sett, data, json.c_str()))
                     {
                         LOG_INFO(F("MQTT: Send OK"));
                     }
