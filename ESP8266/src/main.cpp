@@ -18,6 +18,7 @@
 #include "wifi_helpers.h"
 #include "config.h"
 #include "portal.h"
+#include "json_constructor.h"
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 SlaveData data;       // Данные от Attiny85
@@ -123,6 +124,7 @@ void loop()
 
                 //String mqtt_topic;
                 DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
+                JsonConstructor json(JSON_DYNAMIC_MSG_BUFFER);
 
                 // Подключаемся и подписываемся на мктт
                 if (is_mqtt(sett))
@@ -140,15 +142,12 @@ void loop()
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 
                 // Формироуем JSON
-                get_json_data(sett, data, cdata, json_data);
+                get_json_data(sett, data, cdata, json);
 
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-                
-                String payload = "";
-                serializeJson(json_data, payload);
 
 #ifndef HTTPS_DISABLED
-                if (send_http(sett, payload.c_str()))
+                if (send_http(sett, json.c_str()))
                 {
                     LOG_INFO(F("HTTP: Send OK"));
                 }
@@ -166,7 +165,7 @@ void loop()
 #ifndef MQTT_DISABLED
                 if (is_mqtt(sett))
                 {
-                    if (send_mqtt(sett, data, cdata, payload.c_str()))
+                    if (send_mqtt(sett, data, cdata, json.c_str()))
                     {
                         LOG_INFO(F("MQTT: Send OK"));
                     }
