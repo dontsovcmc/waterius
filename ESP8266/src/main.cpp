@@ -81,17 +81,17 @@ void loop()
 
             //setup_ap(sett, data, cdata);
             //запускаем сервер
-            Portal portal = Portal();
-            portal.begin();
+            Portal* portal = new Portal();
+            portal->begin();
 
             WiFi.scanNetworks(true);
-            while (!portal.doneettings())
+            while (!portal->doneettings())
             {
                 yield();
             };
-            int8_t retCode=portal.code;
-            portal.end();
-            portal.~Portal();
+            int8_t retCode=portal->code;
+            portal->end();
+            delete portal;
             if(retCode==2){
                 LOG_INFO(F("ESP erase config"));
                 ESP.eraseConfig();
