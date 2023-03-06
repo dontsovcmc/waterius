@@ -143,6 +143,7 @@ uint16_t JsonConstructor::quoted(const char *value, size_t size)
             }
             *dst++ = *src++;
         }
+        _pos+=size+q;
         return size + q;
     }
     return 0;
@@ -171,6 +172,7 @@ uint16_t JsonConstructor::quoted(const __FlashStringHelper *value, size_t size)
             }
             *dst++ = c;
         }
+        _pos+=size+q;
         return size + q;
     }
     return 0;
