@@ -23,10 +23,11 @@ extern "C" bool periodUpdated;
 void mqtt_callback(Settings &sett, char *raw_topic, byte *raw_payload, unsigned int length)
 {
     char *i[3] = {nullptr};
-    char *topic = (char *)malloc(strlen(raw_topic));
+    char *topic = (char *)malloc(strlen(raw_topic)+1);
     if (!topic)
         return;
     strcpy(topic, raw_topic);
+    *(topic+strlen(raw_topic))='\0';
     char *ind = strstr(topic, "/");
     while (ind)
     {
