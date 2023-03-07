@@ -55,6 +55,32 @@ struct SlaveData
     // Кратно 16bit https://github.com/esp8266/Arduino/issues/1825
 };
 
+#pragma pack(push, 1)
+struct Header
+{
+    uint8_t version;
+    uint8_t service;
+    uint8_t reserved2;
+    uint8_t reserved3;
+
+    uint8_t reserved4;
+    uint8_t setup_started_counter;
+    uint8_t resets;
+    uint8_t model;
+
+    uint8_t state0;
+    uint8_t state1;
+    uint32_t value0;
+    uint32_t value1;
+    uint16_t adc0;
+    
+    uint16_t adc1;
+
+    uint8_t crc;
+    uint8_t reserved23;
+}; // 24 байт
+#pragma pack(pop)
+
 uint8_t crc_8(const unsigned char *input_str, size_t num_bytes, uint8_t crc = 0);
 
 class MasterI2C
@@ -64,6 +90,8 @@ protected:
     bool getUint16(uint16_t &value, uint8_t &crc);
     bool getByte(uint8_t &value, uint8_t &crc);
     bool sendData(uint8_t *buf, size_t size);
+    bool getByte(uint8_t *value, uint8_t &crc);
+    bool getBytes(uint8_t *value, uint8_t count, uint8_t &crc);
 
 public:
     void begin();

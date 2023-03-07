@@ -83,6 +83,29 @@ bool MasterI2C::getByte(uint8_t &value, uint8_t &crc)
     return true;
 }
 
+bool MasterI2C::getByte(uint8_t *value, uint8_t &crc)
+{
+
+    if (Wire.requestFrom(I2C_SLAVE_ADDR, 1) != 1)
+    {
+        LOG_ERROR(F("RequestFrom failed"));
+        return false;
+    }
+    *value = (uint8_t)Wire.read();
+    crc = crc_8(value, 1, crc);
+    return true;
+}
+
+bool MasterI2C::getBytes(uint8_t *value, uint8_t count, uint8_t &crc)
+{
+    for (; count > 0; count--, value++)
+    {
+        if (!getByte(value, crc))
+            return false;
+    }
+    return true;
+}
+
 bool MasterI2C::getUint16(uint16_t &value, uint8_t &crc)
 {
 
@@ -134,55 +157,48 @@ bool MasterI2C::getSlaveData(SlaveData &data)
 {
     sendCmd('B');
     data.diagnostic = WATERIUS_NO_LINK;
-
-    uint8_t dummy, crc = 0;
-    bool good = getByte(data.version, crc);
-    good &= getByte(data.service, crc);
-    good &= getUint16(data.reserved4, crc);
-    good &= getByte(data.reserved, crc);
-    good &= getByte(data.setup_started_counter, crc);
-
-    good &= getByte(data.resets, crc);
-    good &= getByte(data.model, crc);
-    good &= getByte(data.state0, crc);
-    good &= getByte(data.state1, crc);
-
-    good &= getUint(data.impulses0, crc);
-    good &= getUint(data.impulses1, crc);
-
-    good &= getUint16(data.adc0, crc);
-    good &= getUint16(data.adc1, crc);
-
-    good &= getByte(data.crc, dummy);
-
-    if (good)
+    Header buffer;
+    uint8_t crc = 0;
+    if (!getBytes((uint8_t *)&buffer, 23, crc))
     {
-        data.diagnostic = (data.crc == crc) ? WATERIUS_OK : WATERIUS_BAD_CRC;
-    }
-
-    switch (data.diagnostic)
-    {
-    case WATERIUS_BAD_CRC:
-        LOG_ERROR(F("CRC wrong"));
-    case WATERIUS_OK:
-        LOG_INFO(F("version: ") << data.version);
-        LOG_INFO(F("service: ") << data.service);
-        LOG_INFO(F("setup_started_counter: ") << data.setup_started_counter);
-        LOG_INFO(F("resets: ") << data.resets);
-        LOG_INFO(F("MODEL: ") << data.model);
-        LOG_INFO(F("state0: ") << data.state0);
-        LOG_INFO(F("state1: ") << data.state1);
-        LOG_INFO(F("impulses0: ") << data.impulses0);
-        LOG_INFO(F("impulses1: ") << data.impulses1);
-        LOG_INFO(F("adc0: ") << data.adc0);
-        LOG_INFO(F("adc1: ") << data.adc1);
-        LOG_INFO(F("CRC ok"));
-        break;
-    case WATERIUS_NO_LINK:
         LOG_ERROR(F("Data failed"));
-    };
+        return false;
+    }
+    data.version = buffer.version;
+    data.service = buffer.service;
+    data.setup_started_counter = buffer.setup_started_counter;
+    data.resets = buffer.resets;
+    data.model = buffer.model;
+    data.state0 = buffer.state0;
+    data.state1 = buffer.state1;
 
-    return data.diagnostic == WATERIUS_OK;
+    data.impulses0 = buffer.value0;
+    data.impulses1 = buffer.value1;
+    data.adc0 = buffer.adc0;
+    data.adc1 = buffer.adc1;
+    data.crc = buffer.crc;
+    
+    LOG_INFO(F("version: ") << data.version);
+    LOG_INFO(F("service: ") << data.service);
+    LOG_INFO(F("setup_started_counter: ") << data.setup_started_counter);
+    LOG_INFO(F("resets: ") << data.resets);
+    LOG_INFO(F("MODEL: ") << data.model);
+    LOG_INFO(F("state0: ") << data.state0);
+    LOG_INFO(F("state1: ") << data.state1);
+    LOG_INFO(F("impulses0: ") << data.impulses0);
+    LOG_INFO(F("impulses1: ") << data.impulses1);
+    LOG_INFO(F("adc0: ") << data.adc0);
+    LOG_INFO(F("adc1: ") << data.adc1);
+    
+    if (crc)
+    {
+        LOG_ERROR(F("CRC wrong ")<<crc);
+        data.diagnostic = WATERIUS_BAD_CRC;
+        return false;
+    }
+    LOG_INFO(F("CRC ok"));
+    data.diagnostic = WATERIUS_OK;
+    return true;
 }
 
 bool MasterI2C::setWakeUpPeriod(uint16_t period)
