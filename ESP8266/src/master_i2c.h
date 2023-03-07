@@ -64,6 +64,9 @@ protected:
     bool getUint16(uint16_t &value, uint8_t &crc);
     bool getByte(uint8_t &value, uint8_t &crc);
     bool sendData(uint8_t *buf, size_t size);
+    
+    bool getByte(uint8_t *value, uint8_t &crc);
+    bool getBytes(uint8_t *value, uint8_t count, uint8_t &crc);
 
 public:
     void begin();
