@@ -85,6 +85,8 @@ public:
     void push(int8_t value);
     void push(double value, uint8_t size);
     void push(float value, uint8_t size);
+    /// @brief Получить указатель на сформированную json строку
+    /// @return Указатель на строку
     const char* c_str(){
         return _buffer;
     }

@@ -1,5 +1,10 @@
 #include "json_constructor.h"
 
+/**
+ * @brief Начинает формирование json заново.
+ * 
+ * Удаляет содержимое и вставляет { вначале строки
+ */
 void JsonConstructor::begin()
 {
     _pos = 0;
@@ -8,6 +13,11 @@ void JsonConstructor::begin()
     write(F("{"));
 }
 
+/**
+ * @brief Начинает описание нового объекта с заданным именем
+ * 
+ * @param name имя объекта
+ */
 void JsonConstructor::beginObject(const char *name)
 {
     insert();
@@ -16,6 +26,11 @@ void JsonConstructor::beginObject(const char *name)
     _init = false;
 }
 
+/**
+ * @brief Начинает описание нового объекта с заданным именем
+ * 
+ * @param name имя объекта
+ */
 void JsonConstructor::beginObject(const __FlashStringHelper *name)
 {
     insert();
@@ -24,6 +39,11 @@ void JsonConstructor::beginObject(const __FlashStringHelper *name)
     _init = false;
 }
 
+/**
+ * @brief Начинает описание нового массива с заданным именем
+ * 
+ * @param name имя массива
+ */
 void JsonConstructor::beginArray(const char *name)
 {
     insert();
@@ -32,6 +52,11 @@ void JsonConstructor::beginArray(const char *name)
     _init = false;
 }
 
+/**
+ * @brief Начинает описание нового массива с заданным именем
+ * 
+ * @param name имя массива
+ */
 void JsonConstructor::beginArray(const __FlashStringHelper *name)
 {
     insert();
@@ -40,21 +65,36 @@ void JsonConstructor::beginArray(const __FlashStringHelper *name)
     _init = false;
 }
 
+/**
+ * @brief Завершает документ
+ */
 void JsonConstructor::end()
 {
     write(F("}"));
 }
 
+/**
+ * @brief Завершает описание объекта
+ */
 void JsonConstructor::endObject()
 {
     write(F("}"));
 }
 
+/**
+ * @brief Завершает описание массива
+ */
 void JsonConstructor::endArray()
 {
     write(F("]"));
 }
 
+/**
+ * @brief записывает в документ текст из памяти программ
+ * 
+ * @param value указатель на строку в памяти программы
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::write(const __FlashStringHelper *value)
 {
     if (value == nullptr)
@@ -70,6 +110,12 @@ uint16_t JsonConstructor::write(const __FlashStringHelper *value)
     return 0;
 }
 
+/**
+ * @brief записывает в документ текст из памяти
+ * 
+ * @param value указатель на строку в памяти
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::write(const char *value)
 {
     if (value == nullptr)
@@ -85,6 +131,13 @@ uint16_t JsonConstructor::write(const char *value)
     return 0;
 }
 
+/**
+ * @brief записывает в документ текст из памяти заданной длинны
+ * 
+ * @param value указатель на строку в памяти
+ * @param size количество символов для записи
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::write(const char *value, size_t size)
 {
     if (value == nullptr)
@@ -100,6 +153,12 @@ uint16_t JsonConstructor::write(const char *value, size_t size)
     return 0;
 }
 
+/**
+ * @brief записывает число в документ
+ * 
+ * @param value значение 
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::write(int32_t value)
 {
     char buf[11];
@@ -107,6 +166,12 @@ uint16_t JsonConstructor::write(int32_t value)
     return write(buf);
 }
 
+/**
+ * @brief записывает число в документ
+ * 
+ * @param value значение 
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::write(uint32_t value)
 {
     char buf[11];
@@ -114,6 +179,13 @@ uint16_t JsonConstructor::write(uint32_t value)
     return write(buf);
 }
 
+/**
+ * @brief записывает число в документ с заданной точностью
+ * 
+ * @param value значение 
+ * @param size точность
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::write(double value, uint8_t size)
 {
     char buf[20];
@@ -121,11 +193,24 @@ uint16_t JsonConstructor::write(double value, uint8_t size)
     return write(buf);
 }
 
+/**
+ * @brief записывает число в документ с заданной точностью
+ * 
+ * @param value значение 
+ * @param size точность
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::write(float value, uint8_t size)
 {
     return write((double)value, size);
 }
 
+/**
+ * @brief записывает булевое значение в документ
+ * 
+ * @param value значение 
+  * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::write(bool value)
 {
     if (value)
@@ -133,6 +218,13 @@ uint16_t JsonConstructor::write(bool value)
     return write(F("false"));
 }
 
+/**
+ * @brief записывает в документ строку с экранирующими символами
+ * 
+ * @param value значение
+ * @param size количество символов
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::quoted(const char *value, size_t size)
 {
     if (value == nullptr)
@@ -157,11 +249,24 @@ uint16_t JsonConstructor::quoted(const char *value, size_t size)
     return 0;
 }
 
+/**
+ * @brief записывает в документ строку с экранирующими символами
+ * 
+ * @param value значение
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::quoted(const char *value)
 {
     return quoted(value, strlen(value));
 }
 
+/**
+ * @brief записывает в документ строку из памяти программ с экранирующими символами заданной длинны
+ * 
+ * @param value значение
+ * @param size количество символов
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::quoted(const __FlashStringHelper *value, size_t size)
 {
     if (value == nullptr)
@@ -188,11 +293,23 @@ uint16_t JsonConstructor::quoted(const __FlashStringHelper *value, size_t size)
     return 0;
 }
 
+/**
+ * @brief записывает в документ строку из памяти программ с экранирующими символами
+ * 
+ * @param value значение
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::quoted(const __FlashStringHelper *value)
 {
     return quoted(value, strlen_P(reinterpret_cast<PGM_P>(value)));
 }
 
+/**
+ * @brief записывает в документ текстовое предстовление ip адреса
+ * 
+ * @param value значение
+ * @return uint16_t количество записанных байт
+ */
 uint16_t JsonConstructor::writeIP(uint32_t value)
 {
     uint16_t ret = 0;
@@ -205,6 +322,11 @@ uint16_t JsonConstructor::writeIP(uint32_t value)
     return ret;
 }
 
+/**
+ * @brief вставляет раделитель между параметрами и " для текстовых данных
+ * 
+ * @param str флаг текстовых данных
+ */
 void JsonConstructor::insert(bool str)
 {
     if (_init)
@@ -221,6 +343,12 @@ void JsonConstructor::insert(bool str)
     }
 }
 
+/**
+ * @brief Добавляет в документ строковый параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, const char *value)
 {
     insert();
@@ -230,6 +358,12 @@ void JsonConstructor::push(const char *name, const char *value)
     write(F("\""));
 }
 
+/**
+ * @brief Добавляет в документ строковый параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const __FlashStringHelper *name, const char *value)
 {
     insert();
@@ -239,6 +373,12 @@ void JsonConstructor::push(const __FlashStringHelper *name, const char *value)
     write(F("\""));
 }
 
+/**
+ * @brief Добавляет в документ строковый параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, const __FlashStringHelper *value)
 {
     insert();
@@ -248,6 +388,12 @@ void JsonConstructor::push(const char *name, const __FlashStringHelper *value)
     write(F("\""));
 }
 
+/**
+ * @brief Добавляет в документ строковый параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const __FlashStringHelper *name, const __FlashStringHelper *value)
 {
     insert();
@@ -257,6 +403,12 @@ void JsonConstructor::push(const __FlashStringHelper *name, const __FlashStringH
     write(F("\""));
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, uint32_t value)
 {
     insert();
@@ -265,6 +417,12 @@ void JsonConstructor::push(const char *name, uint32_t value)
     write(value);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const __FlashStringHelper *name, uint32_t value)
 {
     insert();
@@ -273,16 +431,34 @@ void JsonConstructor::push(const __FlashStringHelper *name, uint32_t value)
     write(value);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, uint16_t value)
 {
     push(name, (uint32_t)value);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const __FlashStringHelper *name, uint16_t value)
 {
     push(name, (uint32_t)value);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, uint8_t value)
 {
     push(name, (uint32_t)value);
@@ -293,6 +469,12 @@ void JsonConstructor::push(const __FlashStringHelper *name, uint8_t value)
     push(name, (uint32_t)value);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, int32_t value)
 {
     insert();
@@ -301,6 +483,12 @@ void JsonConstructor::push(const char *name, int32_t value)
     write(value);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const __FlashStringHelper *name, int32_t value)
 {
     insert();
@@ -309,26 +497,56 @@ void JsonConstructor::push(const __FlashStringHelper *name, int32_t value)
     write(value);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, int16_t value)
 {
     push(name, (int32_t)value);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const __FlashStringHelper *name, int16_t value)
 {
     push(name, (int32_t)value);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, int8_t value)
 {
     push(name, (int32_t)value);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const __FlashStringHelper *name, int8_t value)
 {
     push(name, (int32_t)value);
 }
 
+/**
+ * @brief Добавляет в документ строковый параметр с заданной длинной
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, const char *value, size_t size)
 {
     insert();
@@ -338,6 +556,12 @@ void JsonConstructor::push(const char *name, const char *value, size_t size)
     write(F("\""));
 }
 
+/**
+ * @brief Добавляет в документ строковый параметр с заданной длинной
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const __FlashStringHelper *name, const char *value, size_t size)
 {
     insert();
@@ -347,6 +571,12 @@ void JsonConstructor::push(const __FlashStringHelper *name, const char *value, s
     write(F("\""));
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр с заданной точностью
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, double value, uint8_t size)
 {
     insert();
@@ -355,6 +585,12 @@ void JsonConstructor::push(const char *name, double value, uint8_t size)
     write(value, size);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр с заданной точностью
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const __FlashStringHelper *name, double value, uint8_t size)
 {
     insert();
@@ -363,6 +599,12 @@ void JsonConstructor::push(const __FlashStringHelper *name, double value, uint8_
     write(value, size);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр с заданной точностью
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, float value, uint8_t size)
 {
     insert();
@@ -371,6 +613,12 @@ void JsonConstructor::push(const char *name, float value, uint8_t size)
     write(value, size);
 }
 
+/**
+ * @brief Добавляет в документ числовой параметр с заданной точностью
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const __FlashStringHelper *name, float value, uint8_t size)
 {
     insert();
@@ -379,6 +627,12 @@ void JsonConstructor::push(const __FlashStringHelper *name, float value, uint8_t
     write(value, size);
 }
 
+/**
+ * @brief Добавляет в документ билевый параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const char *name, bool value)
 {
     insert();
@@ -387,6 +641,12 @@ void JsonConstructor::push(const char *name, bool value)
     write(value);
 }
 
+/**
+ * @brief Добавляет в документ билевый параметр
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::push(const __FlashStringHelper *name, bool value)
 {
     insert();
@@ -395,6 +655,12 @@ void JsonConstructor::push(const __FlashStringHelper *name, bool value)
     write(value);
 }
 
+/**
+ * @brief Добавляет в документ параметр с ip адресом
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::pushIP(const char *name, uint32_t value)
 {
     insert();
@@ -404,6 +670,11 @@ void JsonConstructor::pushIP(const char *name, uint32_t value)
     write(F("\""));
 }
 
+/**
+ * @brief Добавляет в документ строку
+ * 
+ * @param value значение
+ */
 void JsonConstructor::push(const char *value)
 {
     insert();
@@ -411,6 +682,11 @@ void JsonConstructor::push(const char *value)
     write(F("\""));
 }
 
+/**
+ * @brief Добавляет в документ строку
+ * 
+ * @param value значение
+ */
 void JsonConstructor::push(const __FlashStringHelper *value)
 {
     insert();
@@ -418,49 +694,96 @@ void JsonConstructor::push(const __FlashStringHelper *value)
     write(F("\""));
 }
 
+/**
+ * @brief Добавляет в документ число
+ * 
+ * @param value значение
+ */
 void JsonConstructor::push(uint32_t value)
 {
     insert(false);
     write(value);
 }
+
+/**
+ * @brief Добавляет в документ число
+ * 
+ * @param value значение
+ */
 void JsonConstructor::push(uint16_t value)
 {
     push((uint32_t)value);
 }
 
+/**
+ * @brief Добавляет в документ число
+ * 
+ * @param value значение
+ */
 void JsonConstructor::push(uint8_t value)
 {
     push((uint32_t)value);
 }
 
+/**
+ * @brief Добавляет в документ число
+ * 
+ * @param value значение
+ */
 void JsonConstructor::push(int32_t value)
 {
     insert(false);
     write(value);
 }
 
+/**
+ * @brief Добавляет в документ число
+ * 
+ * @param value значение
+ */
 void JsonConstructor::push(int16_t value)
 {
     push((int32_t)value);
 }
 
+/**
+ * @brief Добавляет в документ число
+ * 
+ * @param value значение
+ */
 void JsonConstructor::push(int8_t value)
 {
     push((int32_t)value);
 }
 
+/**
+ * @brief Добавляет в документ число с заданной точностью
+ * 
+ * @param value значение
+ */
 void JsonConstructor::push(double value, uint8_t size)
 {
     insert(false);
     write(value, size);
 }
 
+/**
+ * @brief Добавляет в документ число с заданной точностью
+ * 
+ * @param value значение
+ */
 void JsonConstructor::push(float value, uint8_t size)
 {
     insert(false);
     write(value, size);
 }
 
+/**
+ * @brief Добавляет в документ параметр с ip адресом
+ * 
+ * @param name имя параметра
+ * @param value значение параметра
+ */
 void JsonConstructor::pushIP(const __FlashStringHelper *name, uint32_t value)
 {
     insert();
@@ -470,6 +793,11 @@ void JsonConstructor::pushIP(const __FlashStringHelper *name, uint32_t value)
     write(F("\""));
 }
 
+/**
+ * @brief резервирует память для буффера
+ * 
+ * @param size размер буффера
+ */
 void JsonConstructor::setSize(size_t size)
 {
     char *t = (char *)realloc(_buffer, size);
@@ -482,6 +810,11 @@ void JsonConstructor::setSize(size_t size)
     _size = size;
 }
 
+/**
+ * @brief Construct a new Json Constructor:: Json Constructor object
+ * 
+ * @param size размер буффера
+ */
 JsonConstructor::JsonConstructor(size_t size)
 {
     _pos = 0;
@@ -492,6 +825,10 @@ JsonConstructor::JsonConstructor(size_t size)
         *_buffer = '\0';
 }
 
+/**
+ * @brief Destroy the Json Constructor:: Json Constructor object
+ * 
+ */
 JsonConstructor::~JsonConstructor()
 {
     if (_buffer)
