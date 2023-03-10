@@ -18,7 +18,7 @@
 // Сохраняем конфигурацию в EEPROM
 void store_config(const Settings &sett)
 {
-    uint16_t crc = get_checksum(sett);
+    uint16_t crc = get_checksum((uint8_t*)&sett,sizeof(sett)-2);
     EEPROM.begin(sizeof(sett) + sizeof(crc));
     EEPROM.put(0, sett);
     EEPROM.put(sizeof(sett), crc);
@@ -45,7 +45,7 @@ bool load_config(Settings &sett)
     EEPROM.get(sizeof(tmp_sett), crc);
     EEPROM.end();
 
-    uint16_t calculated_crc = get_checksum(tmp_sett);
+    uint16_t calculated_crc = get_checksum((uint8_t*)&tmp_sett,sizeof(tmp_sett)-2);
     if (crc == calculated_crc)
     {
         sett = tmp_sett;

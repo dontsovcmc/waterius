@@ -52,17 +52,13 @@ String get_mac_address_hex()
  * @param  sett настройки программы
  * @return возвращет чексуму объекта настроек
  */
-uint16_t get_checksum(const Settings &sett)
+uint16_t get_checksum(const uint8_t *buf, uint16_t count, uint16_t crc)
 {
-	uint8_t *buf = (uint8_t *)&sett;
-	uint16_t crc = 0xffff, poly = 0xa001;
-	uint16_t i = 0;
-	uint16_t len = sizeof(sett) - 2;
-
-	for (i = 0; i < len; i++)
+	uint16_t poly = 0xa001;
+	while (count--)
 	{
-		crc ^= buf[i];
-		for (uint8_t j = 0; j < 8; j++)
+		crc ^= *buf++;
+		for (uint8_t j = 8; j ; j--)
 		{
 			if (crc & 0x01)
 			{

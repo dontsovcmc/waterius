@@ -22,7 +22,7 @@ extern String get_ap_name();
 
 extern String get_mac_address_hex();
 
-extern uint16_t get_checksum(const Settings &sett);
+extern uint16_t get_checksum(const uint8_t *buf, uint16_t count, uint16_t crc=0xffff);
 
 extern String get_proto(const String &url);
 
