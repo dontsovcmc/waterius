@@ -40,15 +40,18 @@ void store_config(const Settings &sett)
 bool load_config(Settings &sett)
 {
     LOG_INFO(F("Loading Config..."));
-    uint16_t crc = 0;
     Settings tmp_sett = {};
-    EEPROM.begin(sizeof(tmp_sett) + sizeof(crc)); //  4 до 4096 байт. с адреса 0x7b000.
-    EEPROM.get(0, tmp_sett);
-    EEPROM.get(sizeof(tmp_sett), crc);
+    eepromCRC eecrc;
+    EEPROM.begin(sizeof(eepromCRC) + sizeof(Settings)); //  4 до 4096 байт. с адреса 0x7b000.
+    EEPROM.get(0, eecrc);
+    EEPROM.get(sizeof(eepromCRC), tmp_sett);
     EEPROM.end();
 
-    uint16_t calculated_crc = get_checksum((uint8_t*)&tmp_sett,sizeof(tmp_sett)-2);
-    if (crc == calculated_crc)
+    uint16_t setting_size=sizeof(Settings);
+    if(eecrc.size<setting_size)
+        setting_size=eecrc.size;
+    uint16_t calculated_crc = get_checksum((uint8_t*)&tmp_sett, setting_size);
+    if (eecrc.crc == calculated_crc)
     {
         sett = tmp_sett;
         LOG_INFO(F("Configuration CRC ok"));
@@ -119,7 +122,7 @@ bool load_config(Settings &sett)
         // Конфигурация не была сохранена в EEPROM, инициализируем с нуля
 
         LOG_INFO(F("ESP config CRC failed. Maybe first run. Init configuration."));
-        LOG_INFO(F("Saved crc=") << crc << F(" calculated=") << calculated_crc);
+        LOG_INFO(F("Saved crc=") << eecrc.crc << F(" calculated=") << calculated_crc);
 
         sett.version = CURRENT_VERSION; // для совместимости в будущем
         LOG_INFO(F("cfg version=") << sett.version);
