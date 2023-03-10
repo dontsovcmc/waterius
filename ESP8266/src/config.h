@@ -7,6 +7,11 @@
 
 #include "setup.h"
 
+struct eepromCRC{
+    uint16_t crc;
+    uint16_t size;
+};
+
 /* Сохраняем конфигурацию в EEPROM */
 extern void store_config(const Settings &sett);
 

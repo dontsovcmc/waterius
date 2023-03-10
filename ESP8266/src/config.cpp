@@ -18,10 +18,12 @@
 // Сохраняем конфигурацию в EEPROM
 void store_config(const Settings &sett)
 {
-    uint16_t crc = get_checksum((uint8_t*)&sett,sizeof(sett)-2);
-    EEPROM.begin(sizeof(sett) + sizeof(crc));
-    EEPROM.put(0, sett);
-    EEPROM.put(sizeof(sett), crc);
+    eepromCRC eecrc;
+    eecrc.size=sizeof(Settings);
+    eecrc.crc = get_checksum((uint8_t*)&sett, eecrc.size);
+    EEPROM.begin(sizeof(eepromCRC) + sizeof(Settings));
+    EEPROM.put(0, eecrc);
+    EEPROM.put(sizeof(eepromCRC), sett);
 
     if (!EEPROM.commit())
     {
@@ -29,7 +31,7 @@ void store_config(const Settings &sett)
     }
     else
     {
-        LOG_INFO(F("Config stored OK crc=") << crc);
+        LOG_INFO(F("Config stored OK crc=") << eecrc.crc);
     }
     EEPROM.end();
 }
