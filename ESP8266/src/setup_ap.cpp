@@ -120,11 +120,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     if (sett.wifi_ssid[0]) {
         struct station_config conf;
         conf.bssid_set = 0;
-        memcpy(conf.ssid, sett.wifi_ssid, sizeof(sett.wifi_ssid));
-        conf.ssid[32] = 0; 
+        memcpy(conf.ssid, sett.wifi_ssid, sizeof(conf.ssid));
         if (sett.wifi_password[0]) {
-            memcpy(conf.password, sett.wifi_password, sizeof(sett.wifi_password));
-            conf.password[64] = 0; 
+            memcpy(conf.password, sett.wifi_password, sizeof(conf.password));
         } else {
             conf.password[0] = 0;
         }    
