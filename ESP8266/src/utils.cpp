@@ -281,3 +281,17 @@ void blink_led(int count, int period, int duty)
 	
 
 }
+
+/**
+ * @brief заполняет область память заданого размера по указателю заданным значением 
+ *
+ * @param address указатель на участок памяти
+ * @param size размер области для заполнения
+ * @param value значение для заполнения
+ */
+void fillmem(uint8_t *address, size_t size, uint8_t value)
+{
+	while(size--){
+		*address++=value;
+	}
+}

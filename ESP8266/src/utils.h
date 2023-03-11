@@ -46,4 +46,6 @@ extern void generateSha256Token(char *token, const int token_len, const char *em
 
 extern void blink_led(int count = 1, int period = 300, int duty = 150);
 
+extern void fillmem(uint8_t *address, size_t size, uint8_t value=0);
+
 #endif
