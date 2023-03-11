@@ -1,3 +1,4 @@
+#pragma once
 #ifndef _WATERIUS_SETUP_h
 #define _WATERIUS_SETUP_h
 
@@ -5,11 +6,16 @@
 
 #define FIRMWARE_VERSION "0.11.1"
 
+// Конвертируем значение переменных компиляции в строк
+#define VALUE_TO_STRING(x) #x
+#define VALUE(x) VALUE_TO_STRING(x)
+#define VAR_NAME_VALUE(var) #var "=" VALUE(var)
+
 /*
 Версии прошивки для ESP
 
 0.11.1 - 2023.02.28 - neitri, dontsovcmc
-                      1. Указанный пользователем NTP сервер используется. 
+                      1. Указанный пользователем NTP сервер используется.
 
 0.11.0 - 2023.01.23 - dontsovcmc Anat0liyBM vzagorovskiy
                       1. PubSubClient 2.7.0 -> 2.8.0
@@ -126,6 +132,18 @@
 
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 
+#ifndef WATERIUS_HOST
+#define WATERIUS_HOST WATERIUS_DEFAULT_DOMAIN
+#else
+#pragma message(VAR_NAME_VALUE(WATERIUS_HOST))
+#endif
+
+#ifndef WATERIUS_KEY
+#define WATERIUS_KEY ""
+#else
+#pragma message(VAR_NAME_VALUE(WATERIUS_KEY))
+#endif
+
 #define ESP_CONNECT_TIMEOUT 10000UL // Время подключения к точке доступа, ms
 
 #define SERVER_TIMEOUT 12000UL // Время ответа сервера, ms
@@ -150,7 +168,7 @@
 #define MQTT_TOPIC_LEN 64
 
 #define MQTT_DEFAULT_TOPIC_PREFIX BRAND_NAME // Проверка: mosquitto_sub -h test.mosquitto.org -t "waterius/#" -v
-#define MQTT_DEFAULT_PORT 1883
+#define MQTT_DEFAULT_PORT 1883U
 
 #ifndef DISCOVERY_TOPIC
 #define DISCOVERY_TOPIC "homeassistant"
@@ -198,10 +216,77 @@
 #define DEFAULT_GATEWAY "192.168.0.1"
 #define DEFAULT_MASK "255.255.255.0"
 #define DEFAULT_NTP_SERVER "ru.pool.ntp.org"
-#ifndef LED_PIN 
-#define LED_PIN 1    
+
+#ifndef LED_PIN
+#define LED_PIN 1
 #endif
 
+#ifndef BLYNK_KEY
+#define BLYNK_KEY ""
+#else
+#pragma message(VAR_NAME_VALUE(BLYNK_KEY))
+#endif
+
+#ifndef MQTT_HOST
+#define MQTT_HOST ""
+#else
+#pragma message(VAR_NAME_VALUE(MQTT_HOST))
+#endif
+
+#ifndef MQTT_LOGIN
+#define MQTT_LOGIN ""
+#else
+#pragma message(VAR_NAME_VALUE(MQTT_LOGIN))
+#endif
+
+#ifndef MQTT_PASSWORD
+#define MQTT_PASSWORD ""
+#else
+#pragma message(VAR_NAME_VALUE(MQTT_PASSWORD))
+#endif
+
+#ifndef WATERIUS_EMAIL
+#define WATERIUS_EMAIL ""
+#else
+#pragma message(VAR_NAME_VALUE(WATERIUS_EMAIL))
+#endif
+
+#ifndef WIFI_SSID
+#define WIFI_SSID ""
+#endif
+
+#ifndef WIFI_PASS
+#define WIFI_PASS ""
+#endif
+
+/**
+ * @brief Параметры конфигурации по умолчанию
+ */
+static const uint8_t default_version PROGMEM = CURRENT_VERSION;
+static const char default_waterius_name[] PROGMEM = BRAND_NAME;
+static const char default_waterius_email[] PROGMEM = WATERIUS_EMAIL;
+static const char default_waterius_host[] PROGMEM = WATERIUS_HOST;
+static const char default_waterius_key[] PROGMEM = WATERIUS_KEY;
+static const char default_blynk_host[] PROGMEM = "blynk-cloud.com";
+static const char default_blynk_key[] PROGMEM = BLYNK_KEY;
+static const char default_email_title[] PROGMEM = "Новые показания {DEVICE_NAME}";
+static const char default_email_template[] PROGMEM = "Показания:<br>Холодная: {V1}м³(+{V4}л)<br>Горячая: {V0}м³ (+{V3}л)<hr>Питание: {V2}В<br>Resets: {V5}";
+static const char default_mqtt_host[] PROGMEM = MQTT_HOST;
+static const uint16_t default_mqtt_port PROGMEM = MQTT_DEFAULT_PORT;
+static const char default_mqtt_login[] PROGMEM = MQTT_LOGIN;
+static const char default_mqtt_password[] PROGMEM = MQTT_PASSWORD;
+static const char default_discovery_topic[] PROGMEM = DISCOVERY_TOPIC;
+static const bool default_mqtt_auto_discovery PROGMEM = MQTT_AUTO_DISCOVERY;
+static const uint16_t default_wakeup_per_min PROGMEM = DEFAULT_WAKEUP_PERIOD_MIN;
+static const uint8_t default_factor1 PROGMEM = AUTO_IMPULSE_FACTOR;
+static const uint8_t default_factor0 PROGMEM = AS_COLD_CHANNEL;
+static const uint32_t default_ip PROGMEM = 0;
+static const uint32_t default_gateway PROGMEM = 0x0100A8C0;
+static const uint32_t default_mask PROGMEM = 0x00FFFFFF;
+static const char default_ntp_server[] PROGMEM = DEFAULT_NTP_SERVER;
+static const char default_wifi_ssid[] PROGMEM = WIFI_SSID;
+static const char default_wifi_password[] PROGMEM = WIFI_PASS;
+static const char slash[] PROGMEM = "/";
 
 struct CalculatedData
 {
@@ -219,139 +304,139 @@ struct CalculatedData
 */
 struct Settings
 {
-    uint8_t version = CURRENT_VERSION; // Версия конфигурации
+    uint8_t version; // Версия конфигурации
 
-    uint8_t reserved = 0;
+    uint8_t reserved;
 
     // SEND_WATERIUS
 
     // http/https сервер для отправки данных в виде JSON
     // вид: http://host[:port][/path]
     //      https://host[:port][/path]
-    char waterius_host[HOST_LEN] = {0};
-    char waterius_key[WATERIUS_KEY_LEN] = {0};
-    char waterius_email[EMAIL_LEN] = {0};
+    char waterius_host[HOST_LEN];
+    char waterius_key[WATERIUS_KEY_LEN];
+    char waterius_email[EMAIL_LEN];
 
     // SEND_BLYNK
     // уникальный ключ устройства blynk
-    char blynk_key[BLYNK_KEY_LEN] = {0};
+    char blynk_key[BLYNK_KEY_LEN];
     // сервер blynk.com или свой blynk сервер
-    char blynk_host[HOST_LEN] = {0};
+    char blynk_host[HOST_LEN];
 
     // Если email не пустой, то отсылается e-mail
     // Чтобы работало нужен виджет эл. почта в приложении
-    char blynk_email[EMAIL_LEN] = {0};
+    char blynk_email[EMAIL_LEN];
     // Заголовок письма. {V0}-{V4} заменяются на данные
-    char blynk_email_title[BLYNK_EMAIL_TITLE_LEN] = {0};
+    char blynk_email_title[BLYNK_EMAIL_TITLE_LEN];
     // Шаблон эл. письма. {V0}-{V4} заменяются на данные
-    char blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN] = {0};
+    char blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN];
 
-    char mqtt_host[HOST_LEN] = {0};
-    uint16_t mqtt_port = MQTT_DEFAULT_PORT;
-    char mqtt_login[MQTT_LOGIN_LEN] = {0};
-    char mqtt_password[MQTT_PASSWORD_LEN] = {0};
-    char mqtt_topic[MQTT_TOPIC_LEN] = {0};
+    char mqtt_host[HOST_LEN];
+    uint16_t mqtt_port;
+    char mqtt_login[MQTT_LOGIN_LEN];
+    char mqtt_password[MQTT_PASSWORD_LEN];
+    char mqtt_topic[MQTT_TOPIC_LEN];
 
     /*
     Показания счетчиках в кубометрах,
     введенные пользователем при настройке
     */
-    float channel0_start = 0.0;
-    float channel1_start = 0.0;
+    float channel0_start;
+    float channel1_start;
 
     /*
     Кол-во литров на 1 импульс
     */
-    uint8_t factor0 = 0;
-    uint8_t factor1 = 0;
+    uint8_t factor0;
+    uint8_t factor1;
 
     /*
     Серийные номера счётчиков воды
     */
-    char serial0[SERIAL_LEN] = {0};
-    char serial1[SERIAL_LEN] = {0};
+    char serial0[SERIAL_LEN];
+    char serial1[SERIAL_LEN];
 
     /*
     Кол-во импульсов Attiny85 соответствующие показаниям счетчиков,
     введенных пользователем при настройке
     */
-    uint32_t impulses0_start = 0;
-    uint32_t impulses1_start = 0;
+    uint32_t impulses0_start;
+    uint32_t impulses1_start;
 
     /*
     Не понятно, как получить от Blynk прирост показаний,
     поэтому сохраним их в памяти каждое включение
     */
-    uint32_t impulses0_previous = 0;
-    uint32_t impulses1_previous = 0;
+    uint32_t impulses0_previous;
+    uint32_t impulses1_previous;
 
     /*
     Время последнего пробуждения
     */
-    uint32_t wake_time = 0;
+    uint32_t wake_time;
 
     /*
     За сколько времени настроили ватериус
     */
-    uint32_t setup_time = 0;
+    uint32_t setup_time;
 
     /*
     Статический адрес
     */
-    uint32_t ip = 0;
-    uint32_t gateway = 0;
-    uint32_t mask = 0;
+    uint32_t ip;
+    uint32_t gateway;
+    uint32_t mask;
 
     /*
     Период пробуждение для отправки данных, мин
     */
-    uint16_t wakeup_per_min = 0;
+    uint16_t wakeup_per_min;
 
     /*
     Установленный период отправки с учетом погрешности
     */
-    uint16_t set_wakeup = 0;
+    uint16_t set_wakeup;
 
     /*
     Время последней отправки по расписанию
     */
-    time_t last_send = 0; // Size of time_t: 8
+    time_t last_send; // Size of time_t: 8
 
     /*
     Режим пробуждения
     */
-    uint8_t mode = 1; // SETUP_MODE
+    uint8_t mode; // SETUP_MODE
 
     /*
     Успешная настройка
     */
-    uint8_t setup_finished_counter = 0;
+    uint8_t setup_finished_counter;
 
     /* Публиковать данные для автоматического добавления в Homeassistant */
-    uint8_t mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
-    uint8_t reserved2 = 0;
+    uint8_t mqtt_auto_discovery;
+    uint8_t reserved2;
 
     /* Топик MQTT*/
-    char mqtt_discovery_topic[MQTT_TOPIC_LEN] = DISCOVERY_TOPIC;
+    char mqtt_discovery_topic[MQTT_TOPIC_LEN];
 
     /* пользовательский NTP сервер */
-    char ntp_server[HOST_LEN] = {0};
+    char ntp_server[HOST_LEN];
 
     /* имя сети Wifi */
-    char wifi_ssid[WIFI_SSID_LEN] = {0};
+    char wifi_ssid[WIFI_SSID_LEN];
     /* пароль к Wifi сети */
-    char wifi_password[WIFI_PWD_LEN] = {0};
+    char wifi_password[WIFI_PWD_LEN];
     /* mac сети Wifi */
-    uint8_t wifi_bssid[6] = {0};
+    uint8_t wifi_bssid[6];
     /* Wifi канал */
-    uint8_t wifi_channel = 0;
-    uint8_t reserved3 = 0; // выравниваем по границе
+    uint8_t wifi_channel;
+    uint8_t reserved3;    // выравниваем по границе
 
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved4[64] = {0};
+    uint8_t reserved4[64];
 
 }; // 960 байт
 

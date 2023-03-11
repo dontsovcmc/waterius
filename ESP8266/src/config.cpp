@@ -9,11 +9,7 @@
 #include "utils.h"
 #include "porting.h"
 #include "sync_time.h"
-
-// Конвертируем значение переменных компиляции в строк
-#define VALUE_TO_STRING(x) #x
-#define VALUE(x) VALUE_TO_STRING(x)
-#define VAR_NAME_VALUE(var) #var "=" VALUE(var)
+#include "setup.h"
 
 // Сохраняем конфигурацию в EEPROM
 void store_config(const Settings &sett)
@@ -118,113 +114,47 @@ bool load_config(Settings &sett)
 
         LOG_INFO(F("ESP config CRC failed. Maybe first run. Init configuration."));
         LOG_INFO(F("Saved crc=") << crc << F(" calculated=") << calculated_crc);
+        fillmem((uint8_t*)&sett, sizeof(sett));
 
-        sett.version = CURRENT_VERSION; // для совместимости в будущем
+        sett.version = default_version; // для совместимости в будущем
         LOG_INFO(F("cfg version=") << sett.version);
 
-        strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, sizeof(WATERIUS_DEFAULT_DOMAIN));
+        strcpy_P(&sett.waterius_host[0], default_waterius_host);
+        strcpy_P(&sett.blynk_host[0], default_blynk_host);
+        strcpy_P(&sett.blynk_email_title[0], default_email_title);
+        strcpy_P(&sett.blynk_email_template[0], default_email_template);
+        strcpy_P(&sett.blynk_email_template[0], default_email_template);
+        strcpy_P(&sett.mqtt_topic[0], default_waterius_name);
+        strcat_P(&sett.mqtt_topic[0], slash);
+        char buf[11];
+        strcat(&sett.mqtt_topic[0],utoa(getChipId(),&buf[0], 10));
+        strcat_P(&sett.mqtt_topic[0], slash);
+        sett.mqtt_port = default_mqtt_port;
+        sett.mqtt_auto_discovery = default_mqtt_auto_discovery;
+        strcpy_P(&sett.mqtt_discovery_topic[0], default_discovery_topic);
+        strcpy_P(&sett.ntp_server[0], default_ntp_server);
+        sett.ip = default_ip;
+        sett.mask = default_mask;
+        sett.gateway = default_gateway;
 
-        strncpy0(sett.blynk_host, BLYNK_DEFAULT_DOMAIN, sizeof(BLYNK_DEFAULT_DOMAIN));
+        sett.factor1 = default_factor1;
+        sett.factor0 = default_factor1;
 
-        String email_title = F("Новые показания {DEVICE_NAME}");
-        strncpy0(sett.blynk_email_title, email_title.c_str(), email_title.length() + 1);
+        sett.wakeup_per_min = default_wakeup_per_min;
+        sett.set_wakeup = default_wakeup_per_min;
 
-        String email_template = F("Показания:<br>Холодная: {V1}м³(+{V4}л)<br>Горячая: {V0}м³ (+{V3}л)<hr>Питание: {V2}В<br>Resets: {V5}");
-        strncpy0(sett.blynk_email_template, email_template.c_str(), email_template.length() + 1);
-
-        String default_topic = String(MQTT_DEFAULT_TOPIC_PREFIX) + "/" + String(getChipId()) + "/";
-        strncpy0(sett.mqtt_topic, default_topic.c_str(), default_topic.length() + 1);
-        sett.mqtt_port = MQTT_DEFAULT_PORT;
-
-        sett.mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
-        String discovery_topic(DISCOVERY_TOPIC);
-        strncpy0(sett.mqtt_discovery_topic, discovery_topic.c_str(), discovery_topic.length() + 1);
-
-        strncpy0(sett.ntp_server, DEFAULT_NTP_SERVER, sizeof(DEFAULT_NTP_SERVER));
-
-        sett.ip = 0;
-        IPAddress network_gateway;
-        network_gateway.fromString(DEFAULT_GATEWAY);
-        sett.gateway = network_gateway;
-        IPAddress network_mask;
-        network_mask.fromString(DEFAULT_MASK);
-        sett.mask = network_mask;
-
-        sett.factor1 = AUTO_IMPULSE_FACTOR;
-        sett.factor0 = AS_COLD_CHANNEL;
-
-        sett.wakeup_per_min = DEFAULT_WAKEUP_PERIOD_MIN;
-        sett.set_wakeup = DEFAULT_WAKEUP_PERIOD_MIN;
-
-        // Можно задать константы при компиляции, чтобы Ватериус сразу заработал
-
-#ifdef BLYNK_KEY
-#pragma message(VAR_NAME_VALUE(BLYNK_KEY))
-        String key = VALUE(BLYNK_KEY);
-        strncpy0(sett.blynk_key, key.c_str(), BLYNK_KEY_LEN);
-        LOG_INFO(F("default Blynk key=") << key);
-#endif
-
-#ifdef WATERIUS_HOST
-#pragma message(VAR_NAME_VALUE(WATERIUS_HOST))
-        String waterius_host = VALUE(WATERIUS_HOST);
-        strncpy0(sett.waterius_host, waterius_host.c_str(), WATERIUS_HOST_LEN);
-        LOG_INFO("default waterius_host=" << waterius_host);
-#endif
-
-#ifdef MQTT_HOST
-#pragma message(VAR_NAME_VALUE(MQTT_HOST))
-        String mqtt_host = VALUE(MQTT_HOST);
-        strncpy0(sett.mqtt_host, mqtt_host.c_str(), HOST_LEN);
-        LOG_INFO("default mqtt_host=" << mqtt_host);
-#endif
-
-#ifdef MQTT_LOGIN
-#pragma message(VAR_NAME_VALUE(MQTT_LOGIN))
-        String mqtt_login = VALUE(MQTT_LOGIN);
-        strncpy0(sett.mqtt_login, mqtt_login.c_str(), MQTT_LOGIN_LEN);
-        LOG_INFO("default mqtt_login=" << mqtt_login);
-#endif
-
-#ifdef MQTT_PASSWORD
-#pragma message(VAR_NAME_VALUE(MQTT_PASSWORD))
-        String mqtt_password = VALUE(MQTT_PASSWORD);
-        strncpy0(sett.mqtt_password, mqtt_password.c_str(), MQTT_PASSWORD_LEN);
-        LOG_INFO("default mqtt_password=" << mqtt_password);
-#endif
-
-#ifdef WATERIUS_EMAIL
-#pragma message(VAR_NAME_VALUE(WATERIUS_EMAIL))
-        strncpy0(sett.waterius_email, VALUE(WATERIUS_EMAIL), EMAIL_LEN);
-        LOG_INFO(F("default waterius email=") << VALUE(WATERIUS_EMAIL));
-#endif
-
-#ifdef WATERIUS_KEY
-#pragma message(VAR_NAME_VALUE(WATERIUS_KEY))
-        strncpy0(sett.waterius_key, VALUE(WATERIUS_KEY), WATERIUS_KEY_LEN);
-        LOG_INFO(F("default waterius key=") << VALUE(WATERIUS_KEY));
-#else
-        if (tmp_sett.version < VER_8) {
-            // предыдущая версия
-            // извлекаем старый ключ
-            LOG_INFO(F("Old key found"));
-            strncpy0(sett.waterius_key, tmp_sett.waterius_key, WATERIUS_KEY_LEN);
-            LOG_INFO(F("waterius key=") << sett.waterius_key);
-        } else {
-            LOG_INFO(F("Generate waterius key"));
-            generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
-            LOG_INFO(F("waterius key=") << sett.waterius_key);
-        }
-#endif
-
-#ifdef WIFI_SSID
-#ifdef WIFI_PASS
-        strncpy0(sett.wifi_ssid, VALUE(WIFI_SSID), WIFI_SSID_LEN);
-        strncpy0(sett.wifi_password, VALUE(WIFI_PASS), WIFI_PWD_LEN);
-        return true;
-#endif
-#endif
-        return false;
+        strcpy_P(&sett.blynk_key[0], default_blynk_key);
+        strcpy_P(&sett.mqtt_host[0], default_mqtt_host);
+        strcpy_P(&sett.mqtt_login[0], default_mqtt_login);
+        strcpy_P(&sett.mqtt_password[0], default_mqtt_password);
+        strcpy_P(&sett.waterius_email[0], default_waterius_email);
+        strcpy_P(&sett.waterius_key[0], default_waterius_key);
+        strcpy_P(&sett.wifi_ssid[0], default_wifi_ssid);
+        strcpy_P(&sett.wifi_password[0], default_wifi_password);
+        strcpy_P(&sett.waterius_key[0], default_waterius_key);
+        LOG_INFO(F("wifi_ssid=") << sett.wifi_ssid);
+        LOG_INFO(F("wifi_pass=") << sett.wifi_password);        
+        return strlen_P(default_wifi_ssid)>0 && strlen_P(default_wifi_password)>0;
     }
 }
 
