@@ -466,12 +466,12 @@ Portal::Portal()
     server = new AsyncWebServer(80);
     server->on("/", HTTP_GET, std::bind(&Portal::onGetRoot, this, std::placeholders::_1));
     server->on("/fwlink", HTTP_GET, std::bind(&Portal::onGetRoot, this, std::placeholders::_1));
-    server->on("/script.js", HTTP_GET, std::bind(&Portal::onGetScript, this, std::placeholders::_1));
     server->on("/networks", HTTP_GET, std::bind(&Portal::onGetNetworks, this, std::placeholders::_1));
     server->on("/wifisave", HTTP_POST, std::bind(&Portal::onPostWifiSave, this, std::placeholders::_1));
     server->on("/exit", HTTP_GET, std::bind(&Portal::onExit, this, std::placeholders::_1));
     server->on("/erase", HTTP_GET, std::bind(&Portal::onErase, this, std::placeholders::_1));
     server->onNotFound(std::bind(&Portal::onNotFound, this, std::placeholders::_1));
+    server->serveStatic("/", LittleFS, "/");
 }
 
 Portal::~Portal()
