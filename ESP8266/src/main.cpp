@@ -49,6 +49,68 @@ void setup()
                              { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
 }
 
+#define SETUP_TIME_SEC 600UL
+
+/**
+ * @brief Возвращает параметры считанные с Waterius`a для отображения данных в реальном времени
+ *
+ * @return int
+ */
+void onGetStates(Portal *portal, AsyncWebServerRequest *request)
+{
+    if(portal->captivePortal(request))
+        return;
+    LOG_INFO(F("Portal onGetState GET ") << request->host() << request->url());
+    SlaveData runtime_data;
+    JsonConstructor json(1024);
+    json.begin();
+    if (masterI2C.getSlaveData(runtime_data))
+    {
+        if (runtime_data.impulses0 > data.impulses0)
+        {
+            json.push(F("state0good"), F("Подключён"));
+            json.push(F("state0bad"), F(""));
+        }
+        else
+        {
+            json.push(F("state0good"), F(""));
+            json.push(F("state0bad"), F("Подключён"));
+        }
+        if (runtime_data.impulses1 > data.impulses1)
+        {
+            json.push(F("state1good"), F("Подключён"));
+            json.push(F("state1bad"), F(""));
+        }
+        else
+        {
+            json.push(F("state1good"), F(""));
+            json.push(F("state1bad"), F("Подключён"));
+        }
+        json.push(F("elapsed"), (uint32_t)(SETUP_TIME_SEC - millis() / 1000.0));
+        json.push(F("factor_cold_feedback"), get_auto_factor(runtime_data.impulses1, data.impulses1));
+        json.push(F("factor_hot_feedback"), get_auto_factor(runtime_data.impulses0, data.impulses0));
+        bool _fail=false;
+        if (_fail)
+        {
+            json.push(F("fail"), F("1"));
+        }
+        else
+        {
+            json.push(F("fail"), F(""));
+        }
+        json.push(F("error"), F(""));
+    }
+    else
+    {
+        json.push(F("error"), F("Ошибка связи с МК"));
+        json.push(F("factor_cold_feedback"), 1);
+        json.push(F("factor_hot_feedback"), 1);
+    }
+    json.end();
+    request->send(200, F("application/json"), json.c_str());
+    LOG_INFO(json.c_str());
+}
+
 void loop()
 {
     uint8_t mode = SETUP_MODE; // TRANSMIT_MODE;
@@ -85,6 +147,7 @@ void loop()
             dns->start(53, "*", WiFi.softAPIP());
             // запускаем сервер
             Portal *portal = new Portal();
+            portal->on("/states", HTTP_GET, std::bind(onGetStates, portal, std::placeholders::_1));
             portal->begin();
 
             WiFi.scanNetworks(true);

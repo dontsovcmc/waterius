@@ -469,7 +469,6 @@ Portal::Portal()
     server->on("/script.js", HTTP_GET, std::bind(&Portal::onGetScript, this, std::placeholders::_1));
     server->on("/networks", HTTP_GET, std::bind(&Portal::onGetNetworks, this, std::placeholders::_1));
     server->on("/wifisave", HTTP_POST, std::bind(&Portal::onPostWifiSave, this, std::placeholders::_1));
-    server->on("/states", HTTP_GET, std::bind(&Portal::onGetStates, this, std::placeholders::_1));
     server->on("/config", HTTP_GET, std::bind(&Portal::onGetConfig, this, std::placeholders::_1));
     server->on("/exit", HTTP_GET, std::bind(&Portal::onExit, this, std::placeholders::_1));
     server->on("/erase", HTTP_GET, std::bind(&Portal::onErase, this, std::placeholders::_1));
