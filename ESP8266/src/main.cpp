@@ -159,6 +159,18 @@ void onGetConfig(Portal *portal, AsyncWebServerRequest *request)
     request->send(response);
 }
 
+void onErase(AsyncWebServerRequest *request)
+{
+    LOG_INFO(F("Portal onErase GET ") << request->host()<< request->url());
+    LOG_INFO(F("ESP erase config"));
+    ESP.eraseConfig();
+    delay(100);
+    LOG_INFO(F("EEPROM erase"));
+    ESP.flashEraseSector(((EEPROM_start - 0x40200000) / SPI_FLASH_SEC_SIZE));
+    delay(1000);
+    ESP.reset();
+}
+
 void loop()
 {
     uint8_t mode = SETUP_MODE; // TRANSMIT_MODE;
@@ -197,7 +209,7 @@ void loop()
             Portal *portal = new Portal();
             portal->on("/states", HTTP_GET, std::bind(onGetStates, portal, std::placeholders::_1));
             portal->on("/config", HTTP_GET, std::bind(onGetConfig, portal, std::placeholders::_1));
-
+            portal->on("/erase", HTTP_GET, onErase);
             portal->begin();
 
             WiFi.scanNetworks(true);
@@ -205,21 +217,11 @@ void loop()
             {
                 dns->processNextRequest();
                 yield();
-            };
-            int8_t retCode = portal->code;
+            }
             portal->end();
             dns->stop();
             delete portal;
             delete dns;
-            if (retCode == 2){
-                LOG_INFO(F("ESP erase config"));
-                ESP.eraseConfig();
-                delay(100);
-                LOG_INFO(F("EEPROM erase"));
-                ESP.flashEraseSector(((EEPROM_start - 0x40200000) / SPI_FLASH_SEC_SIZE));
-                delay(1000);
-                ESP.reset();
-            }
             wifi_shutdown();
 
             LOG_INFO(F("Set mode MANUAL_TRANSMIT to attiny"));
