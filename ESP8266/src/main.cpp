@@ -4,7 +4,7 @@
 #include "Logging.h"
 #include "config.h"
 #include "master_i2c.h"
-//#include "setup_ap.h"
+// #include "setup_ap.h"
 #include "sender_http.h"
 #include "voltage.h"
 #include "utils.h"
@@ -18,6 +18,7 @@
 #include "config.h"
 #include "portal.h"
 #include "json_constructor.h"
+#include "DNSServer.h"
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 SlaveData data;       // Данные от Attiny85
@@ -25,7 +26,7 @@ Settings sett;        // Настройки соединения и предыд
 CalculatedData cdata; // вычисляемые данные
 ADC_MODE(ADC_VCC);
 Ticker voltage_ticker;
-volatile bool periodUpdated=false;
+volatile bool periodUpdated = false;
 
 extern "C" uint32_t __crc_val;
 
@@ -36,9 +37,9 @@ void setup()
 {
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Booted"));
-    char firmware_crc32[9] = { 0 };
+    char firmware_crc32[9] = {0};
     sprintf(firmware_crc32, "%08X", __crc_val);
-    LOG_INFO(F("Firmware CRC32: ")<<firmware_crc32);
+    LOG_INFO(F("Firmware CRC32: ") << firmware_crc32);
 
     masterI2C.begin(); // Включаем i2c master
     LittleFS.begin();
@@ -79,20 +80,25 @@ void loop()
             WiFi.softAP(apName.c_str());
 
 
-            //setup_ap(sett, data, cdata);
-            //запускаем сервер
-            Portal* portal = new Portal();
+            // setup_ap(sett, data, cdata);
+            DNSServer *dns = new DNSServer();
+            dns->start(53, "*", WiFi.softAPIP());
+            // запускаем сервер
+            Portal *portal = new Portal();
             portal->begin();
 
             WiFi.scanNetworks(true);
             while (!portal->doneettings())
             {
+                dns->processNextRequest();
                 yield();
             };
-            int8_t retCode=portal->code;
+            int8_t retCode = portal->code;
             portal->end();
+            dns->stop();
             delete portal;
-            if(retCode==2){
+            delete dns;
+            if (retCode == 2){
                 LOG_INFO(F("ESP erase config"));
                 ESP.eraseConfig();
                 delay(100);
@@ -129,15 +135,15 @@ void loop()
                 {
                     connect_and_subscribe_mqtt(sett);
                     LOG_INFO(F("MQTT: while(){ loop();}"));
-                    uint32_t t=millis()+100;
-                    uint32_t c=0;
-                    while((millis()<t) && (!periodUpdated))
+                    uint32_t t = millis() + 100;
+                    uint32_t c = 0;
+                    while ((millis() < t) && (!periodUpdated))
                     {
                         mqtt_client.loop();
                         c++;
                         delay(2);
                     }
-                    LOG_INFO(F("MQTT: loop count ")<<c);
+                    LOG_INFO(F("MQTT: loop count ") << c);
                 }
 
                 // устанавливать время только при использовани хттпс или мктт
@@ -209,12 +215,12 @@ void loop()
 
     if (!config_loaded) {
         delay(500);
-        blink_led(3,1000,500);
+        blink_led(3, 1000, 500);
     }
-    
+
     masterI2C.sendCmd('Z'); // "Можешь идти спать, attiny"
 
     ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. Instant не ждет 92мс
 
-    
+
 }

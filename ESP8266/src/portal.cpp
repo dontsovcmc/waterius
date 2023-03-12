@@ -64,7 +64,7 @@ bool Portal::captivePortal(AsyncWebServerRequest *request)
     if(isIp(request->host()))
         return false;
     String url=String("http://") + ipToString(request->client()->getLocalAddress());
-    LOG_INFO(F("Request redirected to captive portal ") << url);
+    LOG_INFO(F("Request redirected to captive portal ")<< url);
     AsyncWebServerResponse *response = request->beginResponse(302, "text/plain", "");
     response->addHeader("Location", url);
     request->send(response);
@@ -435,7 +435,6 @@ void Portal::onErase(AsyncWebServerRequest *request)
 
 bool Portal::doneettings()
 {
-    dns->processNextRequest();
     return _donesettings && _delaydonesettings < millis();
 }
 
@@ -450,7 +449,6 @@ void Portal::begin()
 
 void Portal::end()
 {
-    dns->stop();
     server->end();
 }
 
@@ -470,12 +468,9 @@ Portal::Portal()
     server->on("/exit", HTTP_GET, std::bind(&Portal::onExit, this, std::placeholders::_1));
     server->on("/erase", HTTP_GET, std::bind(&Portal::onErase, this, std::placeholders::_1));
     server->onNotFound(std::bind(&Portal::onNotFound, this, std::placeholders::_1));
-    dns = new DNSServer();
-    dns->start(53, "*", WiFi.softAPIP());
 }
 
 Portal::~Portal()
 {
-    delete dns;
     delete server;
 }
