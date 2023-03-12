@@ -19,6 +19,7 @@
 
 #include "ESPAsyncTCP.h"
 #include "ESPAsyncWebServer.h"
+#include "WebHandlerImpl.h"
 #include <LittleFS.h>
 
 uint8_t get_auto_factor(uint32_t runtime_impulses, uint32_t impulses);
@@ -63,7 +64,8 @@ public:
     bool captivePortal(AsyncWebServerRequest *request);
     static bool isIp(String str);
     static String ipToString(uint32_t ip);
-    
+    AsyncCallbackWebHandler& on(const char* uri, WebRequestMethodComposite method, ArRequestHandlerFunction onRequest);
+
 private:
     AsyncWebServer* server;
     uint32_t _delaydonesettings;
