@@ -394,7 +394,7 @@ void Portal::onExit(AsyncWebServerRequest *request)
     LOG_INFO(F("AsyncWebServer onExit GET ") << request->host()<< request->url());
     request->redirect("/");
     _donesettings = true;
-    _delaydonesettings = millis();
+    _delaydonesettings = millis()+1000;
 };
 
 void Portal::onErase(AsyncWebServerRequest *request)
