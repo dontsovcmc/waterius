@@ -4,6 +4,7 @@
 #include "utils.h"
 #include "config.h"
 #include "ESPAsyncWebServer.h"
+#include "WebHandlerImpl.h"
 #include "json_constructor.h"
 
 extern SlaveData data;
@@ -450,6 +451,11 @@ void Portal::begin()
 void Portal::end()
 {
     server->end();
+}
+
+AsyncCallbackWebHandler& Portal::on(const char* uri, WebRequestMethodComposite method, ArRequestHandlerFunction onRequest)
+{
+    return server->on(uri, method, onRequest);
 }
 
 Portal::Portal()
