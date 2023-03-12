@@ -7,6 +7,8 @@
 #define PROTO_HTTPS "https"
 #define PROTO_HTTP "http"
 
+#define IMPULS_LIMIT_1 3 // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
+
 /*
 Запишем 0 в конце буфера принудительно.
 */
@@ -45,5 +47,8 @@ extern void log_system_info();
 extern void generateSha256Token(char *token, const int token_len, const char *email);
 
 extern void blink_led(int count = 1, int period = 300, int duty = 150);
+
+extern uint8_t get_auto_factor(uint32_t runtime_impulses, uint32_t impulses);
+extern uint8_t get_factor(uint8_t combobox_factor, uint32_t runtime_impulses, uint32_t impulses, uint8_t cold_factor);
 
 #endif

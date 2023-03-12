@@ -278,6 +278,23 @@ void blink_led(int count, int period, int duty)
 		digitalWrite(LED_PIN, LOW); 
 		delay(duty); 
 	}
-	
+}
 
+
+uint8_t get_auto_factor(uint32_t runtime_impulses, uint32_t impulses)
+{
+    return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
+}
+
+uint8_t get_factor(uint8_t combobox_factor, uint32_t runtime_impulses, uint32_t impulses, uint8_t cold_factor)
+{
+    switch (combobox_factor)
+    {
+    case AUTO_IMPULSE_FACTOR:
+        return get_auto_factor(runtime_impulses, impulses);
+    case AS_COLD_CHANNEL:
+        return cold_factor;
+    default:
+        return combobox_factor; // 1, 10, 100
+    }
 }

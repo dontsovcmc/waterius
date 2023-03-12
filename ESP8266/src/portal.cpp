@@ -14,27 +14,6 @@ extern CalculatedData cdata;
 
 #define SETUP_TIME_SEC 600UL
 
-#define IMPULS_LIMIT_1 3 // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
-
-uint8_t get_auto_factor(uint32_t runtime_impulses, uint32_t impulses)
-{
-    return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
-}
-
-uint8_t get_factor(uint8_t combobox_factor, uint32_t runtime_impulses, uint32_t impulses, uint8_t cold_factor)
-{
-
-    switch (combobox_factor)
-    {
-    case AUTO_IMPULSE_FACTOR:
-        return get_auto_factor(runtime_impulses, impulses);
-    case AS_COLD_CHANNEL:
-        return cold_factor;
-    default:
-        return combobox_factor; // 1, 10, 100
-    }
-}
-
 bool Portal::isIp(String str) {
   for (size_t i = 0; i < str.length(); i++) {
     int c = str.charAt(i);
@@ -211,7 +190,7 @@ void Portal::onGetStates(AsyncWebServerRequest *request)
         json.push(F("elapsed"), (uint32_t)(SETUP_TIME_SEC - millis() / 1000.0));
         json.push(F("factor_cold_feedback"), get_auto_factor(runtime_data.impulses1, data.impulses1));
         json.push(F("factor_hot_feedback"), get_auto_factor(runtime_data.impulses0, data.impulses0));
-        if (_fail)
+        if (false)
         {
             json.push(F("fail"), F("1"));
         }
@@ -245,7 +224,6 @@ bool Portal::UpdateParamStr(AsyncWebServerRequest *request, const char *param_na
             return false;
         }
     }
-    _fail = true;
     LOG_INFO(F("Fail ") << param_name);
     return false;
 }
@@ -258,7 +236,6 @@ bool Portal::SetParamStr(AsyncWebServerRequest *request, const char *param_name,
         LOG_INFO(F("Save ") << param_name << F("=") << dest);
         return true;
     }
-    _fail = true;
     LOG_INFO(F("Fail ") << param_name);
     return false;
 }
@@ -275,7 +252,6 @@ bool Portal::SetParamIP(AsyncWebServerRequest *request, const char *param_name, 
             return true;
         }
     }
-    _fail = true;
     LOG_INFO(F("Fail ") << param_name);
     return false;
 }
@@ -289,7 +265,6 @@ bool Portal::SetParamUInt(AsyncWebServerRequest *request, const char *param_name
         LOG_INFO(F("Save ") << param_name << F("=") << *dest);
         return true;
     }
-    _fail = true;
     LOG_INFO(F("Fail ") << param_name);
     return false;
 }
@@ -302,7 +277,6 @@ bool Portal::SetParamByte(AsyncWebServerRequest *request, const char *param_name
         LOG_INFO(F("Save ") << param_name << F("=") << *dest);
         return true;
     }
-    _fail = true;
     LOG_INFO(F("Fail ") << param_name);
     return false;
 }
@@ -315,7 +289,6 @@ bool Portal::SetParamFloat(AsyncWebServerRequest *request, const char *param_nam
         LOG_INFO(F("Save ") << param_name << F("=") << *dest);
         return true;
     }
-    _fail = true;
     LOG_INFO(F("Fail ") << param_name);
     return false;
 }
@@ -328,7 +301,6 @@ bool Portal::SetParamFloat(AsyncWebServerRequest *request, const char *param_nam
 void Portal::onPostWifiSave(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("AsyncWebServer onPostWiFiSave POST ") << request->host()<< request->url());
-    _fail = false;
     UpdateParamStr(request, "s", sett.wifi_ssid, WIFI_SSID_LEN - 1);
     UpdateParamStr(request, "p", sett.wifi_password, WIFI_PWD_LEN - 1);
     if (UpdateParamStr(request, PARAM_WMAIL, sett.waterius_email, EMAIL_LEN))
@@ -387,10 +359,10 @@ void Portal::onPostWifiSave(AsyncWebServerRequest *request)
     }
 
     WiFi.persistent(true);
-    _fail = not WiFi.begin(sett.wifi_ssid, sett.wifi_password);
+    bool fail = WiFi.begin(sett.wifi_ssid, sett.wifi_password);
     WiFi.persistent(false);
     // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
-    if (!_fail)
+    if (fail)
     {
         sett.setup_time = millis();
         sett.setup_finished_counter++;
@@ -443,7 +415,6 @@ void Portal::begin()
 {
     _donesettings = false;
     _delaydonesettings = millis();
-    _fail = false;
     code = 0;
     server->begin();
 }
@@ -461,7 +432,6 @@ AsyncCallbackWebHandler& Portal::on(const char* uri, WebRequestMethodComposite m
 Portal::Portal()
 {
     _donesettings = false;
-    _fail = false;
     /* web server*/
     server = new AsyncWebServer(80);
     server->on("/", HTTP_GET, std::bind(&Portal::onGetRoot, this, std::placeholders::_1));

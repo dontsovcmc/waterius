@@ -22,9 +22,6 @@
 #include "WebHandlerImpl.h"
 #include <LittleFS.h>
 
-uint8_t get_auto_factor(uint32_t runtime_impulses, uint32_t impulses);
-uint8_t get_factor(uint8_t combobox_factor, uint32_t runtime_impulses, uint32_t impulses, uint8_t cold_factor);
-
 
 const char PARAM_WMAIL[]       PROGMEM = "wmail";
 const char PARAM_WHOST[]       PROGMEM = "whost";
@@ -66,11 +63,16 @@ public:
     static String ipToString(uint32_t ip);
     AsyncCallbackWebHandler& on(const char* uri, WebRequestMethodComposite method, ArRequestHandlerFunction onRequest);
 
+    static bool SetParamStr(AsyncWebServerRequest *request, const char* param_name, char* dest, size_t size);
+    static bool UpdateParamStr(AsyncWebServerRequest *request, const char* param_name, char* dest, size_t size);
+    static bool SetParamIP(AsyncWebServerRequest *request, const char* param_name, uint32_t* dest);
+    static bool SetParamUInt(AsyncWebServerRequest *request, const char* param_name, uint16_t* dest);
+    static bool SetParamByte(AsyncWebServerRequest *request, const char* param_name, uint8_t* dest);
+    static bool SetParamFloat(AsyncWebServerRequest *request, const char* param_name, float* dest);
 private:
     AsyncWebServer* server;
     uint32_t _delaydonesettings;
     bool _donesettings;
-    bool _fail;
     void onGetRoot(AsyncWebServerRequest *request);
     void onGetScript(AsyncWebServerRequest *request);
     void onGetNetworks(AsyncWebServerRequest *request);
@@ -80,12 +82,6 @@ private:
     void onNotFound(AsyncWebServerRequest *request);
     void onExit(AsyncWebServerRequest *request);
     void onErase(AsyncWebServerRequest *request);
-    bool SetParamStr(AsyncWebServerRequest *request, const char* param_name, char* dest, size_t size);
-    bool UpdateParamStr(AsyncWebServerRequest *request, const char* param_name, char* dest, size_t size);
-    bool SetParamIP(AsyncWebServerRequest *request, const char* param_name, uint32_t* dest);
-    bool SetParamUInt(AsyncWebServerRequest *request, const char* param_name, uint16_t* dest);
-    bool SetParamByte(AsyncWebServerRequest *request, const char* param_name, uint8_t* dest);
-    bool SetParamFloat(AsyncWebServerRequest *request, const char* param_name, float* dest);
 
 };
 
