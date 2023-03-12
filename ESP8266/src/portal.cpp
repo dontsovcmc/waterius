@@ -34,21 +34,64 @@ uint8_t get_factor(uint8_t combobox_factor, uint32_t runtime_impulses, uint32_t 
     }
 }
 
+bool Portal::isIp(String str) {
+  for (size_t i = 0; i < str.length(); i++) {
+    int c = str.charAt(i);
+    if (c != '.' && (c < '0' || c > '9') && c !='/') {
+      return false;
+    }
+  }
+  return true;
+}
+
+String Portal::ipToString(uint32_t ip)
+{
+    String ret;
+    ret.reserve(16);
+    uint8_t *src=(uint8_t*)&ip;
+    uint8_t i=3;
+    while(i--)
+    {
+        ret += String(*src++);
+        ret +=F(".");
+    }
+    ret += String(*src++);
+    return ret;
+}
+
+bool Portal::captivePortal(AsyncWebServerRequest *request)
+{
+    if(isIp(request->host()))
+        return false;
+    String url=String("http://") + ipToString(request->client()->getLocalAddress());
+    LOG_INFO(F("Request redirected to captive portal ") << url);
+    AsyncWebServerResponse *response = request->beginResponse(302, "text/plain", "");
+    response->addHeader("Location", url);
+    request->send(response);
+    return true;
+}
+
 void Portal::onGetRoot(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("AsyncWebServer GET /"));
+    LOG_INFO(F("AsyncWebServer onGetRoot GET ") << request->host() << request->url());
+    if (captivePortal(request))
+        return;
     request->send(LittleFS, "/index.html");
 }
 
 void Portal::onGetScript(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("AsyncWebServer GET /"));
+    if (captivePortal(request))
+        return;
+    LOG_INFO(F("AsyncWebServer onGetScript GET ") << request->host() << request->url());
     request->send(LittleFS, "/script.js");
 };
 
 void Portal::onGetNetworks(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("AsyncWebServer GET /networks"));
+    if(captivePortal(request))
+        return;
+    LOG_INFO(F("AsyncWebServer onGetNetworks GET ") << request->host() << request->url());
     int n = WiFi.scanComplete();
     if (n == -2)
     {
@@ -89,7 +132,9 @@ void Portal::onGetNetworks(AsyncWebServerRequest *request)
  */
 void Portal::onGetConfig(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("AsyncWebServer GET /config"));
+    if(captivePortal(request))
+        return;
+    LOG_INFO(F("AsyncWebServer onGetConfig GET ") << request->host() << request->url());
     JsonConstructor json(2048);
     json.begin();
     json.push(F("wmail"), sett.waterius_email);
@@ -134,7 +179,9 @@ void Portal::onGetConfig(AsyncWebServerRequest *request)
  */
 void Portal::onGetStates(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("AsyncWebServer GET /states"));
+    if(captivePortal(request))
+        return;
+    LOG_INFO(F("AsyncWebServer onGetState GET ") << request->host() << request->url());
     SlaveData runtime_data;
     JsonConstructor json(1024);
     json.begin();
@@ -279,7 +326,7 @@ bool Portal::SetParamFloat(AsyncWebServerRequest *request, const char *param_nam
  */
 void Portal::onPostWifiSave(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("AsyncWebServer POST /wifisave"));
+    LOG_INFO(F("AsyncWebServer onPostWiFiSave POST ") << request->host()<< request->url());
     _fail = false;
     UpdateParamStr(request, "s", sett.wifi_ssid, WIFI_SSID_LEN - 1);
     UpdateParamStr(request, "p", sett.wifi_password, WIFI_PWD_LEN - 1);
@@ -363,13 +410,15 @@ void Portal::onPostWifiSave(AsyncWebServerRequest *request)
 
 void Portal::onNotFound(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("AsyncWebServer 404 ") << request->url());
+    LOG_INFO(F("AsyncWebServer 404 ") << request->host()<< request->url());
+    if(captivePortal(request))
+        return;
     request->send(404);
 };
 
 void Portal::onExit(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("AsyncWebServer GET /exit"));
+    LOG_INFO(F("AsyncWebServer onExit GET ") << request->host()<< request->url());
     request->redirect("/");
     _donesettings = true;
     _delaydonesettings = millis();
@@ -377,7 +426,7 @@ void Portal::onExit(AsyncWebServerRequest *request)
 
 void Portal::onErase(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("AsyncWebServer GET /erase"));
+    LOG_INFO(F("AsyncWebServer onErase GET ") << request->host()<< request->url());
     request->redirect("/");
     code = 2;
     _donesettings = true;
@@ -412,6 +461,7 @@ Portal::Portal()
     /* web server*/
     server = new AsyncWebServer(80);
     server->on("/", HTTP_GET, std::bind(&Portal::onGetRoot, this, std::placeholders::_1));
+    server->on("/fwlink", HTTP_GET, std::bind(&Portal::onGetRoot, this, std::placeholders::_1));
     server->on("/script.js", HTTP_GET, std::bind(&Portal::onGetScript, this, std::placeholders::_1));
     server->on("/networks", HTTP_GET, std::bind(&Portal::onGetNetworks, this, std::placeholders::_1));
     server->on("/wifisave", HTTP_POST, std::bind(&Portal::onPostWifiSave, this, std::placeholders::_1));

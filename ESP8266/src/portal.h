@@ -83,6 +83,9 @@ private:
     bool SetParamUInt(AsyncWebServerRequest *request, const char* param_name, uint16_t* dest);
     bool SetParamByte(AsyncWebServerRequest *request, const char* param_name, uint8_t* dest);
     bool SetParamFloat(AsyncWebServerRequest *request, const char* param_name, float* dest);
+    bool captivePortal(AsyncWebServerRequest *request);
+    bool isIp(String str);
+    String ipToString(uint32_t ip);
 };
 
 #endif
