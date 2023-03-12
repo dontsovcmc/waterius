@@ -46,7 +46,7 @@ bool Portal::isIp(String str) {
 
 String Portal::ipToString(uint32_t ip)
 {
-    String ret;
+    String ret="";
     ret.reserve(16);
     uint8_t *src=(uint8_t*)&ip;
     uint8_t i=3;
@@ -155,9 +155,9 @@ void Portal::onGetConfig(AsyncWebServerRequest *request)
     json.push(F("auto_discovery_checkbox"), sett.mqtt_auto_discovery);
     json.push(F("discovery_topic"), sett.mqtt_discovery_topic);
     json.push(F("mac"), WiFi.macAddress().c_str());
-    json.pushIP(F("ip"), sett.ip);
-    json.pushIP(F("sn"), sett.mask);
-    json.pushIP(F("gw"), sett.gateway);
+    json.push(F("ip"), ipToString(sett.ip).c_str());
+    json.push(F("sn"), ipToString(sett.mask).c_str());
+    json.push(F("gw"), ipToString(sett.gateway).c_str());
     json.push(F("ntp"), sett.ntp_server);
     json.push(F("factorCold"), sett.factor1);
     json.push(F("factorHot"), sett.factor0);
