@@ -111,6 +111,54 @@ void onGetStates(Portal *portal, AsyncWebServerRequest *request)
     LOG_INFO(json.c_str());
 }
 
+
+/**
+ * @brief Возвращает конфигурацию прибора в формате JSON для заполнения полей настройки
+ *
+ * @return
+ */
+void onGetConfig(Portal *portal, AsyncWebServerRequest *request)
+{
+    if(portal->captivePortal(request))
+        return;
+    LOG_INFO(F("Portal onGetConfig GET ") << request->host() << request->url());
+    JsonConstructor json(2048);
+    json.begin();
+    json.push(F("wmail"), sett.waterius_email);
+    json.push(F("whost"), sett.waterius_host);
+    json.push(F("mperiod"), sett.wakeup_per_min);
+    json.push(F("s"), WiFi.SSID().c_str());
+    json.push(F("p"), WiFi.psk().c_str());
+    json.push(F("bhost"), sett.blynk_host);
+    json.push(F("bkey"), sett.blynk_key);
+    json.push(F("bemail"), sett.blynk_email);
+    json.push(F("btitle"), sett.blynk_email_title);
+    json.push(F("btemplate"), sett.blynk_email_template);
+    json.push(F("mhost"), sett.mqtt_host);
+    json.push(F("mport"), sett.mqtt_port);
+    json.push(F("mlogin"), sett.mqtt_login);
+    json.push(F("mpassword"), sett.mqtt_password);
+    json.push(F("mtopic"), sett.mqtt_topic);
+    json.push(F("auto_discovery_checkbox"), sett.mqtt_auto_discovery);
+    json.push(F("discovery_topic"), sett.mqtt_discovery_topic);
+    json.push(F("mac"), WiFi.macAddress().c_str());
+    json.push(F("ip"), Portal::ipToString(sett.ip).c_str());
+    json.push(F("sn"), Portal::ipToString(sett.mask).c_str());
+    json.push(F("gw"), Portal::ipToString(sett.gateway).c_str());
+    json.push(F("ntp"), sett.ntp_server);
+    json.push(F("factorCold"), sett.factor1);
+    json.push(F("factorHot"), sett.factor0);
+    json.push(F("serialCold"), sett.serial0);
+    json.push(F("serialHot"), sett.serial1);
+    json.push(F("ch0"), cdata.channel0, 3);
+    json.push(F("ch1"), cdata.channel1, 3);
+    json.end();
+    AsyncResponseStream *response = request->beginResponseStream(F("application/json"));
+    response->addHeader("Server", "ESP Async Web Server");
+    response->print(json.c_str());
+    request->send(response);
+}
+
 void loop()
 {
     uint8_t mode = SETUP_MODE; // TRANSMIT_MODE;
@@ -148,6 +196,8 @@ void loop()
             // запускаем сервер
             Portal *portal = new Portal();
             portal->on("/states", HTTP_GET, std::bind(onGetStates, portal, std::placeholders::_1));
+            portal->on("/config", HTTP_GET, std::bind(onGetConfig, portal, std::placeholders::_1));
+
             portal->begin();
 
             WiFi.scanNetworks(true);
