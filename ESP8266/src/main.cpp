@@ -171,6 +171,92 @@ void onErase(AsyncWebServerRequest *request)
     ESP.reset();
 }
 
+
+/**
+ * @brief Обработчик POST запроса с новыми параметрами настройки прибора
+ *
+ * @return int
+ */
+void onPostWifiSave(AsyncWebServerRequest *request)
+{
+    LOG_INFO(F("Portal onPostWiFiSave POST ") << request->host()<< request->url());
+    Portal::UpdateParamStr(request, "s", sett.wifi_ssid, WIFI_SSID_LEN - 1);
+    Portal::UpdateParamStr(request, "p", sett.wifi_password, WIFI_PWD_LEN - 1);
+    if (Portal::UpdateParamStr(request, PARAM_WMAIL, sett.waterius_email, EMAIL_LEN))
+    {
+        generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
+    }
+    Portal::SetParamStr(request, PARAM_WHOST, sett.waterius_host, HOST_LEN - 1);
+    Portal::SetParamUInt(request, PARAM_MPERIOD, &sett.wakeup_per_min);
+
+    Portal::SetParamStr(request, PARAM_BHOST, sett.blynk_host, HOST_LEN - 1);
+    Portal::SetParamStr(request, PARAM_BKEY, sett.blynk_key, BLYNK_KEY_LEN);
+    Portal::SetParamStr(request, PARAM_BMAIL, sett.blynk_email, EMAIL_LEN);
+    Portal::SetParamStr(request, PARAM_BTITLE, sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN);
+    Portal::SetParamStr(request, PARAM_BTEMPLATE, sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN);
+
+    Portal::SetParamStr(request, PARAM_MHOST, sett.mqtt_host, HOST_LEN - 1);
+    Portal::SetParamUInt(request, PARAM_MPORT, &sett.mqtt_port);
+    Portal::SetParamStr(request, PARAM_MLOGIN, sett.mqtt_login, MQTT_LOGIN_LEN);
+    Portal::SetParamStr(request, PARAM_MPASSWORD, sett.mqtt_password, MQTT_PASSWORD_LEN);
+    Portal::SetParamStr(request, PARAM_MTOPIC, sett.mqtt_topic, MQTT_TOPIC_LEN);
+    Portal::SetParamByte(request, PARAM_MDAUTO, &sett.mqtt_auto_discovery);
+    Portal::SetParamStr(request, PARAM_MDTOPIC, sett.mqtt_discovery_topic, MQTT_TOPIC_LEN);
+
+    Portal::SetParamIP(request, PARAM_IP, &sett.ip);
+    Portal::SetParamIP(request, PARAM_GW, &sett.gateway);
+    Portal::SetParamIP(request, PARAM_SN, &sett.mask);
+    Portal::SetParamStr(request, PARAM_NTP, sett.ntp_server, HOST_LEN);
+
+    uint8_t combobox_factor = -1;
+    if (Portal::SetParamByte(request, PARAM_FACTORCOLD, &combobox_factor))
+    {
+        sett.factor1 = get_factor(combobox_factor, data.impulses1, data.impulses1, 1);
+        LOG_INFO("cold dropdown=" << combobox_factor);
+        LOG_INFO("factorCold=" << sett.factor1);
+    }
+    if (Portal::SetParamByte(request, PARAM_FACTORHOT, &combobox_factor))
+    {
+        sett.factor0 = get_factor(combobox_factor, data.impulses1, data.impulses1, 1);
+        LOG_INFO("hot dropdown=" << combobox_factor);
+        LOG_INFO("factorHot=" << sett.factor0);
+    }
+    Portal::SetParamStr(request, PARAM_SERIALCOLD, sett.serial1, SERIAL_LEN);
+    Portal::SetParamStr(request, PARAM_SERIALHOT, sett.serial0, SERIAL_LEN);
+
+    if (Portal::SetParamFloat(request, PARAM_CH0, &sett.channel0_start))
+    {
+        sett.impulses0_start = data.impulses0;
+        sett.impulses0_previous = sett.impulses0_start;
+        LOG_INFO("impulses0=" << sett.impulses0_start);
+    }
+    if (Portal::SetParamFloat(request, PARAM_CH1, &sett.channel1_start))
+    {
+        sett.impulses1_start = data.impulses1;
+        sett.impulses1_previous = sett.impulses1_start;
+        LOG_INFO("impulses1=" << sett.impulses1_start);
+    }
+
+    WiFi.persistent(true);
+    bool fail = WiFi.begin(sett.wifi_ssid, sett.wifi_password);
+    WiFi.persistent(false);
+    // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
+    if (fail)
+    {
+        sett.setup_time = millis();
+        sett.setup_finished_counter++;
+
+        store_config(sett);
+        AsyncWebServerResponse *response = request->beginResponse(200, "", F("Save configuration - Successfully."));
+        response->addHeader("Refresh", "2; url=/exit");
+        request->send(response);
+    }
+    else
+    {
+        request->redirect("/");
+    }
+}
+
 void loop()
 {
     uint8_t mode = SETUP_MODE; // TRANSMIT_MODE;
@@ -210,6 +296,7 @@ void loop()
             portal->on("/states", HTTP_GET, std::bind(onGetStates, portal, std::placeholders::_1));
             portal->on("/config", HTTP_GET, std::bind(onGetConfig, portal, std::placeholders::_1));
             portal->on("/erase", HTTP_GET, onErase);
+            portal->on("/wifisave", HTTP_POST, onPostWifiSave);
             portal->begin();
 
             WiFi.scanNetworks(true);
