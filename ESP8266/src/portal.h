@@ -74,15 +74,9 @@ private:
     uint32_t _delaydonesettings;
     bool _donesettings;
     void onGetRoot(AsyncWebServerRequest *request);
-    void onGetScript(AsyncWebServerRequest *request);
     void onGetNetworks(AsyncWebServerRequest *request);
-    void onGetConfig(AsyncWebServerRequest *request);
-    void onGetStates(AsyncWebServerRequest *request);
-    void onPostWifiSave(AsyncWebServerRequest *request);
     void onNotFound(AsyncWebServerRequest *request);
     void onExit(AsyncWebServerRequest *request);
-    void onErase(AsyncWebServerRequest *request);
-
 };
 
 #endif
