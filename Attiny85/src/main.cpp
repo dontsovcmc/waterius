@@ -7,6 +7,7 @@
 #include "SlaveI2C.h"
 #include "Storage.h"
 #include "counter.h"
+#include "button.h"
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include <avr/power.h>
@@ -16,7 +17,7 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 24 // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 25 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
@@ -115,7 +116,7 @@ static ButtonB button(2);  // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1); // Питание на ESP
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_2C, {CounterState_e::CLOSE, CounterState_e::CLOSE}, {0, 0}, {0, 0}, 0, 0};
+struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_2C, {counter0.type, counter1.type}, {0, 0}, {0, 0}, 0, 0};
 
 uint32_t wakeup_period;
 
@@ -128,41 +129,39 @@ static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
 SlaveI2C slaveI2C;
 
 volatile uint32_t wdt_count;
+volatile CounterEvent event;
 
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR(WDT_vect)
 {
 	++wdt_count;
+	event = CounterEvent::TIME;
+}
+
+/* Вектор прерываний Pin Change */
+ISR(PCINT0_vect)
+{
+	event = CounterEvent::FRONT;
 }
 
 // Проверяем входы на замыкание.
 // Замыкание засчитывается только при повторной проверке.
 inline void counting()
 {
-
-	power_adc_enable(); //т.к. мы обесточили всё а нам нужен компаратор
-	adc_enable();		//после подачи питания на adc
-
-	if (counter0.is_impuls())
+	if (counter0.is_impuls(event))
 	{
 		info.data.value0++; //нужен т.к. при пробуждении запрашиваем данные
 		info.adc.adc0 = counter0.adc;
-		info.states.state0 = counter0.state;
+		info.types.type0 = counter0.type;
 		storage.add(info.data);
 	}
 #ifndef LOG_ON
-	if (counter1.is_impuls())
+	if (counter1.is_impuls(event))
 	{
 		info.data.value1++;
 		info.adc.adc1 = counter1.adc;
-		info.states.state1 = counter1.state;
+		info.types.type1 = counter1.type;
 		storage.add(info.data);
-
-		// delayMicroseconds(65000);
-		// delayMicroseconds(65000);
-		// delayMicroseconds(65000);
-		// delayMicroseconds(65000);
-		// delayMicroseconds(65000);
 	}
 #endif
 
@@ -173,7 +172,6 @@ inline void counting()
 // Настройка. Вызывается однократно при запуске.
 void setup()
 {
-
 	noInterrupts();
 	info.service = MCUSR; // причина перезагрузки
 	MCUSR = 0;			  // без этого не работает после перезагрузки по watchdog
@@ -214,16 +212,32 @@ void setup()
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop()
 {
-	power_all_disable(); // Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
+	power_all_disable(); 		// Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
 
-	wdt_count = 0;
-	while ((wdt_count < wakeup_period) && !button.pressed())
+    pinMode(1, OUTPUT);
+	GIMSK = _BV(PCIE);			// Включаем прерывания по фронту счетчиков и кнопки
+	PCMSK = _BV(PCINT2);
+	if (counter0.type == CounterType::ELECTRONIC)
 	{
-		counting();
-		WDTCR |= _BV(WDIE);
-		sleep_mode();
+		PCMSK |= _BV(counter0._pin);
+	}
+	if (counter1.type == CounterType::ELECTRONIC)
+	{
+		PCMSK |= _BV(counter1._pin);
 	}
 
+	wdt_count = 0;
+	while ((wdt_count < wakeup_period) && !button.pressed(event))
+	{
+		counting();
+		event = CounterEvent::NONE;
+		WDTCR |= _BV(WDIE);
+        //digitalWrite(1, LOW);
+		sleep_mode();
+        //digitalWrite(1, HIGH);
+	}
+
+	GIMSK = 0;					// Отлючаем прерывания по фронту
 	power_all_enable();
 
 	LOG_BEGIN(9600);
@@ -234,9 +248,10 @@ void loop()
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит
 	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания
+
 	unsigned long wake_up_limit;
-	if (button.wait_release() > LONG_PRESS_MSEC)
-	{ // wdt_reset внутри wait_release
+	if (button.press == ButtonPressType::LONG)
+	{ 
 		LOG(F("SETUP pressed"));
 		slaveI2C.begin(SETUP_MODE);
 		wake_up_limit = SETUP_TIME_MSEC; // 10 мин при настройке
@@ -248,8 +263,7 @@ void loop()
 	}
 	else
 	{
-
-		if (wdt_count < wakeup_period)
+		if (button.press == ButtonPressType::SHORT)
 		{
 			LOG(F("Manual transmit wake up"));
 			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
@@ -262,22 +276,18 @@ void loop()
 		wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
 	}
 
+	// Нажатие кнопки обработали и удаляем
+	button.press = ButtonPressType::NONE;
+
 	esp.power(true);
 	LOG(F("ESP turn on"));
 
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit))
 	{
-
 		wdt_reset();
-
 		counting();
-
-		delayMicroseconds(65000);
-
-		if (button.wait_release() > LONG_PRESS_MSEC)
-		{		   // wdt_reset внутри wait_release
-			break; // принудительно выключаем
-		}
+		event = CounterEvent::NONE;
+		delayMicroseconds(25000);
 	}
 
 	slaveI2C.end(); // выключаем i2c slave.
@@ -292,6 +302,5 @@ void loop()
 	}
 
 	delayMicroseconds(20000);
-
 	esp.power(false);
 }
