@@ -128,14 +128,19 @@ static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
 
 SlaveI2C slaveI2C;
 
-volatile uint32_t wdt_count;
-volatile CounterEvent event;
+volatile uint32_t 		wdt_count;
+volatile CounterEvent 	event;
+volatile uint8_t		storage_write_limit = 0; 
 
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR(WDT_vect)
 {
 	++wdt_count;
 	event = CounterEvent::TIME;
+	if (storage_write_limit > 0)
+	{
+		storage_write_limit--;
+	}
 }
 
 /* Вектор прерываний Pin Change */
@@ -150,10 +155,14 @@ inline void counting()
 {
 	if (counter0.is_impuls(event))
 	{
-		info.data.value0++; //нужен т.к. при пробуждении запрашиваем данные
+		info.data.value0++; 				//нужен т.к. при пробуждении запрашиваем данные
 		info.adc.adc0 = counter0.adc;
 		info.types.type0 = counter0.type;
-		storage.add(info.data);
+		if (storage_write_limit == 0)
+		{
+			storage.add(info.data);
+			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
+		}
 	}
 #ifndef LOG_ON
 	if (counter1.is_impuls(event))
@@ -161,7 +170,11 @@ inline void counting()
 		info.data.value1++;
 		info.adc.adc1 = counter1.adc;
 		info.types.type1 = counter1.type;
-		storage.add(info.data);
+		if (storage_write_limit == 0)
+		{
+			storage.add(info.data);
+			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
+		}
 	}
 #endif
 
