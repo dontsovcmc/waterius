@@ -53,5 +53,6 @@ bool post_data(String &url, const char *key, const char *email, String &payload)
         httpClient.end();
         (*(WiFiClient *)pClient).stop();
     }
+    delete (WiFiClient*)pClient;
     return result;
 }
