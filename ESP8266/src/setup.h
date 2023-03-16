@@ -3,10 +3,15 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.11.1"
+#define FIRMWARE_VERSION "0.11.2"
 
 /*
 Версии прошивки для ESP
+
+0.11.2 - 2023.03.02 - dontsovcmc, neitri
+                      1. WifiManager обновлен до v2.0.15-rc.1
+                      2. Переполнение массивов, очистка памяти
+                      3. Подсчет crc более компактный
 
 0.11.1 - 2023.02.28 - neitri, dontsovcmc
                       1. Указанный пользователем NTP сервер используется. 

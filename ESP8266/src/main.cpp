@@ -44,7 +44,7 @@ void loop()
     uint8_t mode = SETUP_MODE; // TRANSMIT_MODE;
     bool config_loaded = false;
 
-    // спрашиваем у Attiny85 повод пробуждения и данные
+    // спрашиваем у Attiny85 повод пробуждения и данные true) // /
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
     {
 
