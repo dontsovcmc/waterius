@@ -77,8 +77,13 @@ window.onload = function () {
     send('/config', 500, function (d) { 
         var b = JSON.parse(d); 
         Object.keys(b).forEach(function (e) { 
-            if (g(e)) { 
-                g(e).value = b[e]; 
+            var f = g(e);
+            if (f) { 
+                if (f.type=='checkbox'){
+                    f.checked = b[e];
+                }else{
+                    f.value = b[e]; 
+                }
             }; 
         }) 
     });
