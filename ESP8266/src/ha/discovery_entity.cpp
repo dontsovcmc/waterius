@@ -60,8 +60,7 @@ String build_entity_discovery(const char *mqtt_topic,
     String unique_id = uniqueId_prefix + "-" + entity_id;
     entity[F("uniq_id")] = unique_id.c_str(); // unique_id
 
-    String object_id = unique_id;
-    entity[F("obj_id")] = object_id.c_str(); // object_id
+    entity[F("obj_id")] = unique_id.c_str(); // object_id
 
     entity[F("stat_t")] = mqtt_topic; // state_topic
 
