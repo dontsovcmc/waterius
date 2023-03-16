@@ -1,18 +1,18 @@
 /**
  * @file portal.h
- * @author neitri 
+ * @author neitri
  * @brief Модуль портала настройки асинхронным Web сервером
  * @version 0.2
  * @date 2022-02-27
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  * Клас работает совместно со статическими файлами расположенными в разделе файловой системы
  * Для добавления параметра необходимо отредактироват html докумет. Добавить необходимые элементы.
  * В методе onGetConfig необходимо добавить передачу значения параметра.
  * В методе onPostWifiSave необходимо обработать сохранение введенного значения.
  * В методе onGetStates можно обновлять параметр в реальном времени.
- * 
+ *
  */
 #ifndef Waterius_Portal_h
 #define Waterius_Portal_h
@@ -21,33 +21,6 @@
 #include "ESPAsyncWebServer.h"
 #include "WebHandlerImpl.h"
 #include <LittleFS.h>
-
-
-const char PARAM_WMAIL[]       PROGMEM = "wmail";
-const char PARAM_WHOST[]       PROGMEM = "whost";
-const char PARAM_MPERIOD[]       PROGMEM = "mperiod";
-const char PARAM_BHOST[]       PROGMEM = "bhost";
-const char PARAM_BKEY[]       PROGMEM = "bkey";
-const char PARAM_BMAIL[]       PROGMEM = "bemail";
-const char PARAM_BTITLE[]       PROGMEM = "btitle";
-const char PARAM_BTEMPLATE[]       PROGMEM = "btemplate";
-const char PARAM_MHOST[]       PROGMEM = "mhost";
-const char PARAM_MPORT[]       PROGMEM = "mport";
-const char PARAM_MLOGIN[]       PROGMEM = "mlogin";
-const char PARAM_MPASSWORD[]       PROGMEM = "mpassword";
-const char PARAM_MTOPIC[]       PROGMEM = "mtopic";
-const char PARAM_MDAUTO[]       PROGMEM = "auto_discovery_checkbox";
-const char PARAM_MDTOPIC[]       PROGMEM = "discovery_topic";
-const char PARAM_IP[]       PROGMEM = "ip";
-const char PARAM_GW[]       PROGMEM = "gw";
-const char PARAM_SN[]       PROGMEM = "sn";
-const char PARAM_NTP[]      PROGMEM = "ntp";
-const char PARAM_FACTORCOLD[]       PROGMEM = "factorCold";
-const char PARAM_FACTORHOT[]       PROGMEM = "factorHot";
-const char PARAM_SERIALCOLD[]       PROGMEM = "serialCold";
-const char PARAM_SERIALHOT[]       PROGMEM = "serialHot";
-const char PARAM_CH0[]       PROGMEM = "ch0";
-const char PARAM_CH1[]       PROGMEM = "ch1";
 
 class Portal
 {
@@ -61,16 +34,24 @@ public:
     bool captivePortal(AsyncWebServerRequest *request);
     static bool isIp(String str);
     static String ipToString(uint32_t ip);
-    AsyncCallbackWebHandler& on(const char* uri, WebRequestMethodComposite method, ArRequestHandlerFunction onRequest);
+    AsyncCallbackWebHandler &on(const char *uri, WebRequestMethodComposite method, ArRequestHandlerFunction onRequest);
 
-    static bool SetParamStr(AsyncWebServerRequest *request, const char* param_name, char* dest, size_t size);
-    static bool UpdateParamStr(AsyncWebServerRequest *request, const char* param_name, char* dest, size_t size);
-    static bool SetParamIP(AsyncWebServerRequest *request, const char* param_name, uint32_t* dest);
-    static bool SetParamUInt(AsyncWebServerRequest *request, const char* param_name, uint16_t* dest);
-    static bool SetParamByte(AsyncWebServerRequest *request, const char* param_name, uint8_t* dest);
-    static bool SetParamFloat(AsyncWebServerRequest *request, const char* param_name, float* dest);
+    static bool SetParamStr(AsyncWebServerRequest *request, const char *param_name, char *dest, size_t size);
+    static bool UpdateParamStr(AsyncWebServerRequest *request, const char *param_name, char *dest, size_t size);
+    static bool SetParamIP(AsyncWebServerRequest *request, const char *param_name, uint32_t *dest);
+    static bool SetParamUInt(AsyncWebServerRequest *request, const char *param_name, uint16_t *dest);
+    static bool SetParamByte(AsyncWebServerRequest *request, const char *param_name, uint8_t *dest);
+    static bool SetParamFloat(AsyncWebServerRequest *request, const char *param_name, float *dest);
+
+    static bool SetParamStr(AsyncWebServerRequest *request, const __FlashStringHelper *param_name, char *dest, size_t size);
+    static bool UpdateParamStr(AsyncWebServerRequest *request, const __FlashStringHelper *param_name, char *dest, size_t size);
+    static bool SetParamIP(AsyncWebServerRequest *request, const __FlashStringHelper *param_name, uint32_t *dest);
+    static bool SetParamUInt(AsyncWebServerRequest *request, const __FlashStringHelper *param_name, uint16_t *dest);
+    static bool SetParamByte(AsyncWebServerRequest *request, const __FlashStringHelper *param_name, uint8_t *dest);
+    static bool SetParamFloat(AsyncWebServerRequest *request, const __FlashStringHelper *param_name, float *dest);
+
 private:
-    AsyncWebServer* server;
+    AsyncWebServer *server;
     uint32_t _delaydonesettings;
     bool _donesettings;
     void onGetRoot(AsyncWebServerRequest *request);
