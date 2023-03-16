@@ -19,6 +19,7 @@
 #include "portal.h"
 #include "json_constructor.h"
 #include "DNSServer.h"
+#include "resources.h"
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 SlaveData data;       // Данные от Attiny85
@@ -68,43 +69,43 @@ void onGetStates(Portal *portal, AsyncWebServerRequest *request)
     {
         if (runtime_data.impulses0 > data.impulses0)
         {
-            json.push(F("state0good"), F("Подключён"));
-            json.push(F("state0bad"), F(""));
+            json.push(FPSTR(PARAM_STATE0GOOD), FPSTR(TETX_CONNECTED));
+            json.push(FPSTR(PARAM_STATE0BAD), FPSTR(TEXT_EMPTY));
         }
         else
         {
-            json.push(F("state0good"), F(""));
-            json.push(F("state0bad"), F("Подключён"));
+            json.push(FPSTR(PARAM_STATE0GOOD), FPSTR(TEXT_EMPTY));
+            json.push(FPSTR(PARAM_STATE0BAD), FPSTR(TETX_CONNECTED));
         }
         if (runtime_data.impulses1 > data.impulses1)
         {
-            json.push(F("state1good"), F("Подключён"));
-            json.push(F("state1bad"), F(""));
+            json.push(FPSTR(PARAM_STATE1GOOD), FPSTR(TETX_CONNECTED));
+            json.push(FPSTR(PARAM_STATE1BAD), FPSTR(TEXT_EMPTY));
         }
         else
         {
-            json.push(F("state1good"), F(""));
-            json.push(F("state1bad"), F("Подключён"));
+            json.push(FPSTR(PARAM_STATE1GOOD), FPSTR(TEXT_EMPTY));
+            json.push(FPSTR(PARAM_STATE1BAD), FPSTR(TETX_CONNECTED));
         }
-        json.push(F("elapsed"), (uint32_t)(SETUP_TIME_SEC - millis() / 1000.0));
-        json.push(F("factor_cold_feedback"), get_auto_factor(runtime_data.impulses1, data.impulses1));
-        json.push(F("factor_hot_feedback"), get_auto_factor(runtime_data.impulses0, data.impulses0));
+        json.push(FPSTR(PARAM_ELAPSED), (uint32_t)(SETUP_TIME_SEC - millis() / 1000.0));
+        json.push(FPSTR(PARAM_FACTORCOLDFEEDBACK), get_auto_factor(runtime_data.impulses1, data.impulses1));
+        json.push(FPSTR(PARAM_FACTORHOTFEEDBACK), get_auto_factor(runtime_data.impulses0, data.impulses0));
         bool _fail=false;
         if (_fail)
         {
-            json.push(F("fail"), F("1"));
+            json.push(FPSTR(PARAM_FAIL), F("1"));
         }
         else
         {
-            json.push(F("fail"), F(""));
+            json.push(FPSTR(PARAM_FAIL), FPSTR(TEXT_EMPTY));
         }
-        json.push(F("error"), F(""));
+        json.push(FPSTR(PARAM_ERROR), FPSTR(TEXT_EMPTY));
     }
     else
     {
-        json.push(F("error"), F("Ошибка связи с МК"));
-        json.push(F("factor_cold_feedback"), 1);
-        json.push(F("factor_hot_feedback"), 1);
+        json.push(FPSTR(PARAM_ERROR), FPSTR(TEXT_CONNECTERROR));
+        json.push(FPSTR(PARAM_FACTORCOLDFEEDBACK), 1);
+        json.push(FPSTR(PARAM_FACTORHOTFEEDBACK), 1);
     }
     json.end();
     request->send(200, F("application/json"), json.c_str());
@@ -124,34 +125,34 @@ void onGetConfig(Portal *portal, AsyncWebServerRequest *request)
     LOG_INFO(F("Portal onGetConfig GET ") << request->host() << request->url());
     JsonConstructor json(2048);
     json.begin();
-    json.push(F("wmail"), sett.waterius_email);
-    json.push(F("whost"), sett.waterius_host);
-    json.push(F("mperiod"), sett.wakeup_per_min);
-    json.push(F("s"), WiFi.SSID().c_str());
-    json.push(F("p"), WiFi.psk().c_str());
-    json.push(F("bhost"), sett.blynk_host);
-    json.push(F("bkey"), sett.blynk_key);
-    json.push(F("bemail"), sett.blynk_email);
-    json.push(F("btitle"), sett.blynk_email_title);
-    json.push(F("btemplate"), sett.blynk_email_template);
-    json.push(F("mhost"), sett.mqtt_host);
-    json.push(F("mport"), sett.mqtt_port);
-    json.push(F("mlogin"), sett.mqtt_login);
-    json.push(F("mpassword"), sett.mqtt_password);
-    json.push(F("mtopic"), sett.mqtt_topic);
-    json.push(F("auto_discovery_checkbox"), sett.mqtt_auto_discovery);
-    json.push(F("discovery_topic"), sett.mqtt_discovery_topic);
-    json.push(F("mac"), WiFi.macAddress().c_str());
-    json.push(F("ip"), Portal::ipToString(sett.ip).c_str());
-    json.push(F("sn"), Portal::ipToString(sett.mask).c_str());
-    json.push(F("gw"), Portal::ipToString(sett.gateway).c_str());
-    json.push(F("ntp"), sett.ntp_server);
-    json.push(F("factorCold"), sett.factor1);
-    json.push(F("factorHot"), sett.factor0);
-    json.push(F("serialCold"), sett.serial0);
-    json.push(F("serialHot"), sett.serial1);
-    json.push(F("ch0"), cdata.channel0, 3);
-    json.push(F("ch1"), cdata.channel1, 3);
+    json.push(FPSTR(PARAM_WMAIL), sett.waterius_email);
+    json.push(FPSTR(PARAM_WHOST), sett.waterius_host);
+    json.push(FPSTR(PARAM_MPERIOD), sett.wakeup_per_min);
+    json.push(FPSTR(PARAM_S), WiFi.SSID().c_str());
+    json.push(FPSTR(PARAM_P), WiFi.psk().c_str());
+    json.push(FPSTR(PARAM_BHOST), sett.blynk_host);
+    json.push(FPSTR(PARAM_BKEY), sett.blynk_key);
+    json.push(FPSTR(PARAM_BMAIL), sett.blynk_email);
+    json.push(FPSTR(PARAM_BTITLE), sett.blynk_email_title);
+    json.push(FPSTR(PARAM_BTEMPLATE), sett.blynk_email_template);
+    json.push(FPSTR(PARAM_MHOST), sett.mqtt_host);
+    json.push(FPSTR(PARAM_MPORT), sett.mqtt_port);
+    json.push(FPSTR(PARAM_MLOGIN), sett.mqtt_login);
+    json.push(FPSTR(PARAM_MPASSWORD), sett.mqtt_password);
+    json.push(FPSTR(PARAM_MTOPIC), sett.mqtt_topic);
+    json.push(FPSTR(PARAM_MDAUTO), sett.mqtt_auto_discovery);
+    json.push(FPSTR(PARAM_MDTOPIC), sett.mqtt_discovery_topic);
+    json.push(FPSTR(PARAM_MAC), WiFi.macAddress().c_str());
+    json.push(FPSTR(PARAM_IP), Portal::ipToString(sett.ip).c_str());
+    json.push(FPSTR(PARAM_SN), Portal::ipToString(sett.mask).c_str());
+    json.push(FPSTR(PARAM_GW), Portal::ipToString(sett.gateway).c_str());
+    json.push(FPSTR(PARAM_NTP), sett.ntp_server);
+    json.push(FPSTR(PARAM_FACTORCOLD), sett.factor1);
+    json.push(FPSTR(PARAM_FACTORHOT), sett.factor0);
+    json.push(FPSTR(PARAM_SERIALCOLD), sett.serial0);
+    json.push(FPSTR(PARAM_SERIALHOT), sett.serial1);
+    json.push(FPSTR(PARAM_CH0), cdata.channel0, 3);
+    json.push(FPSTR(PARAM_CH1), cdata.channel1, 3);
     json.end();
     AsyncResponseStream *response = request->beginResponseStream(F("application/json"));
     response->addHeader("Server", "ESP Async Web Server");
@@ -180,57 +181,57 @@ void onErase(AsyncWebServerRequest *request)
 void onPostWifiSave(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("Portal onPostWiFiSave POST ") << request->host()<< request->url());
-    Portal::UpdateParamStr(request, "s", sett.wifi_ssid, WIFI_SSID_LEN - 1);
-    Portal::UpdateParamStr(request, "p", sett.wifi_password, WIFI_PWD_LEN - 1);
-    if (Portal::UpdateParamStr(request, PARAM_WMAIL, sett.waterius_email, EMAIL_LEN))
+    Portal::UpdateParamStr(request, FPSTR(PARAM_S), sett.wifi_ssid, WIFI_SSID_LEN - 1);
+    Portal::UpdateParamStr(request, FPSTR(PARAM_P), sett.wifi_password, WIFI_PWD_LEN - 1);
+    if (Portal::UpdateParamStr(request, FPSTR(PARAM_WMAIL), sett.waterius_email, EMAIL_LEN))
     {
         generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
     }
-    Portal::SetParamStr(request, PARAM_WHOST, sett.waterius_host, HOST_LEN - 1);
-    Portal::SetParamUInt(request, PARAM_MPERIOD, &sett.wakeup_per_min);
+    Portal::SetParamStr(request, FPSTR(PARAM_WHOST), sett.waterius_host, HOST_LEN - 1);
+    Portal::SetParamUInt(request, FPSTR(PARAM_MPERIOD), &sett.wakeup_per_min);
 
-    Portal::SetParamStr(request, PARAM_BHOST, sett.blynk_host, HOST_LEN - 1);
-    Portal::SetParamStr(request, PARAM_BKEY, sett.blynk_key, BLYNK_KEY_LEN);
-    Portal::SetParamStr(request, PARAM_BMAIL, sett.blynk_email, EMAIL_LEN);
-    Portal::SetParamStr(request, PARAM_BTITLE, sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN);
-    Portal::SetParamStr(request, PARAM_BTEMPLATE, sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN);
+    Portal::SetParamStr(request, FPSTR(PARAM_BHOST), sett.blynk_host, HOST_LEN - 1);
+    Portal::SetParamStr(request, FPSTR(PARAM_BKEY), sett.blynk_key, BLYNK_KEY_LEN);
+    Portal::SetParamStr(request, FPSTR(PARAM_BMAIL), sett.blynk_email, EMAIL_LEN);
+    Portal::SetParamStr(request, FPSTR(PARAM_BTITLE), sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN);
+    Portal::SetParamStr(request, FPSTR(PARAM_BTEMPLATE), sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN);
 
-    Portal::SetParamStr(request, PARAM_MHOST, sett.mqtt_host, HOST_LEN - 1);
-    Portal::SetParamUInt(request, PARAM_MPORT, &sett.mqtt_port);
-    Portal::SetParamStr(request, PARAM_MLOGIN, sett.mqtt_login, MQTT_LOGIN_LEN);
-    Portal::SetParamStr(request, PARAM_MPASSWORD, sett.mqtt_password, MQTT_PASSWORD_LEN);
-    Portal::SetParamStr(request, PARAM_MTOPIC, sett.mqtt_topic, MQTT_TOPIC_LEN);
-    Portal::SetParamByte(request, PARAM_MDAUTO, &sett.mqtt_auto_discovery);
-    Portal::SetParamStr(request, PARAM_MDTOPIC, sett.mqtt_discovery_topic, MQTT_TOPIC_LEN);
+    Portal::SetParamStr(request, FPSTR(PARAM_MHOST), sett.mqtt_host, HOST_LEN - 1);
+    Portal::SetParamUInt(request, FPSTR(PARAM_MPORT), &sett.mqtt_port);
+    Portal::SetParamStr(request, FPSTR(PARAM_MLOGIN), sett.mqtt_login, MQTT_LOGIN_LEN);
+    Portal::SetParamStr(request, FPSTR(PARAM_MPASSWORD), sett.mqtt_password, MQTT_PASSWORD_LEN);
+    Portal::SetParamStr(request, FPSTR(PARAM_MTOPIC), sett.mqtt_topic, MQTT_TOPIC_LEN);
+    Portal::SetParamByte(request, FPSTR(PARAM_MDAUTO), &sett.mqtt_auto_discovery);
+    Portal::SetParamStr(request, FPSTR(PARAM_MDTOPIC), sett.mqtt_discovery_topic, MQTT_TOPIC_LEN);
 
-    Portal::SetParamIP(request, PARAM_IP, &sett.ip);
-    Portal::SetParamIP(request, PARAM_GW, &sett.gateway);
-    Portal::SetParamIP(request, PARAM_SN, &sett.mask);
-    Portal::SetParamStr(request, PARAM_NTP, sett.ntp_server, HOST_LEN);
+    Portal::SetParamIP(request, FPSTR(PARAM_IP), &sett.ip);
+    Portal::SetParamIP(request, FPSTR(PARAM_GW), &sett.gateway);
+    Portal::SetParamIP(request, FPSTR(PARAM_SN), &sett.mask);
+    Portal::SetParamStr(request, FPSTR(PARAM_NTP), sett.ntp_server, HOST_LEN);
 
     uint8_t combobox_factor = -1;
-    if (Portal::SetParamByte(request, PARAM_FACTORCOLD, &combobox_factor))
+    if (Portal::SetParamByte(request, FPSTR(PARAM_FACTORCOLD), &combobox_factor))
     {
         sett.factor1 = get_factor(combobox_factor, data.impulses1, data.impulses1, 1);
         LOG_INFO("cold dropdown=" << combobox_factor);
         LOG_INFO("factorCold=" << sett.factor1);
     }
-    if (Portal::SetParamByte(request, PARAM_FACTORHOT, &combobox_factor))
+    if (Portal::SetParamByte(request, FPSTR(PARAM_FACTORHOT), &combobox_factor))
     {
         sett.factor0 = get_factor(combobox_factor, data.impulses1, data.impulses1, 1);
         LOG_INFO("hot dropdown=" << combobox_factor);
         LOG_INFO("factorHot=" << sett.factor0);
     }
-    Portal::SetParamStr(request, PARAM_SERIALCOLD, sett.serial1, SERIAL_LEN);
-    Portal::SetParamStr(request, PARAM_SERIALHOT, sett.serial0, SERIAL_LEN);
+    Portal::SetParamStr(request, FPSTR(PARAM_SERIALCOLD), sett.serial1, SERIAL_LEN);
+    Portal::SetParamStr(request, FPSTR(PARAM_SERIALHOT), sett.serial0, SERIAL_LEN);
 
-    if (Portal::SetParamFloat(request, PARAM_CH0, &sett.channel0_start))
+    if (Portal::SetParamFloat(request, FPSTR(PARAM_CH0), &sett.channel0_start))
     {
         sett.impulses0_start = data.impulses0;
         sett.impulses0_previous = sett.impulses0_start;
         LOG_INFO("impulses0=" << sett.impulses0_start);
     }
-    if (Portal::SetParamFloat(request, PARAM_CH1, &sett.channel1_start))
+    if (Portal::SetParamFloat(request, FPSTR(PARAM_CH1), &sett.channel1_start))
     {
         sett.impulses1_start = data.impulses1;
         sett.impulses1_previous = sett.impulses1_start;
