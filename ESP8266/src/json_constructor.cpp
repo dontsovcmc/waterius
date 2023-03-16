@@ -10,7 +10,7 @@ void JsonConstructor::begin()
     _pos = 0;
     _init = false;
     *_buffer = '\0';
-    write(F("{"));
+    write(FPSTR(JsonConstructor_OpenObject));
 }
 
 /**
@@ -22,7 +22,7 @@ void JsonConstructor::beginObject(const char *name)
 {
     insert();
     write(name);
-    write(F("\":{"));
+    write(FPSTR(JsonConstructor_NewObject));
     _init = false;
 }
 
@@ -35,7 +35,7 @@ void JsonConstructor::beginObject(const __FlashStringHelper *name)
 {
     insert();
     write(name);
-    write(F("\":{"));
+    write(FPSTR(JsonConstructor_NewObject));
     _init = false;
 }
 
@@ -48,7 +48,7 @@ void JsonConstructor::beginArray(const char *name)
 {
     insert();
     write(name);
-    write(F("\":["));
+    write(FPSTR(JsonConstructor_NewArray));
     _init = false;
 }
 
@@ -61,7 +61,7 @@ void JsonConstructor::beginArray(const __FlashStringHelper *name)
 {
     insert();
     write(name);
-    write(F("\":["));
+    write(FPSTR(JsonConstructor_NewArray));
     _init = false;
 }
 
@@ -70,7 +70,7 @@ void JsonConstructor::beginArray(const __FlashStringHelper *name)
  */
 void JsonConstructor::end()
 {
-    write(F("}"));
+    write(FPSTR(JsonConstructor_CloseObject));
 }
 
 /**
@@ -78,7 +78,7 @@ void JsonConstructor::end()
  */
 void JsonConstructor::endObject()
 {
-    write(F("}"));
+    write(FPSTR(JsonConstructor_CloseObject));
 }
 
 /**
@@ -86,7 +86,7 @@ void JsonConstructor::endObject()
  */
 void JsonConstructor::endArray()
 {
-    write(F("]"));
+    write(FPSTR(JsonConstructor_CloseArray));
 }
 
 /**
@@ -214,8 +214,8 @@ uint16_t JsonConstructor::write(float value, uint8_t size)
 uint16_t JsonConstructor::write(bool value)
 {
     if (value)
-        return write(F("true"));
-    return write(F("false"));
+        return write(FPSTR(JsonConstructor_True));
+    return write(FPSTR(JsonConstructor_False));
 }
 
 /**
@@ -317,7 +317,7 @@ uint16_t JsonConstructor::writeIP(uint32_t value)
     {
         ret += write((uint32_t)((uint8_t *)&value)[i]);
         if (i != 3)
-            ret += write(F("."));
+            ret += write(FPSTR(JsonConstructor_Dot));
     }
     return ret;
 }
@@ -331,7 +331,7 @@ void JsonConstructor::insert(bool str)
 {
     if (_init)
     {
-        write(F(","));
+        write(FPSTR(JsonConstructor_Comma));
     }
     else
     {
@@ -339,7 +339,7 @@ void JsonConstructor::insert(bool str)
     }
     if (str)
     {
-        write(F("\""));
+        write(FPSTR(JsonConstructor_Quote));
     }
 }
 
@@ -353,9 +353,9 @@ void JsonConstructor::push(const char *name, const char *value)
 {
     insert();
     write(name);
-    write(F("\":\""));
+    write(FPSTR(JsonConstructor_TextValue));
     quoted(value, strlen(value));
-    write(F("\""));
+    write(FPSTR(JsonConstructor_Quote));
 }
 
 /**
@@ -368,9 +368,9 @@ void JsonConstructor::push(const __FlashStringHelper *name, const char *value)
 {
     insert();
     write(name);
-    write(F("\":\""));
+    write(FPSTR(JsonConstructor_TextValue));
     quoted(value, strlen(value));
-    write(F("\""));
+    write(FPSTR(JsonConstructor_Quote));
 }
 
 /**
@@ -383,9 +383,9 @@ void JsonConstructor::push(const char *name, const __FlashStringHelper *value)
 {
     insert();
     write(name);
-    write(F("\":\""));
+    write(FPSTR(JsonConstructor_TextValue));
     quoted(value, strlen_P(reinterpret_cast<PGM_P>(value)));
-    write(F("\""));
+    write(FPSTR(JsonConstructor_Quote));
 }
 
 /**
@@ -398,9 +398,9 @@ void JsonConstructor::push(const __FlashStringHelper *name, const __FlashStringH
 {
     insert();
     write(name);
-    write(F("\":\""));
+    write(FPSTR(JsonConstructor_TextValue));
     quoted(value, strlen_P(reinterpret_cast<PGM_P>(value)));
-    write(F("\""));
+    write(FPSTR(JsonConstructor_Quote));
 }
 
 /**
@@ -413,7 +413,7 @@ void JsonConstructor::push(const char *name, uint32_t value)
 {
     insert();
     write(name);
-    write(F("\":"));
+    write(FPSTR(JsonConstructor_Value));
     write(value);
 }
 
@@ -427,7 +427,7 @@ void JsonConstructor::push(const __FlashStringHelper *name, uint32_t value)
 {
     insert();
     write(name);
-    write(F("\":"));
+    write(FPSTR(JsonConstructor_Value));
     write(value);
 }
 
@@ -479,7 +479,7 @@ void JsonConstructor::push(const char *name, int32_t value)
 {
     insert();
     write(name);
-    write(F("\":"));
+    write(FPSTR(JsonConstructor_Value));
     write(value);
 }
 
@@ -493,7 +493,7 @@ void JsonConstructor::push(const __FlashStringHelper *name, int32_t value)
 {
     insert();
     write(name);
-    write(F("\":"));
+    write(FPSTR(JsonConstructor_Value));
     write(value);
 }
 
@@ -551,9 +551,9 @@ void JsonConstructor::push(const char *name, const char *value, size_t size)
 {
     insert();
     write(name);
-    write(F("\":\""));
+    write(FPSTR(JsonConstructor_TextValue));
     quoted(value, size);
-    write(F("\""));
+    write(FPSTR(JsonConstructor_Quote));
 }
 
 /**
@@ -566,9 +566,9 @@ void JsonConstructor::push(const __FlashStringHelper *name, const char *value, s
 {
     insert();
     write(name);
-    write(F("\":\""));
+    write(FPSTR(JsonConstructor_TextValue));
     quoted(value, size);
-    write(F("\""));
+    write(FPSTR(JsonConstructor_Quote));
 }
 
 /**
@@ -581,7 +581,7 @@ void JsonConstructor::push(const char *name, double value, uint8_t size)
 {
     insert();
     write(name);
-    write(F("\":"));
+    write(FPSTR(JsonConstructor_Value));
     write(value, size);
 }
 
@@ -595,7 +595,7 @@ void JsonConstructor::push(const __FlashStringHelper *name, double value, uint8_
 {
     insert();
     write(name);
-    write(F("\":"));
+    write(FPSTR(JsonConstructor_Value));
     write(value, size);
 }
 
@@ -609,7 +609,7 @@ void JsonConstructor::push(const char *name, float value, uint8_t size)
 {
     insert();
     write(name);
-    write(F("\":"));
+    write(FPSTR(JsonConstructor_Value));
     write(value, size);
 }
 
@@ -623,7 +623,7 @@ void JsonConstructor::push(const __FlashStringHelper *name, float value, uint8_t
 {
     insert();
     write(name);
-    write(F("\":"));
+    write(FPSTR(JsonConstructor_Value));
     write(value, size);
 }
 
@@ -637,7 +637,7 @@ void JsonConstructor::push(const char *name, bool value)
 {
     insert();
     write(name);
-    write(F("\":"));
+    write(FPSTR(JsonConstructor_Value));
     write(value);
 }
 
@@ -651,7 +651,7 @@ void JsonConstructor::push(const __FlashStringHelper *name, bool value)
 {
     insert();
     write(name);
-    write(F("\":"));
+    write(FPSTR(JsonConstructor_Value));
     write(value);
 }
 
@@ -665,9 +665,9 @@ void JsonConstructor::pushIP(const char *name, uint32_t value)
 {
     insert();
     write(name);
-    write(F("\":\""));
+    write(FPSTR(JsonConstructor_TextValue));
     writeIP(value);
-    write(F("\""));
+    write(FPSTR(JsonConstructor_Quote));
 }
 
 /**
@@ -679,7 +679,7 @@ void JsonConstructor::push(const char *value)
 {
     insert();
     write(value);
-    write(F("\""));
+    write(FPSTR(JsonConstructor_Quote));
 }
 
 /**
@@ -691,7 +691,7 @@ void JsonConstructor::push(const __FlashStringHelper *value)
 {
     insert();
     write(value);
-    write(F("\""));
+    write(FPSTR(JsonConstructor_Quote));
 }
 
 /**
@@ -788,9 +788,9 @@ void JsonConstructor::pushIP(const __FlashStringHelper *name, uint32_t value)
 {
     insert();
     write(name);
-    write(F("\":\""));
+    write(FPSTR(JsonConstructor_TextValue));
     writeIP(value);
-    write(F("\""));
+    write(FPSTR(JsonConstructor_Quote));
 }
 
 /**

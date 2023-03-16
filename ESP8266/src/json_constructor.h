@@ -14,6 +14,20 @@
 #include <ESP8266WiFi.h>
 #include "WString.h"
 
+static const char JsonConstructor_OpenObject[] PROGMEM = "{";
+static const char JsonConstructor_NewObject[] PROGMEM = "\":{";
+static const char JsonConstructor_NewArray[] PROGMEM = "\":[";
+static const char JsonConstructor_CloseObject[] PROGMEM = "}";
+static const char JsonConstructor_CloseArray[] PROGMEM = "]";
+static const char JsonConstructor_False[] PROGMEM = "false";
+static const char JsonConstructor_True[] PROGMEM = "true";
+static const char JsonConstructor_Dot[] PROGMEM = ".";
+static const char JsonConstructor_Comma[] PROGMEM = ",";
+static const char JsonConstructor_Slash[] PROGMEM = "\\";
+static const char JsonConstructor_Quote[] PROGMEM = "\"";
+static const char JsonConstructor_Value[] PROGMEM = "\":";
+static const char JsonConstructor_TextValue[] PROGMEM = "\":\"";
+
 class JsonConstructor
 {
 private:
