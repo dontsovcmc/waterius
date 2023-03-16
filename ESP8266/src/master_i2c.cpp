@@ -11,27 +11,17 @@
 // Dallas CRC x8+x5+x4+1
 uint8_t crc_8(unsigned char *b, size_t num_bytes, uint8_t crc)
 {
-    uint8_t i;
-    for (size_t a = 0; a < num_bytes; a++)
+    while (num_bytes--)
     {
-        i = (*(b + a) ^ crc) & 0xff;
-        crc = 0;
-        if (i & 1)
-            crc ^= 0x5e;
-        if (i & 2)
-            crc ^= 0xbc;
-        if (i & 4)
-            crc ^= 0x61;
-        if (i & 8)
-            crc ^= 0xc2;
-        if (i & 0x10)
-            crc ^= 0x9d;
-        if (i & 0x20)
-            crc ^= 0x23;
-        if (i & 0x40)
-            crc ^= 0x46;
-        if (i & 0x80)
-            crc ^= 0x8c;
+        uint8_t inbyte = *b++;
+        for (uint8_t i = 8; i; i--)
+        {
+            uint8_t mix = (crc ^ inbyte) & 0x01;
+            crc >>= 1;
+            if (mix)
+                crc ^= 0x8C;
+            inbyte >>= 1;
+        }
     }
     return crc;
 }
