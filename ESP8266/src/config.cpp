@@ -218,7 +218,9 @@ bool load_config(Settings &sett)
 #endif
 
 #ifdef WIFI_SSID
+#pragma message(VAR_NAME_VALUE(WIFI_SSID))
 #ifdef WIFI_PASS
+#pragma message(VAR_NAME_VALUE(WIFI_PASS))
         strncpy0(sett.wifi_ssid, VALUE(WIFI_SSID), WIFI_SSID_LEN);
         strncpy0(sett.wifi_password, VALUE(WIFI_PASS), WIFI_PWD_LEN);
         return true;

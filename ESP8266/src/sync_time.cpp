@@ -290,7 +290,7 @@ bool sync_ntp_time()
             LOG_INFO(F("NTP: Time successfully synced. Total time spent ") << millis() - start_time << F(" msec"));
             return true;
         };
-    } while (attempts--);
+    } while (--attempts);
 
     LOG_ERROR(F("NTP: Time could not synced. Total time spent ") << millis() - start_time << F(" msec"));
     return false;

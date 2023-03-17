@@ -105,13 +105,13 @@ uint8_t Voltage::get_battery_level()
 uint16_t Voltage::average()
 {
     uint16_t avrg, sum=0;
-    int count = _num_probes>MAX_PROBES ? MAX_PROBES : _num_probes;
+    int count = _num_probes > MAX_PROBES ? MAX_PROBES : _num_probes;
     for (int i = 0; i < count; i++)
     {
         sum+=_probes[i];
     }
     if (count>0) {
-        avrg = sum/count;
+        avrg = sum / count;
     } else {
         avrg = _voltage;
     }

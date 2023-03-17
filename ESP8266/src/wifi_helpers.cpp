@@ -128,7 +128,7 @@ bool wifi_connect(Settings &sett)
     }
     sett.wifi_channel = 0;
     LOG_ERROR(F("WIFI: Connection failed."));
-  } while (attempts--);
+  } while (--attempts);
   
   LOG_ERROR(F("WIFI: Connection failed.") << millis() - start_time << F(" ms"));
   return false;

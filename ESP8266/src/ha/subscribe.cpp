@@ -108,7 +108,7 @@ bool mqtt_connect(Settings &sett, PubSubClient &mqtt_client)
         }
         LOG_ERROR(F("MQTT: Connect failed with state ") << mqtt_client.state());
         delay(MQTT_CONNECT_DELAY);
-    } while (attempts--);
+    } while (--attempts);
     return true;
 }
 

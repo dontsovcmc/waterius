@@ -210,6 +210,7 @@ void log_system_info()
 {
 	// System info
 	LOG_INFO(F("------------ System Info ------------"));
+	LOG_INFO(F("Firmware ver: ") << String(FIRMWARE_VERSION));
 	LOG_INFO(F("Sketch Size: ") << ESP.getSketchSize());
 	LOG_INFO(F("Free Sketch Space: ") << ESP.getFreeSketchSpace());
 	LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());

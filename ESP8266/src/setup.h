@@ -3,10 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.11.2"
+#define FIRMWARE_VERSION "0.11.3"
 
 /*
 Версии прошивки для ESP
+
+0.11.3 - 2023.03.18 - dontsovcmc
+                      1. Счетчики попыток починил
 
 0.11.2 - 2023.03.02 - dontsovcmc, neitri
                       1. WifiManager обновлен до v2.0.15-rc.1
