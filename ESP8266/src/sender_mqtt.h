@@ -99,8 +99,7 @@ bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdat
 
     mqtt_client.loop();
     // autodiscovery после настройки и по нажатию на кнопку
-    if (sett.mqtt_auto_discovery && (ALWAYS_MQTT_AUTO_DISCOVERY ||
-                                     (sett.mode == SETUP_MODE) ||
+    if (sett.mqtt_auto_discovery && ((sett.mode == SETUP_MODE) ||
                                      (sett.mode == MANUAL_TRANSMIT_MODE)))
     {
         String mqtt_discovery_topic = sett.mqtt_discovery_topic;

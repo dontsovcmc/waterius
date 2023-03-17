@@ -165,10 +165,6 @@
 #define MQTT_AUTO_DISCOVERY true // если true то публикуется автодискавери топик для Home Assistant
 #endif
 
-#ifndef ALWAYS_MQTT_AUTO_DISCOVERY
-#define ALWAYS_MQTT_AUTO_DISCOVERY false // если true то всегда публикуется автодискавери топик для Home Assistant при отправке данных
-#endif
-
 #define MQTT_FORCE_UPDATE true // Сенсор в HA будет обновляться даже если значение не обновилось
 
 #define CHANNEL_NUM 2
@@ -177,7 +173,6 @@
 #define MANUFACTURER "Waterius"
 
 #define JSON_DYNAMIC_MSG_BUFFER 1024
-#define JSON_STATIC_MSG_BUFFER 512
 #define JSON_SMALL_STATIC_MSG_BUFFER 256
 
 #define ROUTER_MAC_LENGTH 8

@@ -139,7 +139,7 @@ uint64_t get_ntp_response(WiFiUDP &udp)
             // compensate for the delay by adding half the total delay
             uint32_t delay_compensation = total_delay / 2;
 
-            LOG_INFO(F("NTP  : NTP replied: delay ") << total_delay << F(" mSec"));
+            LOG_INFO(F("NTP: NTP replied: delay ") << total_delay << F(" mSec"));
 
             ntp_nanos += (uint64_t)delay_compensation * (NSEC / MSEC);
 
