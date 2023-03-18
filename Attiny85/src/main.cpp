@@ -160,7 +160,6 @@ inline void counting()
 		info.types.type0 = counter0.type;
 		if (storage_write_limit == 0)
 		{
-			storage.add(info.data);
 			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
 		}
 	}
@@ -172,7 +171,6 @@ inline void counting()
 		info.types.type1 = counter1.type;
 		if (storage_write_limit == 0)
 		{
-			storage.add(info.data);
 			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
 		}
 	}
@@ -180,6 +178,15 @@ inline void counting()
 
 	adc_disable();
 	power_adc_disable();
+
+	// Сохраняем данные через минуту после импульса, не зависимо были импульсы или нет.
+	// Если код вызывать выше после инкремента, то значение запишется при первом импульсе 
+	// через 1 минуту отсчета счетчика. Т.е. при спускании бочка унитаза, данные подсчитанные при его наполнении запишутся при следующем спускании.
+	if (storage_write_limit == 1)
+	{
+		storage.add(info.data);
+		storage_write_limit=0;
+	}
 }
 //Запрос периода при инициализции. Также период может изменится после настройки.
 // Настройка. Вызывается однократно при запуске.
