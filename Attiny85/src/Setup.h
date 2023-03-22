@@ -135,4 +135,8 @@ struct Header
 
 #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
 
+#ifdef MODKAM_VERSION
+extern bool flag_new_counter_value;
+#endif
+
 #endif

@@ -21,12 +21,19 @@ protected:
     static void requestEvent();
     static void newCommand();
     static void receiveEvent(int howMany);
-    static void getWakeUpPeriod();
+    static void getWakeUpPeriod();	
+    static void getCounterValue();
 
 public:
     void begin(const uint8_t);
     static void end();
     bool masterGoingToSleep();
+};
+
+union ArrayToUin32
+{
+	byte array[4];
+	uint32_t value;
 };
 
 #endif

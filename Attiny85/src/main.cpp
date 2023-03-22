@@ -17,11 +17,17 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 25 // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 26 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
 
+26 - 2023.03.22 - dontsov
+	1. поддержка modkam -DMODKAM_VERSION
+
+25 - 2023.02.02 - abrant
+	1. поддержка электронных импульсов
+	
 24 - 2022.02.22 - neitri, dontsovcmc
 	1. Передача флага о том, что пробуждение по кнопке
 	2. Передача количества включений режима настройки
@@ -98,12 +104,12 @@ TinyDebugSerial mySerial;
 
 // Waterius Classic: https://github.com/dontsovcmc/waterius
 //
-//                                +-\/-+
-//       RESET   (D  5/A0)  PB5  1|    |8  VCC
-//  *Counter1*   (D  3/A3)  PB3  2|    |7  PB2  (D  2/ A1)         SCL   *Button*
-//  *Counter0*   (D  4/A2)  PB4  3|    |6  PB1  (D  1)      MISO         *Power ESP*
-//                          GND  4|    |5  PB0  (D  0)      MOSI   SDA
-//                                +----+
+//								+-\/-+
+//	   RESET   (D  5/A0)  PB5  1|	|8  VCC
+//  *Counter1*   (D  3/A3)  PB3  2|	|7  PB2  (D  2/ A1)		 SCL   *Button*
+//  *Counter0*   (D  4/A2)  PB4  3|	|6  PB1  (D  1)	  MISO		 *Power ESP*
+//						  GND  4|	|5  PB0  (D  0)	  MOSI   SDA
+//								+----+
 //
 // https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x5.md
 
@@ -128,9 +134,13 @@ static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
 
 SlaveI2C slaveI2C;
 
-volatile uint32_t 		wdt_count;
-volatile CounterEvent 	event;
+volatile uint32_t		 wdt_count;
+volatile CounterEvent	 event;
 volatile uint8_t		storage_write_limit = 0; 
+
+#ifdef MODKAM_VERSION
+bool flag_new_counter_value = false;  // может нужно volatile ?
+#endif
 
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR(WDT_vect)
@@ -155,7 +165,7 @@ inline void counting()
 {
 	if (counter0.is_impuls(event))
 	{
-		info.data.value0++; 				//нужен т.к. при пробуждении запрашиваем данные
+		info.data.value0++;				 //нужен т.к. при пробуждении запрашиваем данные
 		info.adc.adc0 = counter0.adc;
 		info.types.type0 = counter0.type;
 		if (storage_write_limit == 0)
@@ -193,21 +203,33 @@ void setup()
 	interrupts();
 
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+	
+	wakeup_period = WAKEUP_PERIOD_DEFAULT;
 
 	uint16_t size = storage.size();
 	if (storage.get(info.data))
-	{ //не первая загрузка
+	{   //не первая загрузка
 		info.resets = EEPROM.read(size);
 		info.resets++;
-		EEPROM.write(size, info.resets);
+		EEPROM.put(size, info.resets);
+
+		EEPROM.get(size + 1, info.setup_started_counter);
+		
+#ifdef MODKAM_VERSION
+		EEPROM.get(size + 2, wakeup_period);
+		if (wakeup_period == 0)
+		{
+			wakeup_period = WAKEUP_PERIOD_DEFAULT;
+		} 
+#endif
+
 	}
 	else
 	{
-		EEPROM.write(size, info.resets);					// 0
-		EEPROM.write(size + 1, info.setup_started_counter); // 0
+		EEPROM.put(size, info.resets);					// 0
+		EEPROM.put(size + 1, info.setup_started_counter); // 0
+		EEPROM.put(size + 2, wakeup_period); // 0
 	}
-
-	wakeup_period = WAKEUP_PERIOD_DEFAULT;
 
 	LOG_BEGIN(9600);
 	LOG(F("==== START ===="));
@@ -215,8 +237,19 @@ void setup()
 	LOG(info.service);
 	LOG(F("RESET"));
 	LOG(info.resets);
+	LOG(F("setup started:"));
+	LOG(info.setup_started_counter);
+
+#ifndef MODKAM_VERSION
 	LOG(F("EEPROM used:"));
-	LOG(size + 2);
+	LOG(storage.size() + 2);
+#else
+	LOG(F("Wakeup period:")); //!!! ptvo
+	LOG(wakeup_period);	  //!!! ptvo
+	LOG(F("EEPROM used:"));
+	LOG(storage.size() + 5);  //!!! ptvo
+#endif
+
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
@@ -225,9 +258,9 @@ void setup()
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop()
 {
-	power_all_disable(); 		// Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
+	power_all_disable();		 // Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
 
-    pinMode(1, OUTPUT);
+	pinMode(1, OUTPUT);
 	GIMSK = _BV(PCIE);			// Включаем прерывания по фронту счетчиков и кнопки
 	PCMSK = _BV(PCINT2);
 	if (counter0.type == CounterType::ELECTRONIC)
@@ -245,9 +278,9 @@ void loop()
 		counting();
 		event = CounterEvent::NONE;
 		WDTCR |= _BV(WDIE);
-        //digitalWrite(1, LOW);
+		//digitalWrite(1, LOW);
 		sleep_mode();
-        //digitalWrite(1, HIGH);
+		//digitalWrite(1, HIGH);
 	}
 
 	GIMSK = 0;					// Отлючаем прерывания по фронту
@@ -262,6 +295,7 @@ void loop()
 	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания
 
+#ifndef MODKAM_VERSION
 	unsigned long wake_up_limit;
 	if (button.press == ButtonPressType::LONG)
 	{ 
@@ -270,7 +304,6 @@ void loop()
 		wake_up_limit = SETUP_TIME_MSEC; // 10 мин при настройке
 
 		uint16_t setup_started_addr = storage.size() + 1;
-		info.setup_started_counter = EEPROM.read(setup_started_addr);
 		info.setup_started_counter++;
 		EEPROM.write(setup_started_addr, info.setup_started_counter);
 	}
@@ -288,6 +321,19 @@ void loop()
 		}
 		wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
 	}
+#else
+		if (button.press == ButtonPressType::SHORT || button.press == ButtonPressType::LONG)
+		{
+			LOG(F("Manual transmit wake up"));
+			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
+		}
+		else
+		{
+			LOG(F("wake up for transmitting"));
+			slaveI2C.begin(TRANSMIT_MODE);
+		}
+		unsigned long wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
+#endif
 
 	// Нажатие кнопки обработали и удаляем
 	button.press = ButtonPressType::NONE;
@@ -302,6 +348,14 @@ void loop()
 		event = CounterEvent::NONE;
 		delayMicroseconds(25000);
 	}
+
+#ifdef MODKAM_VERSION
+	if (flag_new_counter_value) {
+		flag_new_counter_value = false;
+
+		storage.add(info.data);  // вдруг записали новое значение
+	}
+#endif
 
 	slaveI2C.end(); // выключаем i2c slave.
 

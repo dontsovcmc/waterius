@@ -71,7 +71,19 @@ void SlaveI2C::receiveEvent(int howMany)
     case 'S': // ESP присылает новое значение периода пробуждения
         getWakeUpPeriod();
         break;
+#ifdef MODKAM_VERSION
+    case 'C': // set initial counter value
+		getCounterValue();
+		break;
     }
+    
+    while (Wire.available())
+	{
+		Wire.read();
+	}
+#else
+    }
+#endif
 }
 
 void SlaveI2C::getWakeUpPeriod()
@@ -89,6 +101,41 @@ void SlaveI2C::getWakeUpPeriod()
         wakeup_period = ONE_MINUTE * newPeriod;
     }
 }
+
+#ifdef MODKAM_VERSION
+void SlaveI2C::getCounterValue()
+{
+	uint8_t data[5];
+	ArrayToUin32 tmp;
+
+	data[0] = Wire.read();  // номер канала, 0 или 1
+	data[1] = Wire.read();
+	data[2] = Wire.read();
+	data[3] = Wire.read();
+	data[4] = Wire.read();
+	uint8_t crc = Wire.read();
+
+	if (crc == crc_8(data, 5))
+	{
+		for (uint8_t i = 0; i < 4; i++)
+		{
+			tmp.array[3 - i] = data[i + 1];
+		}
+
+		if (data[0] == 1)
+		{
+			info.data.value1 = tmp.value;
+		}
+		else
+		{
+			info.data.value0 = tmp.value;
+		}
+		// we should leave this code as soon as possible
+		// because it is called from ISR
+		flag_new_counter_value = true;
+	}
+}
+#endif
 
 bool SlaveI2C::masterGoingToSleep()
 {
