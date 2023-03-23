@@ -348,7 +348,7 @@ struct Settings
     uint8_t wifi_bssid[6] = {0};
     /* Wifi канал */
     uint8_t wifi_channel = 0;
-    uint8_t reserved3 = 0; // выравниваем по границе
+    uint8_t wifi_phy_mode = 0; // Режим работы интерфейса
 
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
