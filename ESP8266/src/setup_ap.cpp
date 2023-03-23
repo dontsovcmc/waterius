@@ -214,6 +214,15 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     IPAddressParameter param_mask("sn", "Маска подсети", IPAddress(sett.mask));
     wm.addParameter(&param_mask);
 
+    WiFiManagerParameter label_phy_mode("<b>Режим интерфейса</b>");
+    wm.addParameter(&label_phy_mode);
+    DropdownParameter dropdown_phy_mode("phy_mode");
+    dropdown_phy_mode.add_option(0, "Авто", sett.wifi_phy_mode);
+    dropdown_phy_mode.add_option(1, "11b", sett.wifi_phy_mode);
+    dropdown_phy_mode.add_option(2, "11g", sett.wifi_phy_mode);
+    dropdown_phy_mode.add_option(3, "11n", sett.wifi_phy_mode);
+    wm.addParameter(&dropdown_phy_mode);
+
     WiFiManagerParameter param_ntp("ntp", "Сервер времени (NTP)", sett.ntp_server, HOST_LEN - 1);
     wm.addParameter(&param_ntp);
 
@@ -294,6 +303,8 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     // Запуск веб сервера на 192.168.4.1
     LOG_INFO(F("chip id:") << getChipId());
 
+    WiFi.setPhyMode(WIFI_PHY_MODE_11G);
+
     /*
     Имя точки доступа waterius-NNNNN-НОМЕРВЕРСИИ
     */
@@ -360,6 +371,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     {
         LOG_INFO(F("DHCP is ON"));
     }
+    sett.wifi_phy_mode = dropdown_phy_mode.getValue();
 
     strncpy0(sett.ntp_server, param_ntp.getValue(), HOST_LEN);
     LOG_INFO(F("NTP Server=") << param_ntp.getValue());

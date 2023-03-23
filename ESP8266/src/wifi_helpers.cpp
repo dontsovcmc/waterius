@@ -48,7 +48,13 @@ void wifi_begin(Settings &sett)
   delay(200); // подождем чтобы проинициализировалась сеть
 
   wifi_set_mode(WIFI_STA);
-
+  if (sett.wifi_phy_mode)
+  {
+    if (!WiFi.setPhyMode((WiFiPhyMode_t)sett.wifi_phy_mode))
+    {
+      LOG_ERROR(F("Failed set phy mode ")<<sett.wifi_phy_mode);
+    }
+  }
   if (!WiFi.getAutoConnect())
   {
     WiFi.setAutoConnect(true);
