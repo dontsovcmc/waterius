@@ -250,7 +250,6 @@ void loop()
         //digitalWrite(1, HIGH);
 	}
 
-	GIMSK = 0;					// Отлючаем прерывания по фронту
 	power_all_enable();
 
 	LOG_BEGIN(9600);
@@ -295,12 +294,27 @@ void loop()
 	esp.power(true);
 	LOG(F("ESP turn on"));
 
+	uint8_t delay_loop_count = 0;		
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit))
 	{
 		wdt_reset();
-		counting();
-		event = CounterEvent::NONE;
-		delayMicroseconds(25000);
+		if (delay_loop_count < 250)
+		{
+			delay_loop_count++;
+		}
+		else
+		{
+			// Получаем период опроса входов 250мс, как и от ватчдога
+			delay_loop_count = 0;
+			event = CounterEvent::TIME;
+		}
+		if (event != CounterEvent::NONE)
+		{
+			// Если получили фронт изменения сигнала или набежало время - проверяем входы
+			counting();
+			event = CounterEvent::NONE;
+		}
+		delayMicroseconds(1000);
 	}
 
 	slaveI2C.end(); // выключаем i2c slave.
@@ -314,6 +328,6 @@ void loop()
 		LOG(F("Sleep received"));
 	}
 
-	delayMicroseconds(20000);
+	delayMicroseconds(2000);
 	esp.power(false);
 }
