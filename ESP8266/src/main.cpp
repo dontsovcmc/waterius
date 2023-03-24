@@ -65,7 +65,7 @@ void loop()
             WiFi.persistent(false);
             WiFi.disconnect();
 
-            wifi_set_mode(WIFI_AP_STA);
+            wifi_set_mode(WIFI_AP_STA);   // Нужно ли, если есть в WifiManager?
 
             setup_ap(sett, data, cdata);
 
@@ -77,7 +77,6 @@ void loop()
             LOG_INFO(F("Restart ESP"));
             LOG_END();
 
-            wifi_set_mode(WIFI_OFF);
             LOG_INFO(F("Finish setup mode..."));
             ESP.restart();
 

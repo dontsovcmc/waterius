@@ -193,7 +193,7 @@
 
 #define DEF_FALLBACK_DNS "8.8.8.8"
 
-#define WIFI_CONNECT_ATTEMPTS 3
+#define WIFI_CONNECT_ATTEMPTS 2
 
 #define WIFI_SSID_LEN 32 + 1
 #define WIFI_PWD_LEN 64 + 1
