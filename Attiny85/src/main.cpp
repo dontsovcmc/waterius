@@ -17,13 +17,16 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 26 // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 27 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
 
-26 - 2023.03.22 - dontsov
+27 - 2023.03.25 - dontsov
 	1. поддержка modkam -DMODKAM_VERSION
+
+26 - 2023.03.25 - abrant
+	1. Исправление потерь импульсов во время связи
 
 25 - 2023.02.02 - abrant
 	1. поддержка электронных импульсов
@@ -122,7 +125,7 @@ static ButtonB button(2);  // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1); // Питание на ESP
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_2C, {counter0.type, counter1.type}, {0, 0}, {0, 0}, 0, 0};
+struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_MODEL, {counter0.type, counter1.type}, {0, 0}, {0, 0}, 0, 0};
 
 uint32_t wakeup_period;
 

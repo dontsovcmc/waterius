@@ -3,7 +3,11 @@
 
 #include <Arduino.h>
 
-#define WATERIUS_2C 0 // attiny85 - 2 счетчика импульсов
+#ifdef MODKAM_VERSION
+#define WATERIUS_MODEL 2
+#else
+#define WATERIUS_MODEL 0
+#endif
 
 /*
     Включение логирования
@@ -73,62 +77,39 @@ struct ADCLevel
     uint16_t adc1;
 };
 
+/* Поле service: Причина перезагрузки (регистр MCUSR datasheet 8.5.1):
+        0001 - PORF: Power-on Reset Flag. Напряжение питания было низкое или 0.
+        0010 - EXTRF: External Reset Flag. Пин ресет был в низком уровне.
+        0100 - BORF: Brown-out Reset Flag. Напряжение питание было ниже требуемого.
+        1000 - WDRF: Watchdog Reset Flag. Завершение работы таймера.
+
+8  - 1000 - WDRF
+9  - 1001 - WDRF + PORF
+10 - 1010 - WDRF + EXTRF
+*/
+
 struct Header
 {
+    uint8_t version;   // Версия прошивки
+    uint8_t service;   // Причина перезагрузки
 
-    /*
-    Версия прошивки
-    */
-    uint8_t version;
+    uint16_t reserved;  // ver 24: убрал напряжение
+    
+    uint8_t reserved2;   // Для совместимости с 0.10.0.
+    uint8_t setup_started_counter;  // Включение режима настройки
+    
+    uint8_t resets;  // Количество перезагрузок
+    uint8_t model;  //  Модификация: 0 - Классический. 2 счетчика, 1 - 4C2W. 4 счетчика, 2 - modkam
 
-    /*
-    Причина перезагрузки (регистр MCUSR datasheet 8.5.1):
-         0001 - PORF: Power-on Reset Flag. Напряжение питания было низкое или 0.
-         0010 - EXTRF: External Reset Flag. Пин ресет был в низком уровне.
-         0100 - BORF: Brown-out Reset Flag. Напряжение питание было ниже требуемого.
-         1000 - WDRF: Watchdog Reset Flag. Завершение работы таймера.
-
-    8  - 1000 - WDRF
-    9  - 1001 - WDRF + PORF
-    10 - 1010 - WDRF + EXTRF
-    */
-    uint8_t service;
-
-    /*
-    ver 24: убрал напряжение
-    */
-    uint16_t reserved;
-
-    /*
-    Для совместимости с 0.10.0.
-    */
-    uint8_t reserved2;
-
-    /*
-    Включение режима настройки
-    */
-    uint8_t setup_started_counter;
-
-    /*
-    Количество перезагрузок
-    */
-    uint8_t resets;
-
-    /*
-    Модификация
-    0 - Классический. 2 счетчика
-    1 - 4C2W. 4 счетчика
-    */
-    uint8_t model;
-
-    CounterTypes types;
-    Data data;
-    ADCLevel adc;
+    CounterTypes types;  // 2 байта
+    Data data;           // 8 байт
+    ADCLevel adc;        // 2 байта
 
     // HEADER_DATA_SIZE
 
     uint8_t crc;
     uint8_t reserved3;
+
 }; // 24 байт
 
 #define HEADER_DATA_SIZE 22
