@@ -53,7 +53,7 @@ struct CounterB
     CounterType     type;       // тип выхода счетчика
 
     explicit CounterB(uint8_t pin, uint8_t apin = 0)
-        : _pin(pin), _apin(apin), on_time(0), off_time(0), adc(0), state(CounterState::CLOSE), type(CounterType::NAMUR)
+        : _pin(pin), _apin(apin), on_time(0), off_time(0), adc(0), state(CounterState::CLOSE), type(CounterType::ELECTRONIC)
     {
         DDRB &= ~_BV(pin);      // Input
     }
