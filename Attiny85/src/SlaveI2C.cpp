@@ -75,14 +75,14 @@ void SlaveI2C::receiveEvent(int howMany)
     case 'C': // set initial counter value
 		getCounterValue();
 		break;
+#endif
     }
-    
+
+#ifdef MODKAM_VERSION 
     while (Wire.available())
 	{
 		Wire.read();
 	}
-#else
-    }
 #endif
 }
 

@@ -125,7 +125,12 @@ static ButtonB button(2);  // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1); // Питание на ESP
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_MODEL, {counter0.type, counter1.type}, {0, 0}, {0, 0}, 0, 0};
+#ifdef MODKAM_VERSION	
+struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_MODKAM, {counter0.type, counter1.type}, {0, 0}, {0, 0}, 0, 0};	
+bool flag_new_counter_value = false;	
+#else	
+struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_2C, {counter0.type, counter1.type}, {0, 0}, {0, 0}, 0, 0};	
+#endif
 
 uint32_t wakeup_period;
 
@@ -140,10 +145,6 @@ SlaveI2C slaveI2C;
 volatile uint32_t		 wdt_count;
 volatile CounterEvent	 event;
 volatile uint8_t		storage_write_limit = 0; 
-
-#ifdef MODKAM_VERSION
-bool flag_new_counter_value = false;  // может нужно volatile ?
-#endif
 
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR(WDT_vect)
@@ -217,15 +218,11 @@ void setup()
 		EEPROM.put(size, info.resets);
 
 		EEPROM.get(size + 1, info.setup_started_counter);
-		
-#ifdef MODKAM_VERSION
 		EEPROM.get(size + 2, wakeup_period);
 		if (wakeup_period == 0)
 		{
 			wakeup_period = WAKEUP_PERIOD_DEFAULT;
 		} 
-#endif
-
 	}
 	else
 	{
@@ -240,13 +237,13 @@ void setup()
 	LOG(info.service);
 	LOG(F("RESET"));
 	LOG(info.resets);
-	LOG(F("setup started:"));
-	LOG(info.setup_started_counter);
 
 #ifndef MODKAM_VERSION
 	LOG(F("EEPROM used:"));
 	LOG(storage.size() + 2);
 #else
+	LOG(F("setup started:"));
+	LOG(info.setup_started_counter);
 	LOG(F("Wakeup period:")); //!!! ptvo
 	LOG(wakeup_period);	  //!!! ptvo
 	LOG(F("EEPROM used:"));
@@ -324,16 +321,8 @@ void loop()
 		wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
 	}
 #else
-		if (button.press == ButtonPressType::SHORT || button.press == ButtonPressType::LONG)
-		{
-			LOG(F("Manual transmit wake up"));
-			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
-		}
-		else
-		{
-			LOG(F("wake up for transmitting"));
-			slaveI2C.begin(TRANSMIT_MODE);
-		}
+		LOG(F("wake up"));
+		slaveI2C.begin(TRANSMIT_MODE);
 		unsigned long wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
 #endif
 
@@ -363,16 +352,17 @@ void loop()
 			counting();
 			event = CounterEvent::NONE;
 		}
+
+#ifndef MODKAM_VERSION
+		if (flag_new_counter_value) {
+			flag_new_counter_value = false;
+
+			storage.add(info.data);  // вдруг записали новое значение
+		}
+#endif
 		delayMicroseconds(1000);
 	}
 
-#ifdef MODKAM_VERSION
-	if (flag_new_counter_value) {
-		flag_new_counter_value = false;
-
-		storage.add(info.data);  // вдруг записали новое значение
-	}
-#endif
 
 	slaveI2C.end(); // выключаем i2c slave.
 

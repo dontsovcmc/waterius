@@ -30,10 +30,13 @@ public:
     bool masterGoingToSleep();
 };
 
-union ArrayToUin32
-{
-	byte array[4];
-	uint32_t value;
-};
+#ifdef MODKAM_VERSION	
+union ArrayToUin32	
+{	
+	byte array[4];	
+	uint32_t value;	
+};	
+extern bool flag_new_counter_value;	
+#endif
 
 #endif

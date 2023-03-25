@@ -3,11 +3,10 @@
 
 #include <Arduino.h>
 
-#ifdef MODKAM_VERSION
-#define WATERIUS_MODEL 2
-#else
-#define WATERIUS_MODEL 0
-#endif
+#define WATERIUS_2С 0
+#define WATERIUS_4C2W 1
+#define WATERIUS_MODKAM 2
+
 
 /*
     Включение логирования
@@ -115,9 +114,5 @@ struct Header
 #define HEADER_DATA_SIZE 22
 
 #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
-
-#ifdef MODKAM_VERSION
-extern bool flag_new_counter_value;
-#endif
 
 #endif
