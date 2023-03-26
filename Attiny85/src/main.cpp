@@ -353,7 +353,7 @@ void loop()
 			event = CounterEvent::NONE;
 		}
 
-#ifndef MODKAM_VERSION
+#ifdef MODKAM_VERSION
 		if (flag_new_counter_value) {
 			flag_new_counter_value = false;
 
