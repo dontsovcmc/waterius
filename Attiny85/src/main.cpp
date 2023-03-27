@@ -207,10 +207,25 @@ void setup()
 	interrupts();
 
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-	
+
 	wakeup_period = WAKEUP_PERIOD_DEFAULT;
 
 	uint16_t size = storage.size();
+	
+#ifdef MODKAM_VERSION
+	if (storage.get(info.data))
+	{   //не первая загрузка
+		info.resets = EEPROM.read(size);
+		info.resets++;
+		EEPROM.put(size, info.resets);
+	}
+	else
+	{
+		EEPROM.put(size, info.resets);
+	}
+
+#else
+
 	if (storage.get(info.data))
 	{   //не первая загрузка
 		info.resets = EEPROM.read(size);
@@ -230,6 +245,7 @@ void setup()
 		EEPROM.put(size + 1, info.setup_started_counter); // 0
 		EEPROM.put(size + 2, wakeup_period); // 0
 	}
+#endif
 
 	LOG_BEGIN(9600);
 	LOG(F("==== START ===="));
@@ -238,9 +254,9 @@ void setup()
 	LOG(F("RESET"));
 	LOG(info.resets);
 
-#ifndef MODKAM_VERSION
+#ifdef MODKAM_VERSION
 	LOG(F("EEPROM used:"));
-	LOG(storage.size() + 2);
+	LOG(storage.size() + 1);
 #else
 	LOG(F("setup started:"));
 	LOG(info.setup_started_counter);
@@ -294,7 +310,11 @@ void loop()
 	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания
 
-#ifndef MODKAM_VERSION
+#ifdef MODKAM_VERSION
+	LOG(F("wake up"));
+	slaveI2C.begin(TRANSMIT_MODE);
+	unsigned long wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
+#else
 	unsigned long wake_up_limit;
 	if (button.press == ButtonPressType::LONG)
 	{ 
@@ -320,10 +340,6 @@ void loop()
 		}
 		wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
 	}
-#else
-		LOG(F("wake up"));
-		slaveI2C.begin(TRANSMIT_MODE);
-		unsigned long wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
 #endif
 
 	// Нажатие кнопки обработали и удаляем
