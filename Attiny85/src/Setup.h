@@ -121,9 +121,9 @@ struct Header
     */
     uint8_t model;
 
-    CounterTypes types;
-    Data data;
-    ADCLevel adc;
+    CounterTypes types;  // 2 байта
+    Data data;           // 8 байт
+    ADCLevel adc;        // 2 байта
 
     // HEADER_DATA_SIZE
 
