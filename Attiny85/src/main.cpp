@@ -245,9 +245,7 @@ void loop()
 		counting();
 		event = CounterEvent::NONE;
 		WDTCR |= _BV(WDIE);
-        //digitalWrite(1, LOW);
 		sleep_mode();
-        //digitalWrite(1, HIGH);
 	}
 
 	power_all_enable();
