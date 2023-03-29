@@ -53,9 +53,8 @@
 /*
     время долгого нажатия кнопки, милисекунд
 */
-#ifndef MODKAM_VERSION
 #define LONG_PRESS_MSEC  3000
-#endif
+
 
 struct Data
 {
@@ -63,10 +62,10 @@ struct Data
     uint32_t value1;
 };
 
-struct CounterState
-{                   // не добавляем в Data, т.к. та в буфере кольцевом
-    uint8_t state0; // состояние входа
-    uint8_t state1;
+struct CounterTypes
+{
+    uint8_t type0; // тип входа
+    uint8_t type1;
 };
 
 struct ADCLevel
@@ -130,9 +129,9 @@ struct Header
     */
     uint8_t model;
 
-    CounterState states; // TODO убрать
-    Data data;
-    ADCLevel adc;
+    CounterTypes types;  // 2 байта
+    Data data;           // 8 байт
+    ADCLevel adc;        // 2 байта
 
     // HEADER_DATA_SIZE
 

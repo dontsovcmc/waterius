@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 #include <avr/wdt.h>
+#include <avr/power.h>
+#include "Power.h"
 
 // значения компаратора с pull-up
 //    : замкнут (0 ом) - намур-замкнут (1к5) - намур-разомкнут (5к5) - обрыв линии
@@ -16,10 +18,7 @@
 #define LIMIT_NAMUR_OPEN 800   // < 800 - намур разомкнут
                                // > - обрыв
 
-#define TRIES 3 //Сколько раз после окончания импульса
-                //должно его не быть, чтобы мы зарегистририровали импульс
-
-enum CounterState_e
+enum CounterState
 {
     CLOSE,
     NAMUR_CLOSE,
@@ -27,130 +26,163 @@ enum CounterState_e
     OPEN
 };
 
+enum CounterType 
+{
+    NAMUR,
+    DISCRETE,
+    ELECTRONIC
+};
+
+enum class CounterEvent
+{
+    NONE,
+    FRONT,
+    TIME,
+};
+
 struct CounterB
 {
-    int8_t _checks; // -1 <= _checks <= TRIES
+    uint8_t         _pin;       // дискретный вход
+    uint8_t         _apin;      // номер аналогового входа
 
-    uint8_t _pin;  // дискретный вход
-    uint8_t _apin; // номер аналогового входа
+    uint8_t         on_time;
+    uint8_t         off_time;
 
-    uint16_t adc;  // уровень замкнутого входа
-    uint8_t state; // состояние входа
+    uint16_t        adc;        // уровень замкнутого входа
+    CounterState    state;      // состояние входа
+    CounterType     type;       // тип выхода счетчика
 
     explicit CounterB(uint8_t pin, uint8_t apin = 0)
-        : _checks(-1), _pin(pin), _apin(apin), adc(0), state(CounterState_e::CLOSE)
+        : _pin(pin), _apin(apin), on_time(0), off_time(0), adc(0), state(CounterState::CLOSE), type(CounterType::ELECTRONIC)
     {
-        DDRB &= ~_BV(pin); // INPUT
+        DDRB &= ~_BV(pin);      // Input
     }
 
     inline uint16_t aRead()
     {
-        PORTB |= _BV(_pin);               // INPUT_PULLUP
-        uint16_t ret = analogRead(_apin); // в TinyCore там работа с битами, оптимально
-        PORTB &= ~_BV(_pin);              // INPUT
-        return ret;
+	    power_adc_enable();
+	    adc_enable();
+        return analogRead(_apin);
     }
 
-    bool is_close(uint16_t a)
+    bool is_close()
     {
-        state = value2state(a);
-        return state == CounterState_e::CLOSE || state == CounterState_e::NAMUR_CLOSE;
-    }
-
-    bool is_impuls()
-    {
-        //Детектируем импульс когда он заканчивается!
-        //По сути софтовая проверка дребега
-
-        uint16_t a = aRead();
-        if (is_close(a))
+        switch (type) 
         {
-            _checks = TRIES;
-            adc = a;
+            case CounterType::DISCRETE:
+                PORTB |= _BV(_pin);               // Включить pull-up
+                delayMicroseconds(30);
+                state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
+                if ((state == CounterState::CLOSE) && (on_time == 0))
+                {
+                    adc = aRead();
+                }
+                PORTB &= ~_BV(_pin);              // Отключить pull-up
+                break;
+            case CounterType::ELECTRONIC:
+                PORTB |= _BV(_pin);               // Включить pull-up
+                state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
+                if ((state == CounterState::CLOSE) && (on_time == 0))
+                {
+                    adc = aRead();
+                }
+                break;
+            default:
+                PORTB |= _BV(_pin);               // Включить pull-up
+                uint16_t a = aRead();
+                PORTB &= ~_BV(_pin);              // Отключить pull-up
+                state = value2state(a);
+                if (state <= CounterState::NAMUR_CLOSE)
+                {
+                    adc = a;
+                }
+                break;
+        }
+        return state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE;
+    }
+
+    bool is_impuls(CounterEvent event = CounterEvent::NONE)
+    {
+        if (is_close())
+        {
+            // Замкнут
+            if (on_time == 0)
+            {
+                // Начало импульса
+                on_time = 1;
+                off_time = 0;
+            }
+            else
+            {
+                // Продолжение
+                if (on_time < 200)
+                {
+                    // Увеличиваем счетчик времени в замкнутом состоянии
+                    on_time += event == CounterEvent::TIME ? 10 : 1;
+                }
+                off_time = 0;
+            }
         }
         else
         {
-            if (_checks >= 0)
+            // Разомкнут
+            if (on_time > 0)
             {
-                _checks--;
-            }
-            if (_checks == 0)
-            {
-                return true;
+                // Идет обработка импульса
+                if (off_time < 200)
+                {
+                    // Увеличиваем счетчик времени в разомкнутом состоянии
+                    off_time += event == CounterEvent::TIME ? 10 : 1;
+                }
             }
         }
-        return false;
+
+        // Определяем конец импульса
+        if (on_time > 0)
+        {
+            switch (type)
+            {
+                case CounterType::DISCRETE:
+                case CounterType::NAMUR:
+                    // Ждем 750мс после конца импульса и завершаем его
+                    if (off_time > 20)
+                    {
+                        on_time = 0;
+                    }
+                    break;
+                case CounterType::ELECTRONIC:
+                    // У электронного счетчика транзисторный выход и дребезга нет, сразу завершаем импульс
+                    if (off_time > 0)
+                    {
+                        on_time = 0;
+                    }
+                    break;
+            }
+        }
+
+        // Уведомляем о импульсе по его началу
+        return on_time == 1;
     }
 
     // Возвращаем текущее состояние входа
-    inline enum CounterState_e value2state(uint16_t value)
+    inline CounterState value2state(uint16_t value)
     {
         if (value < LIMIT_CLOSED)
         {
-            return CounterState_e::CLOSE;
+            return CounterState::CLOSE;
         }
         else if (value < LIMIT_NAMUR_CLOSED)
         {
-            return CounterState_e::NAMUR_CLOSE;
+            return CounterState::NAMUR_CLOSE;
         }
         else if (value < LIMIT_NAMUR_OPEN)
         {
-            return CounterState_e::NAMUR_OPEN;
+            return CounterState::NAMUR_OPEN;
         }
         else
         {
-            return CounterState_e::OPEN;
+            return CounterState::OPEN;
         }
-    }
-};
-
-struct ButtonB
-{
-    uint8_t _pin; // дискретный вход
-
-    explicit ButtonB(uint8_t pin)
-        : _pin(pin)
-    {
-        DDRB &= ~_BV(pin);   // INPUT
-        PORTB &= ~_BV(_pin); // INPUT
-    }
-
-    inline bool digBit()
-    {
-        return bit_is_set(PINB, _pin);
-    }
-
-    // Проверка нажатия кнопки
-    bool pressed()
-    {
-
-        if (digBit() == LOW)
-        {                             //защита от дребезга
-            delayMicroseconds(20000); //нельзя delay, т.к. power_off
-            return digBit() == LOW;
-        }
-        return false;
-    }
-
-    // Замеряем сколько времени нажата кнопка в мс
-    unsigned long wait_release()
-    {
-
-        unsigned long press_time = millis();
-        while (pressed())
-        {
-            wdt_reset();
-        }
-        return millis() - press_time;
-    }
-
-    bool long_pressed()
-    {
-#ifdef MODKAM_VERSION
-        return false;
-#else
-        return wait_release() > LONG_PRESS_MSEC;
-#endif
     }
 };
 

@@ -1,5 +1,5 @@
-### Автономное устройство для передачи показаний импульсных счётчиков воды по Wi-Fi
-Настройте передачу показаний в управляющую компанию на сайте <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">waterius.ru</a>. 112 сайтов УК по России и СНГ.
+### Автономное устройство для передачи показаний импульсных счётчиков воды и газа по Wi-Fi
+Настройте передачу показаний в управляющую компанию на сайте <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">waterius.ru</a>. 100+ «водоканалов» России и СНГ.
 # Ватериус 0.10.5
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
 
@@ -9,7 +9,7 @@
 
 ### Где купить
 В России: [Yandex.market](https://market.yandex.ru/store--waterius/product/920451755?businessId=1106573&sku=101280435941) | [Aliexpress](https://s.click.aliexpress.com/e/_pujmcX9) | [Wildberries](https://www.wildberries.ru/catalog/26967283/detail.aspx) | [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github)
-Worldwide by Wildberries: [Armenia 🇦🇲](https://am.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Belarus 🇧🇾](https://by.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [France 🇫🇷](https://wildberries.fr/product?card=26967283) | [Germany 🇩🇪](https://de.wildberries.eu/product?card=26967283) | [Israel 🇮🇱](https://wildberries.co.il/product?card=26967283)  | [Italy 🇮🇹](https://it.wildberries.eu/product?card=26967283) | [Kazakhstan 🇰🇿](https://kz.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Kyrgyzstan 🇰🇬](https://kg.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Poland 🇵🇱](https://pl.wildberries.eu/product?card=26967283) | [Slovakia 🇸🇰](https://sk.wildberries.eu/product?card=26967283) | [Spain 🇪🇸](https://wildberries.es/product?card=26967283) | [Ukraine 🇺🇦](https://wildberries.ua/product?card=26967283) | [USA 🇺🇸](https://us.wildberries.ru/product?card=26967283)
+Worldwide by Wildberries (not works...): [Armenia 🇦🇲](https://am.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Belarus 🇧🇾](https://by.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [France 🇫🇷](https://wildberries.fr/product?card=26967283) | [Germany 🇩🇪](https://de.wildberries.eu/product?card=26967283) | [Israel 🇮🇱](https://wildberries.co.il/product?card=26967283)  | [Italy 🇮🇹](https://it.wildberries.eu/product?card=26967283) | [Kazakhstan 🇰🇿](https://kz.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Kyrgyzstan 🇰🇬](https://kg.wildberries.ru/catalog/26967283/detail.aspx?targetUrl=XS) | [Poland 🇵🇱](https://pl.wildberries.eu/product?card=26967283) | [Slovakia 🇸🇰](https://sk.wildberries.eu/product?card=26967283) | [Spain 🇪🇸](https://wildberries.es/product?card=26967283) | [Ukraine 🇺🇦](https://wildberries.ua/product?card=26967283) | [USA 🇺🇸](https://us.wildberries.ru/product?card=26967283)
 
 ### Совместимые счётчики
 Все счётчики с импульсным выходом (провод торчит из корпуса)
@@ -52,6 +52,10 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://am.wildberries.ru/catalog/2
 - [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
 - [Прошивка Attiny85 и ESP](https://github.com/dontsovcmc/waterius/blob/master/Firmware.md) 
 - [Установка и настройка](https://github.com/dontsovcmc/waterius/blob/master/Setup.md) 
+
+### Геркон для газового счётчика
+
+Корпус для геркона под газовый счетчик BK-G4T [bk-g4t-sensor.zip](https://github.com/dontsovcmc/waterius/files/10365883/bk-g4t-sensor.zip)
 
 ## Принцип работы
 Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в сутки она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого ESP8266 засыпает, а Attiny85 продолжает считать-считать-считать...
@@ -118,7 +122,8 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://am.wildberries.ru/catalog/2
 - Олегу К. из Республики Беларусь за [инструкцию к MajorDoMo](https://mjdm.ru/forum/viewtopic.php?p=129000#p129000)
 - [Drafteed](https://github.com/Drafteed) за виджет карты России
 - [neitri](https://github.com/neitri) за доработки прошивки
-
+- [L2jLiga](https://github.com/L2jLiga) за обновление конфигурации Home Assistant
+- nyroux за корпус геркона для газового счётчика
 Форумам: 
 - https://electronix.ru
 - https://esp8266.ru

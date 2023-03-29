@@ -1,3 +1,6 @@
+*.hex
+*.bin
+*.zip
 venv
 venv_*
 ESP8266/platformio.ini
