@@ -143,3 +143,4 @@ uint16_t EEPROMStorage<T>::size()
 }
 
 template class EEPROMStorage<Data>;
+template class EEPROMStorage<Config>;

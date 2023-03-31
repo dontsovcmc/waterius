@@ -73,6 +73,14 @@ struct ADCLevel
     uint16_t adc1;
 };
 
+struct Config
+{
+    uint8_t setup_started_counter;      // Включение режима настройки
+    uint8_t resets;                     // Количество перезагрузок
+    uint8_t model;                      // Модификация: 0 - Классический. 2 счетчика, 1 - 4C2W. 4 счетчика
+    CounterTypes types;                 // Типы входов счетчиков
+};
+
 struct Header
 {
 
@@ -105,23 +113,13 @@ struct Header
     uint8_t reserved2;
 
     /*
-    Включение режима настройки
+    Конфигурация
     */
-    uint8_t setup_started_counter;
+    Config config;
 
     /*
-    Количество перезагрузок
+    Текущие данные
     */
-    uint8_t resets;
-
-    /*
-    Модификация
-    0 - Классический. 2 счетчика
-    1 - 4C2W. 4 счетчика
-    */
-    uint8_t model;
-
-    CounterTypes types;  // 2 байта
     Data data;           // 8 байт
     ADCLevel adc;        // 2 байта
 

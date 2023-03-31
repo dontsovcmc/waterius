@@ -17,10 +17,15 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 26 // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 27 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
+
+27 - 2023.03.31 - abrant
+	1. Исправлен подсчет контрольной суммы. 
+	2. Переписано хранилище, теперь хранятся все последние показания и при старте читается блок с верной контрольной суммой и максимальными показаниями.
+	3. Добавлено хранение в EEPROM настроек и их получение по I2C
 
 26 - 2023.03.25 - abrant
 	1. Исправление потерь импульсов во время связи
@@ -122,7 +127,7 @@ static ButtonB button(2);  // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1); // Питание на ESP
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_2C, {counter0.type, counter1.type}, {0, 0}, {0, 0}, 0, 0};
+struct Header info = {FIRMWARE_VER, 0, 0, 0, {0, 0, WATERIUS_2C, {counter0.type, counter1.type}}, {0, 0}, {0, 0}, 0, 0};
 
 uint32_t wakeup_period;
 
@@ -131,6 +136,7 @@ uint32_t wakeup_period;
 //Записывается каждый импульс, поэтому для 10л/импульс срок службы памяти 10 000м3
 // 100к * 20 = 2 млн * 10 л / 2 счетчика = 10 000 000 л или 10 000 м3
 static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
+static EEPROMStorage<Config> config(2, storage.size()); // 5 byte * 2 + crc * 2
 
 SlaveI2C slaveI2C;
 
@@ -163,7 +169,6 @@ inline void counting()
 	{
 		info.data.value0++; 				//нужен т.к. при пробуждении запрашиваем данные
 		info.adc.adc0 = counter0.adc;
-		info.types.type0 = counter0.type;
 		if (storage_write_limit == 0)
 		{
 			storage.add(info.data);
@@ -175,7 +180,6 @@ inline void counting()
 	{
 		info.data.value1++;
 		info.adc.adc1 = counter1.adc;
-		info.types.type1 = counter1.type;
 		if (storage_write_limit == 0)
 		{
 			storage.add(info.data);
@@ -187,6 +191,14 @@ inline void counting()
 	adc_disable();
 	power_adc_disable();
 }
+
+void saveConfig()
+{
+	// записываем 2 раза чтобы полностью переписать хранилище
+	config.add(info.config);
+	config.add(info.config);	
+}
+
 //Запрос периода при инициализции. Также период может изменится после настройки.
 // Настройка. Вызывается однократно при запуске.
 void setup()
@@ -200,18 +212,23 @@ void setup()
 
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 
-	uint16_t size = storage.size();
-	if (storage.get(info.data))
-	{ //не первая загрузка
-		info.resets = EEPROM.read(size);
-		info.resets++;
-		EEPROM.write(size, info.resets);
+	if (config.get(info.config))
+	{
+		// Конфигурация прочитана
+		info.config.resets++;
+		counter0.type = (CounterType)info.config.types.type0;
+		counter1.type = (CounterType)info.config.types.type1;
 	}
 	else
 	{
-		EEPROM.write(size, info.resets);					// 0
-		EEPROM.write(size + 1, info.setup_started_counter); // 0
+		// Конфигурации нет или повреждена
+		info.config.resets = 0;
+		info.config.setup_started_counter = 0;
+		info.config.types.type0 = counter0.type;
+		info.config.types.type1 = counter1.type;
 	}
+	saveConfig();
+	storage.get(info.data);
 
 	wakeup_period = WAKEUP_PERIOD_DEFAULT;
 
@@ -222,7 +239,7 @@ void setup()
 	LOG(F("RESET"));
 	LOG(info.resets);
 	LOG(F("EEPROM used:"));
-	LOG(size + 2);
+	LOG(storage.size() + config.size());
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
@@ -272,10 +289,8 @@ void loop()
 		slaveI2C.begin(SETUP_MODE);
 		wake_up_limit = SETUP_TIME_MSEC; // 10 мин при настройке
 
-		uint16_t setup_started_addr = storage.size() + 1;
-		info.setup_started_counter = EEPROM.read(setup_started_addr);
-		info.setup_started_counter++;
-		EEPROM.write(setup_started_addr, info.setup_started_counter);
+		info.config.setup_started_counter++;
+		saveConfig();
 	}
 	else
 	{

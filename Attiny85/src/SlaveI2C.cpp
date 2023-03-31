@@ -6,6 +6,7 @@
 #include <Wire.h>
 
 extern struct Header info;
+extern void saveConfig();
 extern uint32_t wakeup_period;
 
 /* Static declaration */
@@ -71,6 +72,9 @@ void SlaveI2C::receiveEvent(int howMany)
     case 'S': // ESP присылает новое значение периода пробуждения
         getWakeUpPeriod();
         break;
+    case 'C': // ESP присылает новую конфигурацию
+        getConfig();
+        break;
     }
 }
 
@@ -87,6 +91,23 @@ void SlaveI2C::getWakeUpPeriod()
     if ((crc == crc_8(data, 2)) && (newPeriod != 0))
     {
         wakeup_period = ONE_MINUTE * newPeriod;
+    }
+}
+
+void SlaveI2C::getConfig()
+{
+    uint8_t data[sizeof(Config)];
+
+    for (uint8_t i=0; i < sizeof(Config); i++)
+    {
+        data[i] = Wire.read();
+    }
+    uint8_t crc = Wire.read();
+
+    if (crc == crc_8(data, sizeof(Config))) 
+    {
+        memcpy((void*)&(info.config), data, sizeof(Config));
+        saveConfig();
     }
 }
 
