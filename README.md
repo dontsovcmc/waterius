@@ -4,6 +4,7 @@
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
 
 ![waterius2-phone_](https://user-images.githubusercontent.com/3930496/149906477-6aa47cdd-f714-4546-85ff-5541c60260a2.jpeg)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fdontsovcmc%2Fwaterius.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fdontsovcmc%2Fwaterius?ref=badge_shield)
 
 [Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
 
@@ -136,3 +137,7 @@ Worldwide by Wildberries (not works...): [Armenia 🇦🇲](https://am.wildberri
 Задавайте вопросы в Телеграм чате: [waterius_forum](https://t.me/waterius_forum)
 
 Найденные ошибки [в issues](https://github.com/dontsovcmc/waterius/issues)
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fdontsovcmc%2Fwaterius.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fdontsovcmc%2Fwaterius?ref=badge_large)
