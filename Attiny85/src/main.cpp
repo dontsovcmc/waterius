@@ -17,10 +17,13 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 27 // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 28 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
+
+28 - 2023.04.19 - dontsovcmc
+	1. Настройка типа входов
 
 27 - 2023.03.31 - abrant
 	1. Исправлен подсчет контрольной суммы. 

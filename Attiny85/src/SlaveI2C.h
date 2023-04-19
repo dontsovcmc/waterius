@@ -22,7 +22,7 @@ protected:
     static void newCommand();
     static void receiveEvent(int howMany);
     static void getWakeUpPeriod();
-    static void getConfig();
+    static void getCounterTypes();
 
 public:
     void begin(const uint8_t);

@@ -73,7 +73,7 @@ void SlaveI2C::receiveEvent(int howMany)
         getWakeUpPeriod();
         break;
     case 'C': // ESP присылает новую конфигурацию
-        getConfig();
+        getCounterTypes();
         break;
     }
 }
@@ -94,19 +94,19 @@ void SlaveI2C::getWakeUpPeriod()
     }
 }
 
-void SlaveI2C::getConfig()
+void SlaveI2C::getCounterTypes()
 {
-    uint8_t data[sizeof(Config)];
+    uint8_t data[sizeof(CounterTypes)];
 
-    for (uint8_t i=0; i < sizeof(Config); i++)
+    for (uint8_t i=0; i < sizeof(CounterTypes); i++)
     {
         data[i] = Wire.read();
     }
     uint8_t crc = Wire.read();
 
-    if (crc == crc_8(data, sizeof(Config))) 
+    if (crc == crc_8(data, sizeof(CounterTypes))) 
     {
-        memcpy((void*)&(info.config), data, sizeof(Config));
+        memcpy((void*)&(info.config.types), data, sizeof(CounterTypes));
         saveConfig();
     }
 }

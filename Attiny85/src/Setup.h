@@ -121,7 +121,7 @@ struct Header
     Текущие данные
     */
     Data data;           // 8 байт
-    ADCLevel adc;        // 2 байта
+    ADCLevel adc;        // 4 байта
 
     // HEADER_DATA_SIZE
 
