@@ -56,6 +56,8 @@ bool UserClass::sendNewData(const Settings &settings, const SlaveData &data, con
     root["setup_started"] = data.setup_started_counter;
     root["channel"] = cdata.channel;
     root["mac"] = cdata.router_mac;
+    root["ctype0"] = data.counter_type0;
+    root["ctype1"] = data.counter_type1;
 
     serializeJson(root, jsonBody);
     // JSON size 0.10.3:  355

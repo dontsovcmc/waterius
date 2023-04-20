@@ -66,6 +66,8 @@ bool send_mqtt(const Settings &sett, const SlaveData &data, const CalculatedData
         client.publish((topic + "setup_started").c_str(), String(data.setup_started_counter).c_str(), true);
         client.publish((topic + "channel").c_str(), String(cdata.channel).c_str(), true);
         client.publish((topic + "mac").c_str(), String(cdata.router_mac).c_str(), true);
+        client.publish((topic + "ctype0").c_str(), String(data.counter_type0).c_str(), true);
+        client.publish((topic + "ctype1").c_str(), String(data.counter_type1).c_str(), true);
 
         client.disconnect();
         return true;

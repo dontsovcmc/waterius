@@ -123,6 +123,13 @@
 #define AUTO_IMPULSE_FACTOR 2
 #define AS_COLD_CHANNEL 7
 
+enum CounterType
+{
+    NAMUR,
+    DISCRETE,
+    ELECTRONIC
+};
+
 struct CalculatedData
 {
     float channel0;

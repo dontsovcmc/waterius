@@ -38,8 +38,8 @@ struct SlaveData
     uint8_t setup_started_counter;
     uint8_t resets;
     uint8_t model;      // WATERIUS_CLASSIC или  WATERIUS_4C2W
-    uint8_t state0;     //Состояние, вход 0
-    uint8_t state1;     //           вход 1
+    uint8_t counter_type0;     //Тип входа, вход 0
+    uint8_t counter_type1;     //           вход 1
     uint32_t impulses0; //Импульсов, канал 0
     uint32_t impulses1; //           канал 1
     uint16_t adc0;      //Уровень,   канал 0
@@ -72,6 +72,7 @@ public:
     bool getMode(uint8_t &mode);
     bool getSlaveData(SlaveData &data);
     bool setWakeUpPeriod(uint16_t per);
+    bool setCountersType(const uint8_t type0, const uint8_t type1);
 };
 
 #endif
