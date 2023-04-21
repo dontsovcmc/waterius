@@ -229,6 +229,26 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label_factor_settings("<h3>Параметры счетчиков</h3>");
     wm.addParameter(&label_factor_settings);
 
+    WiFiManagerParameter label_cold_counter_type("<b>Тип счётчика (синий)</b>");
+    wm.addParameter(&label_cold_counter_type);
+
+    uint8_t counter_type1 = data.counter_type1;
+    DropdownParameter dropdown_cold_counter_type("typeCold");
+    dropdown_cold_counter_type.add_option(CounterType::NAMUR, "Намур", counter_type1);
+    dropdown_cold_counter_type.add_option(CounterType::DISCRETE, "Геркон", counter_type1);
+    dropdown_cold_counter_type.add_option(CounterType::ELECTRONIC, "Электронный", counter_type1);
+    wm.addParameter(&dropdown_cold_counter_type);
+
+    WiFiManagerParameter label_hot_counter_type("<b>Тип счётчика (красный)</b>");
+    wm.addParameter(&label_hot_counter_type);
+
+    uint8_t counter_type0 = data.counter_type0;
+    DropdownParameter dropdown_hot_counter_type("typeHot");
+    dropdown_hot_counter_type.add_option(CounterType::NAMUR, "Намур", counter_type0);
+    dropdown_hot_counter_type.add_option(CounterType::DISCRETE, "Геркон", counter_type0);
+    dropdown_hot_counter_type.add_option(CounterType::ELECTRONIC, "Электронный", counter_type0);
+    wm.addParameter(&dropdown_hot_counter_type);
+
     WiFiManagerParameter label_cold_factor("<b>Холодная вода л/имп</b>");
     wm.addParameter(&label_cold_factor);
 
@@ -416,6 +436,20 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     sett.setup_time = millis();
     sett.setup_finished_counter++;
+    
+    counter_type0 = dropdown_hot_counter_type.getValue();
+    counter_type1 = dropdown_cold_counter_type.getValue();
+
+    if (!masterI2C.setCountersType(counter_type0, 
+                                   counter_type1))
+    {
+        LOG_ERROR(F("Counters types wasn't set"));
+    } //"Разбуди меня через..."
+    else
+    {
+        LOG_INFO(F("Counter0 type: ") << counter_type0);
+        LOG_INFO(F("Counter1 type: ") << counter_type1);
+    }
 
     store_config(sett);
 }

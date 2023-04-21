@@ -17,14 +17,11 @@ class EEPROMStorage
 
     blocks - кол-во копий Т (размер кольцевого буфера).
 
-    После блоков следует массив флагов для обозначения самого последнего блока буфера.
-    Флаг - crc8 соответствующего блока.
-    Добавление значения - запись в блок + crc блока в следующей ячейке массива флагов.
-    Если crc=0, то crc=1.
+    После блоков следует массив контрольных сумм crc8 блоков буфера.
 
-    При перезагрузке микроконтроллера текущий блок восстановиться и буфер продолжит работу.
+    При перезагрузке микроконтроллера блок с максимальным значением счетчиков восстановится и буфер продолжит работу.
 
-    |xxxx|xxxx|xxxx|xxxx|crc|0|0|0|
+    |xxxx|xxxx|xxxx|xxxx|crc|crc|crc|crc|
     */
 
 public:
@@ -32,6 +29,7 @@ public:
     void add(const T &element);
     bool get(T &element);
     bool get_block(const uint8_t block, T &element);
+    void clear();
 
     uint16_t size();
 
@@ -43,6 +41,7 @@ private:
     uint8_t elementSize;
 
     uint16_t flag_shift;
+    int8_t compare(const T &element1, const T &element2);
 };
 
 #endif

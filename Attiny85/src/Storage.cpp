@@ -5,7 +5,7 @@
 // Dallas CRC x8+x5+x4+1
 uint8_t crc_8(unsigned char *b, size_t num_bytes)
 {
-    uint8_t i, crc = 0;
+    uint8_t i, crc = 0xff;
     for (size_t a = 0; a < num_bytes; a++)
     {
         i = (*(b + a) ^ crc) & 0xff;
@@ -37,20 +37,47 @@ EEPROMStorage<T>::EEPROMStorage(const uint8_t _blocks, const uint8_t _start_addr
     elementSize = sizeof(T);
     flag_shift = start_addr + elementSize * blocks;
 
-    //тут определяем не испорчена ли память
-    int t = 0;
-    T tmp;
-    for (int i = 0; i < blocks; i++)
-    {
-        t += EEPROM.read(flag_shift + i);
-        if (t > 0)
+    // Поиск последней записи
+    int n = -1, i = 0;
+    T tmp, max;
+    do {
+        if (get_block(i, tmp))
         {
-            activeBlock = i;
-            if (get(tmp))
-                return;
+            // Блок успешно прочитан
+            if (n < 0)
+            {
+                // И это первый успешно прочитанный блок
+                n = i;
+                max = tmp;
+            }
+            else
+            {
+                if (compare(tmp, max) > 0)
+                {
+                    // Прочитанный блок содержит большее значение счетчиков
+                    n = i;
+                    max = tmp;
+                }
+            }
         }
+        // Читаем все блоки
+        i++;
+    } while (i < blocks);
+
+    if (n >= 0)
+    {
+        // Блок с максимальным значением счетчиков нашли
+        activeBlock = n;
+        return;
     }
 
+    // Ни одного блока прочитать не удалось
+    clear();
+}
+
+template <class T>
+void EEPROMStorage<T>::clear()
+{
     activeBlock = 0;
     for (uint16_t i = start_addr; i < flag_shift + blocks; i++)
     {
@@ -58,40 +85,55 @@ EEPROMStorage<T>::EEPROMStorage(const uint8_t _blocks, const uint8_t _start_addr
     }
 }
 
+// Функция сравнения элементов, что бы не добавлять дополнительных полей используем информацию о том
+// что элемент состоит из увеличивающихся счетчиков, а так как AVR little-endian, то сравниваем с конца
+template <class T>
+int8_t EEPROMStorage<T>::compare(const T &element1, const T &element2)
+{
+    unsigned char *e1 = (unsigned char *)&element1 + elementSize;
+    unsigned char *e2 = (unsigned char *)&element2 + elementSize;
+    while (e1 >= (unsigned char *)&element1)
+    {
+        if (*e1 > *e2)
+            return 1;
+        else if (*e1 < *e2)
+            return -1;
+        e1--;
+        e2--;    
+    }
+    return 0;
+}
+
 template <class T>
 void EEPROMStorage<T>::add(const T &element)
 {
-    uint8_t prev = activeBlock;
     activeBlock = (activeBlock < blocks - 1) ? activeBlock + 1 : 0;
 
     EEPROM.put(start_addr + activeBlock * elementSize, element);
     uint8_t mark = crc_8((unsigned char *)&element, elementSize);
-    if (mark == 0)
-        mark++;
     EEPROM.write(flag_shift + activeBlock, mark);
-    EEPROM.write(flag_shift + prev, 0);
 }
 
 template <class T>
 bool EEPROMStorage<T>::get(T &element)
 {
-    return get_block(activeBlock, element);
-}
-
-template <class T>
-bool EEPROMStorage<T>::get_block(const uint8_t block, T &element)
-{
     T tmp;
-    EEPROM.get(start_addr + block * elementSize, tmp);
-
-    uint8_t crc = crc_8((unsigned char *)&tmp, elementSize);
-    uint8_t mark = EEPROM.read(flag_shift + block);
-    if (mark == crc || (mark == 1 && crc == 0))
+    if (get_block(activeBlock, tmp))
     {
         element = tmp;
         return true;
     }
     return false;
+}
+
+template <class T>
+bool EEPROMStorage<T>::get_block(const uint8_t block, T &element)
+{
+    EEPROM.get(start_addr + block * elementSize, element);
+
+    uint8_t crc = crc_8((unsigned char *)&element, elementSize);
+    uint8_t mark = EEPROM.read(flag_shift + block);
+    return (mark == crc);
 }
 
 template <class T>
@@ -101,3 +143,4 @@ uint16_t EEPROMStorage<T>::size()
 }
 
 template class EEPROMStorage<Data>;
+template class EEPROMStorage<Config>;

@@ -6,6 +6,7 @@
 #include <Wire.h>
 
 extern struct Header info;
+extern void saveConfig();
 extern uint32_t wakeup_period;
 
 /* Static declaration */
@@ -13,7 +14,7 @@ uint8_t SlaveI2C::txBufferPos = 0;
 uint8_t SlaveI2C::txBuffer[TX_BUFFER_SIZE];
 uint8_t SlaveI2C::setup_mode = TRANSMIT_MODE;
 bool SlaveI2C::masterSentSleep = false;
-unsigned long SlaveI2C::SentSleep_timestamp; 
+unsigned long SlaveI2C::sentSleepTimestamp = 0; 
 
 void SlaveI2C::begin(const uint8_t mode)
 {
@@ -21,8 +22,9 @@ void SlaveI2C::begin(const uint8_t mode)
     setup_mode = mode;
     Wire.begin(I2C_SLAVE_ADDRESS);
     Wire.onReceive(receiveEvent);
-    Wire.onRequest(requestEvent);
+    Wire.onRequest(requestEvent);   
     masterSentSleep = false;
+    sentSleepTimestamp = 0;
     newCommand();
 }
 
@@ -60,7 +62,7 @@ void SlaveI2C::receiveEvent(int howMany)
         memcpy(txBuffer, &info, TX_BUFFER_SIZE);
         break;
     case 'Z': // Готовы ко сну
-        SentSleep_timestamp = millis();
+        sentSleepTimestamp = millis();
         masterSentSleep = true;
         break;
     case 'M': // Разбудили ESP для настройки или передачи данных?
@@ -72,6 +74,9 @@ void SlaveI2C::receiveEvent(int howMany)
         break;
     case 'S': // ESP присылает новое значение периода пробуждения
         getWakeUpPeriod();
+        break;
+    case 'C': // ESP присылает новую конфигурацию
+        getCounterTypes();
         break;
     }
 }
@@ -92,7 +97,24 @@ void SlaveI2C::getWakeUpPeriod()
     }
 }
 
+void SlaveI2C::getCounterTypes()
+{
+    uint8_t data[sizeof(CounterTypes)];
+
+    for (uint8_t i=0; i < sizeof(CounterTypes); i++)
+    {
+        data[i] = Wire.read();
+    }
+    uint8_t crc = Wire.read();
+
+    if (crc == crc_8(data, sizeof(CounterTypes))) 
+    {
+        memcpy((void*)&(info.config.types), data, sizeof(CounterTypes));
+        saveConfig();
+    }
+}
+
 bool SlaveI2C::masterGoingToSleep()
 {
-    return masterSentSleep && (millis() - SentSleep_timestamp > DELAY_SENT_SLEEP);
+    return masterSentSleep && (millis() - sentSleepTimestamp > DELAY_SENT_SLEEP);
 }

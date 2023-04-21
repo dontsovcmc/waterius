@@ -110,7 +110,8 @@ bool MasterI2C::getUint(uint32_t &value, uint8_t &crc)
 bool MasterI2C::getMode(uint8_t &mode)
 {
 
-    uint8_t crc; // not used
+    uint8_t crc = 0xff;
+    mode = TRANSMIT_MODE;
     if (!sendCmd('M') || !getByte(mode, crc))
     {
         LOG_ERROR(F("GetMode failed. Check i2c line."));
@@ -125,7 +126,7 @@ bool MasterI2C::getSlaveData(SlaveData &data)
     sendCmd('B');
     data.diagnostic = WATERIUS_NO_LINK;
 
-    uint8_t dummy, crc = 0;
+    uint8_t dummy, crc = 0xff;
     bool good = getByte(data.version, crc);
     good &= getByte(data.service, crc);
     good &= getUint16(data.reserved4, crc);
@@ -134,8 +135,8 @@ bool MasterI2C::getSlaveData(SlaveData &data)
 
     good &= getByte(data.resets, crc);
     good &= getByte(data.model, crc);
-    good &= getByte(data.state0, crc);
-    good &= getByte(data.state1, crc);
+    good &= getByte(data.counter_type0, crc);
+    good &= getByte(data.counter_type1, crc);
 
     good &= getUint(data.impulses0, crc);
     good &= getUint(data.impulses1, crc);
@@ -153,15 +154,15 @@ bool MasterI2C::getSlaveData(SlaveData &data)
     switch (data.diagnostic)
     {
     case WATERIUS_BAD_CRC:
-        LOG_ERROR(F("CRC wrong"));
+        LOG_ERROR(F("!!! CRC wrong !!!!, go to sleep"));
     case WATERIUS_OK:
         LOG_INFO(F("version: ") << data.version);
         LOG_INFO(F("service: ") << data.service);
         LOG_INFO(F("setup_started_counter: ") << data.setup_started_counter);
         LOG_INFO(F("resets: ") << data.resets);
         LOG_INFO(F("MODEL: ") << data.model);
-        LOG_INFO(F("state0: ") << data.state0);
-        LOG_INFO(F("state1: ") << data.state1);
+        LOG_INFO(F("type0: ") << data.counter_type0);
+        LOG_INFO(F("type1: ") << data.counter_type1);
         LOG_INFO(F("impulses0: ") << data.impulses0);
         LOG_INFO(F("impulses1: ") << data.impulses1);
         LOG_INFO(F("adc0: ") << data.adc0);
@@ -182,7 +183,23 @@ bool MasterI2C::setWakeUpPeriod(uint16_t period)
     txBuf[0] = 'S';
     txBuf[1] = (uint8_t)(period >> 8);
     txBuf[2] = (uint8_t)(period);
-    txBuf[3] = crc_8(&txBuf[1], 2, 0);
+    txBuf[3] = crc_8(&txBuf[1], 2, 0xff);
+
+    if (!sendData(txBuf, 4))
+    {
+        return false;
+    }
+    return true;
+}
+
+bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
+{
+    uint8_t txBuf[4];
+
+    txBuf[0] = 'C';
+    txBuf[1] = type0;
+    txBuf[2] = type1;
+    txBuf[3] = crc_8(&txBuf[1], 2, 0xff);
 
     if (!sendData(txBuf, 4))
     {

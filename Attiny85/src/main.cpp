@@ -7,6 +7,7 @@
 #include "SlaveI2C.h"
 #include "Storage.h"
 #include "counter.h"
+#include "button.h"
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include <avr/power.h>
@@ -16,12 +17,26 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 25    // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 28 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
-25 - 2023.02.15 - neitri
+29 - 2023.04.15 - neitri, dontsovcmc
 	1. Задержка отключения ESP после команды перехода в сон
+
+28 - 2023.04.19 - dontsovcmc
+	1. Настройка типа входов
+
+27 - 2023.03.31 - abrant
+	1. Исправлен подсчет контрольной суммы. 
+	2. Переписано хранилище, теперь хранятся все последние показания и при старте читается блок с верной контрольной суммой и максимальными показаниями.
+	3. Добавлено хранение в EEPROM настроек и их получение по I2C
+
+26 - 2023.03.25 - abrant
+	1. Исправление потерь импульсов во время связи
+
+25 - 2023.02.02 - abrant
+	1. поддержка электронных импульсов
 
 24 - 2022.02.22 - neitri, dontsovcmc
 	1. Передача флага о том, что пробуждение по кнопке
@@ -117,7 +132,7 @@ static ButtonB button(2);  // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1); // Питание на ESP
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, 0, 0, WATERIUS_2C, {CounterState_e::CLOSE, CounterState_e::CLOSE}, {0, 0}, {0, 0}, 0, 0};
+struct Header info = {FIRMWARE_VER, 0, 0, 0, {0, 0, WATERIUS_2C, {counter0.type, counter1.type}}, {0, 0}, {0, 0}, 0, 0};
 
 uint32_t wakeup_period;
 
@@ -126,56 +141,73 @@ uint32_t wakeup_period;
 //Записывается каждый импульс, поэтому для 10л/импульс срок службы памяти 10 000м3
 // 100к * 20 = 2 млн * 10 л / 2 счетчика = 10 000 000 л или 10 000 м3
 static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
+static EEPROMStorage<Config> config(2, storage.size()); // 5 byte * 2 + crc * 2
 
 SlaveI2C slaveI2C;
 
-volatile uint32_t wdt_count;
+volatile uint32_t 		wdt_count;
+volatile CounterEvent 	event;
+volatile uint8_t		storage_write_limit = 0; 
 
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR(WDT_vect)
 {
 	++wdt_count;
+	event = CounterEvent::TIME;
+	if (storage_write_limit > 0)
+	{
+		storage_write_limit--;
+	}
+}
+
+/* Вектор прерываний Pin Change */
+ISR(PCINT0_vect)
+{
+	event = CounterEvent::FRONT;
 }
 
 // Проверяем входы на замыкание.
 // Замыкание засчитывается только при повторной проверке.
 inline void counting()
 {
-
-	power_adc_enable(); //т.к. мы обесточили всё а нам нужен компаратор
-	adc_enable();		//после подачи питания на adc
-
-	if (counter0.is_impuls())
+	if (counter0.is_impuls(event))
 	{
-		info.data.value0++; //нужен т.к. при пробуждении запрашиваем данные
+		info.data.value0++; 				//нужен т.к. при пробуждении запрашиваем данные
 		info.adc.adc0 = counter0.adc;
-		info.states.state0 = counter0.state;
-		storage.add(info.data);
+		if (storage_write_limit == 0)
+		{
+			storage.add(info.data);
+			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
+		}
 	}
 #ifndef LOG_ON
-	if (counter1.is_impuls())
+	if (counter1.is_impuls(event))
 	{
 		info.data.value1++;
 		info.adc.adc1 = counter1.adc;
-		info.states.state1 = counter1.state;
-		storage.add(info.data);
-
-		// delayMicroseconds(65000);
-		// delayMicroseconds(65000);
-		// delayMicroseconds(65000);
-		// delayMicroseconds(65000);
-		// delayMicroseconds(65000);
+		if (storage_write_limit == 0)
+		{
+			storage.add(info.data);
+			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
+		}
 	}
 #endif
 
 	adc_disable();
 	power_adc_disable();
 }
+
+void saveConfig()
+{
+	// записываем 2 раза чтобы полностью переписать хранилище
+	config.add(info.config);
+	config.add(info.config);	
+}
+
 //Запрос периода при инициализции. Также период может изменится после настройки.
 // Настройка. Вызывается однократно при запуске.
 void setup()
 {
-
 	noInterrupts();
 	info.service = MCUSR; // причина перезагрузки
 	MCUSR = 0;			  // без этого не работает после перезагрузки по watchdog
@@ -185,18 +217,23 @@ void setup()
 
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 
-	uint16_t size = storage.size();
-	if (storage.get(info.data))
-	{ //не первая загрузка
-		info.resets = EEPROM.read(size);
-		info.resets++;
-		EEPROM.write(size, info.resets);
+	if (config.get(info.config))
+	{
+		// Конфигурация прочитана
+		info.config.resets++;
+		counter0.type = (CounterType)info.config.types.type0;
+		counter1.type = (CounterType)info.config.types.type1;
 	}
 	else
 	{
-		EEPROM.write(size, info.resets);					// 0
-		EEPROM.write(size + 1, info.setup_started_counter); // 0
+		// Конфигурации нет или повреждена
+		info.config.resets = 0;
+		info.config.setup_started_counter = 0;
+		info.config.types.type0 = counter0.type;
+		info.config.types.type1 = counter1.type;
 	}
+	saveConfig();
+	storage.get(info.data);
 
 	wakeup_period = WAKEUP_PERIOD_DEFAULT;
 
@@ -207,7 +244,7 @@ void setup()
 	LOG(F("RESET"));
 	LOG(info.resets);
 	LOG(F("EEPROM used:"));
-	LOG(size + 2);
+	LOG(storage.size() + config.size());
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
@@ -216,12 +253,25 @@ void setup()
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop()
 {
-	power_all_disable(); // Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
+	power_all_disable(); 		// Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
+
+    pinMode(1, OUTPUT);
+	GIMSK = _BV(PCIE);			// Включаем прерывания по фронту счетчиков и кнопки
+	PCMSK = _BV(PCINT2);
+	if (counter0.type == CounterType::ELECTRONIC)
+	{
+		PCMSK |= _BV(counter0._pin);
+	}
+	if (counter1.type == CounterType::ELECTRONIC)
+	{
+		PCMSK |= _BV(counter1._pin);
+	}
 
 	wdt_count = 0;
-	while ((wdt_count < wakeup_period) && !button.pressed())
+	while ((wdt_count < wakeup_period) && !button.pressed(event))
 	{
 		counting();
+		event = CounterEvent::NONE;
 		WDTCR |= _BV(WDIE);
 		sleep_mode();
 	}
@@ -236,22 +286,20 @@ void loop()
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит
 	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания
+
 	unsigned long wake_up_limit;
-	if (button.wait_release() > LONG_PRESS_MSEC)
-	{ // wdt_reset внутри wait_release
+	if (button.press == ButtonPressType::LONG)
+	{ 
 		LOG(F("SETUP pressed"));
 		slaveI2C.begin(SETUP_MODE);
 		wake_up_limit = SETUP_TIME_MSEC; // 10 мин при настройке
 
-		uint16_t setup_started_addr = storage.size() + 1;
-		info.setup_started_counter = EEPROM.read(setup_started_addr);
-		info.setup_started_counter++;
-		EEPROM.write(setup_started_addr, info.setup_started_counter);
+		info.config.setup_started_counter++;
+		saveConfig();
 	}
 	else
 	{
-
-		if (wdt_count < wakeup_period)
+		if (button.press == ButtonPressType::SHORT)
 		{
 			LOG(F("Manual transmit wake up"));
 			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
@@ -264,22 +312,33 @@ void loop()
 		wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
 	}
 
+	// Нажатие кнопки обработали и удаляем
+	button.press = ButtonPressType::NONE;
+
 	esp.power(true);
 	LOG(F("ESP turn on"));
 
+	uint8_t delay_loop_count = 0;		
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit))
 	{
-
 		wdt_reset();
-
-		counting();
-
-		delayMicroseconds(65000);
-
-		if (button.wait_release() > LONG_PRESS_MSEC)
-		{		   // wdt_reset внутри wait_release
-			break; // принудительно выключаем
+		if (delay_loop_count < 250)
+		{
+			delay_loop_count++;
 		}
+		else
+		{
+			// Получаем период опроса входов 250мс, как и от ватчдога
+			delay_loop_count = 0;
+			event = CounterEvent::TIME;
+		}
+		if (event != CounterEvent::NONE)
+		{
+			// Если получили фронт изменения сигнала или набежало время - проверяем входы
+			counting();
+			event = CounterEvent::NONE;
+		}
+		delayMicroseconds(1000);
 	}
 
 	slaveI2C.end(); // выключаем i2c slave.
@@ -292,8 +351,6 @@ void loop()
 	{
 		LOG(F("Sleep received"));
 	}
-
-	delayMicroseconds(20000);
 
 	esp.power(false);
 }

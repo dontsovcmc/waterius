@@ -205,6 +205,12 @@
 #define LED_PIN 1    
 #endif
 
+enum CounterType
+{
+    NAMUR,
+    DISCRETE,
+    ELECTRONIC
+};
 
 struct CalculatedData
 {
