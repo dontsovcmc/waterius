@@ -14,7 +14,6 @@ uint8_t SlaveI2C::txBufferPos = 0;
 uint8_t SlaveI2C::txBuffer[TX_BUFFER_SIZE];
 uint8_t SlaveI2C::setup_mode = TRANSMIT_MODE;
 bool SlaveI2C::masterSentSleep = false;
-unsigned long SlaveI2C::sentSleepTimestamp = 0; 
 
 void SlaveI2C::begin(const uint8_t mode)
 {
@@ -24,7 +23,6 @@ void SlaveI2C::begin(const uint8_t mode)
     Wire.onReceive(receiveEvent);
     Wire.onRequest(requestEvent);   
     masterSentSleep = false;
-    sentSleepTimestamp = 0;
     newCommand();
 }
 
@@ -62,7 +60,6 @@ void SlaveI2C::receiveEvent(int howMany)
         memcpy(txBuffer, &info, TX_BUFFER_SIZE);
         break;
     case 'Z': // Готовы ко сну
-        sentSleepTimestamp = millis();
         masterSentSleep = true;
         break;
     case 'M': // Разбудили ESP для настройки или передачи данных?
@@ -116,5 +113,5 @@ void SlaveI2C::getCounterTypes()
 
 bool SlaveI2C::masterGoingToSleep()
 {
-    return masterSentSleep && (millis() - sentSleepTimestamp > DELAY_SENT_SLEEP);
+    return masterSentSleep;
 }

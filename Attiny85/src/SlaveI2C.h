@@ -17,7 +17,6 @@ protected:
     static uint8_t setup_mode;
 
     static bool masterSentSleep;
-    static unsigned long sentSleepTimestamp; 
 
     static void requestEvent();
     static void newCommand();

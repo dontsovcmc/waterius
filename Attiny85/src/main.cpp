@@ -250,6 +250,28 @@ void setup()
 	LOG(info.data.value1);
 }
 
+void counting_1ms(uint8_t &delay_loop_count)
+{
+	wdt_reset();
+	if (delay_loop_count < 250)
+	{
+		delay_loop_count++;
+	}
+	else
+	{
+		// Получаем период опроса входов 250мс, как и от ватчдога
+		delay_loop_count = 0;
+		event = CounterEvent::TIME;
+	}
+	if (event != CounterEvent::NONE)
+	{
+		// Если получили фронт изменения сигнала или набежало время - проверяем входы
+		counting();
+		event = CounterEvent::NONE;
+	}
+	delayMicroseconds(1000);
+}
+
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
 void loop()
 {
@@ -321,24 +343,11 @@ void loop()
 	uint8_t delay_loop_count = 0;		
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit))
 	{
-		wdt_reset();
-		if (delay_loop_count < 250)
-		{
-			delay_loop_count++;
-		}
-		else
-		{
-			// Получаем период опроса входов 250мс, как и от ватчдога
-			delay_loop_count = 0;
-			event = CounterEvent::TIME;
-		}
-		if (event != CounterEvent::NONE)
-		{
-			// Если получили фронт изменения сигнала или набежало время - проверяем входы
-			counting();
-			event = CounterEvent::NONE;
-		}
-		delayMicroseconds(1000);
+		counting_1ms(delay_loop_count);
+	}
+	uint8_t sleep_delay_ms = 20;
+	while (sleep_delay_ms--) {
+		counting_1ms(delay_loop_count);
 	}
 
 	slaveI2C.end(); // выключаем i2c slave.
