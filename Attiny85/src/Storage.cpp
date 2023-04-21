@@ -5,7 +5,14 @@
 // Dallas CRC x8+x5+x4+1
 uint8_t crc_8(unsigned char *b, size_t num_bytes)
 {
-    uint8_t i, crc = 0xff;
+    uint8_t i;
+    
+#ifdef MODKAM_VERSION
+    uint8_t crc = 0x0;
+#else
+    uint8_t crc = 0xff;
+#endif
+
     for (size_t a = 0; a < num_bytes; a++)
     {
         i = (*(b + a) ^ crc) & 0xff;

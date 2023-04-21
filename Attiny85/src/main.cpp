@@ -17,10 +17,13 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 27 // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 28 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
+
+27 - 2023.04.21 - dontsovcmc
+    1. crc для modkam zigbee версии
 
 27 - 2023.03.29 - dontsovcmc
     1. Единая прошивка Ватериуса и modkam zigbee версии
