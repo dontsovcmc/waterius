@@ -369,6 +369,9 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     sett.setup_time = millis();
     sett.setup_finished_counter++;
+    
+    counter_type0 = dropdown_hot_counter_type.getValue();
+    counter_type1 = dropdown_cold_counter_type.getValue();
 
     if (!masterI2C.setCountersType(counter_type0, 
                                    counter_type1))
