@@ -46,4 +46,10 @@ extern void generateSha256Token(char *token, const int token_len, const char *em
 
 extern void blink_led(int count = 1, int period = 300, int duty = 150);
 
+extern uint8_t counter_type_by_name(uint8_t counter_name);
+
+extern uint8_t counter_name_by_type(uint8_t counter_type);
+
+extern DataType data_type_by_name(uint8_t counter_name, uint8_t index);
+
 #endif

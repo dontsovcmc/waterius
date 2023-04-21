@@ -3,10 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.11.3"
+#define FIRMWARE_VERSION "0.11.4"
 
 /*
 Версии прошивки для ESP
+
+0.11.4 - 2023.04.22 - dontsovcmc
+                      1. Поддержка типа входа attiny
 
 0.11.3 - 2023.03.18 - dontsovcmc
                       1. Счетчики попыток починил
@@ -141,7 +144,8 @@
 #define I2C_SLAVE_ADDR 10 // i2c адрес Attiny85
 
 #define VER_8 8
-#define CURRENT_VERSION VER_8
+#define VER_9 9
+#define CURRENT_VERSION VER_9
 
 #define EMAIL_LEN 40
 
@@ -211,6 +215,33 @@ enum CounterType
     DISCRETE,
     ELECTRONIC
 };
+
+enum CounterName
+{
+    WATER_NAMUR,
+    WATER_GERKON,
+    ELECTRO,
+    GAS_ELECTRONIC,
+    GAS_GERKON,
+    HEAT,
+    PORTABLE_WATER,
+    PORTABLE_WATER_GERKON,
+};
+
+enum DataType
+{
+    COLD_WATER = 0,
+    HOT_WATER = 1,
+    ELECTRICITY = 2,
+    GAS = 3,
+    HEATING = 4,
+    ELECTRICITY_DAY = 5,
+    ELECTRICITY_NIGHT = 6,
+    ELECTRICITY_PEAK = 7,
+    ELECTRICITY_HALF_PEAK = 8,
+    POTABLE_WATER = 9,
+};
+
 
 struct CalculatedData
 {
@@ -355,12 +386,14 @@ struct Settings
     /* Wifi канал */
     uint8_t wifi_channel = 0;
     uint8_t wifi_phy_mode = 0; // Режим работы интерфейса
-
+    
+    uint8_t counter0_name = 0;  //enum CounterName
+    uint8_t counter1_name = 0;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved4[64] = {0};
+    uint8_t reserved4[62] = {0};
 
 }; // 960 байт
 

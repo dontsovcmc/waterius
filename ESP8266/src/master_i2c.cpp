@@ -161,8 +161,8 @@ bool MasterI2C::getSlaveData(SlaveData &data)
         LOG_INFO(F("setup_started_counter: ") << data.setup_started_counter);
         LOG_INFO(F("resets: ") << data.resets);
         LOG_INFO(F("MODEL: ") << data.model);
-        LOG_INFO(F("type0: ") << data.counter_type0);
-        LOG_INFO(F("type1: ") << data.counter_type1);
+        LOG_INFO(F("counter_type0: ") << data.counter_type0);
+        LOG_INFO(F("counter_type1: ") << data.counter_type1);
         LOG_INFO(F("impulses0: ") << data.impulses0);
         LOG_INFO(F("impulses1: ") << data.impulses1);
         LOG_INFO(F("adc0: ") << data.adc0);

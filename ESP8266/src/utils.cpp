@@ -279,6 +279,90 @@ void blink_led(int count, int period, int duty)
 		digitalWrite(LED_PIN, LOW); 
 		delay(duty); 
 	}
-	
+}
 
+/**
+ * @brief Возвращает тип входа по имени счётчика
+ *
+ * @param counter_name имя счётчика в интерфейсе ESP
+ * @return тип входа attiny
+ */
+uint8_t counter_type_by_name(uint8_t counter_name)
+{
+	switch ((CounterName)counter_name)
+	{
+		case CounterName::WATER_NAMUR: 
+			return CounterType::NAMUR;
+
+		case CounterName::WATER_GERKON: 
+		case CounterName::GAS_GERKON: 
+		case CounterName::PORTABLE_WATER_GERKON: 
+			return CounterType::DISCRETE;
+
+		case CounterName::ELECTRO:
+		case CounterName::GAS_ELECTRONIC:
+		case CounterName::HEAT:
+		case CounterName::PORTABLE_WATER:
+		default:
+			break;
+	}
+	return CounterType::ELECTRONIC;
+}
+
+
+/**
+ * @brief Возвращает имя (самое первое) по типу входа. 
+ * Чтобы что-то показать в вебморде, если в attiny другой тип входа.
+ *
+ * @param counter_type тип входа attiny
+ * @return имя счётчика в интерфейсе ESP
+ */
+uint8_t counter_name_by_type(uint8_t counter_type)
+{
+	switch ((CounterType)counter_type)
+	{
+		case CounterType::NAMUR:
+			return CounterName::WATER_NAMUR;
+
+		case CounterType::DISCRETE:
+			return CounterName::WATER_GERKON;
+
+		case CounterType::ELECTRONIC:
+			break;
+	}
+	return CounterName::ELECTRO;
+}
+
+/**
+ * @brief Возвращает тип данных на сервер Ватериуса по названию входа. 
+ *
+ * @param counter_name имя счётчика в интерфейсе ESP
+ * @param index номер входа
+ * @return тип данных на сервере Ватериуса
+ */
+DataType data_type_by_name(uint8_t counter_name, uint8_t index)
+{
+	switch ((CounterName)counter_name)
+	{
+		case CounterName::WATER_GERKON:
+		case CounterName::WATER_NAMUR: 
+			if (index == 0) 
+				return DataType::HOT_WATER;
+			return DataType::COLD_WATER;
+
+		case CounterName::ELECTRO:
+			return DataType::ELECTRICITY;
+
+		case CounterName::GAS_ELECTRONIC:
+		case CounterName::GAS_GERKON: 
+			return DataType::GAS;
+
+		case CounterName::HEAT:
+			return DataType::HEATING;
+
+		case CounterName::PORTABLE_WATER:
+		case CounterName::PORTABLE_WATER_GERKON: 
+			return DataType::POTABLE_WATER;
+	}
+	return DataType::COLD_WATER;
 }
