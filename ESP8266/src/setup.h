@@ -218,14 +218,11 @@ enum CounterType
 
 enum CounterName
 {
-    WATER_NAMUR,
-    WATER_GERKON,
+    WATER,
     ELECTRO,
-    GAS_ELECTRONIC,
-    GAS_GERKON,
+    GAS,
     HEAT,
-    PORTABLE_WATER,
-    PORTABLE_WATER_GERKON,
+    PORTABLE_WATER
 };
 
 enum DataType
@@ -233,7 +230,7 @@ enum DataType
     COLD_WATER = 0,
     HOT_WATER = 1,
     ELECTRICITY = 2,
-    GAS = 3,
+    GAS_DATA = 3,
     HEATING = 4,
     ELECTRICITY_DAY = 5,
     ELECTRICITY_NIGHT = 6,
@@ -387,13 +384,13 @@ struct Settings
     uint8_t wifi_channel = 0;
     uint8_t wifi_phy_mode = 0; // Режим работы интерфейса
     
-    uint8_t counter0_name = 0;  //enum CounterName
-    uint8_t counter1_name = 0;
+    uint8_t counter0_name = CounterName::WATER;  //enum CounterName
+    uint8_t counter1_name = CounterName::WATER;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved4[62] = {0};
+    uint8_t reserved4[64] = {0};
 
 }; // 960 байт
 

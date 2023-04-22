@@ -113,6 +113,11 @@ void bindServerCallback()
 
 void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
+    String counter_name_title = "Тип счётчика", counter_type_title = "Тип выхода";
+    String water = "Вода", electro = "Электричество", teplo = "Тепло", portable = "Питьевая вода";
+    String namur = "намур", discrete = "геркон", electronic = "электронный";
+    uint8_t counter0_type = data.counter_type0, counter1_type = data.counter_type1;
+
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
     
@@ -224,41 +229,23 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter param_ntp("ntp", "Сервер времени (NTP)", sett.ntp_server, HOST_LEN - 1);
     wm.addParameter(&param_ntp);
 
-    WiFiManagerParameter label_factor_settings("<h3>Параметры счетчиков</h3>");
-    wm.addParameter(&label_factor_settings);
+    WiFiManagerParameter label1_settings("<h3 class='cold'>Синий счётчик</h3>");
+    wm.addParameter(&label1_settings);
 
-    uint8_t counter_type1 = counter_type_by_name(sett.counter1_name);
-    if (counter_type1 != data.counter_type1) {  // вдруг в attiny другой тип установлен (не должно быть)
-        sett.counter1_name = counter_name_by_type(data.counter_type1);
-    }
-    DropdownParameter dropdown_cold_counter_type("typeCold", "Тип счётчика (синий)", sett.counter1_name);
-    dropdown_cold_counter_type.add_option(CounterName::WATER_NAMUR, "Вода (намур)");
-    dropdown_cold_counter_type.add_option(CounterName::WATER_GERKON, "Вода (геркон)");
-    dropdown_cold_counter_type.add_option(CounterName::ELECTRO, "Электричество");
-    dropdown_cold_counter_type.add_option(CounterName::GAS_ELECTRONIC, "Газ (электронный)");
-    dropdown_cold_counter_type.add_option(CounterName::GAS_GERKON, "Газ (геркон)");
-    dropdown_cold_counter_type.add_option(CounterName::HEAT, "Тепло (электронный)");
-    dropdown_cold_counter_type.add_option(CounterName::PORTABLE_WATER, "Питьевая вода (электронный)");
-    dropdown_cold_counter_type.add_option(CounterName::PORTABLE_WATER_GERKON, "Питьевая вода (геркон)");
+    DropdownParameter dropdown_cold_counter_name("nameCold", counter_name_title.c_str(), sett.counter1_name);
+    dropdown_cold_counter_name.add_option(CounterName::WATER, water.c_str());
+    dropdown_cold_counter_name.add_option(CounterName::ELECTRO, electro.c_str());
+    dropdown_cold_counter_name.add_option(CounterName::HEAT, teplo.c_str());
+    dropdown_cold_counter_name.add_option(CounterName::PORTABLE_WATER, portable.c_str());
+    wm.addParameter(&dropdown_cold_counter_name);
+
+    DropdownParameter dropdown_cold_counter_type("typeCold", counter_type_title.c_str(), counter1_type);
+    dropdown_cold_counter_type.add_option(CounterType::NAMUR, namur.c_str());
+    dropdown_cold_counter_type.add_option(CounterType::DISCRETE, discrete.c_str());
+    dropdown_cold_counter_type.add_option(CounterType::ELECTRONIC, electronic.c_str());
     wm.addParameter(&dropdown_cold_counter_type);
 
-    uint8_t counter_type0 = counter_type_by_name(sett.counter0_name);
-    if (counter_type0 != data.counter_type0) {
-        sett.counter0_name = counter_name_by_type(data.counter_type0);
-    }
-    DropdownParameter dropdown_hot_counter_type("typeHot", "Тип счётчика (красный)", sett.counter0_name);
-    dropdown_hot_counter_type.add_option(CounterName::WATER_NAMUR, "Вода (намур)");
-    dropdown_hot_counter_type.add_option(CounterName::WATER_GERKON, "Вода (геркон)");
-    dropdown_hot_counter_type.add_option(CounterName::ELECTRO, "Электричество");
-    dropdown_hot_counter_type.add_option(CounterName::GAS_ELECTRONIC, "Газ (электронный)");
-    dropdown_hot_counter_type.add_option(CounterName::GAS_GERKON, "Газ (геркон)");
-    dropdown_hot_counter_type.add_option(CounterName::HEAT, "Тепло (электронный)");
-    dropdown_hot_counter_type.add_option(CounterName::PORTABLE_WATER, "Питьевая вода (электронный)");
-    dropdown_hot_counter_type.add_option(CounterName::PORTABLE_WATER_GERKON, "Питьевая вода (геркон)");
-    wm.addParameter(&dropdown_hot_counter_type);
-
-
-    DropdownParameter dropdown_cold_factor("factorCold", "Множитель (синий) л/имп", sett.factor1);
+    DropdownParameter dropdown_cold_factor("factorCold", "Множитель л/имп", sett.factor1);
     dropdown_cold_factor.add_option(AUTO_IMPULSE_FACTOR, "Авто");
     dropdown_cold_factor.add_option(1, "1");
     dropdown_cold_factor.add_option(10, "10");
@@ -268,7 +255,24 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label_factor_cold_feedback("<p id='fc_fb_control'>Вес импульса: <a id='factor_cold_feedback'></a> л/имп");
     wm.addParameter(&label_factor_cold_feedback);
 
-    DropdownParameter dropdown_hot_factor("factorHot", "Множитель (красный) л/имп", sett.factor0);
+    WiFiManagerParameter label0_settings("<h3 class='hot'>Красный счётчик</h3>");
+    wm.addParameter(&label0_settings);
+
+    DropdownParameter dropdown_hot_counter_name("nameHot", counter_name_title.c_str(), sett.counter0_name);
+    dropdown_hot_counter_name.add_option(CounterName::WATER, water.c_str());
+    dropdown_hot_counter_name.add_option(CounterName::ELECTRO, electro.c_str());
+    dropdown_hot_counter_name.add_option(CounterName::HEAT, teplo.c_str());
+    dropdown_hot_counter_name.add_option(CounterName::PORTABLE_WATER, portable.c_str());
+    wm.addParameter(&dropdown_hot_counter_name);
+
+    DropdownParameter dropdown_hot_counter_type("typeHot", counter_type_title.c_str(), counter0_type);
+    dropdown_hot_counter_type.add_option(CounterType::NAMUR, namur.c_str());
+    dropdown_hot_counter_type.add_option(CounterType::DISCRETE, discrete.c_str());
+    dropdown_hot_counter_type.add_option(CounterType::ELECTRONIC, electronic.c_str());
+    wm.addParameter(&dropdown_hot_counter_type);
+
+
+    DropdownParameter dropdown_hot_factor("factorHot", "Множитель л/имп", sett.factor0);
     dropdown_hot_factor.add_option(AS_COLD_CHANNEL, "Как у холодной");
     dropdown_hot_factor.add_option(AUTO_IMPULSE_FACTOR, "Авто");
     dropdown_hot_factor.add_option(1, "1");
@@ -405,6 +409,25 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(F("wakeup period, min=") << sett.wakeup_per_min);
     LOG_INFO(F("wakeup period, tick=") << sett.set_wakeup);
 
+    // Тип счётчиков
+    sett.counter0_name = dropdown_hot_counter_name.getValue();
+    sett.counter1_name = dropdown_cold_counter_name.getValue();
+
+    // Установка типа входа
+    counter0_type = dropdown_hot_counter_type.getValue();
+    counter1_type = dropdown_cold_counter_type.getValue();
+
+    if (!masterI2C.setCountersType(counter0_type, 
+                                   counter1_type))
+    {
+        LOG_ERROR(F("Counters types wasn't set"));
+    } //"Разбуди меня через..."
+    else
+    {
+        LOG_INFO(F("Counter0 name: ") << sett.counter0_name << F(" type: ") << counter0_type);
+        LOG_INFO(F("Counter1 name: ") << sett.counter1_name << F(" type: ") << counter1_type);
+    }
+
     // Веса импульсов
     LOG_INFO(F("hot dropdown=") << dropdown_hot_factor.getValue());
     LOG_INFO(F("cold dropdown=") << dropdown_cold_factor.getValue());
@@ -439,22 +462,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     sett.setup_time = millis();
     sett.setup_finished_counter++;
-    
-    sett.counter0_name = dropdown_hot_counter_type.getValue();
-    sett.counter1_name = dropdown_cold_counter_type.getValue();
-
-    counter_type0 = counter_type_by_name(sett.counter0_name);
-    counter_type1 = counter_type_by_name(sett.counter1_name);
-    if (!masterI2C.setCountersType(counter_type0, 
-                                   counter_type1))
-    {
-        LOG_ERROR(F("Counters types wasn't set"));
-    } //"Разбуди меня через..."
-    else
-    {
-        LOG_INFO(F("Counter0 name: ") << sett.counter0_name << F(" type: ") << counter_type0);
-        LOG_INFO(F("Counter1 name: ") << sett.counter1_name << F(" type: ") << counter_type1);
-    }
 
     store_config(sett);
 }
