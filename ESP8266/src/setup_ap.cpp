@@ -15,6 +15,8 @@
 extern SlaveData data;
 extern MasterI2C masterI2C;
 
+String message_states;
+String message_networks;
 SlaveData runtime_data;
 
 #define IMPULS_LIMIT_1 3 // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
@@ -89,20 +91,16 @@ WiFiManager wm;
 void handleStates()
 {
     LOG_INFO(F("/states request"));
-    String message;
-    message.reserve(300); // сейчас 200
-    update_data(message);
-    wm.server->send(200, F("text/plain"), message);
+    update_data(message_states);
+    wm.server->send(200, F("text/plain"), message_states);
 }
 
 void handleNetworks()
 {
     LOG_INFO(F("/networks request"));
-    String message;
-    message.reserve(2000);
     wm.WiFi_scanNetworks(wm.server->hasArg(F("refresh")), false); // wifiscan, force if arg refresh
-    wm.getScanItemOut(message);
-    wm.server->send(200, F("text/plain"), message);
+    wm.getScanItemOut(message_networks);
+    wm.server->send(200, F("text/plain"), message_networks);
 }
 
 void bindServerCallback()
@@ -114,11 +112,13 @@ void bindServerCallback()
 void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
     String counter_name_title = "Тип счётчика", counter_type_title = "Тип выхода";
-    String water_cold = "Хол. вода", water_hot = "Гор. вода", electro = "Электричество", 
+    /*String water_cold = "Хол. вода", water_hot = "Гор. вода", electro = "Электричество", 
     gas = "Газ", teplo = "Тепло", portable = "Питьевая вода", other = "Другой";
-    String namur = "Намур", discrete = "Геркон", electronic = "Электронный";
+    String namur = "Намур", discrete = "Геркон", electronic = "Электронный"; */
     uint8_t counter0_type = data.counter_type0, counter1_type = data.counter_type1;
 
+    message_states.reserve(300);
+    message_networks.reserve(2000);
     wm.debugPlatformInfo();
     wm.setWebServerCallback(bindServerCallback);
     
@@ -233,7 +233,15 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label1_settings("<h3 class='cold'>Синий счётчик</h3>");
     wm.addParameter(&label1_settings);
 
-    DropdownParameter dropdown_cold_counter_name("nameCold", counter_name_title.c_str(), sett.counter1_name);
+    ShortParameter dropdown_cold_counter_name("nameCold", counter_name_title.c_str(), sett.counter1_name);
+    wm.addParameter(&dropdown_cold_counter_name);
+
+    ShortParameter dropdown_cold_counter_type("typeCold", counter_type_title.c_str(), counter1_type);
+    wm.addParameter(&dropdown_cold_counter_type);
+
+    ShortParameter dropdown_cold_factor("factorCold", "Множитель л/имп", sett.factor1);
+    wm.addParameter(&dropdown_cold_factor);
+    /*DropdownParameter dropdown_cold_counter_name("nameCold", counter_name_title.c_str(), sett.counter1_name);
     dropdown_cold_counter_name.add_option(CounterName::WATER_COLD, water_cold.c_str());
     dropdown_cold_counter_name.add_option(CounterName::WATER_HOT, water_hot.c_str());
     dropdown_cold_counter_name.add_option(CounterName::ELECTRO, electro.c_str());
@@ -254,7 +262,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     dropdown_cold_factor.add_option(1, "1");
     dropdown_cold_factor.add_option(10, "10");
     dropdown_cold_factor.add_option(100, "100");
-    wm.addParameter(&dropdown_cold_factor);
+    wm.addParameter(&dropdown_cold_factor); */
 
     WiFiManagerParameter label_factor_cold_feedback("<p id='fc_fb_control'>Вес импульса: <a id='factor_cold_feedback'></a> л/имп");
     wm.addParameter(&label_factor_cold_feedback);
@@ -262,7 +270,16 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label0_settings("<h3 class='hot'>Красный счётчик</h3>");
     wm.addParameter(&label0_settings);
 
-    DropdownParameter dropdown_hot_counter_name("nameHot", counter_name_title.c_str(), sett.counter0_name);
+    ShortParameter dropdown_hot_counter_name("nameHot", counter_name_title.c_str(), sett.counter0_name);
+    wm.addParameter(&dropdown_hot_counter_name);
+
+    ShortParameter dropdown_hot_counter_type("typeHot", counter_type_title.c_str(), counter0_type);
+    wm.addParameter(&dropdown_hot_counter_type);
+
+    ShortParameter dropdown_hot_factor("factorHot", "Множитель л/имп", sett.factor0);
+    wm.addParameter(&dropdown_hot_factor);
+    
+    /*DropdownParameter dropdown_hot_counter_name("nameHot", counter_name_title.c_str(), sett.counter0_name);
     dropdown_hot_counter_name.add_option(CounterName::WATER_COLD, water_cold.c_str());
     dropdown_hot_counter_name.add_option(CounterName::WATER_HOT, water_hot.c_str());
     dropdown_hot_counter_name.add_option(CounterName::ELECTRO, electro.c_str());
@@ -285,7 +302,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     dropdown_hot_factor.add_option(1, "1");
     dropdown_hot_factor.add_option(10, "10");
     dropdown_hot_factor.add_option(100, "100");
-    wm.addParameter(&dropdown_hot_factor);
+    wm.addParameter(&dropdown_hot_factor); */
 
     WiFiManagerParameter label_factor_hot_feedback("<p id='fh_fb_control'>Вес импульса: <a id='factor_hot_feedback'></a> л/имп");
     wm.addParameter(&label_factor_hot_feedback);
@@ -295,7 +312,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&div_end);
 
     // Счетчиков
-    WiFiManagerParameter cold_water("<h3>Холодная вода</h3>");
+    WiFiManagerParameter cold_water("<h3 class='cold'>Синий счётчик</h3>");
     wm.addParameter(&cold_water);
 
     WiFiManagerParameter label_cold_info("<p>Во время первой настройки спустите унитаз 1&ndash;3 раза (или вылейте не&nbsp;меньше 4&nbsp;л.), пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;. Если статус &laquo;не&nbsp;подключен&raquo;, проверьте провод в&nbsp;разъёме. Ватериус так определяет тип счётчика. Счётчики не влияют на связь сервером.</p>");
@@ -304,7 +321,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label_cold_state("<b><p class='bad' id='state1bad'></p><p class='good' id='state1good'></p></b>");
     wm.addParameter(&label_cold_state);
 
-    WiFiManagerParameter label_cold("<label class='cold label'>Показания холодной воды</label>");
+    WiFiManagerParameter label_cold("<label>Показания</label>");
     wm.addParameter(&label_cold);
     FloatParameter param_channel1_start("ch1", "", cdata.channel1);
     wm.addParameter(&param_channel1_start);
@@ -312,7 +329,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter param_serial_cold("serialCold", "серийный номер", sett.serial1, SERIAL_LEN - 1);
     wm.addParameter(&param_serial_cold);
 
-    WiFiManagerParameter hot_water("<h3>Горячая вода</h3>");
+    WiFiManagerParameter hot_water("<h3 class='hot'>Красный счётчик</h3>");
     wm.addParameter(&hot_water);
 
     WiFiManagerParameter label_hot_info("<p>Откройте кран горячей воды, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
@@ -321,7 +338,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label_hot_state("<b><p class='bad' id='state0bad'></p><p class='good' id='state0good'></p></b>");
     wm.addParameter(&label_hot_state);
 
-    WiFiManagerParameter label_hot("<label class='hot label'>Показания горячей воды</label>");
+    WiFiManagerParameter label_hot("<label>Показания</label>");
     wm.addParameter(&label_hot);
     FloatParameter param_channel0_start("ch0", "", cdata.channel0);
     wm.addParameter(&param_channel0_start);

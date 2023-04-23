@@ -192,7 +192,7 @@
 #define DEFAULT_WAKEUP_PERIOD_MIN 1440
 #endif
 
-#define AUTO_IMPULSE_FACTOR 2
+#define AUTO_IMPULSE_FACTOR 3
 #define AS_COLD_CHANNEL 7
 
 #define DEF_FALLBACK_DNS "8.8.8.8"
@@ -300,10 +300,10 @@ struct Settings
     float channel1_start = 0.0;
 
     /*
-    Кол-во литров на 1 импульс
+    reserved
     */
-    uint8_t factor0 = 0;
-    uint8_t factor1 = 0;
+    uint8_t reserved5 = 0;
+    uint8_t reserved6 = 0;
 
     /*
     Серийные номера счётчиков воды
@@ -387,13 +387,22 @@ struct Settings
     uint8_t wifi_channel = 0;
     uint8_t wifi_phy_mode = 0; // Режим работы интерфейса
     
+    /*
+    Тип счётчика (вода, тепло, газ, электричество)
+    */
     uint8_t counter0_name = CounterName::WATER_HOT;  //enum CounterName
     uint8_t counter1_name = CounterName::WATER_COLD;
+
+    /*
+    Кол-во литров на 1 импульс
+    */
+    uint16_t factor0 = 0;
+    uint16_t factor1 = 0;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved4[64] = {0};
+    uint8_t reserved4[60] = {0};
 
 }; // 960 байт
 

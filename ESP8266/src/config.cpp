@@ -106,8 +106,8 @@ bool load_config(Settings &sett)
 
         // Всегда одно и тоже будет
         LOG_INFO(F("--- Counters ---- "));
-        LOG_INFO(F("channel0 start=") << sett.channel0_start << F(", impulses=") << sett.impulses0_start << F(", factor=") << sett.factor0);
-        LOG_INFO(F("channel1 start=") << sett.channel1_start << F(", impulses=") << sett.impulses1_start << F(", factor=") << sett.factor1);
+        LOG_INFO(F("channel0 start=") << sett.channel0_start << F(", impulses=") << sett.impulses0_start << F(", factor=") << sett.factor0 << F(", name=") << sett.counter0_name);
+        LOG_INFO(F("channel1 start=") << sett.channel1_start << F(", impulses=") << sett.impulses1_start << F(", factor=") << sett.factor1 << F(", name=") << sett.counter1_name);
 
         LOG_INFO(F("Config succesfully loaded"));
         return true;
