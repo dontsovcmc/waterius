@@ -280,13 +280,7 @@ struct Settings
     // сервер blynk.com или свой blynk сервер
     char blynk_host[HOST_LEN] = {0};
 
-    // Если email не пустой, то отсылается e-mail
-    // Чтобы работало нужен виджет эл. почта в приложении
-    char blynk_email[EMAIL_LEN] = {0};
-    // Заголовок письма. {V0}-{V4} заменяются на данные
-    char blynk_email_title[BLYNK_EMAIL_TITLE_LEN] = {0};
-    // Шаблон эл. письма. {V0}-{V4} заменяются на данные
-    char blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN] = {0};
+    char reserved7[EMAIL_LEN + BLYNK_EMAIL_TITLE_LEN + BLYNK_EMAIL_TEMPLATE_LEN] = {0};
 
     char mqtt_host[HOST_LEN] = {0};
     uint16_t mqtt_port = MQTT_DEFAULT_PORT;

@@ -168,12 +168,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&param_blynk_host);
     WiFiManagerParameter param_blynk_key("bkey", "Уникальный ключ (включает отправку)", sett.blynk_key, BLYNK_KEY_LEN - 1);
     wm.addParameter(&param_blynk_key);
-    WiFiManagerParameter param_blynk_email("bemail", "Адрес эл. почты (включает ежедневные письма)", sett.blynk_email, EMAIL_LEN - 1);
-    wm.addParameter(&param_blynk_email);
-    WiFiManagerParameter param_blynk_email_title("btitle", "Тема письма", sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN - 1);
-    wm.addParameter(&param_blynk_email_title);
-    WiFiManagerParameter param_blynk_email_template("btemplate", "Текст письма", sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN - 1);
-    wm.addParameter(&param_blynk_email_template);
 #endif
 
     // Настройки MQTT
@@ -384,9 +378,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 #ifndef BLYNK_DISABLED
     strncpy0(sett.blynk_key, param_blynk_key.getValue(), BLYNK_KEY_LEN);
     strncpy0(sett.blynk_host, param_blynk_host.getValue(), HOST_LEN);
-    strncpy0(sett.blynk_email, param_blynk_email.getValue(), EMAIL_LEN);
-    strncpy0(sett.blynk_email_title, param_blynk_email_title.getValue(), BLYNK_EMAIL_TITLE_LEN);
-    strncpy0(sett.blynk_email_template, param_blynk_email_template.getValue(), BLYNK_EMAIL_TEMPLATE_LEN);
 #endif
 
 // MQTT

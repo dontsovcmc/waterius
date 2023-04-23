@@ -58,9 +58,6 @@ bool load_config(Settings &sett)
 
         sett.blynk_key[BLYNK_KEY_LEN - 1] = 0;
         sett.blynk_host[HOST_LEN - 1] = 0;
-        sett.blynk_email[EMAIL_LEN - 1] = 0;
-        sett.blynk_email_title[BLYNK_EMAIL_TITLE_LEN - 1] = 0;
-        sett.blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN - 1] = 0;
 
         sett.mqtt_host[HOST_LEN - 1] = 0;
         sett.mqtt_login[MQTT_LOGIN_LEN - 1] = 0;
@@ -77,7 +74,6 @@ bool load_config(Settings &sett)
 
         LOG_INFO(F("--- Blynk.cc ---- "));
         LOG_INFO(F("host=") << sett.blynk_host << F(" key=") << sett.blynk_key);
-        LOG_INFO(F("email=") << sett.blynk_email);
 
         LOG_INFO(F("--- MQTT ---- "));
         LOG_INFO(F("host=") << sett.mqtt_host << F(" port=") << sett.mqtt_port);
