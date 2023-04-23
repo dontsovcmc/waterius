@@ -293,10 +293,11 @@ DataType data_type_by_name(uint8_t counter_name, uint8_t index)
 {
 	switch ((CounterName)counter_name)
 	{
-		case CounterName::WATER:
-			if (index == 0) 
-				return DataType::HOT_WATER;
+		case CounterName::WATER_COLD:
 			return DataType::COLD_WATER;
+
+		case CounterName::WATER_HOT:
+			return DataType::HOT_WATER;
 
 		case CounterName::ELECTRO:
 			return DataType::ELECTRICITY;
@@ -309,6 +310,9 @@ DataType data_type_by_name(uint8_t counter_name, uint8_t index)
 
 		case CounterName::PORTABLE_WATER:
 			return DataType::POTABLE_WATER;
+
+		case CounterName::OTHER:
+			return DataType::OTHER_TYPE;
 	}
 	return DataType::COLD_WATER;
 }

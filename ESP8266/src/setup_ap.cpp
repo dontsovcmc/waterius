@@ -114,8 +114,9 @@ void bindServerCallback()
 void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
     String counter_name_title = "Тип счётчика", counter_type_title = "Тип выхода";
-    String water = "Вода", electro = "Электричество", teplo = "Тепло", portable = "Питьевая вода";
-    String namur = "намур", discrete = "геркон", electronic = "электронный";
+    String water_cold = "Хол. вода", water_hot = "Гор. вода", electro = "Электричество", 
+    gas = "Газ", teplo = "Тепло", portable = "Питьевая вода", other = "Другой";
+    String namur = "Намур", discrete = "Геркон", electronic = "Электронный";
     uint8_t counter0_type = data.counter_type0, counter1_type = data.counter_type1;
 
     wm.debugPlatformInfo();
@@ -233,10 +234,13 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&label1_settings);
 
     DropdownParameter dropdown_cold_counter_name("nameCold", counter_name_title.c_str(), sett.counter1_name);
-    dropdown_cold_counter_name.add_option(CounterName::WATER, water.c_str());
+    dropdown_cold_counter_name.add_option(CounterName::WATER_COLD, water_cold.c_str());
+    dropdown_cold_counter_name.add_option(CounterName::WATER_HOT, water_hot.c_str());
     dropdown_cold_counter_name.add_option(CounterName::ELECTRO, electro.c_str());
+    dropdown_cold_counter_name.add_option(CounterName::GAS, gas.c_str());
     dropdown_cold_counter_name.add_option(CounterName::HEAT, teplo.c_str());
     dropdown_cold_counter_name.add_option(CounterName::PORTABLE_WATER, portable.c_str());
+    dropdown_cold_counter_name.add_option(CounterName::OTHER, other.c_str());
     wm.addParameter(&dropdown_cold_counter_name);
 
     DropdownParameter dropdown_cold_counter_type("typeCold", counter_type_title.c_str(), counter1_type);
@@ -259,10 +263,13 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&label0_settings);
 
     DropdownParameter dropdown_hot_counter_name("nameHot", counter_name_title.c_str(), sett.counter0_name);
-    dropdown_hot_counter_name.add_option(CounterName::WATER, water.c_str());
+    dropdown_hot_counter_name.add_option(CounterName::WATER_COLD, water_cold.c_str());
+    dropdown_hot_counter_name.add_option(CounterName::WATER_HOT, water_hot.c_str());
     dropdown_hot_counter_name.add_option(CounterName::ELECTRO, electro.c_str());
+    dropdown_hot_counter_name.add_option(CounterName::GAS, gas.c_str());
     dropdown_hot_counter_name.add_option(CounterName::HEAT, teplo.c_str());
     dropdown_hot_counter_name.add_option(CounterName::PORTABLE_WATER, portable.c_str());
+    dropdown_hot_counter_name.add_option(CounterName::OTHER, other.c_str());
     wm.addParameter(&dropdown_hot_counter_name);
 
     DropdownParameter dropdown_hot_counter_type("typeHot", counter_type_title.c_str(), counter0_type);
@@ -330,7 +337,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     // Запуск веб сервера на 192.168.4.1
     LOG_INFO(F("chip id:") << getChipId());
 
-    WiFi.setPhyMode(WIFI_PHY_MODE_11G);
+    WiFi.setPhyMode(WIFI_PHY_MODE_11G); //нужно ли ?
 
     /*
     Имя точки доступа waterius-NNNNN-НОМЕРВЕРСИИ

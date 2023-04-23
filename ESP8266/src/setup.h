@@ -179,7 +179,7 @@
 #define HARDWARE_VERSION "1.0.0"
 #define MANUFACTURER "Waterius"
 
-#define JSON_DYNAMIC_MSG_BUFFER 1024
+#define JSON_DYNAMIC_MSG_BUFFER 2048
 #define JSON_SMALL_STATIC_MSG_BUFFER 256
 
 #define ROUTER_MAC_LENGTH 8
@@ -218,11 +218,13 @@ enum CounterType
 
 enum CounterName
 {
-    WATER,
+    WATER_COLD,
+    WATER_HOT,
     ELECTRO,
     GAS,
     HEAT,
-    PORTABLE_WATER
+    PORTABLE_WATER,
+    OTHER
 };
 
 enum DataType
@@ -237,6 +239,7 @@ enum DataType
     ELECTRICITY_PEAK = 7,
     ELECTRICITY_HALF_PEAK = 8,
     POTABLE_WATER = 9,
+    OTHER_TYPE = 10
 };
 
 
@@ -384,8 +387,8 @@ struct Settings
     uint8_t wifi_channel = 0;
     uint8_t wifi_phy_mode = 0; // Режим работы интерфейса
     
-    uint8_t counter0_name = CounterName::WATER;  //enum CounterName
-    uint8_t counter1_name = CounterName::WATER;
+    uint8_t counter0_name = CounterName::WATER_HOT;  //enum CounterName
+    uint8_t counter1_name = CounterName::WATER_COLD;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
