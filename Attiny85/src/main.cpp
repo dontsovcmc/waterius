@@ -17,7 +17,7 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 28 // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 29 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
