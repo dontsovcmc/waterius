@@ -213,22 +213,23 @@
 
 enum CounterType
 {
-    NAMUR,
-    DISCRETE,
-    ELECTRONIC
+    NAMUR=0,
+    DISCRETE=1,
+    ELECTRONIC=2
 };
 
 enum CounterName
 {
-    WATER_COLD,
-    WATER_HOT,
-    ELECTRO,
-    GAS,
-    HEAT,
-    PORTABLE_WATER,
-    OTHER
+    WATER_COLD=0,
+    WATER_HOT=1,
+    ELECTRO=2,
+    GAS=3,
+    HEAT=4,
+    PORTABLE_WATER=5,
+    OTHER=6
 };
 
+// согласно 
 enum DataType
 {
     COLD_WATER = 0,
