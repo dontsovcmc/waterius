@@ -12,9 +12,12 @@
 #include <avr/sleep.h>
 #include <avr/power.h>
 
-// Для логирования раскомментируйте LOG_ON в Setup.h
-#if defined(LOG_ON)
+// Для логирования раскомментируйте LOG_ON в Setup.h или platformio.ini
+#ifdef LOG_ON
+bool debug_new_wakeup_period = false;
 TinyDebugSerial mySerial;
+uint8_t debug_i2c_command_cnt = 0;
+uint8_t debug_i2c_commands[10] = {};
 #endif
 
 #define FIRMWARE_VER 28 // Передается в ESP и на сервер в данных.
@@ -176,12 +179,13 @@ inline void counting()
 	{
 		info.data.value0++; 				//нужен т.к. при пробуждении запрашиваем данные
 		info.adc.adc0 = counter0.adc;
-		info.types.type0 = counter0.type;
+		info.types.type0 = counter0.type;		
 		if (storage_write_limit == 0)
 		{
 			storage.add(info.data);
 			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
 		}
+		
 	}
 #ifndef LOG_ON
 	if (counter1.is_impuls(event))
@@ -236,9 +240,12 @@ void setup()
 	LOG(info.resets);
 	LOG(F("EEPROM used:"));
 	LOG(size + 2);
+	LOG(F("Wakeup period:")); //!!! ptvo
+	LOG(wakeup_period); //!!! ptvo
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
+
 }
 
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
@@ -270,20 +277,20 @@ void loop()
 	power_all_enable();
 
 	LOG_BEGIN(9600);
+	LOG(F("Wakeup period:")); //!!! ptvo
+	LOG(wakeup_period); //!!! ptvo
 	LOG(F("Data:"));
 	LOG(info.data.value0);
 	LOG(info.data.value1);
-
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит
 	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания
 
-	unsigned long wake_up_limit;
+	unsigned long wake_up_limit = WAIT_ESP_MSEC;
 
-#ifdef MODKAM_VERSION
-	LOG(F("Manual transmit wake up"));
+#ifndef MODKAM_VERSION
+	LOG(F("wake up MODKAM_VERSION"));	
 	slaveI2C.begin(MANUAL_TRANSMIT_MODE);
-	wake_up_limit = WAIT_ESP_MSEC;
 #else
 	if (button.press == ButtonPressType::LONG)
 	{ 
@@ -295,17 +302,19 @@ void loop()
 		info.setup_started_counter = EEPROM.read(setup_started_addr);
 		info.setup_started_counter++;
 		EEPROM.write(setup_started_addr, info.setup_started_counter);
+		LOG(F("wake up LONG"));
 	}
 	else
 	{
 		if (button.press == ButtonPressType::SHORT)
 		{
-			LOG(F("Manual transmit wake up"));
-			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
+			LOG(F("wake up SHORT MANUAL_TRANSMIT_MODE"));	
+			slaveI2C.begin(MANUAL_TRANSMIT_MODE);			
+			
 		}
 		else
 		{
-			LOG(F("wake up for transmitting"));
+			LOG(F("wake up TRANSMIT_MODE")); // добавил else shot
 			slaveI2C.begin(TRANSMIT_MODE);
 		}
 		wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
@@ -341,14 +350,31 @@ void loop()
 		delayMicroseconds(1000);
 
 #ifdef MODKAM_VERSION
-		info.voltage = 3000; // Текущее напряжение
-
+		#ifdef LOG_ON
+		if (debug_i2c_command_cnt) {
+			LOG(F("I2C command:"));
+			for (uint8_t i = 0; i < debug_i2c_command_cnt; i++) {
+				LOG((char)debug_i2c_commands[i]);
+			}
+			debug_i2c_command_cnt = 0;
+			LOG(F("I2C command end"));
+		}
+		if (debug_new_wakeup_period) {
+			debug_new_wakeup_period = false;
+			LOG(F("New period:"));
+			LOG(wakeup_period); //!!! ptvo
+		}
+		#endif
+	
 		if (flag_new_counter_value) {
 			flag_new_counter_value = false;
-
+			LOG(F("New counter value:"));
+			LOG(info.data.value0);
+			LOG(info.data.value1);
 			storage.add(info.data);  // вдруг записали новое значение
 		}
 #endif
+
 	}
 
 	slaveI2C.end(); // выключаем i2c slave.

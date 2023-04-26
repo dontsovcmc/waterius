@@ -51,6 +51,16 @@ void SlaveI2C::receiveEvent(int howMany)
 
     command = Wire.read(); // Get instructions from master
 
+#ifdef LOG_ON
+		//!!! ptvo 
+		// it is called from ISR
+		// we should leave this code as soon as possible
+		if (debug_i2c_command_cnt < DEBUG_MAX_I2C_COMMAND) {
+			debug_i2c_commands[debug_i2c_command_cnt] = command;
+			debug_i2c_command_cnt++;
+		}
+#endif
+
     newCommand();
     switch (command)
     {
@@ -99,6 +109,9 @@ void SlaveI2C::getWakeUpPeriod()
     if ((crc == crc_8(data, 2)) && (newPeriod != 0))
     {
         wakeup_period = ONE_MINUTE * newPeriod;
+#ifdef LOG_ON
+        debug_new_wakeup_period = true;
+#endif
     }
 }
 

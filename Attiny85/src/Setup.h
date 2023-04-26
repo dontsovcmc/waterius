@@ -6,28 +6,27 @@
 #define WATERIUS_2C 0 // attiny85 - 2 счетчика импульсов
 
 /*
-    Включение логирования
+    Включение логирования в Arduino IDE. В platformio используйте platformio.ini -DLOG_ON
     3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
     При логировании не работает счетчик2 на 3-м пине (Вход 2).
 
     #define LOG_ON
 */
 
-#ifndef LOG_ON
-#define LOG_BEGIN(x)
-#define LOG(x)
+#ifdef LOG_ON
+    #include "TinyDebugSerial.h"
+    #define LOG_BEGIN(x) mySerial.begin(x)
+    #define LOG(x)                \
+        mySerial.print(millis()); \
+        mySerial.print(F(" : ")); \
+        mySerial.println(x);
 #else
-#undef LOG_BEGIN
-#undef LOG
 
-// TinyDebugSerial на PB3 только в attiny85, 1MHz
-#include "TinyDebugSerial.h"
-#define LOG_BEGIN(x) mySerial.begin(x)
-#define LOG(x)                \
-    mySerial.print(millis()); \
-    mySerial.print(F(" : ")); \
-    mySerial.println(x);
+    #define LOG_BEGIN(x)
+    #define LOG(x)
+
 #endif
+
 
 /*
    1 минута примерно равна 240 пробуждениям
@@ -42,7 +41,15 @@
 /*
     Аварийное отключение, если ESP зависнет и не пришлет команду "сон".
 */
-#define WAIT_ESP_MSEC 30000UL
+
+#ifdef MODKAM_VERSION
+   #define WAIT_ESP_MSEC    15000UL
+#else
+   #define WAIT_ESP_MSEC 30000UL
+#endif
+
+
+
 
 /*
     Сколько милисекунд пользователь может
@@ -146,5 +153,13 @@ struct Header
 #define HEADER_DATA_SIZE 22
 
 #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
+
+#ifdef LOG_ON
+  extern bool debug_new_wakeup_period;
+  extern uint8_t debug_i2c_command_cnt;
+  #define DEBUG_MAX_I2C_COMMAND   10
+  extern uint8_t debug_i2c_commands[DEBUG_MAX_I2C_COMMAND];
+#endif
+
 
 #endif
