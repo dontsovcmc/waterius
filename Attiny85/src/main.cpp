@@ -217,29 +217,32 @@ void setup()
 
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 
+	LOG_BEGIN(9600);
+	LOG(F("==== START ===="));
+	LOG(F("MCUSR"));
+	LOG(info.service);
+
 	uint16_t size = storage.size();
+	LOG(F("EEPROM used:"));
+	LOG(size + 2);
+
 	if (storage.get(info.data))
-	{ //не первая загрузка
+	{   //не первая загрузка
 		info.resets = EEPROM.read(size);
 		info.resets++;
 		EEPROM.write(size, info.resets);
 	}
 	else
 	{
+		LOG(F("First start!"));
 		EEPROM.write(size, info.resets);					// 0
 		EEPROM.write(size + 1, info.setup_started_counter); // 0
 	}
 
 	wakeup_period = WAKEUP_PERIOD_DEFAULT;
 
-	LOG_BEGIN(9600);
-	LOG(F("==== START ===="));
-	LOG(F("MCUSR"));
-	LOG(info.service);
 	LOG(F("RESET"));
 	LOG(info.resets);
-	LOG(F("EEPROM used:"));
-	LOG(size + 2);
 	LOG(F("Wakeup period:")); //!!! ptvo
 	LOG(wakeup_period); //!!! ptvo
 	LOG(F("Data:"));
