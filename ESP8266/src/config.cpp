@@ -115,42 +115,26 @@ bool load_config(Settings &sett)
         LOG_INFO(F("ESP config CRC failed. Maybe first run. Init configuration."));
         LOG_INFO(F("Saved crc=") << crc << F(" calculated=") << calculated_crc);
 
-        sett.version = CURRENT_VERSION; // для совместимости в будущем
         LOG_INFO(F("cfg version=") << sett.version);
 
         strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, sizeof(WATERIUS_DEFAULT_DOMAIN));
 
         strncpy0(sett.blynk_host, BLYNK_DEFAULT_DOMAIN, sizeof(BLYNK_DEFAULT_DOMAIN));
 
-        String email_title = F("Новые показания {DEVICE_NAME}");
-        strncpy0(sett.blynk_email_title, email_title.c_str(), email_title.length() + 1);
-
-        String email_template = F("Показания:<br>Холодная: {V1}м³(+{V4}л)<br>Горячая: {V0}м³ (+{V3}л)<hr>Питание: {V2}В<br>Resets: {V5}");
-        strncpy0(sett.blynk_email_template, email_template.c_str(), email_template.length() + 1);
-
         String default_topic = String(MQTT_DEFAULT_TOPIC_PREFIX) + "/" + String(getChipId()) + "/";
         strncpy0(sett.mqtt_topic, default_topic.c_str(), default_topic.length() + 1);
-        sett.mqtt_port = MQTT_DEFAULT_PORT;
-
-        sett.mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
+        
         String discovery_topic(DISCOVERY_TOPIC);
         strncpy0(sett.mqtt_discovery_topic, discovery_topic.c_str(), discovery_topic.length() + 1);
 
         strncpy0(sett.ntp_server, DEFAULT_NTP_SERVER, sizeof(DEFAULT_NTP_SERVER));
 
-        sett.ip = 0;
         IPAddress network_gateway;
         network_gateway.fromString(DEFAULT_GATEWAY);
         sett.gateway = network_gateway;
         IPAddress network_mask;
         network_mask.fromString(DEFAULT_MASK);
         sett.mask = network_mask;
-
-        sett.factor1 = AUTO_IMPULSE_FACTOR;
-        sett.factor0 = AS_COLD_CHANNEL;
-
-        sett.wakeup_per_min = DEFAULT_WAKEUP_PERIOD_MIN;
-        sett.set_wakeup = DEFAULT_WAKEUP_PERIOD_MIN;
 
         // Можно задать константы при компиляции, чтобы Ватериус сразу заработал
 

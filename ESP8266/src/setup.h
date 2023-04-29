@@ -207,9 +207,19 @@
 #define DEFAULT_GATEWAY "192.168.0.1"
 #define DEFAULT_MASK "255.255.255.0"
 #define DEFAULT_NTP_SERVER "ru.pool.ntp.org"
+
 #ifndef LED_PIN 
 #define LED_PIN 1    
 #endif
+
+// attiny85
+#define SETUP_MODE 1
+#define TRANSMIT_MODE 2
+#define MANUAL_TRANSMIT_MODE 3
+
+// model
+#define WATERIUS_CLASSIC 0
+#define WATERIUS_4C2W 1
 
 enum CounterType
 {
@@ -342,12 +352,12 @@ struct Settings
     /*
     Период пробуждение для отправки данных, мин
     */
-    uint16_t wakeup_per_min = 0;
+    uint16_t wakeup_per_min = DEFAULT_WAKEUP_PERIOD_MIN;
 
     /*
     Установленный период отправки с учетом погрешности
     */
-    uint16_t set_wakeup = 0;
+    uint16_t set_wakeup = DEFAULT_WAKEUP_PERIOD_MIN;
 
     /*
     Время последней отправки по расписанию
@@ -357,7 +367,7 @@ struct Settings
     /*
     Режим пробуждения
     */
-    uint8_t mode = 1; // SETUP_MODE
+    uint8_t mode = SETUP_MODE; // SETUP_MODE
 
     /*
     Успешная настройка
@@ -393,8 +403,8 @@ struct Settings
     /*
     Кол-во литров на 1 импульс
     */
-    uint16_t factor0 = 0;
-    uint16_t factor1 = 0;
+    uint16_t factor0 = AS_COLD_CHANNEL;
+    uint16_t factor1 = AUTO_IMPULSE_FACTOR;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений

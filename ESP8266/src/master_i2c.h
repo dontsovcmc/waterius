@@ -9,15 +9,6 @@
 #define SDA_PIN 0
 #define SCL_PIN 2
 
-// attiny85
-#define SETUP_MODE 1
-#define TRANSMIT_MODE 2
-#define MANUAL_TRANSMIT_MODE 3
-
-// model
-#define WATERIUS_CLASSIC 0
-#define WATERIUS_4C2W 1
-
 enum Status_t
 {
     WATERIUS_NO_LINK = 0, // нет связи по i2c
