@@ -1,6 +1,6 @@
 ### Автономное устройство для передачи показаний импульсных счётчиков воды и газа по Wi-Fi
 Настройте передачу показаний в управляющую компанию на сайте <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">waterius.ru</a>. 100+ «водоканалов» России и СНГ.
-# Ватериус 0.10.5
+# Ватериус 0.11.3
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
 
 ![waterius2-phone_](https://user-images.githubusercontent.com/3930496/149906477-6aa47cdd-f714-4546-85ff-5541c60260a2.jpeg)
@@ -25,6 +25,8 @@ Worldwide by Wildberries (not works...): [Armenia 🇦🇲](https://am.wildberri
 - флаг низкого заряда (экспериментально)
 - настраиваемый период отправки (с 0.10.1)
 - ручная настройка веса импульса (с 0.10.1)
+- дискавери для Home Assistant (с 0.11.0)
+- возможно указать свои: веб сервер, MQTT брокер, сервер Blynk (с 0.11.0), NTP сервер (с 0.11.0)
 
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github">waterius.ru</a>
@@ -124,6 +126,10 @@ Worldwide by Wildberries (not works...): [Armenia 🇦🇲](https://am.wildberri
 - [neitri](https://github.com/neitri) за доработки прошивки
 - [L2jLiga](https://github.com/L2jLiga) за обновление конфигурации Home Assistant
 - nyroux за корпус геркона для газового счётчика
+- Anat0liyBM за поддержку discovery HA
+- [vzagorovskiy](https://github.com/vzagorovskiy) за большое обновление [0.11.0](https://github.com/dontsovcmc/waterius/releases/tag/0.11.0-beta)
+- [abrant-ru](https://github.com/abrant-ru) за поддержку счётчиков с выходом "открытый коллектор" (короткими импульсами)
+
 Форумам: 
 - https://electronix.ru
 - https://esp8266.ru
