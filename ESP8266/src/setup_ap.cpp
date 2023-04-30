@@ -237,20 +237,23 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&dropdown_cold_factor);*/
     
     DropdownParameter dropdown_cold_counter_name("nameCold", counter_name_title.c_str(), sett.counter1_name);
-    dropdown_cold_counter_name.add_option(CounterName::WATER_COLD, water_cold.c_str());
-    dropdown_cold_counter_name.add_option(CounterName::WATER_HOT, water_hot.c_str());
-    dropdown_cold_counter_name.add_option(CounterName::ELECTRO, electro.c_str());
-    dropdown_cold_counter_name.add_option(CounterName::GAS, gas.c_str());
-    dropdown_cold_counter_name.add_option(CounterName::HEAT, teplo.c_str());
-    dropdown_cold_counter_name.add_option(CounterName::PORTABLE_WATER, portable.c_str());
-    dropdown_cold_counter_name.add_option(CounterName::OTHER, other.c_str());
-    wm.addParameter(&dropdown_cold_counter_name);
-
     DropdownParameter dropdown_cold_counter_type("typeCold", counter_type_title.c_str(), counter1_type);
-    dropdown_cold_counter_type.add_option(CounterType::NAMUR, namur.c_str());
-    dropdown_cold_counter_type.add_option(CounterType::DISCRETE, discrete.c_str());
-    dropdown_cold_counter_type.add_option(CounterType::ELECTRONIC, electronic.c_str());
-    wm.addParameter(&dropdown_cold_counter_type);
+    
+    if (data.version >= 29) {
+        dropdown_cold_counter_name.add_option(CounterName::WATER_COLD, water_cold.c_str());
+        dropdown_cold_counter_name.add_option(CounterName::WATER_HOT, water_hot.c_str());
+        dropdown_cold_counter_name.add_option(CounterName::ELECTRO, electro.c_str());
+        dropdown_cold_counter_name.add_option(CounterName::GAS, gas.c_str());
+        dropdown_cold_counter_name.add_option(CounterName::HEAT, teplo.c_str());
+        dropdown_cold_counter_name.add_option(CounterName::PORTABLE_WATER, portable.c_str());
+        dropdown_cold_counter_name.add_option(CounterName::OTHER, other.c_str());
+        wm.addParameter(&dropdown_cold_counter_name);
+
+        dropdown_cold_counter_type.add_option(CounterType::NAMUR, namur.c_str());
+        dropdown_cold_counter_type.add_option(CounterType::DISCRETE, discrete.c_str());
+        dropdown_cold_counter_type.add_option(CounterType::ELECTRONIC, electronic.c_str());
+        wm.addParameter(&dropdown_cold_counter_type);
+    }
 
     DropdownParameter dropdown_cold_factor("factorCold", "Множитель л/имп", sett.factor1);
     dropdown_cold_factor.add_option(AUTO_IMPULSE_FACTOR, "Авто");
@@ -273,23 +276,25 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
 
     ShortParameter dropdown_hot_factor("factorHot", "Множитель л/имп", sett.factor0);
     wm.addParameter(&dropdown_hot_factor); */
-    
+
     DropdownParameter dropdown_hot_counter_name("nameHot", counter_name_title.c_str(), sett.counter0_name);
-    dropdown_hot_counter_name.add_option(CounterName::WATER_COLD, water_cold.c_str());
-    dropdown_hot_counter_name.add_option(CounterName::WATER_HOT, water_hot.c_str());
-    dropdown_hot_counter_name.add_option(CounterName::ELECTRO, electro.c_str());
-    dropdown_hot_counter_name.add_option(CounterName::GAS, gas.c_str());
-    dropdown_hot_counter_name.add_option(CounterName::HEAT, teplo.c_str());
-    dropdown_hot_counter_name.add_option(CounterName::PORTABLE_WATER, portable.c_str());
-    dropdown_hot_counter_name.add_option(CounterName::OTHER, other.c_str());
-    wm.addParameter(&dropdown_hot_counter_name);
-
     DropdownParameter dropdown_hot_counter_type("typeHot", counter_type_title.c_str(), counter0_type);
-    dropdown_hot_counter_type.add_option(CounterType::NAMUR, namur.c_str());
-    dropdown_hot_counter_type.add_option(CounterType::DISCRETE, discrete.c_str());
-    dropdown_hot_counter_type.add_option(CounterType::ELECTRONIC, electronic.c_str());
-    wm.addParameter(&dropdown_hot_counter_type);
 
+    if (data.version >= 29) {
+        dropdown_hot_counter_name.add_option(CounterName::WATER_COLD, water_cold.c_str());
+        dropdown_hot_counter_name.add_option(CounterName::WATER_HOT, water_hot.c_str());
+        dropdown_hot_counter_name.add_option(CounterName::ELECTRO, electro.c_str());
+        dropdown_hot_counter_name.add_option(CounterName::GAS, gas.c_str());
+        dropdown_hot_counter_name.add_option(CounterName::HEAT, teplo.c_str());
+        dropdown_hot_counter_name.add_option(CounterName::PORTABLE_WATER, portable.c_str());
+        dropdown_hot_counter_name.add_option(CounterName::OTHER, other.c_str());
+        wm.addParameter(&dropdown_hot_counter_name);
+
+        dropdown_hot_counter_type.add_option(CounterType::NAMUR, namur.c_str());
+        dropdown_hot_counter_type.add_option(CounterType::DISCRETE, discrete.c_str());
+        dropdown_hot_counter_type.add_option(CounterType::ELECTRONIC, electronic.c_str());
+        wm.addParameter(&dropdown_hot_counter_type);
+    }
 
     DropdownParameter dropdown_hot_factor("factorHot", "Множитель л/имп", sett.factor0);
     dropdown_hot_factor.add_option(AS_COLD_CHANNEL, "Как у холодной");
@@ -425,14 +430,23 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     LOG_INFO(F("wakeup period, min=") << sett.wakeup_per_min);
     LOG_INFO(F("wakeup period, tick=") << sett.set_wakeup);
 
-    // Тип счётчиков
-    sett.counter0_name = dropdown_hot_counter_name.getValue();
-    sett.counter1_name = dropdown_cold_counter_name.getValue();
+    if (data.version >= 29) {
+        // Тип счётчиков
+        sett.counter0_name = dropdown_hot_counter_name.getValue();
+        sett.counter1_name = dropdown_cold_counter_name.getValue();
 
-    // Установка типа входа
-    counter0_type = dropdown_hot_counter_type.getValue();
-    counter1_type = dropdown_cold_counter_type.getValue();
-
+        // Установка типа входа
+        counter0_type = dropdown_hot_counter_type.getValue();
+        counter1_type = dropdown_cold_counter_type.getValue();
+    }
+    else {
+        sett.counter0_name = CounterName::WATER_HOT;
+        sett.counter1_name = CounterName::WATER_COLD;
+        
+        counter0_type = CounterType::NAMUR;
+        counter1_type = CounterType::NAMUR;
+    } 
+    
     if (!masterI2C.setCountersType(counter0_type, 
                                    counter1_type))
     {

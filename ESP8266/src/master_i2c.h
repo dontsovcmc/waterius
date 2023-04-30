@@ -50,6 +50,8 @@ uint8_t crc_8(const unsigned char *input_str, size_t num_bytes, uint8_t crc = 0)
 
 class MasterI2C
 {
+    uint8_t init_crc = 0xFF;
+
 protected:
     bool getUint(uint32_t &value, uint8_t &crc);
     bool getUint16(uint16_t &value, uint8_t &crc);

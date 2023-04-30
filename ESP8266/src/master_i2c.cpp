@@ -62,7 +62,6 @@ bool MasterI2C::sendData(uint8_t *buf, size_t size)
 
 bool MasterI2C::getByte(uint8_t &value, uint8_t &crc)
 {
-
     if (Wire.requestFrom(I2C_SLAVE_ADDR, 1) != 1)
     {
         LOG_ERROR(F("RequestFrom failed"));
@@ -109,8 +108,7 @@ bool MasterI2C::getUint(uint32_t &value, uint8_t &crc)
 
 bool MasterI2C::getMode(uint8_t &mode)
 {
-
-    uint8_t crc = 0xff;
+    uint8_t crc = init_crc;
     mode = TRANSMIT_MODE;
     if (!sendCmd('M') || !getByte(mode, crc))
     {
@@ -126,8 +124,15 @@ bool MasterI2C::getSlaveData(SlaveData &data)
     sendCmd('B');
     data.diagnostic = WATERIUS_NO_LINK;
 
-    uint8_t dummy, crc = 0xff;
+    uint8_t dummy, crc = init_crc;
     bool good = getByte(data.version, crc);
+
+    if (data.version < 29) {
+        init_crc = 0;  // в версиях <29 инициализация идет нулём
+        crc = 0;
+        crc = crc_8(&data.version, 1, crc);
+    }
+
     good &= getByte(data.service, crc);
     good &= getUint16(data.reserved4, crc);
     good &= getByte(data.reserved, crc);
@@ -199,7 +204,7 @@ bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
     txBuf[0] = 'C';
     txBuf[1] = type0;
     txBuf[2] = type1;
-    txBuf[3] = crc_8(&txBuf[1], 2, 0xff);
+    txBuf[3] = crc_8(&txBuf[1], 2, init_crc);
 
     if (!sendData(txBuf, 4))
     {
