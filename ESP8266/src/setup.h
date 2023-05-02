@@ -3,10 +3,15 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.11.4"
+#define FIRMWARE_VERSION "0.11.5"
 
 /*
 Версии прошивки для ESP
+
+0.11.5 - 2023.04.30 - dontsovcmc
+                      1. Поддержка обычной прошивки attiny < 29
+                      2. Комбобоксы в настройках
+                      3. Убрал поля эл. почты в blynk
 
 0.11.4 - 2023.04.22 - dontsovcmc
                       1. Поддержка типа входа attiny
