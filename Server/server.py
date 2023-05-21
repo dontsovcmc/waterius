@@ -2,6 +2,8 @@
 from __future__ import print_function  # для единого кода Python2, Python3
 import sys
 import argparse
+from datetime import datetime
+
 from werkzeug import serving
 from flask import Flask, request
 
@@ -55,6 +57,8 @@ def root():
     -H "Content-Type: application/json" http://192.168.1.10:10000/data -v
     """
     try:
+        print(datetime.utcnow())
+        print(request.data)
         j = request.get_json()
         ret = 'OK' if j['ch0'] > 0 and j['ch1'] > 0 else 'ERROR null value'
         print('{} ({}, {})'.format(ret, j['ch0'], j['ch1']))
