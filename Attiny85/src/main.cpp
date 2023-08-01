@@ -17,10 +17,13 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 29 // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 30 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
+30 - 2023.08.01 - abrant
+	1. Исправлено хранилище. 
+
 29 - 2023.04.15 - neitri, dontsovcmc
 	1. Задержка отключения ESP после команды перехода в сон
 
@@ -217,9 +220,10 @@ void setup()
 
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 
-	if (config.get(info.config))
+	if (config.init())
 	{
-		// Конфигурация прочитана
+		// Конфигурация найдена
+		config.get(info.config);
 		info.config.resets++;
 		counter0.type = (CounterType)info.config.types.type0;
 		counter1.type = (CounterType)info.config.types.type1;
@@ -233,7 +237,11 @@ void setup()
 		info.config.types.type1 = counter1.type;
 	}
 	saveConfig();
-	storage.get(info.data);
+
+	if (storage.init())
+	{
+		storage.get(info.data);
+	}
 
 	wakeup_period = WAKEUP_PERIOD_DEFAULT;
 
@@ -298,6 +306,7 @@ void loop()
 		sleep_mode();
 	}
 
+	storage.add(info.data);
 	power_all_enable();
 
 	LOG_BEGIN(9600);

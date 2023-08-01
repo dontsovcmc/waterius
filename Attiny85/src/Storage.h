@@ -26,9 +26,10 @@ class EEPROMStorage
 
 public:
     explicit EEPROMStorage(const uint8_t _blocks, const uint8_t _start_addr = 0);
+    bool init();
     void add(const T &element);
-    bool get(T &element);
-    bool get_block(const uint8_t block, T &element);
+    bool get(T &element, uint8_t block = (uint8_t)-1);
+    bool check_block(const uint8_t block);
     void clear();
 
     uint16_t size();
@@ -41,7 +42,7 @@ private:
     uint8_t elementSize;
 
     uint16_t flag_shift;
-    int8_t compare(const T &element1, const T &element2);
+    int8_t compare(const uint8_t block1, const uint8_t block2);
 };
 
 #endif
