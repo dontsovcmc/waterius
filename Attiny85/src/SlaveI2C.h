@@ -17,13 +17,12 @@ protected:
     static uint8_t setup_mode;
 
     static bool masterSentSleep;
-    //Время включения Wi-Fi
-    static unsigned long SentSleep_timestamp; 
 
     static void requestEvent();
     static void newCommand();
     static void receiveEvent(int howMany);
     static void getWakeUpPeriod();
+    static void getCounterTypes();
 
 public:
     void begin(const uint8_t);

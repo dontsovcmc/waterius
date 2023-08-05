@@ -84,20 +84,23 @@ public:
     }
 };
 
+// TODO: default_value перенести в конструктор и локальную переменную. чтобы убрать аргумент в add_option
 class DropdownParameter : public WiFiManagerParameter
 {
 public:
     String options;
-    DropdownParameter(const char *id)
-        : WiFiManagerParameter(id, "", true, String(0).c_str(), 10)
+    int _default_value;
+    DropdownParameter(const char *id, const char *label, const int default_value)
+        : WiFiManagerParameter(id, label, String(0).c_str())
+        , _default_value(default_value)
     {
         options.reserve(200);
     }
 
-    void add_option(const int value, const char *title, const int default_value)
+    void add_option(const int value, const char *title)
     {
         options += "<option ";
-        if (value == default_value)
+        if (value == _default_value)
         {
             options += "selected ";
         }

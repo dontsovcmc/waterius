@@ -54,12 +54,12 @@
 /*
     время долгого нажатия кнопки, милисекунд
 */
-#define LONG_PRESS_MSEC 3000
+#define LONG_PRESS_MSEC 2000
 
 /*
-    время перехода в сон
+    пауза мс перед переходом ESP в сон (чтобы успел отключиться)
 */
-#define DELAY_SENT_SLEEP 2000
+#define DELAY_SENT_SLEEP 20000
        
 
 struct Data
@@ -68,16 +68,24 @@ struct Data
     uint32_t value1;
 };
 
-struct CounterState
-{                   // не добавляем в Data, т.к. та в буфере кольцевом
-    uint8_t state0; // состояние входа
-    uint8_t state1;
+struct CounterTypes
+{
+    uint8_t type0; // тип входа
+    uint8_t type1;
 };
 
 struct ADCLevel
 {
     uint16_t adc0;
     uint16_t adc1;
+};
+
+struct Config
+{
+    uint8_t setup_started_counter;      // Включение режима настройки
+    uint8_t resets;                     // Количество перезагрузок
+    uint8_t model;                      // Модификация: 0 - Классический. 2 счетчика, 1 - 4C2W. 4 счетчика
+    CounterTypes types;                 // Типы входов счетчиков
 };
 
 struct Header
@@ -112,25 +120,15 @@ struct Header
     uint8_t reserved2;
 
     /*
-    Включение режима настройки
+    Конфигурация
     */
-    uint8_t setup_started_counter;
+    Config config;
 
     /*
-    Количество перезагрузок
+    Текущие данные
     */
-    uint8_t resets;
-
-    /*
-    Модификация
-    0 - Классический. 2 счетчика
-    1 - 4C2W. 4 счетчика
-    */
-    uint8_t model;
-
-    CounterState states; // TODO убрать
-    Data data;
-    ADCLevel adc;
+    Data data;           // 8 байт
+    ADCLevel adc;        // 4 байта
 
     // HEADER_DATA_SIZE
 
@@ -141,5 +139,11 @@ struct Header
 #define HEADER_DATA_SIZE 22
 
 #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
+
+#define ASSERT_CONCAT_(a, b) a##b
+#define ASSERT_CONCAT(a, b) ASSERT_CONCAT_(a, b)
+#define ct_assert(e) enum { ASSERT_CONCAT(assert_line_, __LINE__) = 1/(!!(e)) }
+
+ct_assert(sizeof(Header)==24);
 
 #endif

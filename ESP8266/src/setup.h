@@ -3,10 +3,20 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.11.3"
+#define FIRMWARE_VERSION "0.11.5"
 
 /*
 Версии прошивки для ESP
+
+0.11.5 - 2023.04.30 - dontsovcmc
+                      1. Поддержка обычной прошивки attiny < 29
+                      2. Комбобоксы в настройках
+                      3. Убрал поля эл. почты в blynk
+
+0.11.4 - 2023.04.22 - dontsovcmc
+                      1. Поддержка типа входа attiny
+                      2. factor - uint16_t
+                      3. Новые параметры в ESP как цифры - очень плохо, но combobox большие и крашут ESP.
 
 0.11.3 - 2023.03.18 - dontsovcmc
                       1. Счетчики попыток починил
@@ -141,7 +151,8 @@
 #define I2C_SLAVE_ADDR 10 // i2c адрес Attiny85
 
 #define VER_8 8
-#define CURRENT_VERSION VER_8
+#define VER_9 9
+#define CURRENT_VERSION VER_9
 
 #define EMAIL_LEN 40
 
@@ -175,7 +186,7 @@
 #define HARDWARE_VERSION "1.0.0"
 #define MANUFACTURER "Waterius"
 
-#define JSON_DYNAMIC_MSG_BUFFER 1024
+#define JSON_DYNAMIC_MSG_BUFFER 2048
 #define JSON_SMALL_STATIC_MSG_BUFFER 256
 
 #define ROUTER_MAC_LENGTH 8
@@ -188,7 +199,7 @@
 #define DEFAULT_WAKEUP_PERIOD_MIN 1440
 #endif
 
-#define AUTO_IMPULSE_FACTOR 2
+#define AUTO_IMPULSE_FACTOR 3
 #define AS_COLD_CHANNEL 7
 
 #define DEF_FALLBACK_DNS "8.8.8.8"
@@ -201,9 +212,53 @@
 #define DEFAULT_GATEWAY "192.168.0.1"
 #define DEFAULT_MASK "255.255.255.0"
 #define DEFAULT_NTP_SERVER "ru.pool.ntp.org"
+
 #ifndef LED_PIN 
 #define LED_PIN 1    
 #endif
+
+// attiny85
+#define SETUP_MODE 1
+#define TRANSMIT_MODE 2
+#define MANUAL_TRANSMIT_MODE 3
+
+// model
+#define WATERIUS_CLASSIC 0
+#define WATERIUS_4C2W 1
+
+enum CounterType
+{
+    NAMUR=0,
+    DISCRETE=1,
+    ELECTRONIC=2
+};
+
+enum CounterName
+{
+    WATER_COLD=0,
+    WATER_HOT=1,
+    ELECTRO=2,
+    GAS=3,
+    HEAT=4,
+    PORTABLE_WATER=5,
+    OTHER=6
+};
+
+// согласно 
+enum DataType
+{
+    COLD_WATER = 0,
+    HOT_WATER = 1,
+    ELECTRICITY = 2,
+    GAS_DATA = 3,
+    HEATING = 4,
+    ELECTRICITY_DAY = 5,
+    ELECTRICITY_NIGHT = 6,
+    ELECTRICITY_PEAK = 7,
+    ELECTRICITY_HALF_PEAK = 8,
+    POTABLE_WATER = 9,
+    OTHER_TYPE = 10
+};
 
 
 struct CalculatedData
@@ -241,13 +296,7 @@ struct Settings
     // сервер blynk.com или свой blynk сервер
     char blynk_host[HOST_LEN] = {0};
 
-    // Если email не пустой, то отсылается e-mail
-    // Чтобы работало нужен виджет эл. почта в приложении
-    char blynk_email[EMAIL_LEN] = {0};
-    // Заголовок письма. {V0}-{V4} заменяются на данные
-    char blynk_email_title[BLYNK_EMAIL_TITLE_LEN] = {0};
-    // Шаблон эл. письма. {V0}-{V4} заменяются на данные
-    char blynk_email_template[BLYNK_EMAIL_TEMPLATE_LEN] = {0};
+    char reserved7[EMAIL_LEN + BLYNK_EMAIL_TITLE_LEN + BLYNK_EMAIL_TEMPLATE_LEN] = {0};
 
     char mqtt_host[HOST_LEN] = {0};
     uint16_t mqtt_port = MQTT_DEFAULT_PORT;
@@ -263,10 +312,10 @@ struct Settings
     float channel1_start = 0.0;
 
     /*
-    Кол-во литров на 1 импульс
+    reserved
     */
-    uint8_t factor0 = 0;
-    uint8_t factor1 = 0;
+    uint8_t reserved5 = 0;
+    uint8_t reserved6 = 0;
 
     /*
     Серийные номера счётчиков воды
@@ -308,12 +357,12 @@ struct Settings
     /*
     Период пробуждение для отправки данных, мин
     */
-    uint16_t wakeup_per_min = 0;
+    uint16_t wakeup_per_min = DEFAULT_WAKEUP_PERIOD_MIN;
 
     /*
     Установленный период отправки с учетом погрешности
     */
-    uint16_t set_wakeup = 0;
+    uint16_t set_wakeup = DEFAULT_WAKEUP_PERIOD_MIN;
 
     /*
     Время последней отправки по расписанию
@@ -323,7 +372,7 @@ struct Settings
     /*
     Режим пробуждения
     */
-    uint8_t mode = 1; // SETUP_MODE
+    uint8_t mode = SETUP_MODE; // SETUP_MODE
 
     /*
     Успешная настройка
@@ -349,12 +398,23 @@ struct Settings
     /* Wifi канал */
     uint8_t wifi_channel = 0;
     uint8_t wifi_phy_mode = 0; // Режим работы интерфейса
+    
+    /*
+    Тип счётчика (вода, тепло, газ, электричество)
+    */
+    uint8_t counter0_name = CounterName::WATER_HOT;  //enum CounterName
+    uint8_t counter1_name = CounterName::WATER_COLD;
 
+    /*
+    Кол-во литров на 1 импульс
+    */
+    uint16_t factor0 = AS_COLD_CHANNEL;
+    uint16_t factor1 = AUTO_IMPULSE_FACTOR;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved4[64] = {0};
+    uint8_t reserved4[60] = {0};
 
 }; // 960 байт
 
