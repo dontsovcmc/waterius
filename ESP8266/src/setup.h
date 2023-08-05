@@ -3,10 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.11.5"
+#define FIRMWARE_VERSION "0.11.6"
 
 /*
 Версии прошивки для ESP
+
+0.11.6 - 2023.08.05 - dontsovcmc
+                      1. версия прошивки attiny=30 
 
 0.11.5 - 2023.04.30 - dontsovcmc
                       1. Поддержка обычной прошивки attiny < 29
