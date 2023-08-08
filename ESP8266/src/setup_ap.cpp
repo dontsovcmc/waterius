@@ -99,6 +99,7 @@ void handleNetworks()
 {
     LOG_INFO(F("/networks request"));
     wm.WiFi_scanNetworks(wm.server->hasArg(F("refresh")), false); // wifiscan, force if arg refresh
+    message_networks.clear();
     wm.getScanItemOut(message_networks);
     wm.server->send(200, F("text/plain"), message_networks);
 }
