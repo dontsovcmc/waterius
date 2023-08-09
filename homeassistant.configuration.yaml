@@ -10,126 +10,126 @@ mqtt:
 
 # С недавнего времени появился домен mqtt в котором описываются все датчики
 mqtt: 
-    sensor:
-      # waterius на кухне
-      - name: "Kitchen Cold Water"
-        object_id: wateriuskcwm
-        state_topic: "waterius/kitchen/ch1"
-        value_template: "{{ value }}"
-        unit_of_measurement: "m³"
-        device_class: water
-        state_class: total
-        icon: mdi:water
-        device:
-          manufacturer: Waterius
-          identifiers: [wateriusk]
-          connections: [["mac", "aa:bb:cc:dd:ee:ff"]]
-          suggested_area: Kitchen
+  sensor:
+    # waterius на кухне
+    - name: "Kitchen Cold Water"
+      object_id: wateriuskcwm
+      state_topic: "waterius/kitchen/ch1"
+      value_template: "{{ value }}"
+      unit_of_measurement: "m³"
+      device_class: water
+      state_class: total
+      icon: mdi:water
+      device:
+        manufacturer: Waterius
+        identifiers: [wateriusk]
+        connections: [["mac", "aa:bb:cc:dd:ee:ff"]]
+        suggested_area: Kitchen
 
-      - name: "Kitchen Hot Water"
-        object_id: wateriuskhwm
-        state_topic: "waterius/kitchen/ch0"
-        value_template: "{{ value }}"
-        unit_of_measurement: "m³"
-        device_class: water
-        state_class: total
-        icon: mdi:water
-        device:
-          identifiers: [wateriusk]
+    - name: "Kitchen Hot Water"
+      object_id: wateriuskhwm
+      state_topic: "waterius/kitchen/ch0"
+      value_template: "{{ value }}"
+      unit_of_measurement: "m³"
+      device_class: water
+      state_class: total
+      icon: mdi:water
+      device:
+        identifiers: [wateriusk]
 
-      - name: "Kitchen Voltage"
-        object_id: wateriuskv
-        state_topic: "waterius/kitchen/voltage"
-        value_template: "{{ value }}"
-        unit_of_measurement: "V"
-        device_class: voltage
-        state_class: measurement
-        entity_category: diagnostic
-        icon: mdi:lightning-bolt
-        device:
-          identifiers: [wateriusk]
+    - name: "Kitchen Voltage"
+      object_id: wateriuskv
+      state_topic: "waterius/kitchen/voltage"
+      value_template: "{{ value }}"
+      unit_of_measurement: "V"
+      device_class: voltage
+      state_class: measurement
+      entity_category: diagnostic
+      icon: mdi:lightning-bolt
+      device:
+        identifiers: [wateriusk]
 
-      - name: "Kitchen Battery"
-        object_id: wateriuskb
-        icon: mdi:battery
-        device_class: battery
-        state_class: measurement
-        entity_category: diagnostic
-        unit_of_measurement: '%'
-        state_topic: 'waterius/kitchen/voltage_diff'
-        device:
-          identifiers: [wateriusk]
-        value_template:  >
-          {% if float(value) > 0.1 %}
-            {{ 0 }}
+    - name: "Kitchen Battery"
+      object_id: wateriuskb
+      icon: mdi:battery
+      device_class: battery
+      state_class: measurement
+      entity_category: diagnostic
+      unit_of_measurement: '%'
+      state_topic: 'waterius/kitchen/voltage_diff'
+      device:
+        identifiers: [wateriusk]
+      value_template:  >
+        {% if float(value) > 0.1 %}
+          {{ 0 }}
+        {% else %}
+          {% if float(value) > 0.05 %}
+            {{ ((0.1 - value | float) * 500) | round(0) }}
           {% else %}
-            {% if float(value) > 0.05 %}
-              {{ ((0.1 - value | float) * 500) | round(0) }}
-            {% else %}
-              {{ (25 + (0.05 - value | float) * 1500) | round(0) }}
-            {% endif %}
+            {{ (25 + (0.05 - value | float) * 1500) | round(0) }}
           {% endif %}
+        {% endif %}
 
 
 
-      # waterius в ванной
-      - name: "Bathroom Cold Water"
-        object_id: wateriusbcwm
-        state_topic: "waterius/bathroom/ch1"
-        value_template: "{{ value }}"
-        unit_of_measurement: "m³"
-        device_class: water
-        state_class: total
-        icon: mdi:water
-        device:
-          manufacturer: Waterius
-          identifiers: [wateriusb]
-          connections: [["mac", "aa:bb:cc:dd:ee:ff"]]
-          suggested_area: Bathroom
+    # waterius в ванной
+    - name: "Bathroom Cold Water"
+      object_id: wateriusbcwm
+      state_topic: "waterius/bathroom/ch1"
+      value_template: "{{ value }}"
+      unit_of_measurement: "m³"
+      device_class: water
+      state_class: total
+      icon: mdi:water
+      device:
+        manufacturer: Waterius
+        identifiers: [wateriusb]
+        connections: [["mac", "aa:bb:cc:dd:ee:ff"]]
+        suggested_area: Bathroom
 
-      - name: "Bathroom Hot Water"
-        object_id: wateriusbhwm
-        state_topic: "waterius/bathroom/ch0"
-        value_template: "{{ value }}"
-        unit_of_measurement: "m³"
-        device_class: water
-        state_class: total
-        icon: mdi:water
-        device:
-          identifiers: [wateriusb]
+    - name: "Bathroom Hot Water"
+      object_id: wateriusbhwm
+      state_topic: "waterius/bathroom/ch0"
+      value_template: "{{ value }}"
+      unit_of_measurement: "m³"
+      device_class: water
+      state_class: total
+      icon: mdi:water
+      device:
+        identifiers: [wateriusb]
 
-      - name: "Bathroom Voltage"
-        object_id: wateriusbv
-        state_topic: "waterius/bathroom/voltage"
-        value_template: "{{ value }}"
-        unit_of_measurement: "V"
-        device_class: voltage
-        state_class: measurement
-        entity_category: diagnostic
-        icon: mdi:lightning-bolt
-        device:
-          identifiers: [wateriusb]
+    - name: "Bathroom Voltage"
+      object_id: wateriusbv
+      state_topic: "waterius/bathroom/voltage"
+      value_template: "{{ value }}"
+      unit_of_measurement: "V"
+      device_class: voltage
+      state_class: measurement
+      entity_category: diagnostic
+      icon: mdi:lightning-bolt
+      device:
+        identifiers: [wateriusb]
 
-      - name: "Bathroom Battery"
-        object_id: wateriusbb
-        icon: mdi:battery
-        device_class: battery
-        state_class: measurement
-        entity_category: diagnostic
-        unit_of_measurement: '%'
-        state_topic: 'waterius/bathroom/voltage_diff'
-        device:
-          identifiers: [wateriusb]
-        value_template:  >
-          {% if float(value) > 0.1 %}
-            {{ 0 }}
+    - name: "Bathroom Battery"
+      object_id: wateriusbb
+      icon: mdi:battery
+      device_class: battery
+      state_class: measurement
+      entity_category: diagnostic
+      unit_of_measurement: '%'
+      state_topic: 'waterius/bathroom/voltage_diff'
+      device:
+        identifiers: [wateriusb]
+      value_template:  >
+        {% if float(value) > 0.1 %}
+          {{ 0 }}
+        {% else %}
+          {% if float(value) > 0.05 %}
+            {{ ((0.1 - value | float) * 500) | round(0) }}
           {% else %}
-            {% if float(value) > 0.05 %}
-              {{ ((0.1 - value | float) * 500) | round(0) }}
-            {% else %}
-              {{ (25 + (0.05 - value | float) * 1500) | round(0) }}
-            {% endif %}
+            {{ (25 + (0.05 - value | float) * 1500) | round(0) }}
           {% endif %}
+        {% endif %}
 
 
 
@@ -137,10 +137,10 @@ mqtt:
     # Создаём сенсор счётчик прошедшего времени с момента последнего обновления данных Ватериусом
     # Используем время последнего обновления показаний холодной воды (object_id: wateriuskcwm), так как этот сенсор обновляется
     # чаще, чем все остальные
-  template:
-    sensors:
-      vaterius_last_seen:
-        friendly_name: 'Ватериус вне сети'
-        value_template: >
-          {{(as_timestamp(now())-as_timestamp(states.sensor.wateriuskcwm.last_updated)) | timestamp_custom('%Hh %Mm %Ss',false)}}
+template:
+  sensors:
+    vaterius_last_seen:
+      friendly_name: 'Ватериус вне сети'
+      value_template: >
+        {{(as_timestamp(now())-as_timestamp(states.sensor.wateriuskcwm.last_updated)) | timestamp_custom('%Hh %Mm %Ss',false)}}
 # кусок конфигурации отсутствует    
