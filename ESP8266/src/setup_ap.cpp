@@ -269,15 +269,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label0_settings("<h3 class='hot'>Красный счётчик</h3>");
     wm.addParameter(&label0_settings);
 
-    /*ShortParameter dropdown_hot_counter_name("nameHot", counter_name_title.c_str(), sett.counter0_name);
-    wm.addParameter(&dropdown_hot_counter_name);
-
-    ShortParameter dropdown_hot_counter_type("typeHot", counter_type_title.c_str(), counter0_type);
-    wm.addParameter(&dropdown_hot_counter_type);
-
-    ShortParameter dropdown_hot_factor("factorHot", "Множитель л/имп", sett.factor0);
-    wm.addParameter(&dropdown_hot_factor); */
-
     DropdownParameter dropdown_hot_counter_name("nameHot", counter_name_title.c_str(), sett.counter0_name);
     DropdownParameter dropdown_hot_counter_type("typeHot", counter_type_title.c_str(), counter0_type);
 

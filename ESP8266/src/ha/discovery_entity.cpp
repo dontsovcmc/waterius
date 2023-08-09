@@ -157,9 +157,10 @@ String build_entity_discovery(const char *mqtt_topic,
  * @param index индекс первого атрибута в масссиве
  * @param count количестов атрибутов в масссиве
  * @param channel канал
+ * @param channel_name enum типа канала из интерфейса настройки
  * @return String строка с шаблоном для извлечения атрибутов для сенсора
  */
-String get_attributes_template(const char *const attrs[][MQTT_PARAM_COUNT], int index, int count, int channel)
+String get_attributes_template(const char *const attrs[][MQTT_PARAM_COUNT], int index, int count, int channel, int channel_name)
 {
     String json_attributes_template = "";
 
@@ -174,7 +175,7 @@ String get_attributes_template(const char *const attrs[][MQTT_PARAM_COUNT], int 
         attribute_name = FPSTR(attrs[index + i][1]);
         attribute_id = FPSTR(attrs[index + i][2]);
 
-        update_channel_names(channel, attribute_id, attribute_name);
+        update_channel_names(channel, channel_name, attribute_id, attribute_name);
 
         attribute_template = String(F("{{ value_json.")) + attribute_id + F(" | is_defined }}");
 
@@ -189,14 +190,15 @@ String get_attributes_template(const char *const attrs[][MQTT_PARAM_COUNT], int 
  * @brief Изменяет названия и идентификаторы сенсоров с учетом названия и идентификатора канала
  *
  * @param channel номер канала
+ * @param channel_name enum типа канала из интерфейса настройки
  * @param entity_id идентификатор сенсора
  * @param entity_name имя сенсора
  */
-void update_channel_names(int channel, String &entity_id, String &entity_name)
+void update_channel_names(int channel, int channel_name, String &entity_id, String &entity_name)
 {
-    if (channel != NONE)
+    if (channel != NONE && channel_name != NONE)
     {
         entity_id += channel;
-        entity_name = String(FPSTR(CHANNEL_NAMES[channel])) + " " + entity_name;
+        entity_name = String(FPSTR(CHANNEL_NAMES[channel_name])) + " " + entity_name;
     }
 }

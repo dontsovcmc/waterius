@@ -104,7 +104,7 @@ bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdat
     {
         String mqtt_discovery_topic = sett.mqtt_discovery_topic;
         remove_trailing_slash(mqtt_discovery_topic);
-        publish_discovery(mqtt_client, mqtt_topic, mqtt_discovery_topic, data);
+        publish_discovery(mqtt_client, mqtt_topic, mqtt_discovery_topic, data, sett);
         mqtt_client.loop();
     }
 
