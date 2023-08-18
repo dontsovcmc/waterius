@@ -157,15 +157,19 @@ static const char *const CHANNEL_ENERGY_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
  * @brief Названия каналов
  *        enum CounterName
  */
-static const char s_hot_wtr_name[] PROGMEM = "Hot Water";
 static const char s_cold_wtr_name[] PROGMEM = "Cold Water";
+static const char s_hot_wtr_name[] PROGMEM = "Hot Water";
 static const char s_electricity_name[] PROGMEM = "Electricity";
 static const char s_gas_name[] PROGMEM = "Gas";
 static const char s_heat_name[] PROGMEM = "Heat";
 static const char s_portable_wtr_name[] PROGMEM = "Potable Water";
 static const char s_other_name[] PROGMEM = "Other";
 
-static const char *const CHANNEL_NAMES[] PROGMEM = {s_hot_wtr_name, s_cold_wtr_name, 
+/**
+ * @brief Названия каналов, согласно enum CounterName
+*/
+
+static const char *const CHANNEL_NAMES[] PROGMEM = {s_cold_wtr_name, s_hot_wtr_name,
                                                     s_electricity_name, s_gas_name,
                                                     s_heat_name, s_portable_wtr_name,
                                                     s_other_name};

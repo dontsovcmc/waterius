@@ -3,10 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.11.7"
+#define FIRMWARE_VERSION "0.11.8"
 
 /*
 Версии прошивки для ESP
+
+0.11.8 - 2023.08.18 - dontsovcmc
+                      1. Перепутаны названия ГВС/ХВС в HA discovery 
 
 0.11.7 - 2023.08.09 - dontsovcmc
                       1. не дублируется список wi-fi сетей при настройке
