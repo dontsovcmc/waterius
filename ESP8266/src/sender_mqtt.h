@@ -55,7 +55,7 @@ bool connect_and_subscribe_mqtt(Settings &sett, const SlaveData &data, const Cal
         // парамтеры в лямбду передаются "by reference"
 
         mqtt_client.setCallback([&](char *raw_topic, byte *raw_payload, unsigned int length)
-                                { mqtt_callback(sett, json_data, mqtt_client, mqtt_topic, raw_topic, raw_payload, length); });
+                                { mqtt_callback(sett, data, json_data, mqtt_client, mqtt_topic, raw_topic, raw_payload, length); });
     }
 
     if (mqtt_connect(sett, mqtt_client))
