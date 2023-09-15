@@ -16,6 +16,7 @@ extern SlaveData data;
 extern MasterI2C masterI2C;
 
 String message_states;
+String message_status;
 String message_networks;
 SlaveData runtime_data;
 
@@ -104,10 +105,21 @@ void handleNetworks()
     wm.server->send(200, F("text/plain"), message_networks);
 }
 
+void handleWiFiStatus()
+{
+    LOG_INFO(F("/handleWiFiStatus request"));
+    message_status.clear();
+    message_status = F("{\"wifistatus\": \"");
+    wm.reportStatus(message_status);
+    message_status += F("\"}");
+    wm.server->send(200, F("text/plain"), message_status);
+}
+
 void bindServerCallback()
 {
     wm.server->on(F("/states"), handleStates);
     wm.server->on(F("/networks"), handleNetworks);
+    wm.server->on(F("/wifistatus"), handleWiFiStatus);
 }
 
 void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata)
