@@ -364,7 +364,7 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     wm.addParameter(&hot_water);
 
     WiFiManagerParameter label_hot_info_first("<p>Откройте горячую воду, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
-    WiFiManagerParameter label_hot_info("<p>Если вы&nbsp;заменили счётчик, то&nbsp;вылейте воду, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;.</p>");
+    WiFiManagerParameter label_hot_info("<p>Передача данных работает. Если вы&nbsp;заменили счётчик, то&nbsp;вылейте воду, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;.</p>");
     
     if (sett.factor1 == AS_COLD_CHANNEL) {
         wm.addParameter(&label_hot_info_first);
