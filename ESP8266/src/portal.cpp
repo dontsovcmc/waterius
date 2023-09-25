@@ -60,7 +60,7 @@ void Portal::onGetNetworks(AsyncWebServerRequest *request)
         return;
     LOG_INFO(F("AsyncWebServer onGetNetworks GET ") << request->host() << request->url());
     int n = WiFi.scanComplete();
-    if (n == -2)
+    if (n == WIFI_SCAN_FAILED)
     {
         WiFi.scanNetworks(true);
         request->send(100, "", "");
@@ -82,7 +82,7 @@ void Portal::onGetNetworks(AsyncWebServerRequest *request)
             json += F("'></div></label>");
         }
         WiFi.scanDelete();
-        if (WiFi.scanComplete() == -2)
+        if (WiFi.scanComplete() == WIFI_SCAN_FAILED)
         {
             WiFi.scanNetworks(true);
         }
