@@ -22,7 +22,7 @@
   @param data показания.
   @param cdata расчитанные показатели.
   @param voltage мониторинг питания.
-  @param json_data json документ в ктороый будут записаны данные.
+  @param json_data json документ в который будут записаны данные.
 */
 extern void get_json_data(const Settings &sett, const SlaveData &data, const CalculatedData &cdata, JsonConstructor &json);
 

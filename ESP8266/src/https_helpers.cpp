@@ -16,7 +16,7 @@ bool post_data(String &url, const char *key, const char *email, const char *payl
     LOG_INFO(F("HTTP: Protocol: ") << proto);
 
     // Set wc client
-    if ((proto == PROTO_HTTP))
+    if (proto == PROTO_HTTP)
     {
         LOG_INFO(F("HTTP: Create insecure client"));
         pClient = new WiFiClient;
@@ -53,5 +53,15 @@ bool post_data(String &url, const char *key, const char *email, const char *payl
         httpClient.end();
         (*(WiFiClient *)pClient).stop();
     }
+
+    if (proto == PROTO_HTTP)
+    {
+        delete (WiFiClient*)pClient;
+    }
+    else if (proto == PROTO_HTTPS)
+    {
+        delete (WiFiClientSecure*)pClient;
+    }
+    
     return result;
 }

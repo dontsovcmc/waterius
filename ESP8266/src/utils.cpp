@@ -210,6 +210,7 @@ void log_system_info()
 {
 	// System info
 	LOG_INFO(F("------------ System Info ------------"));
+	LOG_INFO(F("Firmware ver: ") << String(FIRMWARE_VERSION));
 	LOG_INFO(F("Sketch Size: ") << ESP.getSketchSize());
 	LOG_INFO(F("Free Sketch Space: ") << ESP.getFreeSketchSpace());
 	LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
@@ -281,20 +282,37 @@ void blink_led(int count, int period, int duty)
 }
 
 
-uint8_t get_auto_factor(uint32_t runtime_impulses, uint32_t impulses)
+/**
+ * @brief Возвращает тип данных на сервер Ватериуса по названию входа. 
+ *
+ * @param counter_name имя счётчика в интерфейсе ESP
+ * @param index номер входа
+ * @return тип данных на сервере Ватериуса
+ */
+DataType data_type_by_name(uint8_t counter_name, uint8_t index)
 {
-    return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
-}
+	switch ((CounterName)counter_name)
+	{
+		case CounterName::WATER_COLD:
+			return DataType::COLD_WATER;
 
-uint8_t get_factor(uint8_t combobox_factor, uint32_t runtime_impulses, uint32_t impulses, uint8_t cold_factor)
-{
-    switch (combobox_factor)
-    {
-    case AUTO_IMPULSE_FACTOR:
-        return get_auto_factor(runtime_impulses, impulses);
-    case AS_COLD_CHANNEL:
-        return cold_factor;
-    default:
-        return combobox_factor; // 1, 10, 100
-    }
+		case CounterName::WATER_HOT:
+			return DataType::HOT_WATER;
+
+		case CounterName::ELECTRO:
+			return DataType::ELECTRICITY;
+
+		case CounterName::GAS:
+			return DataType::GAS_DATA;
+
+		case CounterName::HEAT:
+			return DataType::HEATING;
+
+		case CounterName::PORTABLE_WATER:
+			return DataType::POTABLE_WATER;
+
+		case CounterName::OTHER:
+			return DataType::OTHER_TYPE;
+	}
+	return DataType::COLD_WATER;
 }

@@ -1,10 +1,10 @@
 #include <user_interface.h>
 #include <ESP8266WiFi.h>
-#include "LittleFS.h"
+#include <ArduinoJson.h>
 #include "Logging.h"
 #include "config.h"
 #include "master_i2c.h"
-// #include "setup_ap.h"
+#include "setup_ap.h"
 #include "sender_http.h"
 #include "voltage.h"
 #include "utils.h"
@@ -16,10 +16,6 @@
 #include "sync_time.h"
 #include "wifi_helpers.h"
 #include "config.h"
-#include "portal.h"
-#include "json_constructor.h"
-#include "DNSServer.h"
-#include "resources.h"
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 SlaveData data;       // Данные от Attiny85
@@ -27,9 +23,6 @@ Settings sett;        // Настройки соединения и предыд
 CalculatedData cdata; // вычисляемые данные
 ADC_MODE(ADC_VCC);
 Ticker voltage_ticker;
-volatile bool periodUpdated = false;
-
-extern "C" uint32_t __crc_val;
 
 /*
 Выполняется однократно при включении
@@ -38,224 +31,12 @@ void setup()
 {
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Booted"));
-    char firmware_crc32[9] = {0};
-    sprintf(firmware_crc32, "%08X", __crc_val);
-    LOG_INFO(F("Firmware CRC32: ") << firmware_crc32);
 
     masterI2C.begin(); // Включаем i2c master
-    LittleFS.begin();
 
     get_voltage()->begin();
     voltage_ticker.attach_ms(300, []()
                              { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
-}
-
-#define SETUP_TIME_SEC 600UL
-
-/**
- * @brief Возвращает параметры считанные с Waterius`a для отображения данных в реальном времени
- *
- * @return int
- */
-void onGetStates(Portal *portal, AsyncWebServerRequest *request)
-{
-    if(portal->captivePortal(request))
-        return;
-    LOG_INFO(F("Portal onGetState GET ") << request->host() << request->url());
-    SlaveData runtime_data;
-    JsonConstructor json(1024);
-    json.begin();
-    if (masterI2C.getSlaveData(runtime_data))
-    {
-        if (runtime_data.impulses0 > data.impulses0)
-        {
-            json.push(FPSTR(PARAM_STATE0GOOD), FPSTR(TETX_CONNECTED));
-            json.push(FPSTR(PARAM_STATE0BAD), FPSTR(TEXT_EMPTY));
-        }
-        else
-        {
-            json.push(FPSTR(PARAM_STATE0GOOD), FPSTR(TEXT_EMPTY));
-            json.push(FPSTR(PARAM_STATE0BAD), FPSTR(TETX_CONNECTED));
-        }
-        if (runtime_data.impulses1 > data.impulses1)
-        {
-            json.push(FPSTR(PARAM_STATE1GOOD), FPSTR(TETX_CONNECTED));
-            json.push(FPSTR(PARAM_STATE1BAD), FPSTR(TEXT_EMPTY));
-        }
-        else
-        {
-            json.push(FPSTR(PARAM_STATE1GOOD), FPSTR(TEXT_EMPTY));
-            json.push(FPSTR(PARAM_STATE1BAD), FPSTR(TETX_CONNECTED));
-        }
-        json.push(FPSTR(PARAM_ELAPSED), (uint32_t)(SETUP_TIME_SEC - millis() / 1000.0));
-        json.push(FPSTR(PARAM_FACTORCOLDFEEDBACK), get_auto_factor(runtime_data.impulses1, data.impulses1));
-        json.push(FPSTR(PARAM_FACTORHOTFEEDBACK), get_auto_factor(runtime_data.impulses0, data.impulses0));
-        bool _fail=false;
-        if (_fail)
-        {
-            json.push(FPSTR(PARAM_FAIL), F("1"));
-        }
-        else
-        {
-            json.push(FPSTR(PARAM_FAIL), FPSTR(TEXT_EMPTY));
-        }
-        json.push(FPSTR(PARAM_ERROR), FPSTR(TEXT_EMPTY));
-    }
-    else
-    {
-        json.push(FPSTR(PARAM_ERROR), FPSTR(TEXT_CONNECTERROR));
-        json.push(FPSTR(PARAM_FACTORCOLDFEEDBACK), 1);
-        json.push(FPSTR(PARAM_FACTORHOTFEEDBACK), 1);
-    }
-    json.end();
-    request->send(200, F("application/json"), json.c_str());
-    LOG_INFO(json.c_str());
-}
-
-
-/**
- * @brief Возвращает конфигурацию прибора в формате JSON для заполнения полей настройки
- *
- * @return
- */
-void onGetConfig(Portal *portal, AsyncWebServerRequest *request)
-{
-    if(portal->captivePortal(request))
-        return;
-    LOG_INFO(F("Portal onGetConfig GET ") << request->host() << request->url());
-    JsonConstructor json(2048);
-    json.begin();
-    json.push(FPSTR(PARAM_WMAIL), sett.waterius_email);
-    json.push(FPSTR(PARAM_WHOST), sett.waterius_host);
-    json.push(FPSTR(PARAM_MPERIOD), sett.wakeup_per_min);
-    json.push(FPSTR(PARAM_S), WiFi.SSID().c_str());
-    json.push(FPSTR(PARAM_P), WiFi.psk().c_str());
-    json.push(FPSTR(PARAM_BHOST), sett.blynk_host);
-    json.push(FPSTR(PARAM_BKEY), sett.blynk_key);
-    json.push(FPSTR(PARAM_BMAIL), sett.blynk_email);
-    json.push(FPSTR(PARAM_BTITLE), sett.blynk_email_title);
-    json.push(FPSTR(PARAM_BTEMPLATE), sett.blynk_email_template);
-    json.push(FPSTR(PARAM_MHOST), sett.mqtt_host);
-    json.push(FPSTR(PARAM_MPORT), sett.mqtt_port);
-    json.push(FPSTR(PARAM_MLOGIN), sett.mqtt_login);
-    json.push(FPSTR(PARAM_MPASSWORD), sett.mqtt_password);
-    json.push(FPSTR(PARAM_MTOPIC), sett.mqtt_topic);
-    json.push(FPSTR(PARAM_MDAUTO), sett.mqtt_auto_discovery);
-    json.push(FPSTR(PARAM_MDTOPIC), sett.mqtt_discovery_topic);
-    json.push(FPSTR(PARAM_MAC), WiFi.macAddress().c_str());
-    json.push(FPSTR(PARAM_IP), Portal::ipToString(sett.ip).c_str());
-    json.push(FPSTR(PARAM_SN), Portal::ipToString(sett.mask).c_str());
-    json.push(FPSTR(PARAM_GW), Portal::ipToString(sett.gateway).c_str());
-    json.push(FPSTR(PARAM_NTP), sett.ntp_server);
-    json.push(FPSTR(PARAM_FACTORCOLD), sett.factor1);
-    json.push(FPSTR(PARAM_FACTORHOT), sett.factor0);
-    json.push(FPSTR(PARAM_SERIALCOLD), sett.serial0);
-    json.push(FPSTR(PARAM_SERIALHOT), sett.serial1);
-    json.push(FPSTR(PARAM_CH0), cdata.channel0, 3);
-    json.push(FPSTR(PARAM_CH1), cdata.channel1, 3);
-    json.end();
-    AsyncResponseStream *response = request->beginResponseStream(F("application/json"));
-    response->addHeader("Server", "ESP Async Web Server");
-    response->print(json.c_str());
-    request->send(response);
-}
-
-void onErase(AsyncWebServerRequest *request)
-{
-    LOG_INFO(F("Portal onErase GET ") << request->host()<< request->url());
-    LOG_INFO(F("ESP erase config"));
-    ESP.eraseConfig();
-    delay(100);
-    LOG_INFO(F("EEPROM erase"));
-    ESP.flashEraseSector(((EEPROM_start - 0x40200000) / SPI_FLASH_SEC_SIZE));
-    delay(1000);
-    ESP.reset();
-}
-
-
-/**
- * @brief Обработчик POST запроса с новыми параметрами настройки прибора
- *
- * @return int
- */
-void onPostWifiSave(AsyncWebServerRequest *request)
-{
-    LOG_INFO(F("Portal onPostWiFiSave POST ") << request->host()<< request->url());
-    Portal::UpdateParamStr(request, FPSTR(PARAM_S), sett.wifi_ssid, WIFI_SSID_LEN - 1);
-    Portal::UpdateParamStr(request, FPSTR(PARAM_P), sett.wifi_password, WIFI_PWD_LEN - 1);
-    if (Portal::UpdateParamStr(request, FPSTR(PARAM_WMAIL), sett.waterius_email, EMAIL_LEN))
-    {
-        generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
-    }
-    Portal::SetParamStr(request, FPSTR(PARAM_WHOST), sett.waterius_host, HOST_LEN - 1);
-    Portal::SetParamUInt(request, FPSTR(PARAM_MPERIOD), &sett.wakeup_per_min);
-
-    Portal::SetParamStr(request, FPSTR(PARAM_BHOST), sett.blynk_host, HOST_LEN - 1);
-    Portal::SetParamStr(request, FPSTR(PARAM_BKEY), sett.blynk_key, BLYNK_KEY_LEN);
-    Portal::SetParamStr(request, FPSTR(PARAM_BMAIL), sett.blynk_email, EMAIL_LEN);
-    Portal::SetParamStr(request, FPSTR(PARAM_BTITLE), sett.blynk_email_title, BLYNK_EMAIL_TITLE_LEN);
-    Portal::SetParamStr(request, FPSTR(PARAM_BTEMPLATE), sett.blynk_email_template, BLYNK_EMAIL_TEMPLATE_LEN);
-
-    Portal::SetParamStr(request, FPSTR(PARAM_MHOST), sett.mqtt_host, HOST_LEN - 1);
-    Portal::SetParamUInt(request, FPSTR(PARAM_MPORT), &sett.mqtt_port);
-    Portal::SetParamStr(request, FPSTR(PARAM_MLOGIN), sett.mqtt_login, MQTT_LOGIN_LEN);
-    Portal::SetParamStr(request, FPSTR(PARAM_MPASSWORD), sett.mqtt_password, MQTT_PASSWORD_LEN);
-    Portal::SetParamStr(request, FPSTR(PARAM_MTOPIC), sett.mqtt_topic, MQTT_TOPIC_LEN);
-    Portal::SetParamByte(request, FPSTR(PARAM_MDAUTO), &sett.mqtt_auto_discovery);
-    Portal::SetParamStr(request, FPSTR(PARAM_MDTOPIC), sett.mqtt_discovery_topic, MQTT_TOPIC_LEN);
-
-    Portal::SetParamIP(request, FPSTR(PARAM_IP), &sett.ip);
-    Portal::SetParamIP(request, FPSTR(PARAM_GW), &sett.gateway);
-    Portal::SetParamIP(request, FPSTR(PARAM_SN), &sett.mask);
-    Portal::SetParamStr(request, FPSTR(PARAM_NTP), sett.ntp_server, HOST_LEN);
-
-    uint8_t combobox_factor = -1;
-    if (Portal::SetParamByte(request, FPSTR(PARAM_FACTORCOLD), &combobox_factor))
-    {
-        sett.factor1 = get_factor(combobox_factor, data.impulses1, data.impulses1, 1);
-        LOG_INFO("cold dropdown=" << combobox_factor);
-        LOG_INFO("factorCold=" << sett.factor1);
-    }
-    if (Portal::SetParamByte(request, FPSTR(PARAM_FACTORHOT), &combobox_factor))
-    {
-        sett.factor0 = get_factor(combobox_factor, data.impulses1, data.impulses1, 1);
-        LOG_INFO("hot dropdown=" << combobox_factor);
-        LOG_INFO("factorHot=" << sett.factor0);
-    }
-    Portal::SetParamStr(request, FPSTR(PARAM_SERIALCOLD), sett.serial1, SERIAL_LEN);
-    Portal::SetParamStr(request, FPSTR(PARAM_SERIALHOT), sett.serial0, SERIAL_LEN);
-
-    if (Portal::SetParamFloat(request, FPSTR(PARAM_CH0), &sett.channel0_start))
-    {
-        sett.impulses0_start = data.impulses0;
-        sett.impulses0_previous = sett.impulses0_start;
-        LOG_INFO("impulses0=" << sett.impulses0_start);
-    }
-    if (Portal::SetParamFloat(request, FPSTR(PARAM_CH1), &sett.channel1_start))
-    {
-        sett.impulses1_start = data.impulses1;
-        sett.impulses1_previous = sett.impulses1_start;
-        LOG_INFO("impulses1=" << sett.impulses1_start);
-    }
-
-    WiFi.persistent(true);
-    bool fail = WiFi.begin(sett.wifi_ssid, sett.wifi_password);
-    WiFi.persistent(false);
-    // Запоминаем кол-во импульсов Attiny соответствующих текущим показаниям счетчиков
-    if (fail)
-    {
-        sett.setup_time = millis();
-        sett.setup_finished_counter++;
-
-        store_config(sett);
-        AsyncWebServerResponse *response = request->beginResponse(200, "", F("Save configuration - Successfully."));
-        response->addHeader("Refresh", "2; url=/exit");
-        request->send(response);
-    }
-    else
-    {
-        request->redirect("/");
-    }
 }
 
 void loop()
@@ -263,7 +44,7 @@ void loop()
     uint8_t mode = SETUP_MODE; // TRANSMIT_MODE;
     bool config_loaded = false;
 
-    // спрашиваем у Attiny85 повод пробуждения и данные
+    // спрашиваем у Attiny85 повод пробуждения и данные true) // /
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
     {
 
@@ -284,32 +65,10 @@ void loop()
             WiFi.persistent(false);
             WiFi.disconnect();
 
-            wifi_set_mode(WIFI_AP);
-            String apName = get_ap_name();
-            WiFi.softAP(apName.c_str());
+            wifi_set_mode(WIFI_AP_STA);   // Нужно ли, если есть в WifiManager?
 
+            setup_ap(sett, data, cdata);
 
-            // setup_ap(sett, data, cdata);
-            DNSServer *dns = new DNSServer();
-            dns->start(53, "*", WiFi.softAPIP());
-            // запускаем сервер
-            Portal *portal = new Portal();
-            portal->on("/states", HTTP_GET, std::bind(onGetStates, portal, std::placeholders::_1));
-            portal->on("/config", HTTP_GET, std::bind(onGetConfig, portal, std::placeholders::_1));
-            portal->on("/erase", HTTP_GET, onErase);
-            portal->on("/wifisave", HTTP_POST, onPostWifiSave);
-            portal->begin();
-
-            WiFi.scanNetworks(true);
-            while (!portal->doneettings())
-            {
-                dns->processNextRequest();
-                yield();
-            }
-            portal->end();
-            dns->stop();
-            delete portal;
-            delete dns;
             wifi_shutdown();
 
             LOG_INFO(F("Set mode MANUAL_TRANSMIT to attiny"));
@@ -318,7 +77,6 @@ void loop()
             LOG_INFO(F("Restart ESP"));
             LOG_END();
 
-            wifi_set_mode(WIFI_OFF);
             LOG_INFO(F("Finish setup mode..."));
             ESP.restart();
 
@@ -331,40 +89,30 @@ void loop()
             {
                 log_system_info();
 
-                JsonConstructor json(JSON_DYNAMIC_MSG_BUFFER);
+                DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
 
                 // Подключаемся и подписываемся на мктт
                 if (is_mqtt(sett))
                 {
-                    connect_and_subscribe_mqtt(sett);
-                    LOG_INFO(F("MQTT: while(){ loop();}"));
-                    uint32_t t = millis() + 100;
-                    uint32_t c = 0;
-                    while ((millis() < t) && (!periodUpdated))
-                    {
-                        mqtt_client.loop();
-                        c++;
-                        delay(2);
-                    }
-                    LOG_INFO(F("MQTT: loop count ") << c);
+                    connect_and_subscribe_mqtt(sett, data, cdata, json_data);
                 }
 
                 // устанавливать время только при использовани хттпс или мктт
                 if (is_mqtt(sett) || is_https(sett.waterius_host))
                 {
-                    sync_ntp_time();
+                    sync_ntp_time(sett);
                 }
 
                 voltage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 
                 // Формироуем JSON
-                get_json_data(sett, data, cdata, json);
+                get_json_data(sett, data, cdata, json_data);
 
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 
 #ifndef HTTPS_DISABLED
-                if (send_http(sett, json.c_str()))
+                if (send_http(sett, json_data))
                 {
                     LOG_INFO(F("HTTP: Send OK"));
                 }
@@ -372,7 +120,7 @@ void loop()
 #endif
 
 #ifndef BLYNK_DISABLED
-                if (send_blynk(sett, data, cdata))
+                if (send_blynk(sett, json_data))
                 {
                     LOG_INFO(F("BLYNK: Send OK"));
                 }
@@ -382,7 +130,7 @@ void loop()
 #ifndef MQTT_DISABLED
                 if (is_mqtt(sett))
                 {
-                    if (send_mqtt(sett, data, json.c_str()))
+                    if (send_mqtt(sett, data, cdata, json_data))
                     {
                         LOG_INFO(F("MQTT: Send OK"));
                     }
@@ -418,12 +166,10 @@ void loop()
 
     if (!config_loaded) {
         delay(500);
-        blink_led(3, 1000, 500);
+        blink_led(3,1000,500);
     }
-
+    
     masterI2C.sendCmd('Z'); // "Можешь идти спать, attiny"
 
     ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. Instant не ждет 92мс
-
-
 }

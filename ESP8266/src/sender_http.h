@@ -42,7 +42,7 @@ bool send_http(const Settings &sett, const char *json)
         LOG_INFO(F("HTTP: Attempt #") << HTTP_SEND_ATTEMPTS - attempts + 1 << F(" from ") << HTTP_SEND_ATTEMPTS);
         result = post_data(url, sett.waterius_key, sett.waterius_email, json);
 
-    } while (!result && attempts--);
+    } while (!result && --attempts);
 
     if (result)
     {

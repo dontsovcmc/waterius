@@ -25,6 +25,7 @@
 
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
+#include <ArduinoJson.h>
 #include "master_i2c.h"
 #include "Logging.h"
 #include "json.h"
@@ -32,12 +33,11 @@
 #include "ha/publish_discovery.h"
 #include "ha/subscribe.h"
 #include "utils.h"
-#include "setup.h"
 
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
 
-bool connect_and_subscribe_mqtt(Settings &sett)
+bool connect_and_subscribe_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
 {
     String mqtt_topic = sett.mqtt_topic;
     remove_trailing_slash(mqtt_topic);
@@ -55,7 +55,7 @@ bool connect_and_subscribe_mqtt(Settings &sett)
         // парамтеры в лямбду передаются "by reference"
 
         mqtt_client.setCallback([&](char *raw_topic, byte *raw_payload, unsigned int length)
-                                { mqtt_callback(sett, raw_topic, raw_payload, length); });
+                                { mqtt_callback(sett, data, json_data, mqtt_client, mqtt_topic, raw_topic, raw_payload, length); });
     }
 
     if (mqtt_connect(sett, mqtt_client))
@@ -85,7 +85,7 @@ bool connect_and_subscribe_mqtt(Settings &sett)
  *
  * @returns true если успешно отправлены данные и false если не отправлено
  */
-bool send_mqtt(Settings &sett, const SlaveData &data, const char *json)
+bool send_mqtt(Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
 {
     unsigned long start_time = millis();
     String mqtt_topic = sett.mqtt_topic;
@@ -99,18 +99,17 @@ bool send_mqtt(Settings &sett, const SlaveData &data, const char *json)
 
     mqtt_client.loop();
     // autodiscovery после настройки и по нажатию на кнопку
-    if (sett.mqtt_auto_discovery && (ALWAYS_MQTT_AUTO_DISCOVERY ||
-                                     (sett.mode == SETUP_MODE) ||
+    if (sett.mqtt_auto_discovery && ((sett.mode == SETUP_MODE) ||
                                      (sett.mode == MANUAL_TRANSMIT_MODE)))
     {
         String mqtt_discovery_topic = sett.mqtt_discovery_topic;
         remove_trailing_slash(mqtt_discovery_topic);
-        publish_discovery(mqtt_client, mqtt_topic, mqtt_discovery_topic, data);
+        publish_discovery(mqtt_client, mqtt_topic, mqtt_discovery_topic, data, sett);
         mqtt_client.loop();
     }
 
     // публикация показаний в MQTT
-    publish_data(mqtt_client, mqtt_topic, json, sett.mqtt_auto_discovery);
+    publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
 
     mqtt_client.loop();
     mqtt_unsubscribe(mqtt_client, mqtt_topic);

@@ -48,7 +48,13 @@ void wifi_begin(Settings &sett)
   delay(200); // подождем чтобы проинициализировалась сеть
 
   wifi_set_mode(WIFI_STA);
-
+  if (sett.wifi_phy_mode)
+  {
+    if (!WiFi.setPhyMode((WiFiPhyMode_t)sett.wifi_phy_mode))
+    {
+      LOG_ERROR(F("Failed set phy mode ")<<sett.wifi_phy_mode);
+    }
+  }
   if (!WiFi.getAutoConnect())
   {
     WiFi.setAutoConnect(true);
@@ -61,7 +67,10 @@ void wifi_begin(Settings &sett)
     WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, fallback_dns_server);
   }
 
-  WiFi.hostname(get_device_name());
+  if (!WiFi.hostname(get_device_name()))
+  {
+    LOG_ERROR(F("WIFI: set hostname failed"));
+  }
 
   delay(100); // подождем чтобы проинициализировалась сеть
 
@@ -128,7 +137,7 @@ bool wifi_connect(Settings &sett)
     }
     sett.wifi_channel = 0;
     LOG_ERROR(F("WIFI: Connection failed."));
-  } while (attempts--);
+  } while (--attempts);
   
   LOG_ERROR(F("WIFI: Connection failed.") << millis() - start_time << F(" ms"));
   return false;
