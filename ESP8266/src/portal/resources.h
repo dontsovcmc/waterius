@@ -27,11 +27,14 @@ static const char PARAM_FACTORCOLD[] PROGMEM = "factorCold";
 static const char PARAM_FACTORHOT[] PROGMEM = "factorHot";
 static const char PARAM_SERIALCOLD[] PROGMEM = "serialCold";
 static const char PARAM_SERIALHOT[] PROGMEM = "serialHot";
+static const char PARAM_CNAMEHOT[] PROGMEM = "counter0_name";
+static const char PARAM_CNAMECOLD[] PROGMEM = "counter1_name";
+static const char PARAM_CTYPEHOT[] PROGMEM = "counter_type0";
+static const char PARAM_CTYPECOLD[] PROGMEM = "counter_type1";
 static const char PARAM_CH0[] PROGMEM = "ch0";
 static const char PARAM_CH1[] PROGMEM = "ch1";
 static const char PARAM_S[] PROGMEM = "s";
 static const char PARAM_P[] PROGMEM = "p";
-
 
 static const char PARAM_STATE0GOOD[] PROGMEM = "state0good";
 static const char PARAM_STATE0BAD[] PROGMEM = "state0bad";

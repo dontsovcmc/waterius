@@ -62,13 +62,8 @@ void loop()
             // Режим настройки - запускаем точку доступа на 192.168.4.1
             // Запускаем точку доступа с вебсервером
 
-            WiFi.persistent(false);
-            WiFi.disconnect();
-
-            wifi_set_mode(WIFI_AP_STA);   // Нужно ли, если есть в WifiManager?
-
-            setup_ap(sett, data, cdata);
-
+            start_active_point(sett, data, cdata);
+            
             wifi_shutdown();
 
             LOG_INFO(F("Set mode MANUAL_TRANSMIT to attiny"));
