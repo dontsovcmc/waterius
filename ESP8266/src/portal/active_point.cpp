@@ -10,8 +10,11 @@
 #include "setup.h"
 #include "Logging.h"
 #include "master_i2c.h"
+#include "utils.h"
+#include "config.h"
+#include "wifi_helpers.h"
 #include "resources.h"
-#include "Portal.h"
+#include "param_helpers.h"
 
 bool exit_portal = false;
 
@@ -237,8 +240,6 @@ void onGetConfig(AsyncWebServerRequest *request)
     LOG_INFO(F("JSON: Mem usage: ") << root.memoryUsage());
     LOG_INFO(F("JSON: Size: ") << measureJson(root));
 
-
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
     serializeJson(root, *response);
     request->send(response);
 }
@@ -252,59 +253,59 @@ void onGetConfig(AsyncWebServerRequest *request)
 void onPostWifiSave(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("Portal onPostWiFiSave POST ") << request->host()<< request->url());
-    Portal::UpdateParamStr(request, FPSTR(PARAM_S), sett.wifi_ssid, WIFI_SSID_LEN - 1);
-    Portal::UpdateParamStr(request, FPSTR(PARAM_P), sett.wifi_password, WIFI_PWD_LEN - 1);
-    if (Portal::UpdateParamStr(request, FPSTR(PARAM_WMAIL), sett.waterius_email, EMAIL_LEN))
+    UpdateParamStr(request, FPSTR(PARAM_S), sett.wifi_ssid, WIFI_SSID_LEN - 1);
+    UpdateParamStr(request, FPSTR(PARAM_P), sett.wifi_password, WIFI_PWD_LEN - 1);
+    if (UpdateParamStr(request, FPSTR(PARAM_WMAIL), sett.waterius_email, EMAIL_LEN))
     {
         generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
     }
-    Portal::SetParamStr(request, FPSTR(PARAM_WHOST), sett.waterius_host, HOST_LEN - 1);
+    SetParamStr(request, FPSTR(PARAM_WHOST), sett.waterius_host, HOST_LEN - 1);
     
 
 #ifndef BLYNK_DISABLED
-    Portal::SetParamStr(request, FPSTR(PARAM_BHOST), sett.blynk_host, HOST_LEN - 1);
-    Portal::SetParamStr(request, FPSTR(PARAM_BKEY), sett.blynk_key, BLYNK_KEY_LEN);
+    SetParamStr(request, FPSTR(PARAM_BHOST), sett.blynk_host, HOST_LEN - 1);
+    SetParamStr(request, FPSTR(PARAM_BKEY), sett.blynk_key, BLYNK_KEY_LEN);
 
 #endif
 
 // MQTT
 #ifndef MQTT_DISABLED
-    Portal::SetParamStr(request, FPSTR(PARAM_MHOST), sett.mqtt_host, HOST_LEN - 1);
-    Portal::SetParamUInt(request, FPSTR(PARAM_MPORT), &sett.mqtt_port);
-    Portal::SetParamStr(request, FPSTR(PARAM_MLOGIN), sett.mqtt_login, MQTT_LOGIN_LEN);
-    Portal::SetParamStr(request, FPSTR(PARAM_MPASSWORD), sett.mqtt_password, MQTT_PASSWORD_LEN);
-    Portal::SetParamStr(request, FPSTR(PARAM_MTOPIC), sett.mqtt_topic, MQTT_TOPIC_LEN);
-    Portal::SetParamByte(request, FPSTR(PARAM_MDAUTO), &sett.mqtt_auto_discovery);
-    Portal::SetParamStr(request, FPSTR(PARAM_MDTOPIC), sett.mqtt_discovery_topic, MQTT_TOPIC_LEN);
+    SetParamStr(request, FPSTR(PARAM_MHOST), sett.mqtt_host, HOST_LEN - 1);
+    SetParamUInt(request, FPSTR(PARAM_MPORT), &sett.mqtt_port);
+    SetParamStr(request, FPSTR(PARAM_MLOGIN), sett.mqtt_login, MQTT_LOGIN_LEN);
+    SetParamStr(request, FPSTR(PARAM_MPASSWORD), sett.mqtt_password, MQTT_PASSWORD_LEN);
+    SetParamStr(request, FPSTR(PARAM_MTOPIC), sett.mqtt_topic, MQTT_TOPIC_LEN);
+    SetParamByte(request, FPSTR(PARAM_MDAUTO), &sett.mqtt_auto_discovery);
+    SetParamStr(request, FPSTR(PARAM_MDTOPIC), sett.mqtt_discovery_topic, MQTT_TOPIC_LEN);
 
 #endif // MQTT
 
-    Portal::SetParamIP(request, FPSTR(PARAM_IP), &sett.ip);
+    SetParamIP(request, FPSTR(PARAM_IP), &sett.ip);
     if (sett.ip)
     {
-        Portal::SetParamIP(request, FPSTR(PARAM_GW), &sett.gateway);
-        Portal::SetParamIP(request, FPSTR(PARAM_SN), &sett.mask);
-        Portal::SetParamStr(request, FPSTR(PARAM_NTP), sett.ntp_server, HOST_LEN);
+        SetParamIP(request, FPSTR(PARAM_GW), &sett.gateway);
+        SetParamIP(request, FPSTR(PARAM_SN), &sett.mask);
+        SetParamStr(request, FPSTR(PARAM_NTP), sett.ntp_server, HOST_LEN);
     }
     else
     {
         LOG_INFO(F("DHCP is ON"));
     }
 
-    Portal::SetParamStr(request, FPSTR(PARAM_NTP), sett.ntp_server, HOST_LEN);
+    SetParamStr(request, FPSTR(PARAM_NTP), sett.ntp_server, HOST_LEN);
     LOG_INFO(F("NTP Server=") << sett.ntp_server);
 
-    Portal::SetParamUInt(request, FPSTR(PARAM_MPERIOD), &sett.wakeup_per_min);
+    SetParamUInt(request, FPSTR(PARAM_MPERIOD), &sett.wakeup_per_min);
     sett.set_wakeup = sett.wakeup_per_min;
     LOG_INFO(F("wakeup period, min=") << sett.wakeup_per_min);
     LOG_INFO(F("wakeup period, tick=") << sett.set_wakeup);
 
 
     uint8_t counter0_type, counter1_type;
-    Portal::SetParamByte(request, FPSTR(PARAM_CNAMEHOT), &sett.counter0_name);
-    Portal::SetParamByte(request, FPSTR(PARAM_CNAMECOLD), &sett.counter1_name);
-    Portal::SetParamByte(request, FPSTR(PARAM_CTYPEHOT), &counter0_type);
-    Portal::SetParamByte(request, FPSTR(PARAM_CTYPECOLD), &counter1_type);
+    SetParamByte(request, FPSTR(PARAM_CNAMEHOT), &sett.counter0_name);
+    SetParamByte(request, FPSTR(PARAM_CNAMECOLD), &sett.counter1_name);
+    SetParamByte(request, FPSTR(PARAM_CTYPEHOT), &counter0_type);
+    SetParamByte(request, FPSTR(PARAM_CTYPECOLD), &counter1_type);
     
     if (!masterI2C.setCountersType(counter0_type, 
                                    counter1_type))
@@ -318,28 +319,28 @@ void onPostWifiSave(AsyncWebServerRequest *request)
     }
 
     uint8_t combobox_factor = -1;
-    if (Portal::SetParamByte(request, FPSTR(PARAM_FACTORCOLD), &combobox_factor))
+    if (SetParamByte(request, FPSTR(PARAM_FACTORCOLD), &combobox_factor))
     {
         sett.factor1 = get_factor(combobox_factor, data.impulses1, data.impulses1, 1);
         LOG_INFO("cold dropdown=" << combobox_factor);
         LOG_INFO("factorCold=" << sett.factor1);
     }
-    if (Portal::SetParamByte(request, FPSTR(PARAM_FACTORHOT), &combobox_factor))
+    if (SetParamByte(request, FPSTR(PARAM_FACTORHOT), &combobox_factor))
     {
         sett.factor0 = get_factor(combobox_factor, data.impulses0, data.impulses0, sett.factor1);
         LOG_INFO("hot dropdown=" << combobox_factor);
         LOG_INFO("factorHot=" << sett.factor0);
     }
-    Portal::SetParamStr(request, FPSTR(PARAM_SERIALCOLD), sett.serial1, SERIAL_LEN);
-    Portal::SetParamStr(request, FPSTR(PARAM_SERIALHOT), sett.serial0, SERIAL_LEN);
+    SetParamStr(request, FPSTR(PARAM_SERIALCOLD), sett.serial1, SERIAL_LEN);
+    SetParamStr(request, FPSTR(PARAM_SERIALHOT), sett.serial0, SERIAL_LEN);
 
-    if (Portal::SetParamFloat(request, FPSTR(PARAM_CH0), &sett.channel0_start))
+    if (SetParamFloat(request, FPSTR(PARAM_CH0), &sett.channel0_start))
     {
         sett.impulses0_start = data.impulses0;
         sett.impulses0_previous = sett.impulses0_start;
         LOG_INFO("impulses0=" << sett.impulses0_start);
     }
-    if (Portal::SetParamFloat(request, FPSTR(PARAM_CH1), &sett.channel1_start))
+    if (SetParamFloat(request, FPSTR(PARAM_CH1), &sett.channel1_start))
     {
         sett.impulses1_start = data.impulses1;
         sett.impulses1_previous = sett.impulses1_start;
@@ -377,7 +378,7 @@ void onErase(AsyncWebServerRequest *request)
     ESP.reset();
 }
 
-void start_active_point()
+void start_active_point(const Settings &sett, const SlaveData &data, CalculatedData &cdata)
 {
     // Если настройки есть в конфиге то присваиваем их 
     if (sett.wifi_ssid[0]) {

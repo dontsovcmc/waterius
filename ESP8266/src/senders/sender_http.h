@@ -19,7 +19,7 @@
 
 #define HTTP_SEND_ATTEMPTS 3
 
-bool send_http(const Settings &sett, const char *json)
+bool send_http(const Settings &sett, DynamicJsonDocument &jsonData)
 {
 
     if (!(sett.waterius_host[0] && sett.waterius_key[0]))
@@ -33,6 +33,8 @@ bool send_http(const Settings &sett, const char *json)
     LOG_INFO(F("-- START -- "));
     LOG_INFO(F("HTTP: Send new data"));
 
+    String payload = "";
+    serializeJson(jsonData, payload);
     String url = sett.waterius_host;
 
     int attempts = HTTP_SEND_ATTEMPTS;
@@ -40,7 +42,7 @@ bool send_http(const Settings &sett, const char *json)
     do
     {
         LOG_INFO(F("HTTP: Attempt #") << HTTP_SEND_ATTEMPTS - attempts + 1 << F(" from ") << HTTP_SEND_ATTEMPTS);
-        result = post_data(url, sett.waterius_key, sett.waterius_email, json);
+        result = post_data(url, sett.waterius_key, sett.waterius_email, payload);
 
     } while (!result && --attempts);
 

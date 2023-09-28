@@ -3,6 +3,6 @@
 
 #include <Arduino.h>
 
-extern bool post_data(String &url, const char *key, const char *email, const char *payload);
+extern bool post_data(const String &url, const char *key, const char *email, const String &payload);
 
 #endif
