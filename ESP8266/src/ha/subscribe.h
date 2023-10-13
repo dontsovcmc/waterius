@@ -13,9 +13,10 @@
 #include <Arduino.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include "master_i2c.h"
 #include "setup.h"
 
-extern void mqtt_callback(Settings &sett,DynamicJsonDocument &json_data, PubSubClient &mqtt_client, String &mqtt_topic, char *raw_topic, byte *raw_payload, unsigned int length);
+extern void mqtt_callback(Settings &sett, const SlaveData &data, DynamicJsonDocument &json_data, PubSubClient &mqtt_client, String &mqtt_topic, char *raw_topic, byte *raw_payload, unsigned int length);
 extern bool mqtt_connect(Settings &sett, PubSubClient &mqtt_client);
 extern bool mqtt_subscribe(PubSubClient &mqtt_client, String &mqtt_topic);
 extern bool mqtt_unsubscribe(PubSubClient &mqtt_client, String &mqtt_topic);

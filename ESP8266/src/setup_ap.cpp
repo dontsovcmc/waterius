@@ -14,8 +14,10 @@
 
 extern SlaveData data;
 extern MasterI2C masterI2C;
+extern Settings sett;
 
 String message_states;
+String message_status;
 String message_networks;
 SlaveData runtime_data;
 
@@ -53,11 +55,31 @@ void update_data(String &message)
         uint32_t delta0 = runtime_data.impulses0 - data.impulses0;
         uint32_t delta1 = runtime_data.impulses1 - data.impulses1;
 
+        if (sett.factor0 != AS_COLD_CHANNEL 
+         && sett.factor0 != AUTO_IMPULSE_FACTOR) 
+        {   // повторная настройка
+            state0good = F("\"Состояние неизвестно\"");
+            state0bad = F("\"\"");
+        } 
+
         if (delta0 > 0)
         {
             state0good = F("\"Подключён\"");
             state0bad = F("\"\"");
+        } 
+
+        int factor1;
+        if (sett.factor1 == AUTO_IMPULSE_FACTOR)
+        {
+            factor1 = get_auto_factor(runtime_data.impulses1, data.impulses1);
         }
+        else  // повторная настройка
+        {
+            factor1 = sett.factor1;
+            state1good = F("\"Состояние неизвестно\"");
+            state1bad = F("\"\"");
+        }
+
         if (delta1 > 0)
         {
             state1good = F("\"Подключён\"");
@@ -75,7 +97,7 @@ void update_data(String &message)
         message += F(", \"elapsed\": ");
         message += String((uint32_t)(SETUP_TIME_SEC - millis() / 1000.0));
         message += F(", \"factor_cold_feedback\": ");
-        message += String(get_auto_factor(runtime_data.impulses1, data.impulses1));
+        message += String(factor1);
         message += F(", \"factor_hot_feedback\": ");
         message += String(get_auto_factor(runtime_data.impulses0, data.impulses0));
         message += F(", \"error\": \"\"");
@@ -99,14 +121,26 @@ void handleNetworks()
 {
     LOG_INFO(F("/networks request"));
     wm.WiFi_scanNetworks(wm.server->hasArg(F("refresh")), false); // wifiscan, force if arg refresh
+    message_networks.clear();
     wm.getScanItemOut(message_networks);
     wm.server->send(200, F("text/plain"), message_networks);
+}
+
+void handleWiFiStatus()
+{
+    LOG_INFO(F("/handleWiFiStatus request"));
+    message_status.clear();
+    message_status = F("{\"wifistatus\": \"");
+    wm.reportStatus(message_status);
+    message_status += F("\"}");
+    wm.server->send(200, F("text/plain"), message_status);
 }
 
 void bindServerCallback()
 {
     wm.server->on(F("/states"), handleStates);
     wm.server->on(F("/networks"), handleNetworks);
+    wm.server->on(F("/wifistatus"), handleWiFiStatus);
 }
 
 void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata)
@@ -268,15 +302,6 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter label0_settings("<h3 class='hot'>Красный счётчик</h3>");
     wm.addParameter(&label0_settings);
 
-    /*ShortParameter dropdown_hot_counter_name("nameHot", counter_name_title.c_str(), sett.counter0_name);
-    wm.addParameter(&dropdown_hot_counter_name);
-
-    ShortParameter dropdown_hot_counter_type("typeHot", counter_type_title.c_str(), counter0_type);
-    wm.addParameter(&dropdown_hot_counter_type);
-
-    ShortParameter dropdown_hot_factor("factorHot", "Множитель л/имп", sett.factor0);
-    wm.addParameter(&dropdown_hot_factor); */
-
     DropdownParameter dropdown_hot_counter_name("nameHot", counter_name_title.c_str(), sett.counter0_name);
     DropdownParameter dropdown_hot_counter_type("typeHot", counter_type_title.c_str(), counter0_type);
 
@@ -315,8 +340,14 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter cold_water("<h3 class='cold'>Синий счётчик</h3>");
     wm.addParameter(&cold_water);
 
-    WiFiManagerParameter label_cold_info("<p>Во время первой настройки спустите унитаз 1&ndash;3 раза (или вылейте не&nbsp;меньше 4&nbsp;л.), пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;. Если статус &laquo;не&nbsp;подключен&raquo;, проверьте провод в&nbsp;разъёме. Ватериус так определяет тип счётчика. Счётчики не влияют на связь сервером.</p>");
-    wm.addParameter(&label_cold_info);
+    WiFiManagerParameter label_cold_info_first("<p>Вылейте не&nbsp;меньше 4&nbsp;л., пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;. Статус &laquo;не&nbsp;подключен&raquo; означает, что не&nbsp;было импульса. Подключение не&nbsp;влияет на&nbsp;связь сервером.</p>");
+    WiFiManagerParameter label_cold_info("<p>Передача данных работает. Если вы&nbsp;заменили счётчик, то&nbsp;вылейте воду, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;.</p>");
+    
+    if (sett.factor1 == AUTO_IMPULSE_FACTOR) {
+        wm.addParameter(&label_cold_info_first);
+    } else {
+        wm.addParameter(&label_cold_info);
+    }
 
     WiFiManagerParameter label_cold_state("<b><p class='bad' id='state1bad'></p><p class='good' id='state1good'></p></b>");
     wm.addParameter(&label_cold_state);
@@ -332,8 +363,14 @@ void setup_ap(Settings &sett, const SlaveData &data, const CalculatedData &cdata
     WiFiManagerParameter hot_water("<h3 class='hot'>Красный счётчик</h3>");
     wm.addParameter(&hot_water);
 
-    WiFiManagerParameter label_hot_info("<p>Откройте кран горячей воды, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
-    wm.addParameter(&label_hot_info);
+    WiFiManagerParameter label_hot_info_first("<p>Откройте горячую воду, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;</p>");
+    WiFiManagerParameter label_hot_info("<p>Передача данных работает. Если вы&nbsp;заменили счётчик, то&nbsp;вылейте воду, пока надпись не&nbsp;сменится на&nbsp;&laquo;подключен&raquo;.</p>");
+    
+    if (sett.factor1 == AS_COLD_CHANNEL) {
+        wm.addParameter(&label_hot_info_first);
+    } else {
+        wm.addParameter(&label_hot_info);
+    }
 
     WiFiManagerParameter label_hot_state("<b><p class='bad' id='state0bad'></p><p class='good' id='state0good'></p></b>");
     wm.addParameter(&label_hot_state);

@@ -287,8 +287,6 @@ void counting_1ms(uint8_t &delay_loop_count)
 void loop()
 {
 	power_all_disable(); 		// Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
-
-    pinMode(1, OUTPUT);
 	GIMSK = _BV(PCIE);			// Включаем прерывания по фронту счетчиков и кнопки
 	PCMSK = _BV(PCINT2);
 	counter0.type = (CounterType)info.config.types.type0;

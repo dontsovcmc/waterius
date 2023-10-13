@@ -67,7 +67,10 @@ void wifi_begin(Settings &sett)
     WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, fallback_dns_server);
   }
 
-  WiFi.hostname(get_device_name());
+  if (!WiFi.hostname(get_device_name()))
+  {
+    LOG_ERROR(F("WIFI: set hostname failed"));
+  }
 
   delay(100); // подождем чтобы проинициализировалась сеть
 

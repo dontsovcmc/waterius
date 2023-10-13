@@ -20,7 +20,7 @@
  * @param attrs_index индекс первого атрибута сенсора в массиве
  * @param attrs_count кол-во атрибутов (строк в массиве)
  * @param channel индекс канала при наличии
- * @param channel_name имя канала при наличии
+ * @param channel_name enum типа канала из интерфейса настройки
  */
 void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &discovery_topic,
                               const SlaveData &data, String &device_id, String &device_mac,
@@ -29,7 +29,8 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
                               bool extended = false,
                               int attrs_index = NONE,
                               int attrs_count = NONE,
-                              int channel = NONE)
+                              int channel = NONE,
+                              int channel_name = NONE)
 {
 
     String device_name = "";
@@ -50,7 +51,7 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
 
     String uniqueId_prefix = get_device_name();
 
-    update_channel_names(channel, entity_id, entity_name);
+    update_channel_names(channel, channel_name, entity_id, entity_name);
 
     if (extended)
     {
@@ -66,7 +67,7 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
     if ((attrs_index != NONE) && (attrs_count != NONE))
     {
         json_attributes_topic = topic;
-        json_attributes_template = get_attributes_template(entities, attrs_index, attrs_count, channel);
+        json_attributes_template = get_attributes_template(entities, attrs_index, attrs_count, channel, channel_name);
     }
 
     String payload = build_entity_discovery(topic.c_str(),
@@ -113,15 +114,46 @@ void publish_discovery_general_entities(PubSubClient &mqtt_client, String &topic
  * @param topic топик для публикации
  * @param data показания
  */
-void publish_discovery_channel_entities(PubSubClient &mqtt_client, String &topic, String &discovery_topic, const SlaveData &data, String &device_id, String &device_mac)
+void publish_discovery_channel_entities(PubSubClient &mqtt_client, String &topic, String &discovery_topic, 
+                                        const SlaveData &data, const Settings &sett,
+                                        String &device_id, String &device_mac)
 {
     // Сенсоры по каналам, холодная и горячая вода
-    String channel_name = "";
-    for (int channel = 0; channel < CHANNEL_NUM; channel++)
+
+    switch (sett.counter0_name) 
     {
-        // один сенсор из массива CHANNEL_ENTITIES с индексом 0 ("total") будет основным
-        // остальные его атрибутами с 1 по индекс 5
-        publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_ENTITIES, 0, false, 1, 5, channel);
+        case CounterName::WATER_COLD:
+        case CounterName::WATER_HOT:
+        case CounterName::PORTABLE_WATER:
+        case CounterName::OTHER:
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 0, false, 1, 5, 0, sett.counter0_name);
+            break;
+        case CounterName::GAS:
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_GAS_ENTITIES, 0, false, 1, 5, 0, sett.counter0_name);
+            break;
+        case CounterName::ELECTRO:
+        case CounterName::HEAT:
+
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_ENERGY_ENTITIES, 0, false, 1, 5, 0, sett.counter0_name);
+            break;
+    }
+
+    switch (sett.counter1_name) 
+    {
+        case CounterName::WATER_COLD:
+        case CounterName::WATER_HOT:
+        case CounterName::PORTABLE_WATER:
+        case CounterName::OTHER:
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 0, false, 1, 5, 1, sett.counter1_name);
+            break;
+        case CounterName::GAS:
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_GAS_ENTITIES, 0, false, 1, 5, 1, sett.counter1_name);
+            break;
+        case CounterName::ELECTRO:
+        case CounterName::HEAT:
+
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_ENERGY_ENTITIES, 0, false, 1, 5, 1, sett.counter1_name);
+            break;
     }
 }
 
@@ -132,7 +164,7 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client, String &topic
  * @param topic Корневой топик
  * @param data Данные измерений
  */
-void publish_discovery(PubSubClient &mqtt_client, String &topic, String &discovery_topic, const SlaveData &data)
+void publish_discovery(PubSubClient &mqtt_client, String &topic, String &discovery_topic, const SlaveData &data, const Settings &sett)
 {
     LOG_INFO(F("MQTT: Publishing discovery topic"));
     unsigned long start_time = millis();
@@ -144,7 +176,7 @@ void publish_discovery(PubSubClient &mqtt_client, String &topic, String &discove
     publish_discovery_general_entities(mqtt_client, topic, discovery_topic, data, device_id, device_mac);
 
     LOG_INFO(F("MQTT: Channel entities"));
-    publish_discovery_channel_entities(mqtt_client, topic, discovery_topic, data, device_id, device_mac);
+    publish_discovery_channel_entities(mqtt_client, topic, discovery_topic, data, sett, device_id, device_mac);
 
     LOG_INFO(F("MQTT: Discovery topic published: ") << millis() - start_time << F(" milliseconds elapsed"));
 }

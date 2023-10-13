@@ -34,8 +34,8 @@ extern String build_entity_discovery(const char *mqtt_topic,
                                    const char *json_attributes_topic = "",
                                    const char *json_attributes_template = "");
 
-extern void update_channel_names(int channel, String &entity_id, String &entity_name);
+extern void update_channel_names(int channel, int channel_name, String &entity_id, String &entity_name);
 
-extern String get_attributes_template(const char *const attrs[][MQTT_PARAM_COUNT], int index, int count, int channel);
+extern String get_attributes_template(const char *const attrs[][MQTT_PARAM_COUNT], int index, int count, int channel, int channel_name);
 
 #endif
