@@ -1,0 +1,260 @@
+*{line-height:1;color:#000;font-weight:400;font-family:Roboto,sans-serif;margin:0;padding:0;border:0;vertical-align:baseline;box-sizing:border-box;outline:0;user-select:none;}
+html{height:100%;}
+body{width:100%;min-height:100%;font-size:100%;}
+button,a{cursor:pointer;transition:.5s;text-decoration:none;}
+button,input{border-radius:8px;}
+.wrap{
+    height:100%;
+    width:100%;
+    max-width:360px;
+    min-width:280px;
+    position:fixed;
+    padding:16px;
+    top:0;
+    left:50%;
+    transform: translateX(-50%);
+}
+.container{width:100%;height:100%;position:relative;padding-top:32px;}
+.container.f1{padding-bottom:68px;}
+.container.f2{padding-bottom:136px;}
+.container.f3{padding-bottom:204px;}
+main{overflow:auto;height:100%;width:100%;}
+header{
+    width:100%;
+    height:16px;
+    position: absolute;
+    top:0;
+}
+header *{color:#232323;}
+.logo{position:absolute;left:50%;top:0;margin-left:-8px;}
+.lang{color:#1655F5;font-weight:700;}
+.lang:hover{color:#1655F5;}
+.bf{float:left;}
+h2{
+    font-size:32px;
+    font-weight:700;
+    margin-bottom:16px;
+    font-family: Helvetica,sans-serif;
+}
+h3{
+    font-weight:700;
+    font-size:16px;
+}
+p.text{
+    line-height: 20px;
+    font-family: Helvetica,sans-serif;
+}
+p.text.strong{font-weight:700;line-height: 21px;}
+.note{
+    color:#C3BDBD;
+    line-height: 20px;
+    font-weight: 400;
+    font-family: Helvetica,sans-serif;
+}
+footer{
+    bottom:0;
+    position:absolute;
+    width:100%;
+}
+.btn{
+    width:100%;
+    height:48px;
+    line-height: 48px;
+    background: #1655F5;
+    color:#FBF3F3;
+    font-size:16px;
+    font-weight:400;
+    display:block;
+    text-align: center;
+    border-radius:8px;
+    position: relative;
+}
+button.btn:hover{
+    background:#06277b;
+}
+.btn-red{
+    background: #F53410;
+}
+.btn-red:hover{
+    background: #961f09;
+}
+/*.btn.circle:after{background: #fff;height:16px;width:16px;border-radius:50%;display:block;content:'';position:absolute;left:50%;top:50%;margin:-8px 0 0 -8px;}*/
+.btn2{
+    line-height: 44px;
+    border:2px solid #1655F5;
+    background: #fff;
+    color:#1655F5;
+}
+.btn2:hover{
+    border:2px solid #06277b;
+    background: #06277b;
+    color:#FBF3F3;
+}
+.btn-serv{
+    border-radius:8px;
+    display:inline-block;
+    font-size:16px;
+    font-weight:400;
+    color:#232323;
+    padding:8px 16px;
+    border:1px solid #1655F5;
+    background: #fff;
+}
+.btn-serv:hover{
+    border:1px solid #06277b;
+    background: #06277b;
+    color:#FBF3F3;
+}
+.wifi-list{padding-top:20px;}
+.link-row{
+    display:block;
+    position: relative;
+    height: 40px;
+    line-height: 40px;
+    padding:0 30px;
+    overflow:hidden;
+    text-overflow: ellipsis;
+    font-weight:400;
+}
+/*.link-row.hd{display:none;}*/
+.link-row .icon{
+    overflow: hidden;
+    position: absolute;
+    height:24px;
+    width: 24px;
+    left:0;
+    top:8px;
+}
+.link-row .icon.l2 img{margin-top:-24px;}
+.link-row .icon.l3 img{margin-top:-48px;}
+.link-row .icon.l4 img{margin-top:-72px;}
+.link-row .icon.l5 img{margin-top:-96px;}
+.link-row .arrow{
+    left:auto;
+    right:0;
+}
+
+.f-row{
+    margin-top: 20px;
+    position: relative;
+}
+.f-row .icon{height:24px;position: absolute;right:10px;top:38px;}
+.f-row .copy{height:18px;top:41px;}
+label{
+    display:block;
+    font-weight:700;
+    margin-bottom:10px;
+}
+input{
+    font-family:Roboto,sans-serif;
+    color:#000;
+    font-size:16px;
+    font-weight:400;
+    display:block;
+    width:100%;
+    height:48px;
+    line-height: 46px;
+    border:1px solid #E6E9F1;
+    padding:0 10px;
+    background: #F3F6FE;
+    transition:.5s;
+}
+input.has-icon{padding-right:45px;}
+input:focus{border:1px solid #1655F5;}
+input::placeholder {color: #C3BDBD;}
+input:disabled{color: #C3BDBD;}
+.f-row p{margin-top:10px;}
+.form-error{border-radius: 8px;border:1px solid #F3F6FE;padding:16px;margin-top: 16px;background: linear-gradient(0deg, #F0EBEB, #F0EBEB),linear-gradient(0deg, #F3F6FE, #F3F6FE);}
+.error{color:#F53410;}
+
+
+.toggle{margin-top:16px;}
+.toggle input{display:none;}
+.toggle label{
+    position: relative;
+    padding-left:48px;
+    margin:0;
+    height:24px;
+    line-height: 26px;
+}
+.toggle label:before,.toggle label:after{display:block;position: absolute;content:'';}
+.toggle label:before{width:40px;height:24px;background: #C3BDBD;left:0;border-radius: 12px;}
+.toggle label:after{width:20px;height:20px;background: #fff;left:2px;top:2px;border-radius: 50%;transition:.5s;}
+.toggle input:checked + label:before{background: #1655F5;}
+.toggle input:checked + label:after{left:18px;}
+
+.counter{max-width:100%;margin:0 auto;}
+
+.setup-complete{position: absolute;top:50%;transform: translateY(-50%);text-align: center;}
+.setup-complete p.text{margin-top:16px;}
+
+.fr{float:right;}
+.clr{clear: both;}
+.hd{display:none;}
+.mt10{margin-top:10px;}
+.mt16{margin-top:16px;}
+.mt20{margin-top:20px;}
+.mt24{margin-top:24px;}
+
+
+/*preloader*/
+.preloader{position:fixed;z-index:-1;opacity:0;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.2);transition:.2s;}
+.preloader.show{z-index:10;opacity:1;}
+.lds-ellipsis {
+    margin:-40px 0 0 -40px;
+    display: inline-block;
+    position: absolute;
+    left:50%;
+    top:50%;
+    width: 80px;
+    height: 80px;
+  }
+  .lds-ellipsis div {
+    position: absolute;
+    top: 33px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #fff;
+    animation-timing-function: cubic-bezier(0, 1, 1, 0);
+  }
+  .lds-ellipsis div:nth-child(1) {
+    left: 8px;
+    animation: lds-ellipsis1 0.6s infinite;
+  }
+  .lds-ellipsis div:nth-child(2) {
+    left: 8px;
+    animation: lds-ellipsis2 0.6s infinite;
+  }
+  .lds-ellipsis div:nth-child(3) {
+    left: 32px;
+    animation: lds-ellipsis2 0.6s infinite;
+  }
+  .lds-ellipsis div:nth-child(4) {
+    left: 56px;
+    animation: lds-ellipsis3 0.6s infinite;
+  }
+  @keyframes lds-ellipsis1 {
+    0% {
+      transform: scale(0);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  @keyframes lds-ellipsis3 {
+    0% {
+      transform: scale(1);
+    }
+    100% {
+      transform: scale(0);
+    }
+  }
+  @keyframes lds-ellipsis2 {
+    0% {
+      transform: translate(0, 0);
+    }
+    100% {
+      transform: translate(24px, 0);
+    }
+  }
