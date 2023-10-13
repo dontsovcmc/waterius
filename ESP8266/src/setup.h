@@ -3,10 +3,14 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.11.9"
+#define FIRMWARE_VERSION "0.11.10"
 
 /*
 Версии прошивки для ESP
+
+0.11.10 - 2023.10.13 - abrant
+                      attiny version 31
+                      1. Изменение типа входа не требует перезагрузки питания (attiny)
 
 0.11.9 - 2023.09.15 - dontsovcmc
                       1. Статус подключения к Wi-Fi
