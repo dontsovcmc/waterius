@@ -288,6 +288,8 @@ void loop()
     pinMode(1, OUTPUT);
 	GIMSK = _BV(PCIE);			// Включаем прерывания по фронту счетчиков и кнопки
 	PCMSK = _BV(PCINT2);
+	counter0.type = (CounterType)info.config.types.type0;
+	counter1.type = (CounterType)info.config.types.type1;
 	if (counter0.type == CounterType::ELECTRONIC)
 	{
 		PCMSK |= _BV(counter0._pin);
