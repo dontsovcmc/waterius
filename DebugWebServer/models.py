@@ -20,7 +20,7 @@ class ConnectModel:
 class SettingsModel:
     """
     Класс настроек в ESP
-    Настройки ssid, password
+    POST запрос от фронтенда на сохранение их
     """
 
     # Страница /setup_send.html

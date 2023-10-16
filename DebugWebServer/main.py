@@ -1,195 +1,126 @@
 import uvicorn
+from dataclasses import fields
+from log import log
 from copy import deepcopy
-from fastapi import FastAPI, Depends
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.responses import RedirectResponse
 from urllib.parse import urlencode
-from esp import settings, attiny_data
+from esp import settings, settings_vars, attiny_data
+from api import api_app
 from api_debug import debug_app, runtime_data
-from config import ROOT_PATH
 from models import SettingsModel, ConnectModel
 import time
 
+import os
 
-api_app = FastAPI(title="api application")
+
+ROOT_PATH = os.path.normpath(os.path.join(os.path.abspath(__file__),
+                                          os.pardir, os.pardir, 'ESP8266', 'data'))
+if not os.path.exists(ROOT_PATH):
+    raise Exception(f'Не найдена папка с файлами: {ROOT_PATH}')
+
 
 app = FastAPI(title="main application")
 app.mount("/api", api_app)
 app.mount("/debug", debug_app)
-app.mount("/", StaticFiles(directory=ROOT_PATH, html=True), name="static")
+app.mount("/images", StaticFiles(directory=os.path.join(ROOT_PATH, 'images')), name="static")
 
 
-@api_app.get("/networks")
-async def networks():
-    networks = [{"ssid": "HAUWEI-B311_F9E1", "level": 5},
-                {"ssid": "ERROR_PASSWORD", "level": 4},
-                {"ssid": "ERROR_CONNECT", "level": 3},
-                {"ssid": "OK", "level": 2},
-                {"ssid": "C78F56_5G", "level": 1},
-                {"ssid": "wifi-6", "level": 1},
-                {"ssid": "wifi-7", "level": 1},
-                {"ssid": "wifi-8", "level": 1},
-                {"ssid": "wifi-9", "level": 1},
-                {"ssid": "wifi-10", "level": 1},
-                {"ssid": "wifi-11", "level": 1},
-                {"ssid": "wifi-12", "level": 1},
-                {"ssid": "wifi-13", "level": 1},
-                {"ssid": "wifi-14", "level": 1}
-    ]
-    json_networks = jsonable_encoder(networks)
-    return JSONResponse(content=json_networks)
+def template_response(filename: str):
+    try:
+        with open(os.path.join(ROOT_PATH, filename), "r") as file:
+            html_content = file.read()
+
+            for name in settings_vars:
+                if f'%{name}%' in html_content:
+                    v = getattr(settings, name)
+                    if isinstance(v, bool):
+                        pass
+                    else:
+                        html_content = html_content.replace(f'%{name}%', str(v))
+
+        return HTMLResponse(content=html_content)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found")
 
 
-@api_app.post("/connect")
-async def connect(form_data: ConnectModel = Depends()):
-    """
-    Инициирует подключение ESP к Wi-Fi роутеру.
-    Успешное подключение: /setup_cold_welcome.html
-    Ошибка подключения: /wifi_settings.html#параметры_подключения
-    :param form_data:
-    :return:
-    """
-    res = deepcopy(form_data)
-    if form_data.ssid == "ERROR_PASSWORD":
-        time.sleep(1.0)
-        res.update({
-            "error":  "Ошибка авторизации. Проверьте пароль",
-            "redirect": "wifi_settings.html"
-        })
-        json_status = jsonable_encoder(res)
-        return JSONResponse(content=json_status)
-
-    elif form_data.ssid == "ERROR_CONNECT":
-        time.sleep(1.0)
-        res.update({
-            "error":  "Ошибка подключения",
-            "redirect": "wifi_settings.html"
-        })
-        json_status = jsonable_encoder(res)
-        return JSONResponse(content=json_status)
-
-    else:
-        for k, v in form_data:
-            if settings.get(k):
-                settings.set(k, v)
-
-        time.sleep(1.0)
-        res = {
-            "redirect": "/setup_cold_welcome.html"
-        }
-        json = jsonable_encoder(res)
-        return JSONResponse(content=json)
+@app.get("/style.css")
+async def index():
+    return FileResponse(os.path.join(ROOT_PATH, "style.css"))
 
 
-@api_app.get("/status/{input}")
-async def status(input: int):
-    res = {"state": 0, "factor": 1, "delta": 2, "error": ""}
-    res = {"state": 1, "factor": 1, "delta": 2, "error": ""}  # Подключен
-    #res = {"state": 0, "factor": 1, "delta": 2, "error": "Ошибка связи с МК"}
-    json = jsonable_encoder(res)
-    return JSONResponse(content=json)
-
-"""
-@api_app.get("/status/{input}")
-async def status(input: int):
-    
-    Запрос данных Входа
-    :param input: 0 или 1
-    :return: JSON
-        state: 0 - не подключен, 1 - подключен
-        factor: множитель
-        delta: количество импульсов пришедших с момента настройки
-        error: если есть ошибка связи с МК (имитация: /attiny_link)
-    
-    global attiny_link_error
-    error_str = ""
-    if attiny_link_error:
-        error_str = "Ошибка связи с МК"
-
-    if input == 0:
-        status = {
-            "state": int(runtime_data.impulses0 > attiny_data.impulses0),
-            "factor": settings.factor0,
-            "delta": runtime_data.impulses0 - attiny_data.impulses0,
-            "error": error_str
-        }
-    elif input == 1:
-        status = {
-            "state": int(runtime_data.impulses1 > attiny_data.impulses1),
-            "factor": settings.factor1,
-            "delta": runtime_data.impulses1 - attiny_data.impulses1,
-            "error": error_str
-        }
-    else:
-        status = {"error": "Некорректные данные {input}"}
-
-    json_status = jsonable_encoder(status)
-    return JSONResponse(content=json_status)
-"""
+@app.get("/common.js")
+async def index():
+    return FileResponse(os.path.join(ROOT_PATH, "common.js"))
 
 
-@api_app.post("/setup")
-async def setup(form_data: SettingsModel = Depends()):
-    res = {
-        "errors": {
-            "form": "Ошибка формы сообщение",
-            "serial1": "Введите серийный номер",
-            "channel1_start": "Введите показания счётчика"
-        }
-    }
-    json = jsonable_encoder(res)
-    return JSONResponse(content=json)
+@app.get("/favicon.ico")
+async def index():
+    return FileResponse(os.path.join(ROOT_PATH, "favicon.ico"))
 
 
-@api_app.post("/set")
-async def set():
-    res = {
-        #"errors": #{
-        #    "form": "Ошибка формы сообщение",
-        #    "serial1": "Введите серийный номер",
-        #    "channel1_start": "Введите показания счётчика"
-        #},
-        "redirect": "/finish.html"
-    }
-    json = jsonable_encoder(res)
-    return JSONResponse(content=json)
-
-"""
-@api_app.post("/set")
-async def set(form_data: SettingsModel = Depends()):
-
-    Сохранение параметров с вебстраницы в память ESP
-    :param form_data:
-    :return:
-    
-    for k, v in form_data:
-        if settings.get(k):
-            settings.set(k, v)
-    return ''
-"""
+@app.get("/finish.html", response_class=HTMLResponse)
+async def index():
+    return template_response("finish.html")
 
 
-@api_app.get("/turnoff")
-async def turnoff():
-    """
-    Выключить ESP (Завершить настройку)
-    1. ESP отключает свою точку доступа
-    2. Телефон ищет родной Вай-фай или сеть оператора
-    3. Т.к. страница открыла waterius.ru/account, то браузер ее загрузит, как появится сеть
-    :return:
-    """
-    return ''
+@app.get("/")
+async def index():
+    return template_response("index.html")
 
 
-@api_app.post("/reset")
-async def reset():
-    """
-    Возврат к заводским настройкам ESP
-    :return:
-    """
-    return ''
+@app.get("/logs.html", response_class=HTMLResponse)
+async def index():
+    return template_response("logs.html")
+
+
+@app.get("/reset.html", response_class=HTMLResponse)
+async def index():
+    return template_response("reset.html")
+
+
+@app.get("/setup_cold_welcome.html", response_class=HTMLResponse)
+async def index():
+    return template_response("setup_cold_welcome.html")
+
+
+@app.get("/setup_cold.html", response_class=HTMLResponse)
+async def index():
+    return template_response("setup_cold.html")
+
+
+@app.get("/setup_hot_welcome.html", response_class=HTMLResponse)
+async def index():
+    return template_response("setup_hot_welcome.html")
+
+
+@app.get("/setup_hot.html", response_class=HTMLResponse)
+async def index():
+    return template_response("setup_hot.html")
+
+
+@app.get("/start.html", response_class=HTMLResponse)
+async def index():
+    return template_response("start.html")
+
+
+@app.get("/wifi_list.html", response_class=HTMLResponse)
+async def index():
+    return template_response("wifi_list.html")
+
+
+@app.get("/wifi_password.html", response_class=HTMLResponse)
+async def index():
+    return template_response("wifi_password.html")
+
+
+@app.get("/wifi_settings.html", response_class=HTMLResponse)
+async def index():
+    return template_response("wifi_settings.html")
 
 
 if __name__ == "__main__":
