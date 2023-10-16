@@ -1,4 +1,3 @@
-
 import uvicorn
 from copy import deepcopy
 from fastapi import FastAPI, Depends
@@ -24,72 +23,83 @@ app.mount("/", StaticFiles(directory=ROOT_PATH, html=True), name="static")
 
 @api_app.get("/networks")
 async def networks():
-    networks = [{"name": "HAUWEI-B311_F9E1", "level": 5},
-                {"name": "ERROR_PASSWORD", "level": 4},
-                {"name": "ERROR_CONNECT", "level": 3},
-                {"name": "OK", "level": 2},
-                {"name": "C78F56_5G", "level": 1},
-                {"name": "wifi-6", "level": 1},
-                {"name": "wifi-7", "level": 1},
-                {"name": "wifi-8", "level": 1},
-                {"name": "wifi-9", "level": 1},
-                {"name": "wifi-10", "level": 1},
-                {"name": "wifi-11", "level": 1},
-                {"name": "wifi-12", "level": 1},
-                {"name": "wifi-13", "level": 1},
-                {"name": "wifi-14", "level": 1}
+    networks = [{"ssid": "HAUWEI-B311_F9E1", "level": 5},
+                {"ssid": "ERROR_PASSWORD", "level": 4},
+                {"ssid": "ERROR_CONNECT", "level": 3},
+                {"ssid": "OK", "level": 2},
+                {"ssid": "C78F56_5G", "level": 1},
+                {"ssid": "wifi-6", "level": 1},
+                {"ssid": "wifi-7", "level": 1},
+                {"ssid": "wifi-8", "level": 1},
+                {"ssid": "wifi-9", "level": 1},
+                {"ssid": "wifi-10", "level": 1},
+                {"ssid": "wifi-11", "level": 1},
+                {"ssid": "wifi-12", "level": 1},
+                {"ssid": "wifi-13", "level": 1},
+                {"ssid": "wifi-14", "level": 1}
     ]
     json_networks = jsonable_encoder(networks)
     return JSONResponse(content=json_networks)
 
 
-@api_app.post("/set")
-async def set(form_data: SettingsModel = Depends()):
-    """
-    Сохранение параметров с вебстраницы в память ESP
-    :param form_data:
-    :return:
-    """
-    for k, v in form_data:
-        if settings.get(k):
-            settings.set(k, v)
-    return ''
-
-
 @api_app.post("/connect")
-async def connect(form_data: ConnectModel = Depends()):
-    """
+async def connect():
+    data = {
+        "ssid": "HAUWEI-B311_F9E1",
+        "password": "123123",
+        "error": "Ошибка авторизации. Проверьте пароль", # lang?
+        "redirect": "/wifi_settings.html"
+    }
+    data = {"redirect": "/setup_cold_welcome.html"}
+    json = jsonable_encoder(data)
+    return JSONResponse(content=json)
+
+"""
+#@api_app.post("/connect")
+#async def connect(form_data: ConnectModel = Depends()):
+    
     Инициирует подключение ESP к Wi-Fi роутеру.
-    Успешное подключение: /meter-cold.html
+    Успешное подключение: /setup_cold_welcome.html
     Ошибка подключения: /wifi-settings.html#параметры_подключения
     :param form_data:
     :return:
-    """
-    data = deepcopy(form_data.__dict__)
 
     if form_data.ssid == "ERROR_PASSWORD":
         time.sleep(1.0)
-        data["connect_error"] = "Ошибка авторизации. Проверьте пароль"
-        return RedirectResponse(url=f'/wifi-settings.html#{urlencode(form_data.__dict__)}')
+        data["error"] = "Ошибка авторизации. Проверьте пароль"# lang?
+        data["redirect"] = "/wifi_settings.html"
+        json = jsonable_encoder(data)
+        return JSONResponse(content=json)
 
     elif form_data.ssid == "ERROR_CONNECT":
         time.sleep(1.0)
-        data["connect_error"] = "Ошибка подключения"
-        return RedirectResponse(url=f'/wifi-settings.html#{urlencode(form_data.__dict__)}')
+        data["error"] = "Ошибка подключения"# lang?
+        data["redirect"] = "/wifi_settings.html"
+        json = jsonable_encoder(data)
+        return JSONResponse(content=json)
 
     else:
         settings.ssid = form_data.ssid
         settings.password = form_data.password
 
         time.sleep(1.0)
-        return RedirectResponse(url='/meter-cold.html')
-
-
+        res = {"redirect": "/setup_cold_welcome.html"}
+        json = jsonable_encoder(res)
+        return JSONResponse(content=json)
+    """
 
 
 @api_app.get("/status/{input}")
 async def status(input: int):
-    """
+    #res = {"state": 0, "factor": 1, "delta": 2, "error": ""}
+    res = {"state": 1, "factor": 1, "delta": 2, "error": ""}
+    json = jsonable_encoder(res)
+    return JSONResponse(content=json)
+
+"""
+@api_app.get("/status/{input}")
+async def status(input: int):
+    
     Запрос данных Входа
     :param input: 0 или 1
     :return: JSON
@@ -97,7 +107,7 @@ async def status(input: int):
         factor: множитель
         delta: количество импульсов пришедших с момента настройки
         error: если есть ошибка связи с МК (имитация: /attiny_link)
-    """
+    
     global attiny_link_error
     error_str = ""
     if attiny_link_error:
@@ -122,13 +132,56 @@ async def status(input: int):
 
     json_status = jsonable_encoder(status)
     return JSONResponse(content=json_status)
+"""
+
+@api_app.post("/setup")
+async def setup():
+    res = {
+        "errors": {
+            "form": "Ошибка формы сообщение",
+            "serial1": "Введите серийный номер",
+            "channel1_start": "Введите показания счётчика"
+        }
+    }
+    json = jsonable_encoder(res)
+    return JSONResponse(content=json)
 
 
-@api_app.post("/turnoff")
+@api_app.post("/set")
+async def set():
+    res = {
+        #"errors": #{
+        #    "form": "Ошибка формы сообщение",
+        #    "serial1": "Введите серийный номер",
+        #    "channel1_start": "Введите показания счётчика"
+        #},
+        "redirect": "/finish.html"
+    }
+    json = jsonable_encoder(res)
+    return JSONResponse(content=json)
+"""
+@api_app.post("/set")
+async def set(form_data: SettingsModel = Depends()):
+
+    Сохранение параметров с вебстраницы в память ESP
+    :param form_data:
+    :return:
+    
+    for k, v in form_data:
+        if settings.get(k):
+            settings.set(k, v)
+    return ''
+"""
+
+@api_app.get("/turnoff")
 async def turnoff():
     """
     Выключить ESP (Завершить настройку)
     :return:
+    """
+    """
+    сделана переадресайия на клиенте на //waterius.ru/account
+    тк телефон по вайфаю к ватериусу подключен, как он к сайту в сеть выйдет???
     """
     return ''
 

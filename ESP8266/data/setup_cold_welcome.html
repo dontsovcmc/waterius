@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Детектирование счётчика холодной воды</title>
+        <link rel="stylesheet" href="/style.css">
+    </head>
+    <body>
+        <div class="wrap">
+            <div class="container f2">
+                <header>
+                    <a id="back-btn">
+                        <div class="icon bf">
+                            <img src="/images/icons.png">
+                        </div>
+                        Назад</a>
+                    <div class="icon logo">
+                        <img src="/images/icons.png">
+                    </div>
+                    <div class="fr">шаг 3/6</div>
+                </header>
+                <main>
+                    <h2>Холодная вода</h2>
+                    <img src="images/meter-cold.png" class="counter">
+                    <p class="text strong mt20">Сейчас мы настроим счётчик холодной воды, для этого:</p>
+                    <p class="text mt10">Спускайте воду в унитазе пока устройство не перенесёт вас на следующую страницу</p>
+                    <input type="hidden" id="meter-status" value="1">
+                </main>
+                <footer class="btns">
+                    <div class="btn">
+                        <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
+                    </div>
+                    <a class="btn btn2 mt20" id="skip" href="/setup_cold.html">Пропустить счётчик</a>
+                </footer>
+            </div>
+        </div>
+        <script src="/common.js"></script>
+    </body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Подключение к WiFi</title>
+        <link rel="stylesheet" href="/style.css">
+    </head>
+    <body>
+        <form onsubmit="formSubmit(event, this, 'connect');">
+            <div class="wrap">
+                <div class="container f1">
+                    <header>
+                        <a id="back-btn">
+                            <div class="icon bf">
+                                <img src="/images/icons.png">
+                            </div>
+                            Назад</a>
+                        <div class="icon logo">
+                            <img src="/images/icons.png">
+                        </div>
+                        <div class="fr">шаг 2/6</div>
+                    </header>
+                    <main>
+                        <h2>Подключение к WiFi</h2>
+                        <p class="form-error"></p>
+                        
+                        <div class="f-row">
+                            <label for="ssid">Название сети</label>
+                            <input id="ssid" name="ssid" placeholder="Название" required>
+                            <p class="error hd" id="ssid-error">Введите название сети</p>
+                        </div>
+                        <div class="f-row">
+                            <label for="password">Пароль</label>
+                            <input id="password" type="password" name="password" class="has-icon" placeholder="Пароль" required>
+                            <div class="icon" onclick="showPW('password')">
+                                <img src="/images/icons.png">
+                            </div>
+                            <p class="error hd" id="password-error">Введите пароль</p>
+                        </div>
+                        <div class="toggle">
+                            <input type="checkbox" value="1" name="dhcp_on" id="dhcp_on" value="1">
+                            <label for="dhcp_on">DHCP</label>
+                        </div>
+                        <div class="f-row">
+                            <label for="gateway_ip">Адрес шлюза</label>
+                            <input id="gateway_ip" name="gateway_ip" placeholder="000.000.0.0" value="192.168.0.1">
+                        </div>
+                        <div class="f-row">
+                            <label for="static_ip">Статический адрес</label>
+                            <input id="static_ip" name="static_ip" placeholder="192.168.0.140">
+                        </div>
+                        <div class="f-row">
+                            <label for="mask">Маска подсети</label>
+                            <input id="mask" name="mask" placeholder="255.255.255.0">
+                        </div>
+                        <div class="f-row">
+                            <label for="mac_address">MAC адрес Ватериуса</label>
+                            <input id="mac_address" name="mac_address" value="00-1B-63-84-45-Е6" disabled class="disabled has-icon">
+                            <div class="icon copy" onclick="copyInput('mac_address')">
+                                <img src="/images/icons.png">
+                            </div>
+                        </div>
+                    </main>
+                    <footer class="btns">
+                        <button class="btn" type="submit">Сохранить</button>
+                    </footer>
+                </div>
+            </div>
+        </form>
+        <div class="preloader"><div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div></div>
+        <script src="/common.js"></script>
+    </body>
+</html>

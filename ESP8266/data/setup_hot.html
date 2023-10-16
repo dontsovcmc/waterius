@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Ввод данных счётчика</title>
+        <link rel="stylesheet" href="/style.css">
+    </head>
+    <body>
+        <form onsubmit="formSubmit(event, this, 'setup');">
+            <div class="wrap">
+                <div class="container f1">
+                    <header>
+                        <a id="back-btn">
+                            <div class="icon bf">
+                                <img src="/images/icons.png">
+                            </div>
+                            Назад</a>
+                        <div class="icon logo">
+                            <img src="/images/icons.png">
+                        </div>
+                        <div class="fr">шаг 4/6</div>
+                    </header>
+                    <main>
+                        <h2>Горячая вода</h2>
+                        <p class="text">Счётчик определился Ватериусом, теперь введите серийный номер и показания счётчика</p>
+                        <p class="form-error hd"></p>
+                        <div class="f-row">
+                            <label for="serial0">Серийный номер</label>
+                            <input id="serial0" name="serial0" placeholder="S748HT838DN" required>
+                            <p class="error hd" id="serial1-error">Введите серийный номер</p>
+                        </div>
+                        <div class="f-row">
+                            <label for="channel0_start">Показания счётчика</label>
+                            <input id="channel0_start" name="channel0_start" type="number" placeholder="356.89" required>
+                            <p class="error hd" id="channel1_start-error">Введите показания счётчика</p>
+                        </div>
+                        <p class="note mt16">Вес счётчика – <span id="meter-factor">1</span>л/имп</p>
+                    </main>
+                    <footer class="btns">
+                        <button class="btn" type="submit">Сохранить</button>
+                    </footer>
+                </div>
+            </div>
+        </form>
+        <div class="preloader"><div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div></div>
+        <script src="/common.js"></script>
+    </body>
+</html>

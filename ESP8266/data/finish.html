@@ -4,18 +4,14 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
         <title>Ватериус настроен</title>
-        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="/style.css">
     </head>
     <body>
         <div class="wrap">
             <div class="container f1">
                 <header>
-                    <div class="logo">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M13.6469 0H2.3531C1.05352 0 0 1.05352 0 2.3531V13.6469C0 14.9465 1.05352 16 2.3531 16H13.6469C14.9465 16 16 14.9465 16 13.6469V2.3531C16 1.05352 14.9465 0 13.6469 0Z" fill="black"/>
-                            <path d="M4.4801 10.8791C6.07068 10.8791 7.3601 9.58972 7.3601 7.99914C7.3601 6.40856 6.07068 5.11914 4.4801 5.11914C2.88952 5.11914 1.6001 6.40856 1.6001 7.99914C1.6001 9.58972 2.88952 10.8791 4.4801 10.8791Z" fill="#1655F5"/>
-                            <path d="M11.5201 10.8791C13.1107 10.8791 14.4001 9.58972 14.4001 7.99914C14.4001 6.40856 13.1107 5.11914 11.5201 5.11914C9.92956 5.11914 8.64014 6.40856 8.64014 7.99914C8.64014 9.58972 9.92956 10.8791 11.5201 10.8791Z" fill="#F53410"/>
-                        </svg>
+                    <div class="icon logo">
+                        <img src="/images/icons.png">
                     </div>
                 </header>
                 <main>
@@ -26,9 +22,10 @@
                     </div>
                 </main>
                 <footer class="btns">
-                    <button class="btn" type="button">Завершить</button>
+                    <button class="btn" type="button" onclick="finish(this);">Завершить</button>
                 </footer>
             </div>
         </div>
+        <script src="/common.js"></script>
     </body>
 </html>

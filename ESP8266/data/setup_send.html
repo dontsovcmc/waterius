@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Отправка показаний</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <form onsubmit="formSubmit(event, this, 'set', true);">
+            <div class="wrap">
+                <div class="container f1">
+                    <header>
+                        <a id="back-btn">
+                            <div class="icon bf">
+                                <img src="/images/icons.png">
+                            </div>
+                            Назад</a>
+                        <div class="icon logo">
+                            <img src="/images/icons.png">
+                        </div>
+                        <div class="fr">шаг 5/6</div>
+                    </header>
+                    <main>
+                        <h2>Отправка показаний</h2>
+                        <p class="text">Выберите куда Ватериусу отправлять показания счётчиков и введите необходимые данные</p>
+                        <p class="form-error hd">Выберете куда отправлять показания счётчиков, чтобы закончить настройку Ватериуса</p>
+
+                        <div class="toggle mt24">
+                            <input type="checkbox" value="1" name="waterius_on" id="waterius_on" onclick="showForm('.email-form')">
+                            <label for="waterius_on">Waterius.ru</label>
+                        </div>
+                        <div class="f-row mt16 hd email-form">
+                            <label for="waterius_email">Почта аккаунта</label>
+                            <input id="waterius_email" name="waterius_email" placeholder="name@domen.ru" type="email">
+                            <p class="error hd" id="waterius_email-error">Введите E-mail</p>
+                        </div>
+                        <div class="toggle">
+                            <input type="checkbox" value="1" name="http_on" id="http_on" onclick="showForm('.server-form')">
+                            <label for="http_on">Сервер</label>
+                        </div>
+                        <div class="f-row mt16 hd server-form">
+                            <label for="http_url">Адрес</label>
+                            <input id="http_url" name="http_url" placeholder="https://iot.your.site.com">
+                            <p class="error hd" id="http_url-error">Введите адрес сервера</p>
+                        </div>
+                        <div class="toggle">
+                            <input type="checkbox" value="1" name="mqtt_on" id="mqtt_on" onclick="showForm('.mqtt-form')">
+                            <label for="mqtt_on">MQTT</label>
+                        </div>
+                        <div class="hd mqtt-form">
+                            <div class="f-row mt16">
+                                <label for="mqtt_host">Адрес</label>
+                                <input id="mqtt_host" name="mqtt_host" placeholder="http://broker.domen.ru">
+                                <p>Включает отправку</p>
+                                <p class="error hd" id="mqtt_host-error"></p>
+                            </div>
+                            <div class="f-row">
+                                <label for="wakeup_per_min">Период отправки показаний</label>
+                                <input id="wakeup_per_min" name="wakeup_per_min" placeholder="1440" type="number">
+                                <p>В минутах</p>
+                                <p class="error hd" id="wakeup_per_min-error"></p>
+                            </div>
+                            <div class="f-row">
+                                <label for="mqtt_port">Порт</label>
+                                <input id="mqtt_port" name="mqtt_port" placeholder="1883" type="number">
+                                <p class="error hd" id="mqtt_port-error"></p>
+                            </div>
+                            <div class="f-row">
+                                <label for="mqtt_login">Логин</label>
+                                <input id="mqtt_login" name="mqtt_login" placeholder="Логин">
+                                <p class="error hd" id="mqtt_login-error">Введите логин</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="mqtt_password">Пароль</label>
+                                <input id="mqtt_password" type="password" name="mqtt_password" class="has-icon" placeholder="Пароль">
+                                <div class="icon" onclick="showPW('mqtt_password')">
+                                    <img src="/images/icons.png">
+                                </div>
+                                <p class="error hd" id="mqtt_password-error">Введите пароль</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="mqtt_topic">Topic</label>
+                                <input id="mqtt_topic" name="mqtt_topic" value="waterius/2713320">
+                                <p class="error hd" id="mqtt_topic-error">Введите пароль</p>
+                            </div>
+                        </div>
+                    </main>
+                    <footer class="btns">
+                        <button class="btn" type="submit">Сохранить</button>
+                    </footer>
+                </div>
+            </div>
+        </form>
+        <div class="preloader"><div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div></div>
+        <script src="/common.js"></script>
+    </body>
+</html>
