@@ -6,8 +6,8 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.responses import RedirectResponse
 from urllib.parse import urlencode
-from esp import settings, attiny_data, AttinyData
-from api_debug import debug_app
+from esp import settings, attiny_data
+from api_debug import debug_app, runtime_data
 from config import ROOT_PATH
 from models import SettingsModel, ConnectModel
 import time
@@ -43,56 +43,51 @@ async def networks():
 
 
 @api_app.post("/connect")
-async def connect():
-    data = {
-        "ssid": "HAUWEI-B311_F9E1",
-        "password": "123123",
-        "error": "Ошибка авторизации. Проверьте пароль", # lang?
-        "redirect": "/wifi_settings.html"
-    }
-    data = {"redirect": "/setup_cold_welcome.html"}
-    json = jsonable_encoder(data)
-    return JSONResponse(content=json)
-
-"""
-#@api_app.post("/connect")
-#async def connect(form_data: ConnectModel = Depends()):
-    
+async def connect(form_data: ConnectModel = Depends()):
+    """
     Инициирует подключение ESP к Wi-Fi роутеру.
     Успешное подключение: /setup_cold_welcome.html
-    Ошибка подключения: /wifi-settings.html#параметры_подключения
+    Ошибка подключения: /wifi_settings.html#параметры_подключения
     :param form_data:
     :return:
-
+    """
+    res = deepcopy(form_data)
     if form_data.ssid == "ERROR_PASSWORD":
         time.sleep(1.0)
-        data["error"] = "Ошибка авторизации. Проверьте пароль"# lang?
-        data["redirect"] = "/wifi_settings.html"
-        json = jsonable_encoder(data)
-        return JSONResponse(content=json)
+        res.update({
+            "error":  "Ошибка авторизации. Проверьте пароль",
+            "redirect": "wifi_settings.html"
+        })
+        json_status = jsonable_encoder(res)
+        return JSONResponse(content=json_status)
 
     elif form_data.ssid == "ERROR_CONNECT":
         time.sleep(1.0)
-        data["error"] = "Ошибка подключения"# lang?
-        data["redirect"] = "/wifi_settings.html"
-        json = jsonable_encoder(data)
-        return JSONResponse(content=json)
+        res.update({
+            "error":  "Ошибка подключения",
+            "redirect": "wifi_settings.html"
+        })
+        json_status = jsonable_encoder(res)
+        return JSONResponse(content=json_status)
 
     else:
-        settings.ssid = form_data.ssid
-        settings.password = form_data.password
+        for k, v in form_data:
+            if settings.get(k):
+                settings.set(k, v)
 
         time.sleep(1.0)
-        res = {"redirect": "/setup_cold_welcome.html"}
+        res = {
+            "redirect": "/setup_cold_welcome.html"
+        }
         json = jsonable_encoder(res)
         return JSONResponse(content=json)
-    """
 
 
 @api_app.get("/status/{input}")
 async def status(input: int):
-    #res = {"state": 0, "factor": 1, "delta": 2, "error": ""}
-    res = {"state": 1, "factor": 1, "delta": 2, "error": ""}
+    res = {"state": 0, "factor": 1, "delta": 2, "error": ""}
+    res = {"state": 1, "factor": 1, "delta": 2, "error": ""}  # Подключен
+    #res = {"state": 0, "factor": 1, "delta": 2, "error": "Ошибка связи с МК"}
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
 
@@ -134,8 +129,9 @@ async def status(input: int):
     return JSONResponse(content=json_status)
 """
 
+
 @api_app.post("/setup")
-async def setup():
+async def setup(form_data: SettingsModel = Depends()):
     res = {
         "errors": {
             "form": "Ошибка формы сообщение",
@@ -159,6 +155,7 @@ async def set():
     }
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
+
 """
 @api_app.post("/set")
 async def set(form_data: SettingsModel = Depends()):
@@ -173,15 +170,15 @@ async def set(form_data: SettingsModel = Depends()):
     return ''
 """
 
+
 @api_app.get("/turnoff")
 async def turnoff():
     """
     Выключить ESP (Завершить настройку)
+    1. ESP отключает свою точку доступа
+    2. Телефон ищет родной Вай-фай или сеть оператора
+    3. Т.к. страница открыла waterius.ru/account, то браузер ее загрузит, как появится сеть
     :return:
-    """
-    """
-    сделана переадресайия на клиенте на //waterius.ru/account
-    тк телефон по вайфаю к ватериусу подключен, как он к сайту в сеть выйдет???
     """
     return ''
 
@@ -196,4 +193,4 @@ async def reset():
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host='0.0.0.0', port=8000, reload=True)
+    uvicorn.run("main:app", host='0.0.0.0', port=9000, reload=True)

@@ -3,16 +3,17 @@ from dataclasses import dataclass
 from fastapi import Form
 from esp import settings
 
+
 @dataclass
 class ConnectModel:
     ssid: str = Form(...)
     password: str = Form(...)
 
-    dhcp_on: bool = Form(...)
-    gateway_ip: str = Form(...)
-    static_ip: str = Form(...)
-    mask: str = Form(...)
-    mac_address: str = Form(...)
+    dhcp_on: bool | None = Form(None)
+    gateway_ip: str | None = Form(None)
+    static_ip: str | None = Form(None)
+    mask: str | None = Form(None)
+    mac_address: str | None = Form(None)
 
 
 @dataclass
