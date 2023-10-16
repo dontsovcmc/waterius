@@ -28,32 +28,32 @@
                         
                         <div class="f-row">
                             <label for="ssid">Название сети</label>
-                            <input id="ssid" name="ssid" placeholder="Название" required>
+                            <input id="ssid" name="ssid" placeholder="Название" value="%ssid%" required>
                             <p class="error hd" id="ssid-error">Введите название сети</p>
                         </div>
                         <div class="f-row">
                             <label for="password">Пароль</label>
-                            <input id="password" type="password" name="password" class="has-icon" placeholder="Пароль" required>
+                            <input id="password" type="password" name="password" class="has-icon" placeholder="Пароль" value="%password%" required>
                             <div class="icon" onclick="showPW('password')">
                                 <img src="/images/icons.png">
                             </div>
                             <p class="error hd" id="password-error">Введите пароль</p>
                         </div>
                         <div class="toggle">
-                            <input type="checkbox" value="1" name="dhcp_on" id="dhcp_on" value="1">
+                            <input type="checkbox" name="dhcp_on" id="dhcp_on" value="%dhcp_on%">
                             <label for="dhcp_on">DHCP</label>
                         </div>
                         <div class="f-row">
                             <label for="gateway">Адрес шлюза</label>
-                            <input id="gateway" name="gateway" placeholder="000.000.0.0" value="192.168.0.1">
+                            <input id="gateway" name="gateway" placeholder="000.000.0.0" value="%gateway%">
                         </div>
                         <div class="f-row">
                             <label for="ip">Статический адрес</label>
-                            <input id="ip" name="ip" placeholder="192.168.0.140">
+                            <input id="ip" name="ip" placeholder="192.168.0.140" value="%ip%">
                         </div>
                         <div class="f-row">
                             <label for="mask">Маска подсети</label>
-                            <input id="mask" name="mask" placeholder="255.255.255.0">
+                            <input id="mask" name="mask" placeholder="255.255.255.0" value="%mask%">
                         </div>
                         <div class="f-row">
                             <label for="mac_address">MAC адрес Ватериуса</label>

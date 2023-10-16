@@ -39,7 +39,10 @@ def template_response(filename: str):
                 if f'%{name}%' in html_content:
                     v = getattr(settings, name)
                     if isinstance(v, bool):
-                        pass
+                        if v:
+                            html_content = html_content.replace(f'%{name}%', '1')
+                        else:
+                            html_content = html_content.replace(f'%{name}%', '0')
                     else:
                         html_content = html_content.replace(f'%{name}%', str(v))
 

@@ -30,7 +30,6 @@ class Settings:
     Класс настроек в ESP
     Настройки ssid, password
     """
-    dhcp_on: bool | None = False
 
     waterius_host: str | None = "https://cloud.waterius.ru"
     waterius_key: str | None = "0102010200210512512052105125"
@@ -54,8 +53,8 @@ class Settings:
     impulses0_start: int | None = 0
     impulses1_start: int | None = 0
 
-    static_ip_on: bool | None = False
-    ip: str | None = ""
+    dhcp_on: bool | None = True
+    ip: str | None = "192.168.0.100"
     gateway: str | None = "192.168.0.1"
     mask: str | None = "255.255.255.0"
     mac_address: str | None = "00-1B-63-84-45-Е6"
@@ -67,8 +66,8 @@ class Settings:
 
     ntp_server: str | None = "ru.pool.ntp.org"
 
-    ssid: str | None = ""
-    password: str | None = ""
+    ssid: str | None = "adsg"
+    password: str | None = "123"
 
     wifi_phy_mode: int | None = 0
 
