@@ -255,6 +255,7 @@ textarea {
     background: #fff;
     animation-timing-function: cubic-bezier(0, 1, 1, 0);
   }
+  .wifi-list  .lds-ellipsis div {background: #1655F5;}
   .lds-ellipsis div:nth-child(1) {
     left: 8px;
     animation: lds-ellipsis1 0.6s infinite;
