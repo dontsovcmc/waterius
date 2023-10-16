@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
         <title>Сброс устройства</title>
         <link rel="stylesheet" href="/style.css">
+        <script src="/common.js"></script>
     </head>
     <body>
         <form onsubmit="formSubmit(event, this, 'reset');">
@@ -25,12 +26,10 @@
                         <p class="text">Данное действие вернёт устройство к заводским настройкам.<br><br>Устройство выключится, удалит все настройки, чтобы настроить заново вам нужно зажать кнопку на Ватериусе на 5 секунд.</p>
                     </main>
                     <footer class="btns">
-                        <button class="btn disabled" type="button">Сбросить устройство</button>
+                        <button class="btn disabled" type="submit">Сбросить устройство</button>
                     </footer>
                 </div>
             </div>
         </form>
-        <div class="preloader"><div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div></div>
-        <script src="/common.js"></script>
     </body>
 </html>

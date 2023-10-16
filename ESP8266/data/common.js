@@ -97,7 +97,13 @@ function ajax(action, data, callback, pl = true, _try = 0) {
         });
 }
 function preloader(show) {
-    const _pl = document.querySelector('.preloader');
+    let _pl = document.querySelector('.preloader');
+    if(!_pl) {
+        _pl = document.createElement('div');
+        _pl.innerHTML = '<div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>';
+        _pl.classList.add('preloader');
+        document.body.appendChild(_pl);
+    }
     if(show) _pl.classList.add('show');
     else _pl.classList.remove('show');
 }
@@ -111,6 +117,26 @@ function showPW(id){
 function showForm(cls){
     document.querySelector(cls).classList.toggle('hd');
     document.querySelector('.form-error').classList.add('hd');
+}
+function getWifiList(){
+    const showAllBtn = document.getElementById('show-all');
+    ajax('/api/networks', {}, data => {
+        //if(data && data.length) {
+            let html = '';
+            data.forEach((item, index) => {
+                html += getWifiRow(item, index);
+            });
+            document.querySelector('.wifi-list').innerHTML = html;
+            if(data.length > 10) {
+                showAllBtn.classList.remove('hd');
+                showAllBtn.onclick = function() {
+                    document.querySelectorAll('.link-row.hd').forEach(item => item.classList.remove('hd'));
+                    showAllBtn.classList.add('hd');
+                }
+            }
+        //}
+        document.getElementById('wifi-name').classList.remove('hd');
+    });
 }
 function getWifiRow(data, index) {
     let cl = ''
@@ -156,6 +182,9 @@ function finishTimer(btn, sec){
     btn.disabled = true;
     setTimeout(() => finishTimer(btn, sec), 1000);
 }
+function getLogs(){
+    ajax('/waterius_logs.txt', {}, data => document.getElementById('logs').value = data);
+}
 window.onload = function() {
     // back button
     const _bb = document.getElementById('back-btn');
@@ -191,34 +220,6 @@ window.onload = function() {
         // скрыть текст: шаг 3/6
         if(queryParams._setup) document.querySelector('header .fr').classList.add('hd');
     }
-
-    // старт детектирование счетчика
-    const _status = document.getElementById('meter-status');
-    if(_status) return getStatus(_status.value);
-
-    // wifi-list
-    if(document.querySelector('.wifi-list')) {
-        const showAllBtn = document.getElementById('show-all');
-        ajax('/api/networks', {}, data => {
-            //if(data && data.length) {
-                let html = '';
-                data.forEach((item, index) => {
-                    html += getWifiRow(item, index);
-                });
-                document.querySelector('.wifi-list').innerHTML = html;
-                if(data.length > 10) {
-                    showAllBtn.classList.remove('hd');
-                    showAllBtn.onclick = function() {
-                        document.querySelectorAll('.link-row.hd').forEach(item => item.classList.remove('hd'));
-                        showAllBtn.classList.add('hd');
-                    }
-                }
-            //}
-            document.getElementById('wifi-name').classList.remove('hd');
-        });
-        return;
-    }
-
     // wifi-password
     if(document.getElementById('wifi-form') && queryParams.ssid) {
         //document.getElementById('ssid').value = queryParams.ssid;
@@ -230,8 +231,4 @@ window.onload = function() {
 
         return;
     }
-
-    // logs
-    const logs = document.getElementById('logs');
-    if(logs) ajax('/waterius_logs.txt', {}, data => document.getElementById('logs').value = data);
 }
