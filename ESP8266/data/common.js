@@ -297,6 +297,6 @@ function mainSettings(){
         data.forEach(mess => {
             html.push(`<p class="form-error mt24">${mess.error}${mess.link ? `<br><br><a class="link" href="${mess.link}">${mess.link_text}</a>` : ''}</p>`);
         });
-        document.getElementById('mainInfoText').innerHTML = html.join('<hr>');
+        document.getElementById('mainInfoText').innerHTML = html.join('');
     });
 }
