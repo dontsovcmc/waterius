@@ -7,11 +7,16 @@
         <link rel="stylesheet" href="/style.css">
         <script src="/common.js"></script>
     </head>
-    <body onload="getWifiList();">
+    <body onload="getWifiList({
+        back: '/',
+        back_wizard: '/start.html',
+        next: '/wifi_password.html',
+        next_wizard: '/wifi_password.html?wizard=true'
+    });">
         <div class="wrap">
             <div class="container">
                 <header>
-                    <a id="back-btn">
+                    <a onclick="_goto()">
                         <div class="icon bf">
                             <img src="/images/icons.png">
                         </div>
@@ -29,7 +34,7 @@
                     </div>                    
                     <button type="button" class="btn-serv mt20 hd" id="show-all">Показать все сети</button>
                     <div class="clr "></div>
-                    <a type="button" class="btn-serv mt20 hd" id="wifi-name" href="/wifi_password.html">Ввести название сети</a>
+                    <a type="button" class="btn-serv mt20 hd" id="wifi-name" onclick="_goto(true)">Ввести название сети</a>
                 </main>
             </div>
         </div>

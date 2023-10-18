@@ -3,6 +3,7 @@ html{height:100%;}
 body{width:100%;min-height:100%;font-size:100%;}
 button,a{cursor:pointer;transition:.5s;text-decoration:none;}
 button,input,select,textarea{border-radius:8px;}
+input,textarea{user-select:text;}
 a.link{color:#1655F5;}
 a.link:hover{color:#F53410;}
 .wrap{

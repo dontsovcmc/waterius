@@ -7,12 +7,17 @@
         <link rel="stylesheet" href="/style.css">
         <script src="/common.js"></script>
     </head>
-    <body>
-        <form onsubmit="formSubmit(event, this, 'connect', '/', '/setup_cold_welcome.html');">
+    <body onload="_init({
+        back: '/wifi_list.html',
+        back_wizard: '/wifi_list.html?wizard=true',
+        next: '/',
+        next_wizard: '/setup_cold_welcome.html?wizard=true'
+    })">
+        <form onsubmit="formSubmit(event, this, 'connect');">
             <div class="wrap">
                 <div class="container f1">
                     <header>
-                        <a id="back-btn">
+                        <a onclick="_goto()">
                             <div class="icon bf">
                                 <img src="/images/icons.png">
                             </div>
@@ -40,7 +45,7 @@
                             <p class="error hd" id="password-error">Введите пароль</p>
                         </div>
                         <div class="toggle">
-                            <input type="checkbox" name="dhcp_on" id="dhcp_on" value="%dhcp_on%">
+                            <input type="checkbox" name="dhcp_on" id="dhcp_on" value="1">
                             <label for="dhcp_on">DHCP</label>
                         </div>
                         <div class="f-row">
@@ -57,7 +62,7 @@
                         </div>
                         <div class="f-row">
                             <label for="mac_address">MAC адрес Ватериуса</label>
-                            <input id="mac_address" name="mac_address" value="00-1B-63-84-45-Е6" disabled class="disabled has-icon">
+                            <input id="mac_address" name="mac_address" value="00-1B-63-84-45-Е6" readonly class="disabled has-icon">
                             <div class="icon copy" onclick="copyInput('mac_address')">
                                 <img src="/images/icons.png">
                             </div>

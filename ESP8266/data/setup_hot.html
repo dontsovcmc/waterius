@@ -7,12 +7,17 @@
         <link rel="stylesheet" href="/style.css">
         <script src="/common.js"></script>
     </head>
-    <body>
-        <form onsubmit="formSubmit(event, this, 'setup', '/', '/setup_send.html');">
+    <body onload="_init({
+        back: '/setup_hot_welcome.html',
+        back_wizard: '/setup_hot_welcome.html?wizard=true',
+        next: '/',
+        next_wizard: '/setup_send.html?wizard=true'
+    })">
+        <form onsubmit="formSubmit(event, this, 'setup');">
             <div class="wrap">
                 <div class="container f1">
                     <header>
-                        <a id="back-btn">
+                        <a onclick="_goto()">
                             <div class="icon bf">
                                 <img src="/images/icons.png">
                             </div>
@@ -33,7 +38,7 @@
                         </div>
                         <div class="f-row">
                             <label for="channel0_start">Показания счётчика</label>
-                            <input id="channel0_start" name="channel0_start" type="number" placeholder="356.89" value="%channel0_start%">
+                            <input pattern="^\s*[\d]+([,\.][\d]+)?\s*$" id="channel0_start" name="channel0_start" placeholder="356.89" value="%channel0_start%">
                             <p class="error hd" id="channel1_start-error">Введите показания счётчика</p>
                         </div>
                         <p class="note mt16">Вес счётчика – <span id="meter-factor">1</span>л/имп</p>

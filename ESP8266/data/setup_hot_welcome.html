@@ -7,11 +7,17 @@
         <link rel="stylesheet" href="/style.css">
         <script src="/common.js"></script>
     </head>
-    <body onload="getStatus(0, '/setup_hot.html', '/setup_hot.html');">
+    <body onload="_init({
+        back: '/',
+        back_wizard: '/setup_cold.html?wizard=true',
+        next: '/setup_hot.html',
+        next_wizard: '/setup_hot.html?wizard=true'
+    });
+    getStatus(0);">
         <div class="wrap">
             <div class="container f2">
                 <header>
-                    <a id="back-btn">
+                    <a onclick="_goto()">
                         <div class="icon bf">
                             <img src="/images/icons.png">
                         </div>
@@ -32,7 +38,7 @@
                     <div class="btn mt20">
                         <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
                     </div>
-                    <a class="btn btn2 mt20" id="skip" href="/setup_hot.html">Пропустить счётчик</a>
+                    <a class="btn btn2 mt20" onclick="_goto(true)">Пропустить счётчик</a>
                 </footer>
             </div>
         </div>

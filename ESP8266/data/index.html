@@ -5,8 +5,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
         <title>Настройки</title>
         <link rel="stylesheet" href="/style.css">
+        <script src="/common.js"></script>
     </head>
-    <body>
+    <body onload="mainSettings()">
         <div class="wrap">
             <div class="container f1">
                 <header>
@@ -22,86 +23,72 @@
                     <h2>Настройки</h2>
                     <p class="text">Здесь вы можете внести изменения в настройки Ватериуса. Не забудьте нажать на кнопку “Завершить”, как внесёте все необходимые изменения настроек</p>
 
-                    <!--<p class="form-error mt24">Счётчик Холодной воды перестал передавать показания<br><br><a class="link" href="#">Настроить заново</a></p>--->
+                    <div id="mainInfoText"></div>
 
                     <h3 class="mt24">Счётчики воды</h3>
-                    <div class="link-row">
+                    <a class="link-row" href="/setup_cold_welcome.html">
                         <div class="circle"></div>
                         Холодная
-                        <a href="/setup_cold_welcome.html">
-                            <div class="icon arrow">
-                                <img src="/images/icons.png">
-                            </div>
-                        </a>
-                    </div>
-                    <div class="link-row">
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
+                    <a class="link-row" href="/setup_hot_welcome.html">
                         <div class="circle hot"></div>
                         Горячая
-                        <a href="/setup_hot_welcome.html">
-                            <div class="icon arrow">
-                                <img src="/images/icons.png">
-                            </div>
-                        </a>
-                    </div>
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
 
                     <h3 class="mt24">Сетевые настройки</h3>
-                    <div class="link-row">
+                    <a class="link-row" href="/wifi_list.html">
                         <div class="icon l5">
                             <img src="/images/icons.png">
                         </div>
                         Сменить Wi-Fi сеть
-                        <a href="/wifi_list.html">
-                            <div class="icon arrow">
-                                <img src="/images/icons.png">
-                            </div>
-                        </a>
-                    </div>
-                    <div class="link-row">
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
+                    <a class="link-row" href="/wifi_settings.html">
                         <div class="icon l6">
                             <img src="/images/icons.png">
                         </div>
                         Изменить настройки
-                        <a href="/wifi_settings.html">
-                            <div class="icon arrow">
-                                <img src="/images/icons.png">
-                            </div>
-                        </a>
-                    </div>
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
 
                     <h3 class="mt24">Прочие</h3>
-                    <div class="link-row">
+                    <a class="link-row" href="/setup_send.html">
                         <div class="icon l4 r">
                             <img src="/images/icons.png">
                         </div>
                         Внешние сервисы
-                        <a href="/setup_send.html">
-                            <div class="icon arrow">
-                                <img src="/images/icons.png">
-                            </div>
-                        </a>
-                    </div>
-                    <div class="link-row">
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
+                    <a class="link-row" href="/logs.html">
                         <div class="icon l5 r">
                             <img src="/images/icons.png">
                         </div>
                         Логи
-                        <a href="/logs.html">
-                            <div class="icon arrow">
-                                <img src="/images/icons.png">
-                            </div>
-                        </a>
-                    </div>
-                    <div class="link-row">
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
+                    <a class="link-row" href="/reset.html">
                         <div class="icon l6 r">
                             <img src="/images/icons.png">
                         </div>
                         Сброс до заводских настроек
-                        <a href="/reset.html">
-                            <div class="icon arrow">
-                                <img src="/images/icons.png">
-                            </div>
-                        </a>
-                    </div>
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
                     <!--div class="link-row">
                         <div class="icon l6 r">
                             <img src="/images/icons.png">

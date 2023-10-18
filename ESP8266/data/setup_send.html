@@ -7,12 +7,17 @@
         <link rel="stylesheet" href="style.css">
         <script src="/common.js"></script>
     </head>
-    <body>
-        <form onsubmit="formSubmit(event, this, 'setup', '/', '/finish.html');">
+    <body onload="_init({
+        back: '/',
+        back_wizard: '/setup_hot.html?wizard=true',
+        next: '/',
+        next_wizard: '/finish.html'
+    })">
+        <form onsubmit="formSubmit(event, this, 'setup');">
             <div class="wrap">
                 <div class="container f1">
                     <header>
-                        <a id="back-btn">
+                        <a onclick="_goto()">
                             <div class="icon bf">
                                 <img src="/images/icons.png">
                             </div>
@@ -28,7 +33,7 @@
                         <p class="form-error hd"></p>
 
                         <div class="toggle mt24">
-                            <input type="checkbox" value="%waterius_on%" name="waterius_on" id="waterius_on" onclick="showForm('.email-form')">
+                            <input type="checkbox" value="1" name="waterius_on" id="waterius_on" onclick="showForm('.email-form')">
                             <label for="waterius_on">Waterius.ru</label>
                         </div>
                         <div class="f-row mt16 hd email-form">
@@ -37,7 +42,7 @@
                             <p class="error hd" id="waterius_email-error">Введите E-mail</p>
                         </div>
                         <div class="toggle">
-                            <input type="checkbox" value="%http_on%" name="http_on" id="http_on" onclick="showForm('.server-form')">
+                            <input type="checkbox" value="1" name="http_on" id="http_on" onclick="showForm('.server-form')">
                             <label for="http_on">Сервер</label>
                         </div>
                         <div class="f-row mt16 hd server-form">
@@ -46,7 +51,7 @@
                             <p class="error hd" id="http_url-error">Введите адрес сервера</p>
                         </div>
                         <div class="toggle">
-                            <input type="checkbox" value="%mqtt_on%" name="mqtt_on" id="mqtt_on" onclick="showForm('.mqtt-form')">
+                            <input type="checkbox" value="1" name="mqtt_on" id="mqtt_on" onclick="showForm('.mqtt-form')">
                             <label for="mqtt_on">MQTT</label>
                         </div>
                         <div class="hd mqtt-form">
