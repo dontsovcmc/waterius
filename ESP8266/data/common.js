@@ -163,7 +163,7 @@ function getWifiRow(data, index, wizard = false) {
     </div>`;
 }
 function getStatus(i, next_page, next_wizard_page) {
-    let wizard = parseQueryParams().wizard;
+    let wizard = getWizardValue();
     const uri = wizard ? next_wizard_page + '?wizard=true&' : next_page + '?';
 
     setTimeout(() => {
@@ -236,10 +236,12 @@ function main() {
         // показ ошибки из location.search
         formError(queryParams.error);
 
-
-        // скрыть текст: шаг 3/6
-        if(queryParams.wizard) document.querySelector('header .fr').classList.add('hd');
     }
+
+    // скрыть текст: шаг 3/6
+    if(!getWizardValue()) 
+        document.querySelector('header .fr').classList.add('hd');
+
     // wifi-password
     if(document.getElementById('wifi-form') && queryParams.ssid) {
         //document.getElementById('ssid').value = queryParams.ssid;
