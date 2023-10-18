@@ -1,18 +1,10 @@
-import uvicorn
-from log import log
-from copy import deepcopy
-from fastapi.responses import HTMLResponse, FileResponse
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.staticfiles import StaticFiles
+
+from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from fastapi.responses import RedirectResponse
-from urllib.parse import urlencode
-from esp import settings, attiny_data
-from api_debug import debug_app, runtime_data
+from esp import settings
 from models import SettingsModel, ConnectModel
 import time
-import os
 
 
 api_app = FastAPI(title="api application")
@@ -55,27 +47,61 @@ async def connect(form_data: ConnectModel = Depends()):
     if form_data.ssid == "ERROR_PASSWORD":
         res.update({
             "error": "Ошибка авторизации. Проверьте пароль",
-            "redirect": "wifi_settings.html"
+            "redirect": "/wifi_settings.html"
         })
 
     elif form_data.ssid == "ERROR_CONNECT":
         res.update({
             "error": "Ошибка подключения",
-            "redirect": "wifi_settings.html"
+            "redirect": "/wifi_settings.html"
         })
     else:
-        res["redirect"] = "/setup_cold_welcome.html"
+        pass
 
     time.sleep(1.0)
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
 
 
+@api_app.get("/status")
+async def status():
+    """
+    Запрос на главной странице для отображения диагностических сообщений.
+    :return:
+    """
+
+    """
+    res = {
+        "error": "Счетчик холодной воды перестал передавать показания",
+        "link_text": "Настроить заново"
+        "link": "/setup_cold_welcome.html"
+    }
+    """
+    """
+        res = {
+            "error": "Подключите заново провода холодного счётчика к Ватериусу",
+            "link_text": "Приступить к настройке"
+            "link": "/setup_cold_welcome.html"
+        }
+    """
+    """
+        res = {
+            "error": "Расход холодной воды больше горячей в 30 раз",
+            "link_text": "Настроить множитель"
+            "link": "/setup_cold.html"
+        }
+    """
+
+    res = {"error": ""}
+    json = jsonable_encoder(res)
+    return JSONResponse(content=json)
+
+
 @api_app.get("/status/{input}")
-async def status(input: int):
-    res = {"state": 0, "factor": 1, "delta": 2, "error": ""}
-    #res = {"state": 1, "factor": 1, "delta": 2, "error": ""}  # Подключен
-    # res = {"state": 0, "factor": 1, "delta": 2, "error": "Ошибка связи с МК"}
+async def status_input(input: int):
+    #res = {"state": 0, "factor": 1, "delta": 2, "error": ""}
+    res = {"state": 1, "factor": 0, "delta": 2, "error": ""}  # Подключен
+    #res = {"state": 0, "factor": 1, "delta": 2, "error": "Ошибка связи с МК"}
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
 
@@ -127,38 +153,10 @@ async def setup(form_data: SettingsModel = Depends()):
     # res["errors"]["form"] = "Ошибка формы сообщение"
     # res["errors"]["serial1"] = "Введите серийный номер"
     # res["errors"]["channel1_start"] = "Введите показания счётчика"
+    #  "redirect": "/finish.html"
 
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
-
-
-@api_app.post("/set")
-async def set():
-    res = {
-        # "errors": #{
-        #    "form": "Ошибка формы сообщение",
-        #    "serial1": "Введите серийный номер",
-        #    "channel1_start": "Введите показания счётчика"
-        # },
-        "redirect": "/finish.html"
-    }
-    json = jsonable_encoder(res)
-    return JSONResponse(content=json)
-
-
-"""
-@api_app.post("/set")
-async def set(form_data: SettingsModel = Depends()):
-
-    Сохранение параметров с вебстраницы в память ESP
-    :param form_data:
-    :return:
-
-    for k, v in form_data:
-        if settings.get(k):
-            settings.set(k, v)
-    return ''
-"""
 
 
 @api_app.get("/turnoff")

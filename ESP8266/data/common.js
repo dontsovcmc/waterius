@@ -1,16 +1,13 @@
-function formSubmit(event, form, action, _setup = false) {
+function getWizardValue(){
+    return parseQueryParams().wizard === 'true';
+}
+
+function formSubmit(event, form, action, next_page, next_wizard_page) {
     event.preventDefault();
 
+    let wizard = getWizardValue();
+    let uri = wizard ? next_wizard_page : next_page;
 
-    if(_setup) {
-        let count = 0;
-        document.querySelectorAll('#waterius_on,#http_on,#mqtt_on').forEach(item => {
-            if(item.checked) count++;
-        });
-        const _fe = document.querySelector('.form-error');
-        if(!count) return _fe.classList.remove('hd');
-        _fe.classList.add('hd');
-    }
 
     const data = new URLSearchParams();
     //const data = {};// json
@@ -18,6 +15,7 @@ function formSubmit(event, form, action, _setup = false) {
         data.append(pair[0], pair[1]);
         //data[pair[0]] = pair[1];// json
     }
+    
     ajax('/api/' + action, {
         method: 'POST',
         headers: {
@@ -27,19 +25,7 @@ function formSubmit(event, form, action, _setup = false) {
         body: data
         //body: JSON.stringify(data)// json
     }, data =>{
-        // callback
-        if(data.redirect) {
-            let uri = data.redirect;
-            delete data.redirect;
-            let queryString = Object.keys(data).map((k) => {
-                return encodeURIComponent(k) + '=' + encodeURIComponent(data[k])
-            }).join('&');
-            if(queryString) uri += '?' + queryString;
-            window.location = uri;
-            return;
-        }
         
-
         // ошибки заполнения формы
         if(data.errors) {
             document.querySelectorAll('.f-row p.error').forEach(item => item.classList.add('hd'));
@@ -51,7 +37,22 @@ function formSubmit(event, form, action, _setup = false) {
             }
             formError(data.errors.form);
         }
-        //*/
+
+        // callback
+        if(data.redirect) {
+            uri = data.redirect;
+            delete data.redirect;
+        }
+
+        if(uri) {
+            let queryString = Object.keys(data).map((k) => {
+                return encodeURIComponent(k) + '=' + encodeURIComponent(data[k])
+            }).join('&');
+            if(wizard) queryString += '&wizard=true';
+            if(queryString) uri += '?' + queryString;
+            window.location = uri;
+            return;
+        }
     });
 }
 function ajax(action, data, callback, pl = true, _try = 0) {
@@ -119,12 +120,16 @@ function showForm(cls){
     document.querySelector('.form-error').classList.add('hd');
 }
 function getWifiList(){
+    main();
+
     const showAllBtn = document.getElementById('show-all');
+    let wizard = getWizardValue();
+
     ajax('/api/networks', {}, data => {
         //if(data && data.length) {
             let html = '';
             data.forEach((item, index) => {
-                html += getWifiRow(item, index);
+                html += getWifiRow(item, index, wizard);
             });
             document.querySelector('.wifi-list').innerHTML = html;
             if(data.length > 10) {
@@ -136,9 +141,13 @@ function getWifiList(){
             }
         //}
         document.getElementById('wifi-name').classList.remove('hd');
+
+        if (wizard) {
+            document.getElementById('wifi-name').href = '/wifi_password.html?wizard=true';
+        }
     });
 }
-function getWifiRow(data, index) {
+function getWifiRow(data, index, wizard = false) {
     let cl = ''
     if(index > 9) cl = ' hd';
     return `<div class="link-row${cl}">
@@ -146,19 +155,25 @@ function getWifiRow(data, index) {
             <img src="/images/icons.png">
         </div>
         ${data.ssid}
-        <a href="/wifi_password.html?ssid=${encodeURIComponent(data.ssid)}&level=${data.level}">
+        <a href="/wifi_password.html?ssid=${encodeURIComponent(data.ssid)}&level=${data.level}&wizard=${wizard}">
             <div class="icon arrow">
                 <img src="/images/icons.png">
             </div>
         </a>
     </div>`;
 }
-function getStatus(value) {
+function getStatus(i, next_page, next_wizard_page) {
+    let wizard = parseQueryParams().wizard;
+    const uri = wizard ? next_wizard_page + '?wizard=true&' : next_page + '?';
+
     setTimeout(() => {
-        ajax('/api/status/' + value, {}, data => {
+        ajax('/api/status/' + i, {}, data => {
             if(data.state == 1) //console.log(document.getElementById('skip').href + '?factor=' + data.factor);
-                return window.location = document.getElementById('skip').href + '?factor=' + data.factor;
-                getStatus(value);
+                return window.location = uri + 'factor' + i + '=' + data.factor;
+                
+                getStatus(i, next_page, next_wizard_page);
+
+            formError(data.error);
         }, false);
     }, 2000);
 }
@@ -185,7 +200,22 @@ function finishTimer(btn, sec){
 function getLogs(){
     ajax('/waterius_logs.txt', {}, data => document.getElementById('logs').value = data);
 }
-window.onload = function() {
+function parseQueryParams(){
+    // parse location.search
+    const _s = window.location.search.substring(1).split(/[\=\&]/);
+    let queryParams = {};
+    if(_s.length) {
+        for(let i = 0; i < _s.length; i = i + 2){
+            if(_s[i] && _s[i + 1])
+                queryParams[decodeURI(_s[i])] = decodeURI(_s[i + 1]); // decodeURIComponent? 
+        }
+    }
+    return queryParams;
+}
+
+function main() {
+    // Должна выполняться при загрузке каждой страницы
+
     // back button
     const _bb = document.getElementById('back-btn');
     if(_bb) _bb.onclick = function(){
@@ -193,15 +223,8 @@ window.onload = function() {
         return false;
     }
 
-    // parse location.search
-    const _s = window.location.search.substring(1).split(/[\=\&]/);
-    const queryParams = {};
-    if(_s.length) {
-        for(let i = 0; i < _s.length; i = i + 2){
-            if(_s[i] && _s[i + 1])
-                queryParams[decodeURI(_s[i])] = decodeURI(_s[i + 1]);
-        }
-
+    const queryParams = parseQueryParams();
+    if(queryParams) {
         // заполнение полей формы из location.search
         document.querySelectorAll('input,textarea').forEach(item => {
             if(queryParams[item.name]) 
@@ -213,12 +236,9 @@ window.onload = function() {
         // показ ошибки из location.search
         formError(queryParams.error);
 
-        // вес счетчика
-        const _mf = document.getElementById('meter-factor');
-        if(queryParams.factor && _mf) _mf.innerText = queryParams.factor;
 
         // скрыть текст: шаг 3/6
-        if(queryParams._setup) document.querySelector('header .fr').classList.add('hd');
+        if(queryParams.wizard) document.querySelector('header .fr').classList.add('hd');
     }
     // wifi-password
     if(document.getElementById('wifi-form') && queryParams.ssid) {
@@ -232,3 +252,5 @@ window.onload = function() {
         return;
     }
 }
+
+window.onload = function() { main(); }

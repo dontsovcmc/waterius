@@ -8,7 +8,7 @@
         <script src="/common.js"></script>
     </head>
     <body>
-        <form onsubmit="formSubmit(event, this, 'connect');">
+        <form onsubmit="formSubmit(event, this, 'connect', '/', '/setup_cold_welcome.html');">
             <div class="wrap">
                 <div class="container f1">
                     <header>
@@ -33,7 +33,7 @@
                         </div>
                         <div class="f-row">
                             <label for="password">Пароль</label>
-                            <input id="password" type="password" name="password" class="has-icon" placeholder="Пароль" value="%password%" required>
+                            <input id="password" type="password" name="password" class="has-icon" placeholder="Пароль" value="%password%" autocomplete="on" required>
                             <div class="icon" onclick="showPW('password')">
                                 <img src="/images/icons.png">
                             </div>

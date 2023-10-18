@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import Enum
 from copy import deepcopy
 import ipaddress
@@ -31,18 +30,23 @@ class Settings:
     Настройки ssid, password
     """
 
+    waterius_on: bool | None = True
     waterius_host: str | None = "https://cloud.waterius.ru"
     waterius_key: str | None = "0102010200210512512052105125"
     waterius_email: str | None = "contact@waterius.ru"
 
+    http_on: bool | None = False
+    http_url: str | None = ""
+
     blynk_key: str | None = "182191205125"
     blynk_host: str | None = "blynk.com"
 
+    mqtt_on: bool | None = False
     mqtt_host: str | None = ""
     mqtt_port: int | None = 1883
     mqtt_login: str | None = ""
     mqtt_password: str | None = ""
-    mqtt_topic: str | None = ""
+    mqtt_topic: str | None = "waterius/2713320"
 
     channel0_start: float | None = 0.0
     channel1_start: float | None = 0.0
@@ -59,7 +63,7 @@ class Settings:
     mask: str | None = "255.255.255.0"
     mac_address: str | None = "00-1B-63-84-45-Е6"
 
-    wakeup_per_min: int | None = 1440,
+    wakeup_per_min: int | None = 1440
 
     mqtt_auto_discovery: int | None = 0
     mqtt_discovery_topic: str | None = ""
@@ -93,6 +97,16 @@ class Settings:
         }
         """
         res = deepcopy(form_data)
+
+        if 'waterius_on' in form_data:
+
+            if not form_data.get('waterius_on') \
+                    and not form_data.get('http_on') \
+                    and not form_data.get('mqtt_on'):
+                res.update({"errors": {
+                    "form": "Выберите куда отправлять показания счётчиков, "
+                            "чтобы закончить настройку Ватериуса"
+                }})
 
         static_ip_on = form_data.get('static_ip_on')
 

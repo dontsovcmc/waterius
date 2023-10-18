@@ -1,7 +1,6 @@
 
 from dataclasses import dataclass
 from fastapi import Form
-from esp import settings
 
 
 @dataclass

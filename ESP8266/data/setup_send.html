@@ -8,7 +8,7 @@
         <script src="/common.js"></script>
     </head>
     <body>
-        <form onsubmit="formSubmit(event, this, 'set', true);">
+        <form onsubmit="formSubmit(event, this, 'setup', '/', '/finish.html');">
             <div class="wrap">
                 <div class="container f1">
                     <header>
@@ -25,56 +25,50 @@
                     <main>
                         <h2>Отправка показаний</h2>
                         <p class="text">Выберите куда Ватериусу отправлять показания счётчиков и введите необходимые данные</p>
-                        <p class="form-error hd">Выберете куда отправлять показания счётчиков, чтобы закончить настройку Ватериуса</p>
+                        <p class="form-error hd"></p>
 
                         <div class="toggle mt24">
-                            <input type="checkbox" value="1" name="waterius_on" id="waterius_on" onclick="showForm('.email-form')">
+                            <input type="checkbox" value="%waterius_on%" name="waterius_on" id="waterius_on" onclick="showForm('.email-form')">
                             <label for="waterius_on">Waterius.ru</label>
                         </div>
                         <div class="f-row mt16 hd email-form">
                             <label for="waterius_email">Почта аккаунта</label>
-                            <input id="waterius_email" name="waterius_email" placeholder="name@domen.ru" type="email">
+                            <input type="email" id="waterius_email" name="waterius_email" placeholder="name@domen.ru" value="%waterius_email%" >
                             <p class="error hd" id="waterius_email-error">Введите E-mail</p>
                         </div>
                         <div class="toggle">
-                            <input type="checkbox" value="1" name="http_on" id="http_on" onclick="showForm('.server-form')">
+                            <input type="checkbox" value="%http_on%" name="http_on" id="http_on" onclick="showForm('.server-form')">
                             <label for="http_on">Сервер</label>
                         </div>
                         <div class="f-row mt16 hd server-form">
                             <label for="http_url">Адрес</label>
-                            <input id="http_url" name="http_url" placeholder="https://iot.your.site.com">
+                            <input id="http_url" name="http_url" placeholder="https://iot.your.site.com" value="%http_url%">
                             <p class="error hd" id="http_url-error">Введите адрес сервера</p>
                         </div>
                         <div class="toggle">
-                            <input type="checkbox" value="1" name="mqtt_on" id="mqtt_on" onclick="showForm('.mqtt-form')">
+                            <input type="checkbox" value="%mqtt_on%" name="mqtt_on" id="mqtt_on" onclick="showForm('.mqtt-form')">
                             <label for="mqtt_on">MQTT</label>
                         </div>
                         <div class="hd mqtt-form">
                             <div class="f-row mt16">
                                 <label for="mqtt_host">Адрес</label>
-                                <input id="mqtt_host" name="mqtt_host" placeholder="http://broker.domen.ru">
+                                <input id="mqtt_host" name="mqtt_host" placeholder="http://broker.domen.ru" value="%mqtt_host%">
                                 <p>Включает отправку</p>
                                 <p class="error hd" id="mqtt_host-error"></p>
                             </div>
                             <div class="f-row">
-                                <label for="wakeup_per_min">Период отправки показаний</label>
-                                <input id="wakeup_per_min" name="wakeup_per_min" placeholder="1440" type="number">
-                                <p>В минутах</p>
-                                <p class="error hd" id="wakeup_per_min-error"></p>
-                            </div>
-                            <div class="f-row">
                                 <label for="mqtt_port">Порт</label>
-                                <input id="mqtt_port" name="mqtt_port" placeholder="1883" type="number">
+                                <input id="mqtt_port" name="mqtt_port" placeholder="1883" type="number" value="%mqtt_port%">
                                 <p class="error hd" id="mqtt_port-error"></p>
                             </div>
                             <div class="f-row">
                                 <label for="mqtt_login">Логин</label>
-                                <input id="mqtt_login" name="mqtt_login" placeholder="Логин">
+                                <input id="mqtt_login" name="mqtt_login" placeholder="Логин" value="%mqtt_login%">
                                 <p class="error hd" id="mqtt_login-error">Введите логин</p>
                             </div>
                             <div class="f-row">
                                 <label for="mqtt_password">Пароль</label>
-                                <input id="mqtt_password" type="password" name="mqtt_password" class="has-icon" placeholder="Пароль">
+                                <input id="mqtt_password" type="password" name="mqtt_password" class="has-icon" placeholder="Пароль" value="%mqtt_password%">
                                 <div class="icon" onclick="showPW('mqtt_password')">
                                     <img src="/images/icons.png">
                                 </div>
@@ -82,8 +76,17 @@
                             </div>
                             <div class="f-row">
                                 <label for="mqtt_topic">Topic</label>
-                                <input id="mqtt_topic" name="mqtt_topic" value="waterius/2713320">
+                                <input id="mqtt_topic" name="mqtt_topic" value="%mqtt_topic%">
                                 <p class="error hd" id="mqtt_topic-error">Введите пароль</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="f-row">
+                                <label for="wakeup_per_min">Период отправки показаний</label>
+                                <input id="wakeup_per_min" name="wakeup_per_min" placeholder="1440" type="number" value="%wakeup_per_min%">
+                                <p>В минутах</p>
+                                <p class="error hd" id="wakeup_per_min-error"></p>
                             </div>
                         </div>
                     </main>
