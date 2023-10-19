@@ -63,36 +63,26 @@ async def connect(form_data: ConnectModel = Depends()):
     return JSONResponse(content=json)
 
 
-@api_app.get("/status")
-async def status():
+@api_app.get("/main_status")
+async def main_status():
     """
     Запрос на главной странице для отображения диагностических сообщений.
     :return:
     """
-
-    """
-    res = {
+    res = [{
         "error": "Счетчик холодной воды перестал передавать показания",
-        "link_text": "Настроить заново"
+        "link_text": "Настроить заново",
         "link": "/setup_cold_welcome.html"
-    }
-    """
-    """
-        res = {
-            "error": "Подключите заново провода холодного счётчика к Ватериусу",
-            "link_text": "Приступить к настройке"
-            "link": "/setup_cold_welcome.html"
-        }
-    """
-    """
-        res = {
-            "error": "Расход холодной воды больше горячей в 30 раз",
-            "link_text": "Настроить множитель"
-            "link": "/setup_cold.html"
-        }
-    """
+    }, {
+        "error": "Подключите заново провода холодного счётчика к Ватериусу",
+        "link_text": "Приступить к настройке",
+        "link": "/setup_cold_welcome.html"
+    }, {
+        "error": "Расход холодной воды больше горячей в 30 раз",
+        "link_text": "Настроить множитель",
+        "link": "/setup_cold.html"
+    }]
 
-    res = {"error": ""}
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
 
@@ -100,7 +90,7 @@ async def status():
 @api_app.get("/status/{input}")
 async def status_input(input: int):
     #res = {"state": 0, "factor": 1, "delta": 2, "error": ""}
-    res = {"state": 1, "factor": 0, "delta": 2, "error": ""}  # Подключен
+    res = {"state": 0, "factor": 0, "delta": 2, "error": ""}  # Подключен
     #res = {"state": 0, "factor": 1, "delta": 2, "error": "Ошибка связи с МК"}
     json = jsonable_encoder(res)
     return JSONResponse(content=json)

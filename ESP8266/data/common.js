@@ -40,13 +40,11 @@ function _init(_pages) {
 }
 function parseQueryParams(){
     // parse location.search
-    //const _s = window.location.search.substring(1).split(/[\=\&]/);
-    const _s = decodeURI(window.location.search).substring(1).split(/[\=\&]/);
+    const _s = window.location.search.substring(1).split(/[\=\&]/);
     if(_s.length) {
         for(let i = 0; i < _s.length; i = i + 2){
             if(_s[i] && _s[i + 1])
-                //queryParams[decodeURIComponent(_s[i])] = decodeURIComponent(_s[i + 1]);
-                queryParams[_s[i]] = _s[i + 1];
+                queryParams[decodeURIComponent(_s[i])] = decodeURIComponent(_s[i + 1]);
         }
     }
 }
@@ -266,7 +264,7 @@ function getStatus(i) {
                 return window.location = (queryParams.wizard ? pages.next_wizard + '&' : pages.next + '?') + 'factor' + i + '=' + data.factor;
                 
             getStatus(i);
-            //formError(data.error);// ???
+            formError(data.error);
         }, false);
     }, 2000);
 }
@@ -287,11 +285,12 @@ function getLogs(){
     ajax('/waterius_logs.txt', {}, data => document.getElementById('logs').value = data);
 }
 function _goto(next = false){
-    if(!next) return window.location = queryParams.wizard ? pages.back_wizard : pages.back;
+    if(!next) 
+        return window.location = queryParams.wizard ? pages.back_wizard : pages.back;
     return window.location = queryParams.wizard ? pages.next_wizard : pages.next;
 }
-function mainSettings(){
-    ajax('/api/main_settings', {}, data => {
+function mainStatus(){
+    ajax('/api/main_status', {}, data => {
         if(!data.length) return;
         const html = [];
         data.forEach(mess => {

@@ -31,9 +31,9 @@ def template_response(filename: str):
                     v = getattr(settings, name)
                     if isinstance(v, bool):
                         if v:
-                            html_content = html_content.replace(f'%{name}%', '1')
+                            html_content = html_content.replace(f'%{name}%', 'value="1" checked')
                         else:
-                            html_content = html_content.replace(f'%{name}%', '0')
+                            html_content = html_content.replace(f'%{name}%', '')
                     else:
                         html_content = html_content.replace(f'%{name}%', str(v))
 
@@ -128,6 +128,6 @@ async def index():
 
 
 if __name__ == "__main__":
-    #uvicorn.run("main:app", host='0.0.0.0', port=9000, reload=True)
-    uvicorn.run("main:app", host='192.168.10.43', port=9000, reload=True)
+    uvicorn.run("main:app", host='192.168.1.38', port=9000, reload=True)
+    #uvicorn.run("main:app", host='192.168.10.43', port=9000, reload=True)
 
