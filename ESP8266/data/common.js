@@ -10,13 +10,20 @@ function _init(_pages) {
         // заполнение полей формы из location.search
         document.querySelectorAll('input,textarea').forEach(item => {
             if(item.type == 'checkbox'){
-                if(parseInt(queryParams[item.name])) item.checked = true;
-                else item.checked = false;
+                if(parseInt(queryParams[item.name]) || (queryParams[item.name] && queryParams[item.name].toLowerCase() == 'true'))//{
+                    item.checked = true;
+                    //item.parentNode.classList.add('active');
+                //}else{
+                    //item.checked = false;
+                    //item.parentNode.classList.remove('active');
+                //}
+                checkboxToggle(item);
                 return;
             }
             if(queryParams[item.name]) item.value = queryParams[item.name];
         });
     }
+
     // показ ошибки из location.search
     formError(queryParams.error);
 
@@ -46,6 +53,14 @@ function parseQueryParams(){
             if(_s[i] && _s[i + 1])
                 queryParams[decodeURIComponent(_s[i])] = decodeURIComponent(_s[i + 1]);
         }
+    }
+}
+function checkboxToggle(inp){
+    inp.checked ? inp.parentNode.classList.add('active') : inp.parentNode.classList.remove('active');
+    if(inp.dataset && inp.dataset.form){
+        document.querySelector('.form-error').classList.add('hd');
+        const _from = document.querySelector(inp.dataset.form);
+        inp.checked ? _from.classList.remove('hd') : _from.classList.add('hd');
     }
 }
 function formError(html){
@@ -80,20 +95,31 @@ function getWifiList(_pages){
 function getWifiRow(data, index) {
     let cl = ''
     if(index > 9) cl = ' hd';
-    return `<div class="link-row${cl}">
+    return `<a class="link-row${cl}" href="/wifi_password.html?ssid=${encodeURIComponent(data.ssid)}&level=${data.level}${queryParams.wizard ? `&wizard=true` : ''}">
         <div class="icon l${data.level}">
             <img src="/images/icons.png">
         </div>
         ${data.ssid}
-        <a href="/wifi_password.html?ssid=${encodeURIComponent(data.ssid)}&level=${data.level}${queryParams.wizard ? `&wizard=true` : ''}">
-            <div class="icon arrow">
-                <img src="/images/icons.png">
-            </div>
-        </a>
-    </div>`;
+        <div class="icon arrow">
+            <img src="/images/icons.png">
+        </div>
+    </a>`;
 }
-function formSubmit(event, form, action) {
+function formSubmit(event, form, action, _setup = false) {
     event.preventDefault();
+
+    //*
+    // setup_send если все тублеры выключены: форму не отправлять, показать ошибку
+    if(_setup) {
+        let count = 0;
+        document.querySelectorAll('#waterius_on,#http_on,#mqtt_on').forEach(item => {
+            if(item.checked) count++;
+        });
+        const _fe = document.querySelector('.form-error');
+        if(!count) return _fe.classList.remove('hd');
+        _fe.classList.add('hd');
+    }
+    //*/
 
     const data = new URLSearchParams();
     //const data = {};// json
@@ -253,20 +279,27 @@ function showPW(id){
     const pw=document.getElementById(id);
     pw.type == 'password' ? pw.type = 'text' : pw.type = 'password';
 }
-function showForm(cls){
+/*function showForm(cls){
     document.querySelector(cls).classList.toggle('hd');
     document.querySelector('.form-error').classList.add('hd');
-}
+}*/
 function getStatus(i) {
     setTimeout(() => {
         ajax('/api/status/' + i, {}, data => {
             if(data.state == 1)
                 return window.location = (queryParams.wizard ? pages.next_wizard + '&' : pages.next + '?') + 'factor' + i + '=' + data.factor;
+                // при переадресации на setup_send factor ну нужен; или это временно так щас сделано?
+                // тк нажимая назад на setup_send попадаю на setup_hot
+                //return window.location = queryParams.wizard ? pages.next_wizard : pages.next;
                 
             getStatus(i);
             formError(data.error);
         }, false);
     }, 2000);
+}
+function _setup(_pages, i){
+    _init(_pages);
+    if(parseInt(queryParams['factor' + i]) > 0) document.getElementById('factor' + i).innerText = parseInt(queryParams['factor' + i]);
 }
 function finish(btn){
     ajax('/api/turnoff', {}, () => {

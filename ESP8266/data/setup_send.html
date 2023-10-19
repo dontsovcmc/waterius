@@ -13,7 +13,7 @@
         next: '/',
         next_wizard: '/finish.html'
     })">
-        <form onsubmit="formSubmit(event, this, 'setup');">
+        <form onsubmit="formSubmit(event, this, 'setup', true);">
             <div class="wrap">
                 <div class="container f1">
                     <header>
@@ -30,10 +30,10 @@
                     <main>
                         <h2>Отправка показаний</h2>
                         <p class="text">Выберите куда Ватериусу отправлять показания счётчиков и введите необходимые данные</p>
-                        <p class="form-error hd"></p>
+                        <p class="form-error hd">Выберите куда отправлять показания счётчиков, чтобы закончить настройку Ватериуса</p>
 
                         <div class="toggle mt24">
-                            <input type="checkbox" name="waterius_on" id="waterius_on" onclick="showForm('.email-form')" %waterius_on%>
+                            <input type="checkbox" name="waterius_on" id="waterius_on" onclick="checkboxToggle(this)" data-form=".email-form" %waterius_on%>
                             <label for="waterius_on">Waterius.ru</label>
                         </div>
                         <div class="f-row mt16 hd email-form">
@@ -42,7 +42,7 @@
                             <p class="error hd" id="waterius_email-error">Введите E-mail</p>
                         </div>
                         <div class="toggle">
-                            <input type="checkbox" name="http_on" id="http_on" onclick="showForm('.server-form')" %http_on%>
+                            <input type="checkbox" name="http_on" id="http_on" onclick="checkboxToggle(this)" data-form=".server-form" %http_on%>
                             <label for="http_on">Сервер HTTP</label>
                         </div>
                         <div class="f-row mt16 hd server-form">
@@ -51,7 +51,7 @@
                             <p class="error hd" id="http_url-error">Введите адрес сервера</p>
                         </div>
                         <div class="toggle">
-                            <input type="checkbox" name="mqtt_on" id="mqtt_on" onclick="showForm('.mqtt-form')" %mqtt_on%>
+                            <input type="checkbox" name="mqtt_on" id="mqtt_on" onclick="checkboxToggle(this)" data-form=".mqtt-form" %mqtt_on%>
                             <label for="mqtt_on">Брокер MQTT</label>
                         </div>
                         <div class="hd mqtt-form">

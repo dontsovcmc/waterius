@@ -7,12 +7,12 @@
         <link rel="stylesheet" href="/style.css">
         <script src="/common.js"></script>
     </head>
-    <body onload="_init({
+    <body onload="_setup({
         back: '/setup_hot_welcome.html',
         back_wizard: '/setup_hot_welcome.html?wizard=true',
         next: '/',
         next_wizard: '/setup_send.html?wizard=true'
-    })">
+    }, 0)">
         <form onsubmit="formSubmit(event, this, 'setup');">
             <div class="wrap">
                 <div class="container f1">
@@ -41,7 +41,7 @@
                             <input pattern="^\s*[\d]+([,\.][\d]+)?\s*$" id="channel0_start" name="channel0_start" placeholder="356.89" value="%channel0_start%">
                             <p class="error hd" id="channel1_start-error">Введите показания счётчика</p>
                         </div>
-                        <p class="note mt16">Вес счётчика – <span id="meter-factor">1</span>л/имп</p>
+                        <p class="note mt16">Вес счётчика – <span id="factor0">1</span>л/имп</p>
                     </main>
                     <footer class="btns">
                         <button class="btn" type="submit">Сохранить</button>
