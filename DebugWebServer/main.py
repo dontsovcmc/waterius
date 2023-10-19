@@ -128,6 +128,6 @@ async def index():
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host='192.168.1.38', port=9000, reload=True)
+    uvicorn.run("main:app", host='0.0.0.0', port=9000, reload=True)
     #uvicorn.run("main:app", host='192.168.10.43', port=9000, reload=True)
 

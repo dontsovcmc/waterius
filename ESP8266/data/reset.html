@@ -7,7 +7,12 @@
         <link rel="stylesheet" href="/style.css">
         <script src="/common.js"></script>
     </head>
-    <body>
+    <body onload="_init({
+        back: '/',
+        back_wizard: '/',
+        next: '/',
+        next_wizard: '/'
+    })">
         <form onsubmit="formSubmit(event, this, 'reset');">
             <div class="wrap">
                 <div class="container f1">

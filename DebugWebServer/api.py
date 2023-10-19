@@ -83,6 +83,8 @@ async def main_status():
         "link": "/setup_cold.html"
     }]
 
+    res = []
+
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
 
