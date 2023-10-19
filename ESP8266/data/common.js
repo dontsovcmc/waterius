@@ -108,19 +108,6 @@ function getWifiRow(data, index) {
 function formSubmit(event, form, action, _setup = false) {
     event.preventDefault();
 
-    //*
-    // setup_send если все тублеры выключены: форму не отправлять, показать ошибку
-    if(_setup) {
-        let count = 0;
-        document.querySelectorAll('#waterius_on,#http_on,#mqtt_on').forEach(item => {
-            if(item.checked) count++;
-        });
-        const _fe = document.querySelector('.form-error');
-        if(!count) return _fe.classList.remove('hd');
-        _fe.classList.add('hd');
-    }
-    //*/
-
     const data = new URLSearchParams();
     //const data = {};// json
     /*for (const pair of new FormData(form)) {

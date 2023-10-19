@@ -40,7 +40,7 @@ async def connect(form_data: ConnectModel = Depends()):
     :param form_data:
     :return:
     """
-    res = {k: v for k, v in form_data.__dict__.items() if v}
+    res = {k: v for k, v in form_data.__dict__.items() if v is not None}
 
     res = settings.apply_settings(res)
 
@@ -139,7 +139,7 @@ async def status(input: int):
 
 @api_app.post("/setup")
 async def setup(form_data: SettingsModel = Depends()):
-    res = {k: v for k, v in form_data.__dict__.items() if v}
+    res = {k: v for k, v in form_data.__dict__.items() if v is not None}
     res = settings.apply_settings(res)
 
     # res["errors"]["form"] = "Ошибка формы сообщение"

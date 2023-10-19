@@ -30,7 +30,7 @@
                     <main>
                         <h2>Отправка показаний</h2>
                         <p class="text">Выберите куда Ватериусу отправлять показания счётчиков и введите необходимые данные</p>
-                        <p class="form-error hd">Выберите куда отправлять показания счётчиков, чтобы закончить настройку Ватериуса</p>
+                        <p class="form-error hd"></p>
 
                         <div class="toggle mt24">
                             <input type="checkbox" name="waterius_on" id="waterius_on" onclick="checkboxToggle(this)" data-form=".email-form" %waterius_on%>
@@ -38,7 +38,7 @@
                         </div>
                         <div class="f-row mt16 hd email-form">
                             <label for="waterius_email">Почта аккаунта</label>
-                            <input type="email" id="waterius_email" name="waterius_email" placeholder="name@domen.ru" value="%waterius_email%" >
+                            <input type="email" id="waterius_email" name="waterius_email" placeholder="name@domen.ru" pattern="[^@\s]+@[^@\s]+\.[^@\s]+" value="%waterius_email%" >
                             <p class="error hd" id="waterius_email-error">Введите E-mail</p>
                         </div>
                         <div class="toggle">

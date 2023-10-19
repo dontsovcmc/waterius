@@ -1,6 +1,7 @@
 from enum import Enum
 from copy import deepcopy
 import ipaddress
+import re
 
 AUTO_IMPULSE_FACTOR = 3
 AS_COLD_CHANNEL = 7
@@ -104,8 +105,7 @@ class Settings:
                     and not form_data.get('http_on') \
                     and not form_data.get('mqtt_on'):
                 res.update({"errors": {
-                    "form": "Выберите куда отправлять показания счётчиков, "
-                            "чтобы закончить настройку Ватериуса"
+                    "form": "Выберите хотя бы одного получателя данных"
                 }})
 
         static_ip_on = form_data.get('static_ip_on')
@@ -122,12 +122,6 @@ class Settings:
         return res
 
 
-settings = Settings()
-settings_vars = [attr for attr in dir(settings) if
-                 not callable(getattr(settings, attr)) and
-                 not attr.startswith("__")]
-
-
 class AttinyData:
     impulses0: int = 0
     impulses1: int = 0
@@ -135,6 +129,21 @@ class AttinyData:
     counter_type1: int = 0
     model: int = 30
 
+
+class SystemInfo:
+    version_esp: str = '0.11.9'
+    version: int = 31
+
+
+settings = Settings()
+settings_vars = [attr for attr in dir(settings) if
+                 not callable(getattr(settings, attr)) and
+                 not attr.startswith("__")]
+
+system_info = SystemInfo()
+system_info_vars = [attr for attr in dir(system_info) if
+                    not callable(getattr(system_info, attr)) and
+                    not attr.startswith("__")]
 
 attiny_data = AttinyData()
 

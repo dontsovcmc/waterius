@@ -1,8 +1,9 @@
 import uvicorn
+from typing import List, Any
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from esp import settings, settings_vars
+from esp import settings, settings_vars, system_info, system_info_vars
 from api import api_app
 from api_debug import debug_app
 
@@ -21,25 +22,36 @@ app.mount("/debug", debug_app)
 app.mount("/images", StaticFiles(directory=os.path.join(ROOT_PATH, 'images')), name="static")
 
 
+def replace_variables(text: str, keywords: List[str], obj: Any):
+    for name in keywords:
+        if f'%{name}%' in text:
+            v = getattr(obj, name)
+            if isinstance(v, bool):
+                if v:
+                    text = text.replace(f'%{name}%', 'value="1" checked')
+                else:
+                    text = text.replace(f'%{name}%', '')
+            else:
+                text = text.replace(f'%{name}%', str(v))
+    return text
+
+
 def template_response(filename: str):
     try:
         with open(os.path.join(ROOT_PATH, filename), "r") as file:
             html_content = file.read()
 
-            for name in settings_vars:
-                if f'%{name}%' in html_content:
-                    v = getattr(settings, name)
-                    if isinstance(v, bool):
-                        if v:
-                            html_content = html_content.replace(f'%{name}%', 'value="1" checked')
-                        else:
-                            html_content = html_content.replace(f'%{name}%', '')
-                    else:
-                        html_content = html_content.replace(f'%{name}%', str(v))
+            html_content = replace_variables(html_content, settings_vars, settings)
+            html_content = replace_variables(html_content, system_info_vars, system_info)
 
         return HTMLResponse(content=html_content)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="File not found")
+
+
+@app.get("/about.html")
+async def index():
+    return template_response("about.html")
 
 
 @app.get("/style.css")
