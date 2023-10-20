@@ -7,12 +7,12 @@
         <link rel="stylesheet" href="/style.css">
         <script src="/common.js"></script>
     </head>
-    <body onload="_setup({
+    <body onload="_init({
         back: '/setup_hot_welcome.html',
         back_wizard: '/setup_hot_welcome.html?wizard=true',
         next: '/',
         next_wizard: '/setup_send.html?wizard=true'
-    }, 0)">
+    }, 0); getImpulses(0);">
         <form onsubmit="formSubmit(event, this, 'setup');">
             <div class="wrap">
                 <div class="container f1">
@@ -33,7 +33,7 @@
                         <p class="form-error hd"></p>
                         <div class="f-row">
                             <label for="serial0">Серийный номер (опционально)</label>
-                            <input id="serial0" name="serial0" placeholder="S748HT838DN" value="%serial0%">
+                            <input id="serial0" name="serial0" placeholder="10-12345" value="%serial0%">
                             <p class="error hd" id="serial1-error">Введите серийный номер</p>
                         </div>
                         <div class="f-row">
@@ -41,7 +41,17 @@
                             <input pattern="^\s*[\d]+([,\.][\d]+)?\s*$" id="channel0_start" name="channel0_start" placeholder="356.89" value="%channel0_start%">
                             <p class="error hd" id="channel1_start-error">Введите показания счётчика</p>
                         </div>
-                        <p class="note mt16">Вес счётчика – <span id="factor0">1</span>л/имп</p>
+                        <div class="f-row">
+                            <label for="factor0">Вес импульса</label>
+                            <select class="slct" id="factor0" name="factor0">
+                              <option selected="" value="1">1</option>
+                              <option value="10">10</option>
+                              <option value="100">100</option>
+                            </select>
+                            <p>л/имп</p>
+                            <p class="error hd" id="factor0-error">Недопустимое значение</p>
+                        </div>
+                        <p class="note mt16">означает, что во время настройки вылилось около <span id="delta0">1</span>л воды.</p>
                     </main>
                     <footer class="btns">
                         <button class="btn" type="submit">Сохранить</button>

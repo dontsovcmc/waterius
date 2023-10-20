@@ -2,7 +2,8 @@
 from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
-from esp import settings
+from esp import settings, attiny_data, attiny_link_error, AUTO_IMPULSE_FACTOR, AS_COLD_CHANNEL
+from api_debug import runtime_data
 from models import SettingsModel, ConnectModel
 import time
 
@@ -89,6 +90,7 @@ async def main_status():
     return JSONResponse(content=json)
 
 
+"""
 @api_app.get("/status/{input}")
 async def status_input(input: int):
     #res = {"state": 0, "factor": 1, "delta": 2, "error": ""}
@@ -97,11 +99,12 @@ async def status_input(input: int):
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
 
-
 """
+
+
 @api_app.get("/status/{input}")
 async def status(input: int):
-
+    """
     Запрос данных Входа
     :param input: 0 или 1
     :return: JSON
@@ -109,24 +112,35 @@ async def status(input: int):
         factor: множитель
         delta: количество импульсов пришедших с момента настройки
         error: если есть ошибка связи с МК (имитация: /attiny_link)
-
+    """
     global attiny_link_error
-    error_str = ""
-    if attiny_link_error:
-        error_str = "Ошибка связи с МК"
+    error_str = "" if not attiny_link_error else "Ошибка связи с МК"
 
-    if input == 0:
+    if input == 0:  # ГВС
+
+        if settings.factor0 == AS_COLD_CHANNEL:
+            factor = settings.factor1  # как у холодной
+        else:
+            factor = settings.factor0
+
         status = {
             "state": int(runtime_data.impulses0 > attiny_data.impulses0),
-            "factor": settings.factor0,
-            "delta": runtime_data.impulses0 - attiny_data.impulses0,
+            "factor": factor,
+            "impulses": runtime_data.impulses0 - attiny_data.impulses0,
             "error": error_str
         }
-    elif input == 1:
+    elif input == 1:  # ХВС
+
+        if settings.factor1 == AUTO_IMPULSE_FACTOR:
+            # если первичная настройка, то множитель определяем по слитой воде
+            factor = 1 if runtime_data.impulses1 - attiny_data.impulses1 > 2 else 10
+        else:
+            factor = settings.factor1
+
         status = {
             "state": int(runtime_data.impulses1 > attiny_data.impulses1),
-            "factor": settings.factor1,
-            "delta": runtime_data.impulses1 - attiny_data.impulses1,
+            "factor": factor,
+            "impulses": runtime_data.impulses1 - attiny_data.impulses1,
             "error": error_str
         }
     else:
@@ -134,7 +148,6 @@ async def status(input: int):
 
     json_status = jsonable_encoder(status)
     return JSONResponse(content=json_status)
-"""
 
 
 @api_app.post("/setup")

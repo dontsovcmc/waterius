@@ -1,5 +1,6 @@
 const queryParams = {};
 let pages = {};
+
 function _init(_pages) {
     // Должна выполняться при загрузке каждой страницы
     
@@ -8,7 +9,7 @@ function _init(_pages) {
 
     if(document.querySelector('form')) {
         // заполнение полей формы из location.search
-        document.querySelectorAll('input,textarea').forEach(item => {
+        document.querySelectorAll('input,textarea,select,span').forEach(item => {
             if(item.type == 'checkbox'){
                 if(parseInt(queryParams[item.name]) || (queryParams[item.name] && queryParams[item.name].toLowerCase() == 'true'))//{
                     item.checked = true;
@@ -18,6 +19,10 @@ function _init(_pages) {
                     //item.parentNode.classList.remove('active');
                 //}
                 checkboxToggle(item);
+                return;
+            }
+            if (item.localName == 'span') {
+                item.textContent = queryParams[item.id];
                 return;
             }
             if(queryParams[item.name]) item.value = queryParams[item.name];
@@ -114,7 +119,7 @@ function formSubmit(event, form, action, _setup = false) {
         data.append(pair[0], pair[1]);
         //data[pair[0]] = pair[1];// json
     }*/
-    form.querySelectorAll('input,textarea').forEach(inp => {
+    form.querySelectorAll('input,textarea,select').forEach(inp => {
         if(inp.type == 'checkbox') return inp.checked ? data.append(inp.name, 1) : data.append(inp.name, 0);
         if(inp.type == 'radio' ) return inp.checked ? data.append(inp.name, 1) : ''; //data.append(inp.name, 0);
         data.append(inp.name, inp.value.trim());
@@ -266,27 +271,24 @@ function showPW(id){
     const pw=document.getElementById(id);
     pw.type == 'password' ? pw.type = 'text' : pw.type = 'password';
 }
-/*function showForm(cls){
-    document.querySelector(cls).classList.toggle('hd');
-    document.querySelector('.form-error').classList.add('hd');
-}*/
-function getStatus(i) {
+function getStatus(i, next) {
     setTimeout(() => {
         ajax('/api/status/' + i, {}, data => {
             if(data.state == 1)
-                return window.location = (queryParams.wizard ? pages.next_wizard + '&' : pages.next + '?') + 'factor' + i + '=' + data.factor;
-                // при переадресации на setup_send factor ну нужен; или это временно так щас сделано?
-                // тк нажимая назад на setup_send попадаю на setup_hot
-                //return window.location = queryParams.wizard ? pages.next_wizard : pages.next;
-                
-            getStatus(i);
+                return window.location = (queryParams.wizard ? next + '?wizard=true' + '&' : next + '?') + 'factor' + i + '=' + data.factor + '&delta' + i + '=' + data.impulses * data.factor;
             formError(data.error);
+            getStatus(i, next);
         }, false);
     }, 2000);
 }
-function _setup(_pages, i){
-    _init(_pages);
-    if(parseInt(queryParams['factor' + i]) > 0) document.getElementById('factor' + i).innerText = parseInt(queryParams['factor' + i]);
+function getImpulses(i) {
+    setTimeout(() => {
+        ajax('/api/status/' + i, {}, data => {
+            document.getElementById('delta' + i).textContent = data.impulses * parseInt(document.getElementById('factor' + i).value);
+            formError(data.error);
+            getImpulses(i);
+        }, false);
+    }, 2000);
 }
 function finish(btn){
     ajax('/api/turnoff', {}, () => {

@@ -1,4 +1,5 @@
 import uvicorn
+import os
 from typing import List, Any
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi import FastAPI, HTTPException
@@ -6,8 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from esp import settings, settings_vars, system_info, system_info_vars
 from api import api_app
 from api_debug import debug_app
-
-import os
+from log import log
 
 
 ROOT_PATH = os.path.normpath(os.path.join(os.path.abspath(__file__),
@@ -140,6 +140,8 @@ async def index():
 
 
 if __name__ == "__main__":
+    log.info(f'api: http://127.0.0.1:9000/api/docs')
+    log.info(f'debug api: http://127.0.0.1:9000/debug/docs')
     uvicorn.run("main:app", host='0.0.0.0', port=9000, reload=True)
     #uvicorn.run("main:app", host='192.168.10.43', port=9000, reload=True)
 

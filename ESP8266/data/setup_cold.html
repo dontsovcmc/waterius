@@ -7,12 +7,12 @@
         <link rel="stylesheet" href="/style.css">
         <script src="/common.js"></script>
     </head>
-    <body onload="_setup({
-        back: '/setup_hot_welcome.html',
-        back_wizard: '/setup_hot_welcome.html?wizard=true',
+    <body onload="_init({
+        back: '/setup_cold_welcome.html',
+        back_wizard: '/setup_cold_welcome.html?wizard=true',
         next: '/',
-        next_wizard: '/setup_send.html?wizard=true'
-    }, 1)">
+        next_wizard: '/setup_hot_welcome.html?wizard=true'
+    }, 1); getImpulses(1);">
         <form onsubmit="formSubmit(event, this, 'setup');">
             <div class="wrap">
                 <div class="container f1">
@@ -33,7 +33,7 @@
                         <p class="form-error hd"></p>
                         <div class="f-row">
                             <label for="serial1">Серийный номер (опционально)</label>
-                            <input id="serial1" name="serial1" placeholder="S748HT838DN" value="%serial1%">
+                            <input id="serial1" name="serial1" placeholder="10-12345" value="%serial1%">
                             <p class="error hd" id="serial1-error">Введите серийный номер</p>
                         </div>
                         <div class="f-row">
@@ -41,7 +41,17 @@
                             <input pattern="^\s*[\d]+([,\.][\d]+)?\s*$" id="channel1_start" name="channel1_start" placeholder="356.89" value="%channel1_start%">
                             <p class="error hd" id="channel1_start-error">Введите показания счётчика</p>
                         </div>
-                        <p class="note mt16">Вес счётчика – <span id="factor1">1</span>л/имп</p>
+                        <div class="f-row">
+                            <label for="factor1">Вес импульса</label>
+                            <select class="slct" id="factor1" name="factor1">
+                              <option selected="" value="1">1</option>
+                              <option value="10">10</option>
+                              <option value="100">100</option>
+                            </select>
+                            <p>л/имп</p>
+                            <p class="error hd" id="factor1-error">Недопустимое значение</p>
+                        </div>
+                        <p class="note mt16">(во время настройки вылилось около <span id="delta1">1</span>л воды)</p>
                     </main>
                     <footer class="btns">
                         <button class="btn" type="submit">Сохранить</button>

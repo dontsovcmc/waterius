@@ -6,7 +6,7 @@ from fastapi import Form
 @dataclass
 class ConnectModel:
     ssid: str = Form(...)
-    password: str = Form(...)
+    password: str | None = Form(None)
 
     dhcp_on: bool | None = Form(None)
     gateway_ip: str | None = Form(None)

@@ -1,6 +1,6 @@
 
 from fastapi import FastAPI
-from esp import AttinyData
+from esp import AttinyData, attiny_link_error
 
 debug_app = FastAPI(title="debug application")
 

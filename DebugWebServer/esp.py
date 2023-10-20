@@ -1,7 +1,7 @@
 from enum import Enum
 from copy import deepcopy
 import ipaddress
-import re
+
 
 AUTO_IMPULSE_FACTOR = 3
 AS_COLD_CHANNEL = 7
