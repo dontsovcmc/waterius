@@ -1,5 +1,12 @@
-# Ватериус 0.11.8
-## Wi-Fi приставка для импульсных счётчиков воды и газа
+# Ватериус 0.11.10
+## Wi-Fi приставка для импульсных счётчиков воды, газа, тепла
+
+<a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
+
+![waterius2-phone_](https://user-images.githubusercontent.com/3930496/149906477-6aa47cdd-f714-4546-85ff-5541c60260a2.jpeg)
+
+[Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
+
 ✅ Протоколы HTTP, MQTT
 
 ✅ Поддержка <a href="https://www.home-assistant.io/" targe="_blank">HomeAssistant</a>,  <a href="https://www.hackster.io/dontsovcmc/domoticz-4346d5" targe="_blank">Domoticz</a>, <a href="https://spruthub.ru" targe="_blank">SprutHub</a> 
@@ -13,20 +20,20 @@
 
 ✅ Работает от 3-х батареек АА несколько лет
 
-<a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
+### Подходит к счётчикам
+✅ Все счётчики воды с [импульсным выходом](https://github.com/dontsovcmc/waterius/issues/65) (провод торчит из корпуса)
 
-![waterius2-phone_](https://user-images.githubusercontent.com/3930496/149906477-6aa47cdd-f714-4546-85ff-5541c60260a2.jpeg)
+✅ Все счётчики газа с герконом
 
-[Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
+✅ Электронные счётчики газа: Бетар СГБМ-4 [подробнее](https://github.com/dontsovcmc/waterius/issues/233)
+
+✅ Электронные счётчики тепла: Sanext Monu CU [подробнее](https://github.com/dontsovcmc/waterius/issues/233)
 
 ### Где купить
 
 В России: [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github) | [Ozon](https://ozon.ru/product/vaterius-umnaya-pristavka-k-schetchikam-vody-wi-fi-dlya-impulsnyh-schetchikov-goryachego-i-366409307/?utm_source=github&utm_campaign=vendor_org_160471_sell_page&hs=1) | [Yandex.market](https://market.yandex.ru/store--waterius/product/920451755?businessId=1106573&sku=101280435941) | [Wildberries](https://global.wildberries.ru/product?card=26967283)
 
 Worldwide by Wildberries: [Armenia 🇦🇲](https://global.wildberries.ru/product?card=26967283) | [Belarus 🇧🇾](https://global.wildberries.ru/product?card=26967283) | [Kyrgyzstan 🇰🇬](https://global.wildberries.ru/product?card=26967283) | [Kazakhstan 🇰🇿](https://global.wildberries.ru/product?card=26967283)
-
-### Совместимые счётчики
-Все счётчики с [импульсным выходом](https://github.com/dontsovcmc/waterius/issues/65) (провод торчит из корпуса)
 
 ### Характеристики
 - 2 счётчика
