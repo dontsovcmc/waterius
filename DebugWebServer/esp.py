@@ -39,8 +39,9 @@ class Settings:
     http_on: bool | None = False
     http_url: str | None = ""
 
-    blynk_key: str | None = "182191205125"
-    blynk_host: str | None = "blynk.com"
+    #blynk_on: bool | None = False
+    #blynk_key: str | None = "182191205125"
+    #blynk_host: str | None = "blynk.com"
 
     mqtt_on: bool | None = False
     mqtt_host: str | None = ""

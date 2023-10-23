@@ -173,7 +173,8 @@
 
 #define VER_8 8
 #define VER_9 9
-#define CURRENT_VERSION VER_9
+#define VER_10 10
+#define CURRENT_VERSION VER_10
 
 #define EMAIL_LEN 40
 
@@ -300,7 +301,7 @@ struct Settings
 {
     uint8_t version = CURRENT_VERSION; // Версия конфигурации
 
-    uint8_t reserved = 0;
+    uint8_t reserved0 = 0;
 
     // SEND_WATERIUS
 
@@ -317,7 +318,8 @@ struct Settings
     // сервер blynk.com или свой blynk сервер
     char blynk_host[HOST_LEN] = {0};
 
-    char reserved7[EMAIL_LEN + BLYNK_EMAIL_TITLE_LEN + BLYNK_EMAIL_TEMPLATE_LEN] = {0};
+    char http_url[HOST_LEN] = {0};
+    char reserved7[EMAIL_LEN + BLYNK_EMAIL_TEMPLATE_LEN] = {0};
 
     char mqtt_host[HOST_LEN] = {0};
     uint16_t mqtt_port = MQTT_DEFAULT_PORT;
@@ -418,12 +420,13 @@ struct Settings
     uint8_t wifi_bssid[6] = {0};
     /* Wifi канал */
     uint8_t wifi_channel = 0;
-    uint8_t wifi_phy_mode = 0; // Режим работы интерфейса
+    /* Режим работы интерфейса */
+    uint8_t wifi_phy_mode = 0;
     
     /*
     Тип счётчика (вода, тепло, газ, электричество)
     */
-    uint8_t counter0_name = CounterName::WATER_HOT;  //enum CounterName
+    uint8_t counter0_name = CounterName::WATER_HOT;
     uint8_t counter1_name = CounterName::WATER_COLD;
 
     /*
@@ -431,11 +434,24 @@ struct Settings
     */
     uint16_t factor0 = AS_COLD_CHANNEL;
     uint16_t factor1 = AUTO_IMPULSE_FACTOR;
+
+    /* Включение передачи на офиц. сайт */
+    uint8_t waterius_on = (uint8_t)true;
+    /* Включение передачи по http на другой хост */
+    uint8_t http_on = (uint8_t)false;
+    /* Включение передачи по mqtt */
+    uint8_t mqtt_on = (uint8_t)false;
+    /* Включение Blynk */
+    uint8_t blynk_on = (uint8_t)false;
+    /* Включение DHCP или статических настроек */
+    uint8_t dhcp_on = (uint8_t)true;
+
+    uint8_t reserved8 = 0;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved4[60] = {0};
+    uint8_t reserved4[54] = {0};
 
 }; // 960 байт
 

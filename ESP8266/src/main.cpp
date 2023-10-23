@@ -64,6 +64,11 @@ void loop()
 
             start_active_point(sett, data, cdata);
             
+            sett.setup_time = millis();
+            sett.setup_finished_counter++;
+
+            store_config(sett);
+    
             wifi_shutdown();
 
             LOG_INFO(F("Set mode MANUAL_TRANSMIT to attiny"));

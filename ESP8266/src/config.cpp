@@ -56,6 +56,8 @@ bool load_config(Settings &sett)
         sett.waterius_key[WATERIUS_KEY_LEN - 1] = 0;
         sett.waterius_email[EMAIL_LEN - 1] = 0;
 
+        sett.http_url[HOST_LEN - 1] = 0;
+
         sett.blynk_key[BLYNK_KEY_LEN - 1] = 0;
         sett.blynk_host[HOST_LEN - 1] = 0;
 
@@ -67,15 +69,39 @@ bool load_config(Settings &sett)
 
         sett.ntp_server[HOST_LEN - 1] = 0;
 
-        LOG_INFO(F("--- Waterius.ru ---- "));
-        LOG_INFO(F("email=") << sett.waterius_email);
-        LOG_INFO(F("host=") << sett.waterius_host << F(" key=") << sett.waterius_key);
         LOG_INFO(F("wakeup min=") << sett.wakeup_per_min);
 
+        LOG_INFO(F("--- Waterius.ru ---- "));
+        if (sett.waterius_on) {
+            LOG_INFO(F("state=ON"));
+        } else {
+            LOG_INFO(F("state=OFF"));
+        }
+        LOG_INFO(F("email=") << sett.waterius_email);
+        LOG_INFO(F("host=") << sett.waterius_host << F(" key=") << sett.waterius_key);
+
+        LOG_INFO(F("--- HTTP ---- "));
+        if (sett.http_on) {
+            LOG_INFO(F("state=ON"));
+        } else {
+            LOG_INFO(F("state=OFF"));
+        }
+        LOG_INFO(F("host=") << sett.http_url);
+
         LOG_INFO(F("--- Blynk.cc ---- "));
+        if (sett.blynk_on) {
+            LOG_INFO(F("state=ON"));
+        } else {
+            LOG_INFO(F("state=OFF"));
+        }
         LOG_INFO(F("host=") << sett.blynk_host << F(" key=") << sett.blynk_key);
 
         LOG_INFO(F("--- MQTT ---- "));
+        if (sett.mqtt_on) {
+            LOG_INFO(F("state=ON"));
+        } else {
+            LOG_INFO(F("state=OFF"));
+        }
         LOG_INFO(F("host=") << sett.mqtt_host << F(" port=") << sett.mqtt_port);
         LOG_INFO(F("login=") << sett.mqtt_login << F(" pass=") << sett.mqtt_password);
         LOG_INFO(F("auto discovery=") << sett.mqtt_auto_discovery);
@@ -84,7 +110,11 @@ bool load_config(Settings &sett)
         LOG_INFO(F("--- Network ---- "));
         if (sett.ip)
         {
-            LOG_INFO(F("DHCP turn off"));
+            if (sett.dhcp_on) {
+                LOG_INFO(F("DHCP=ON"));
+            } else {
+                LOG_INFO(F("DHCP=OFF"));
+            }
             LOG_INFO(F("static_ip=") << IPAddress(sett.ip).toString());
             LOG_INFO(F("gateway=") << IPAddress(sett.gateway).toString());
             LOG_INFO(F("mask=") << IPAddress(sett.mask).toString());

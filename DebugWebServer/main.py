@@ -50,27 +50,27 @@ def template_response(filename: str):
 
 
 @app.get("/about.html")
-async def index():
+async def about():
     return template_response("about.html")
 
 
 @app.get("/style.css")
-async def index():
+async def style():
     return FileResponse(os.path.join(ROOT_PATH, "style.css"))
 
 
 @app.get("/common.js")
-async def index():
+async def common():
     return FileResponse(os.path.join(ROOT_PATH, "common.js"))
 
 
 @app.get("/favicon.ico")
-async def index():
+async def favicon():
     return FileResponse(os.path.join(ROOT_PATH, "favicon.ico"))
 
 
 @app.get("/finish.html")
-async def index():
+async def finish():
     return template_response("finish.html")
 
 
@@ -80,68 +80,68 @@ async def index():
 
 
 @app.get("/logs.html")
-async def index():
+async def logs():
     return template_response("logs.html")
 
 
 @app.get("/reset.html")
-async def index():
+async def reset():
     return template_response("reset.html")
 
 
 @app.get("/setup_cold_welcome.html")
-async def index():
+async def setup_cold_welcome():
     return template_response("setup_cold_welcome.html")
 
 
 @app.get("/setup_cold.html")
-async def index():
+async def setup_cold():
     return template_response("setup_cold.html")
 
 
 @app.get("/setup_hot_welcome.html")
-async def index():
+async def setup_hot_welcome():
     return template_response("setup_hot_welcome.html")
 
 
 @app.get("/setup_hot.html")
-async def index():
+async def setup_hot():
     return template_response("setup_hot.html")
 
 
 @app.get("/setup_send.html")
-async def index():
+async def setup_send():
     return template_response("setup_send.html")
 
 
 @app.get("/start.html")
-async def index():
+async def start():
     return template_response("start.html")
 
 
 @app.get("/waterius_logs.txt")
-async def index():
+async def waterius_logs():
     return FileResponse(os.path.join(ROOT_PATH, "waterius_logs.txt"))
 
 
 @app.get("/wifi_list.html")
-async def index():
+async def wifi_list():
     return template_response("wifi_list.html")
 
 
 @app.get("/wifi_password.html")
-async def index():
+async def wifi_password():
     return template_response("wifi_password.html")
 
 
 @app.get("/wifi_settings.html")
-async def index():
+async def wifi_settings():
     return template_response("wifi_settings.html")
 
 
 if __name__ == "__main__":
     log.info(f'api: http://127.0.0.1:9000/api/docs')
     log.info(f'debug api: http://127.0.0.1:9000/debug/docs')
-    uvicorn.run("main:app", host='0.0.0.0', port=9000, reload=True)
+    uvicorn.run("main:app", host='0.0.0.0', port=7000, reload=True)
     #uvicorn.run("main:app", host='192.168.10.43', port=9000, reload=True)
 
