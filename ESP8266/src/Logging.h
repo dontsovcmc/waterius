@@ -24,9 +24,27 @@ inline Print &operator<<(Print &obj, T arg)
 		unsigned char seconds = (((logTime % MS_IN_DAY) % MS_IN_HOUR) % MS_IN_MINUTE) / MS_IN_SECOND; \
 		unsigned short ms = ((((logTime % MS_IN_DAY) % MS_IN_HOUR) % MS_IN_MINUTE) % MS_IN_SECOND);   \
 		char logFormattedTime[17];                                                                    \
-		sprintf(logFormattedTime, "%02u:%02u:%03u", minutes, seconds, ms);                            \
+		snprintf_P(logFormattedTime, sizeof(logFormattedTime),                                        \
+		           PSTR("%02u:%02u:%03u"), minutes, seconds, ms);                                     \
 		Serial << String(logFormattedTime);                                                           \
 	} while (0)
+
+#ifdef ESP8266
+#define LOG_FREE_HEAP                                                       \
+	do                                                                      \
+	{                                                                       \
+		char logHeap[10];                                                   \
+		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d"), int(ESP.getFreeHeap() / 1024)); \
+	} while (0)                                                             
+#else
+#define LOG_FREE_HEAP                                                       \
+	do                                                                      \
+	{                                                                       \
+		char logHeap[10];                                                   \
+		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d/%02d"),        \
+				   ESP_getFreeHeap1024(), ESP_getHeapFragmentation());  \
+	} while (0)  
+#endif
 
 // Default do no logging...
 #define LOG_BEGIN(baud)                 \
@@ -56,7 +74,8 @@ inline Print &operator<<(Print &obj, T arg)
 #define LOG_ERROR(content)                           \
 	do                                               \
 	{                                                \
-		LOG_FORMAT_TIME;                             \
+		LOG_FORMAT_TIME;                             \ 
+		LOG_FREE_HEAP;                               \
 		Serial << "  ERROR : " << content << "\r\n"; \
 	} while (0)
 #undef LOG_INFO
@@ -64,6 +83,7 @@ inline Print &operator<<(Print &obj, T arg)
 	do                                               \
 	{                                                \
 		LOG_FORMAT_TIME;                             \
+		LOG_FREE_HEAP;                               \
 		Serial << "  INFO  : " << content << "\r\n"; \
 	} while (0)
 
