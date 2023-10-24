@@ -12,7 +12,6 @@
 #include "config.h"
 #include "wifi_helpers.h"
 #include "resources.h"
-#include "param_helpers.h"
 
 
 extern bool exit_portal;
@@ -51,11 +50,14 @@ uint8_t get_factor(uint8_t combobox_factor, uint32_t runtime_impulses, uint32_t 
  * @param request запрос
  */
 bool captivePortal(AsyncWebServerRequest *request)
-{
-    if(IPAddress::isValid(request->host()))
-        return false;
-    String url= String("http://") + IPAddress(request->client()->getLocalAddress()).toString();
+{      
+    String url = IPAddress(request->client()->getLocalAddress()).toString();
     LOG_INFO(F("Request redirected to captive portal ") << url);
+
+    if(WiFi.softAPIP() == IPAddress(request->client()->getLocalAddress()))
+        return false;
+
+    LOG_INFO(F("HTTP 302 to: ") << url);
     AsyncWebServerResponse *response = request->beginResponse(302, "text/plain", "");
     response->addHeader("Location", url);
     request->send(response);
@@ -70,9 +72,7 @@ bool captivePortal(AsyncWebServerRequest *request)
  */
 void onGetApiNetworks(AsyncWebServerRequest *request)
 {
-    if (captivePortal(request))
-        return;
-    LOG_INFO(F("GET /networks") << request->host() << request->url());
+    LOG_INFO(F("GET ") << request->url());
     
     int n = WiFi.scanComplete();
     if (n == WIFI_SCAN_FAILED)
@@ -105,16 +105,25 @@ void onGetApiNetworks(AsyncWebServerRequest *request)
  *
  * @param request запрос
  */
-void onGetApiConnect(AsyncWebServerRequest *request)
+void onPostApiConnect(AsyncWebServerRequest *request)
 {
+    LOG_INFO(F("POST ") << request->url());
 
     DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
+    JsonObject errorsObj = ret.createNestedObject("errors");
 
-    if (!wifi_connect(sett))
-    {
-        ret[F("error")] = F("Ошибка авторизации. Проверьте пароль");
-        ret[F("redirect")] = F("/wifi_settings.html");
+    applySettings(request, errorsObj);
+    
+    if (!errorsObj.size()) 
+    {   
+        // Ошибок в настройках нет
+        if (!wifi_connect(sett, WIFI_AP_STA))
+        {   
+            //Ошибка подключения
+            ret[F("error")] = F("Ошибка авторизации. Проверьте пароль");
+            ret[F("redirect")] = F("/wifi_settings.html");
+        }
     }
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -129,6 +138,7 @@ void onGetApiConnect(AsyncWebServerRequest *request)
  */
 void onGetApiMainStatus(AsyncWebServerRequest *request)
 {   
+    LOG_INFO(F("GET ") << request->url());
     if (captivePortal(request))
         return;
 
@@ -166,6 +176,7 @@ void onGetApiStatus1(AsyncWebServerRequest *request)
  */
 void onGetApiStatus(AsyncWebServerRequest *request, int index)
 {
+    LOG_INFO(F("GET ") << request->url());
     if (captivePortal(request))
         return;
 
@@ -303,15 +314,11 @@ void save_ip_param(AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj)
     }
 }
 
-void onPostApiSetup(AsyncWebServerRequest *request)
+void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
 {
-    DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
-    JsonObject ret = json_doc.to<JsonObject>();
-    JsonObject errorsObj = ret.createNestedObject("errors");
-
-
     const int params = request->params();
-    for(int i=0; i<params; i++){
+    for(int i=0; i<params; i++)
+    {
         AsyncWebParameter* p = request->getParam(i);
         const String &name = p->name();
 
@@ -455,10 +462,19 @@ void onPostApiSetup(AsyncWebServerRequest *request)
         }
         else if(name == FPSTR(PARAM_DHCP_ON)){   
             save_bool_param(p, sett.dhcp_on, errorsObj);
-        }
-        
+        }   
     }
+}
 
+void onPostApiSetup(AsyncWebServerRequest *request)
+{
+    LOG_INFO(F("POST ") << request->url());
+    DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
+    JsonObject ret = json_doc.to<JsonObject>();
+    JsonObject errorsObj = ret.createNestedObject("errors");
+
+    applySettings(request, errorsObj);
+    
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     serializeJson(json_doc, *response);
     request->send(response);
@@ -467,15 +483,15 @@ void onPostApiSetup(AsyncWebServerRequest *request)
 
 void onGetApiTurnOff(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("/api/turnoff"));
+    LOG_INFO(F("GET ") << request->url());
     exit_portal = true;
     AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "");
     request->send(response);
 }
 
-void onGetApiReset(AsyncWebServerRequest *request)
+void onPostApiReset(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("/api/reset"));
+    LOG_INFO(F("POST ") << request->url());
     if (captivePortal(request))
         return;
 

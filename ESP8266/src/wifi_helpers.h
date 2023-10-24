@@ -13,8 +13,8 @@
 #include <ESP8266WiFi.h>
 #include "setup.h"
 
-extern bool wifi_connect(Settings &sett);
-extern void wifi_begin(Settings &sett);
+extern bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode = WIFI_STA);
+extern void wifi_begin(Settings &sett, WiFiMode_t wifi_mode);
 extern void wifi_set_mode(WiFiMode_t wifi_mode);
 extern void wifi_shutdown();
 extern String wifi_mode();

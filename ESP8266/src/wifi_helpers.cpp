@@ -39,7 +39,7 @@ void wifi_set_mode(WiFiMode_t wifi_mode)
   }
 }
 
-void wifi_begin(Settings &sett)
+void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
 {
 
   WiFi.persistent(false);
@@ -47,7 +47,7 @@ void wifi_begin(Settings &sett)
 
   delay(200); // подождем чтобы проинициализировалась сеть
 
-  wifi_set_mode(WIFI_STA);
+  wifi_set_mode(wifi_mode);
   if (sett.wifi_phy_mode)
   {
     if (!WiFi.setPhyMode((WiFiPhyMode_t)sett.wifi_phy_mode))
@@ -55,6 +55,7 @@ void wifi_begin(Settings &sett)
       LOG_ERROR(F("Failed set phy mode ")<<sett.wifi_phy_mode);
     }
   }
+
   if (!WiFi.getAutoConnect())
   {
     WiFi.setAutoConnect(true);
@@ -62,6 +63,7 @@ void wifi_begin(Settings &sett)
 
   if (is_dhcp(sett))
   {
+    LOG_INFO(F("WIFI: use static IP"));
     IPAddress fallback_dns_server;
     fallback_dns_server.fromString(DEF_FALLBACK_DNS); 
     WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, fallback_dns_server);
@@ -116,7 +118,7 @@ String wifi_mode()
   return mode;
 }
 
-bool wifi_connect(Settings &sett)
+bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
 {
   uint32_t start_time = millis();
   LOG_INFO(F("WIFI: Connecting..."));
@@ -124,7 +126,7 @@ bool wifi_connect(Settings &sett)
   do
   {
     LOG_INFO(F("WIFI: Attempt #") << WIFI_CONNECT_ATTEMPTS - attempts + 1 << F(" from ") << WIFI_CONNECT_ATTEMPTS);
-    wifi_begin(sett);
+    wifi_begin(sett, wifi_mode);
     if (WiFi.isConnected())
     {
       sett.wifi_channel = WiFi.channel(); // сохраняем для быстрого коннекта

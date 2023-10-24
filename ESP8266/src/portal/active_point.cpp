@@ -14,7 +14,6 @@
 #include "config.h"
 #include "wifi_helpers.h"
 #include "resources.h"
-#include "param_helpers.h"
 #include "active_point_api.h"
 #include "active_point.h"
 
@@ -130,7 +129,7 @@ String processor(const String& var)
 
 void onNotFound(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("AsyncWebServer 404 ") << request->host()<< request->url());
+    LOG_INFO(F("onNotFound ") << request->url());
     if(captivePortal(request))
         return;
     request->send(404);
@@ -139,33 +138,60 @@ void onNotFound(AsyncWebServerRequest *request)
 
 void onRoot(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET /") << request->host() << request->url());
-    if (captivePortal(request))
-        return;      
-
+    LOG_INFO(F("onRoot GET ") << request->url());
+    if(captivePortal(request))
+        return;
     //request->send(LittleFS, "/start.html", String(), false, processor);
-    request->send(LittleFS, "/index.html", String(), false, processor);
+    request->send(LittleFS, "/index.html", F("text/html"), false, processor);
 }
 
 
 void start_active_point(const Settings &sett, const SlaveData &data, CalculatedData &cdata)
 {
+    if (!LittleFS.begin())
+    {
+        LOG_INFO(F("An Error has occurred while mounting LittleFS"));
+        return;
+    }
+    LOG_INFO(F("LittleFS mounted"));
+
     // Если настройки есть в конфиге то присваиваем их 
     if (sett.wifi_ssid[0]) {
+        LOG_INFO(F("Apply SSID:") << String(sett.wifi_ssid) << F(" from config"));
         struct station_config conf;
         conf.bssid_set = 0;
         memcpy(conf.ssid, sett.wifi_ssid, sizeof(conf.ssid));
         if (sett.wifi_password[0]) {
             memcpy(conf.password, sett.wifi_password, sizeof(conf.password));
+            LOG_INFO(F("Apply password from config"));
         } else {
             conf.password[0] = 0;
+            LOG_INFO(F("No password in config"));
         }    
         wifi_station_set_config(&conf);
+    } else {
+        LOG_INFO(F("No SSID saved in config"));
     }
+    
+    wifi_set_mode(WIFI_AP_STA);
+    if (!WiFi.softAP(get_ap_name(), "", 1, 0, 4)) 
+    {
+        LOG_ERROR(F("AP started failed"));
+        return;
+    }
+  
+    delay(500);
 
+    LOG_INFO(F("AP started on channel 1, ssid=") << get_ap_name());
+    LOG_INFO(F("IP: ") << WiFi.softAPIP());
+    
+    LOG_INFO(F("Start DNS server"));
     DNSServer *dns = new DNSServer();
     dns->start(53, "*", WiFi.softAPIP());
+
+    LOG_INFO(F("DNS server started"));
     
+    LOG_INFO(F("Start HTTP server"));
     AsyncWebServer *server = new AsyncWebServer(80);
     
     //TODO добавить .setLastModified( и  https://github.com/GyverLibs/buildTime/releases/tag/1.0
@@ -244,24 +270,35 @@ void start_active_point(const Settings &sett, const SlaveData &data, CalculatedD
 
     /*API*/
     server->on("/api/networks", HTTP_GET, onGetApiNetworks);
-    server->on("/api/connect", HTTP_GET, onGetApiConnect);
+    server->on("/api/connect", HTTP_POST, onPostApiConnect);
+    server->on("/api/setup", HTTP_POST, onPostApiSetup);
     server->on("/api/main_status", HTTP_GET, onGetApiMainStatus);
     server->on("/api/status/0", HTTP_GET, onGetApiStatus0);
     server->on("/api/status/1", HTTP_GET, onGetApiStatus1);
     server->on("/api/turnoff", HTTP_GET, onGetApiTurnOff);
-    server->on("/api/reset", HTTP_GET, onGetApiReset);
+    server->on("/api/reset", HTTP_POST, onPostApiReset);
 
     server->begin();
 
+    LOG_INFO(F("HTTP server started"));
+
     //Начинаем сканирование Wi-Fi сетей
+    LOG_INFO(F("Start scan Wi-Fi networks"));
     WiFi.scanNetworks(true);
 
     uint16_t start = millis();
-    while (!exit_portal && millis() - start < SETUP_TIME_SEC)
+    while (!exit_portal && ((millis() - start) / 1000) < SETUP_TIME_SEC)
     {
         dns->processNextRequest();
         yield();
     }
+
+    if (((millis() - start) / 1000) > SETUP_TIME_SEC) {
+        LOG_ERROR(F("Portal setup time is over"));
+    }
+
+    LOG_INFO(F("Shutdown HTTP and DNS servers"));
+
     server->end();
     dns->stop();
     delete server;

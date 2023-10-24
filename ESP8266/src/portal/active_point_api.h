@@ -21,9 +21,10 @@ void save_bool_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj);
 void save_param(AsyncWebParameter *p, float &v, JsonObject &errorsObj);
 void save_ip_param(AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj);
 
+void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj);
 
 bool captivePortal(AsyncWebServerRequest *request);
-void onGetApiConnect(AsyncWebServerRequest *request);
+void onPostApiConnect(AsyncWebServerRequest *request);
 void onGetApiNetworks(AsyncWebServerRequest *request);
 void onGetApiMainStatus(AsyncWebServerRequest *request);
 void onGetApiStatus0(AsyncWebServerRequest *request);
@@ -31,6 +32,6 @@ void onGetApiStatus1(AsyncWebServerRequest *request);
 void onGetApiStatus(AsyncWebServerRequest *request, int index);
 void onPostApiSetup(AsyncWebServerRequest *request);
 void onGetApiTurnOff(AsyncWebServerRequest *request);
-void onGetApiReset(AsyncWebServerRequest *request);
+void onPostApiReset(AsyncWebServerRequest *request);
 
 #endif

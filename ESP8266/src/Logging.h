@@ -29,6 +29,8 @@ inline Print &operator<<(Print &obj, T arg)
 		Serial << String(logFormattedTime);                                                           \
 	} while (0)
 
+#ifdef LOG_FREE_HEAP
+#undef LOG_FREE_HEAP
 #ifdef ESP8266
 #define LOG_FREE_HEAP                                                       \
 	do                                                                      \
@@ -44,6 +46,10 @@ inline Print &operator<<(Print &obj, T arg)
 		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d/%02d"),        \
 				   ESP_getFreeHeap1024(), ESP_getHeapFragmentation());  \
 	} while (0)  
+#endif
+#else
+#undef LOG_FREE_HEAP
+#define LOG_FREE_HEAP ;
 #endif
 
 // Default do no logging...
