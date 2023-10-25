@@ -43,7 +43,8 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
 {
 
   WiFi.persistent(false);
-  WiFi.disconnect();
+  WiFi.disconnect(true);
+  LOG_INFO(F("WIFI: disconnect"));
 
   delay(200); // подождем чтобы проинициализировалась сеть
 
@@ -52,16 +53,17 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
   {
     if (!WiFi.setPhyMode((WiFiPhyMode_t)sett.wifi_phy_mode))
     {
-      LOG_ERROR(F("Failed set phy mode ")<<sett.wifi_phy_mode);
+      LOG_ERROR(F("WIFI: Failed set phy mode ")<<sett.wifi_phy_mode);
     }
   }
 
   if (!WiFi.getAutoConnect())
   {
     WiFi.setAutoConnect(true);
+    LOG_INFO(F("WIFI: set auto connect true"));
   }
 
-  if (is_dhcp(sett))
+  if (!is_dhcp(sett))
   {
     LOG_INFO(F("WIFI: use static IP"));
     IPAddress fallback_dns_server;
@@ -78,20 +80,24 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
 
   if (sett.wifi_channel)
   {
+    LOG_INFO(F("WIFI: begin channel: ") << sett.wifi_channel);
     WiFi.begin(sett.wifi_ssid, sett.wifi_password, sett.wifi_channel, sett.wifi_bssid);
   }
   else
   {
+    LOG_INFO(F("WIFI: begin"));
     WiFi.begin(sett.wifi_ssid, sett.wifi_password);
   }
 
   WiFi.waitForConnectResult(ESP_CONNECT_TIMEOUT); //  ждем результата подключения
+  LOG_INFO(F("WIFI: status=") << WiFi.status());
 }
 
 void wifi_shutdown()
 {
   WiFi.disconnect(true);
   delay(100);
+  yield();
   wifi_set_mode(WIFI_OFF);
 }
 

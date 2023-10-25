@@ -317,6 +317,9 @@ void save_ip_param(AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj)
 void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
 {
     const int params = request->params();
+    
+    LOG_INFO(F("Apply ") << params << " parameters");
+
     for(int i=0; i<params; i++)
     {
         AsyncWebParameter* p = request->getParam(i);
@@ -400,10 +403,10 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
             save_param(p, sett.ntp_server, HOST_LEN, errorsObj);
         }
 
-        else if(name == FPSTR(PARAM_WIFI_SSID)){   
+        else if(name == FPSTR(PARAM_SSID)){   
             save_param(p, sett.wifi_ssid, WIFI_SSID_LEN, errorsObj);
         }
-        else if(name == FPSTR(PARAM_WIFI_PASSWORD)){   
+        else if(name == FPSTR(PARAM_PASSWORD)){   
             save_param(p, sett.wifi_password, WIFI_PWD_LEN, errorsObj);
         }
 

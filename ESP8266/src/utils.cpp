@@ -199,7 +199,7 @@ bool is_ha(const Settings &sett)
 
 bool is_dhcp(const Settings &sett)
 {
-	return sett.ip != 0;
+	return sett.dhcp_on != 0;
 }
 
 /**

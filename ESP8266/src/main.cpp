@@ -1,4 +1,5 @@
 #include <user_interface.h>
+#include <umm_malloc/umm_heap_select.h>
 #include <ESP8266WiFi.h>
 #include <ArduinoJson.h>
 #include "Logging.h"
@@ -33,6 +34,13 @@ void setup()
     LOG_INFO(F("Booted"));
 
     masterI2C.begin(); // Включаем i2c master
+
+    HeapSelectIram ephemeral;
+    LOG_INFO(F("IRAM free: ") << ESP.getFreeHeap() << F(" bytes"));
+    {
+        HeapSelectDram ephemeral;
+        LOG_INFO(F("DRAM free: ") << ESP.getFreeHeap() << F(" bytes"));
+    }
 
     get_voltage()->begin();
     voltage_ticker.attach_ms(300, []()

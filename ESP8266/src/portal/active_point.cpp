@@ -89,9 +89,9 @@ String processor(const String& var)
     if(var == FPSTR(PARAM_NTP_SERVER))
         return String(sett.ntp_server);
 
-    if(var == FPSTR(PARAM_WIFI_SSID))
+    if(var == FPSTR(PARAM_SSID))
         return String(sett.wifi_ssid);
-    if(var == FPSTR(PARAM_WIFI_PASSWORD))
+    if(var == FPSTR(PARAM_PASSWORD))
         return String(sett.wifi_password);
 
     if(var == FPSTR(PARAM_WIFI_PHY_MODE))
