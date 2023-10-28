@@ -1,6 +1,8 @@
 #include "wifi_helpers.h"
 #include "Logging.h"
 #include "utils.h"
+#include <LittleFS.h>
+#include <ESP8266WiFiScan.h>
 
 #define WIFI_SET_MODE_ATTEMPTS 2
 
@@ -42,22 +44,22 @@ void wifi_set_mode(WiFiMode_t wifi_mode)
 void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
 {
 
-  WiFi.persistent(false);
-  WiFi.disconnect(true);
+  WiFi.persistent(false); // Solve possible wifi init errors (re-add at 6.2.1.16 #4044, #4083)
+  WiFi.disconnect(true);  // Delete SDK wifi config
   LOG_INFO(F("WIFI: disconnect"));
 
   delay(200); // подождем чтобы проинициализировалась сеть
 
-  wifi_set_mode(wifi_mode);
+  wifi_set_mode(wifi_mode); // Disable AP mode
   if (sett.wifi_phy_mode)
   {
     if (!WiFi.setPhyMode((WiFiPhyMode_t)sett.wifi_phy_mode))
     {
-      LOG_ERROR(F("WIFI: Failed set phy mode ")<<sett.wifi_phy_mode);
+      LOG_ERROR(F("WIFI: Failed set phy mode ") << sett.wifi_phy_mode);
     }
   }
 
-  if (!WiFi.getAutoConnect())
+  if (!WiFi.getAutoConnect()) // Tasmota..
   {
     WiFi.setAutoConnect(true);
     LOG_INFO(F("WIFI: set auto connect true"));
@@ -67,11 +69,11 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
   {
     LOG_INFO(F("WIFI: use static IP"));
     IPAddress fallback_dns_server;
-    fallback_dns_server.fromString(DEF_FALLBACK_DNS); 
+    fallback_dns_server.fromString(DEF_FALLBACK_DNS);
     WiFi.config(sett.ip, sett.gateway, sett.mask, sett.gateway, fallback_dns_server);
   }
 
-  if (!WiFi.hostname(get_device_name()))
+  if (!WiFi.hostname(get_device_name())) // ESP8266 needs this here (after WiFi.mode)
   {
     LOG_ERROR(F("WIFI: set hostname failed"));
   }
@@ -139,14 +141,73 @@ bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
       uint8_t *bssid = WiFi.BSSID();
       memcpy((void *)&sett.wifi_bssid, (void *)bssid, sizeof(sett.wifi_bssid)); // сохраняем для быстрого коннекта
       LOG_INFO(F("WIFI: Connected."));
-      LOG_INFO(F("WIFI: SSID: ") << WiFi.SSID() << F(" Channel: ") << WiFi.channel() << F(" BSSID: ") <<  WiFi.BSSIDstr());
+      LOG_INFO(F("WIFI: SSID: ") << WiFi.SSID() << F(" Channel: ") << WiFi.channel() << F(" BSSID: ") << WiFi.BSSIDstr());
       LOG_INFO(F("WIFI: Time spent ") << millis() - start_time << F(" ms"));
       return true;
     }
     sett.wifi_channel = 0;
     LOG_ERROR(F("WIFI: Connection failed."));
   } while (--attempts);
-  
+
   LOG_ERROR(F("WIFI: Connection failed.") << millis() - start_time << F(" ms"));
   return false;
+}
+
+void write_ssid_to_file()
+{
+  // LittleFS.remove("/ssid.txt");
+  File file = LittleFS.open("/ssid.txt", "w");
+  if (!file)
+  {
+    LOG_ERROR(F("FS: Failed to open ssid.txt for writing"));
+    return;
+  }
+
+  int n = WiFi.scanComplete();
+  if (n == WIFI_SCAN_FAILED)
+  {
+    if (!file.print(F("No WIFI networks found")))
+    {
+      LOG_ERROR(F("FS: Failed to write ssid.txt"));
+    }
+  }
+  else if (n)
+  {
+    for (int i = 0; i < n; ++i)
+    {
+      const bss_info *it = ESP8266WiFiScanClass::getScanInfoByIndex(i);
+      char tmp[33];
+      String s;
+
+      if (it)
+      {
+        memcpy(tmp, it->ssid, sizeof(it->ssid));
+        tmp[32] = 0;
+
+        file.printf("bssid:%02x%02x%02x%02x%02x%02x\n",
+                    it->bssid[0], it->bssid[1], it->bssid[2],
+                    it->bssid[3], it->bssid[4], it->bssid[5]);
+        file.printf("SSID:%s\n", tmp);
+        file.printf("ssid_len:%d\n", it->ssid_len);
+        file.printf("channel:%d\n", it->channel);
+        file.printf("rssi:%d\n", it->rssi);
+        file.printf("authmode:%d\n", (int)it->authmode);
+        file.printf("is_hidden:%d\n", it->is_hidden);
+        file.printf("freq_offset:%d\n", it->freq_offset);
+        file.printf("freqcal_val:%d\n", it->freqcal_val);
+        // file.printf("freqcal_val:%d\n",it->freqcal_val);  //uint8 *esp_mesh_ie;
+        file.printf("simple_pair:%d\n", it->simple_pair);
+        file.printf("pairwise_cipher:%d\n", it->pairwise_cipher);
+        file.printf("group_cipher:%d\n", it->group_cipher);
+        file.printf("phy_11b:%d\n", it->phy_11b);
+        file.printf("phy_11g:%d\n", it->phy_11g);
+        file.printf("phy_11n:%d\n", it->phy_11n);
+        file.printf("wps:%d\n", it->wps);
+        file.printf("reserved:%u\n", it->reserved); // uint32_t reserved:28;
+      }
+    }
+  }
+
+  delay(500); // Make sure the CREATE and LASTWRITE times are different
+  file.close();
 }

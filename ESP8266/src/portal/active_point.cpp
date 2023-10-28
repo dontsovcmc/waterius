@@ -20,8 +20,9 @@
 
 #define SETUP_TIME_SEC 600UL // На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
 
-bool exit_portal = false;
-bool start_connect = false;
+bool exit_portal_flag = false;
+bool start_connect_flag = false;
+bool factory_reset_flag = false;
 
 extern SlaveData data;
 extern MasterI2C masterI2C;
@@ -192,7 +193,11 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     }
     
     wifi_set_mode(WIFI_AP_STA);
-    if (!WiFi.softAP(get_ap_name(), "", 1, 0, 4)) 
+
+    //TODO выбирать channel исходя из настроек. 
+    //Канал WiFi роутера к кому подсоединимся должен совпадать с каналом точки доступа ESP
+    //https://bbs.espressif.com/viewtopic.php?t=324
+    if (!WiFi.softAP(get_ap_name(), "", sett.wifi_channel, 0, 4)) 
     {
         LOG_ERROR(F("AP started failed"));
         return;
@@ -288,6 +293,11 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
         request->send(LittleFS, "/wifi_settings.html", F("text/html"), false, processor);
     });
 
+    /*Debug*/
+    server->on("/ssid.txt", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(LittleFS, "/ssid.txt", F("text/plain"));
+    });
+
     server->onNotFound(onNotFound);
 
     /*API*/
@@ -310,14 +320,17 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     WiFi.scanNetworks(true);
 
     uint16_t start = millis();
-    while (!exit_portal && ((millis() - start) / 1000) < SETUP_TIME_SEC)
+    while (!exit_portal_flag && ((millis() - start) / 1000) < SETUP_TIME_SEC)
     {
         dns->processNextRequest();
         yield();
         
-        if (start_connect) {
+        if (start_connect_flag) {
             wifi_connect(sett, WIFI_AP_STA);
-            start_connect = false;
+            start_connect_flag = false;
+        }
+        if (factory_reset_flag) {
+            factory_reset(sett);
         }
     }
 

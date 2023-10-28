@@ -13,20 +13,20 @@ api_app = FastAPI(title="api application")
 
 @api_app.get("/networks")
 async def networks():
-    networks = [{"ssid": "HAUWEI-B311_F9E1", "level": 5},
-                {"ssid": "ERROR_PASSWORD", "level": 4},
-                {"ssid": "ERROR_CONNECT", "level": 3},
-                {"ssid": "OK", "level": 2},
-                {"ssid": "C78F56_5G", "level": 1},
-                {"ssid": "wifi-6", "level": 1},
-                {"ssid": "wifi-7", "level": 1},
-                {"ssid": "wifi-8", "level": 1},
-                {"ssid": "wifi-9", "level": 1},
-                {"ssid": "wifi-10", "level": 1},
-                {"ssid": "wifi-11", "level": 1},
-                {"ssid": "wifi-12", "level": 1},
-                {"ssid": "wifi-13", "level": 1},
-                {"ssid": "wifi-14", "level": 1}
+    networks = [{"ssid": "HAUWEI-B311_F9E1", "level": 5, "wifi_channel": 1},
+                {"ssid": "ERROR_PASSWORD", "level": 4, "wifi_channel": 1},
+                {"ssid": "ERROR_CONNECT", "level": 3, "wifi_channel": 1},
+                {"ssid": "OK", "level": 2, "wifi_channel": 1},
+                {"ssid": "C78F56_5G", "level": 1, "wifi_channel": 1},
+                {"ssid": "wifi-6", "level": 1, "wifi_channel": 6},
+                {"ssid": "wifi-7", "level": 1, "wifi_channel": 7},
+                {"ssid": "wifi-8", "level": 1, "wifi_channel": 8},
+                {"ssid": "wifi-9", "level": 1, "wifi_channel": 9},
+                {"ssid": "wifi-10", "level": 1, "wifi_channel": 10},
+                {"ssid": "wifi-11", "level": 1, "wifi_channel": 11},
+                {"ssid": "wifi-12", "level": 1, "wifi_channel": 12},
+                {"ssid": "wifi-13", "level": 1, "wifi_channel": 13},
+                {"ssid": "wifi-14", "level": 1, "wifi_channel": 13}
                 ]
     json_networks = jsonable_encoder(networks)
     return JSONResponse(content=json_networks)
@@ -43,11 +43,19 @@ async def connect(form_data: ConnectModel = Depends()):
     """
     res = {k: v for k, v in form_data.__dict__.items() if v is not None}
 
+    ap_channel = settings.wifi_channel
+
     res = settings.apply_settings(res)
 
-    res.update({
-        "redirect": "/wifi_connect.html"
-    })
+    if settings.wifi_channel != ap_channel:
+        # При подключении к Роутеру на другой частоте связь с точкой доступа оборвется
+        res.update({
+            "redirect": "/wifi_connect.html?error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново."
+        })
+    else:
+        res.update({
+            "redirect": "/wifi_connect.html"
+        })
 
     json = jsonable_encoder(res)
     return JSONResponse(content=json)

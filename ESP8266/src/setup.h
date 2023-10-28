@@ -418,7 +418,7 @@ struct Settings
     /* mac сети Wifi */
     uint8_t wifi_bssid[6] = {0};
     /* Wifi канал */
-    uint8_t wifi_channel = 0;
+    uint8_t wifi_channel = 1;
     /* Режим работы интерфейса */
     uint8_t wifi_phy_mode = 0;
     

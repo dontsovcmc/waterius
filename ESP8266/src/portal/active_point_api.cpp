@@ -14,8 +14,9 @@
 #include "resources.h"
 
 
-extern bool exit_portal;
-extern bool start_connect;
+extern bool exit_portal_flag;
+extern bool start_connect_flag;
+extern bool factory_reset_flag;
 
 SlaveData runtime_data;
 extern SlaveData data;
@@ -80,7 +81,7 @@ void onGetApiConnectStatus(AsyncWebServerRequest *request)
     DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
 
-    if (start_connect) 
+    if (start_connect_flag) 
     {
         ret["status"] = F("connecting...");
         LOG_INFO(F("WIFI: connecting..."));  
@@ -134,7 +135,11 @@ void onGetApiNetworks(AsyncWebServerRequest *request)
             JsonObject obj = array.createNestedObject();
             obj["ssid"] = WiFi.SSID(i);
             obj["level"] = int(round(map(WiFi.RSSI(i), -100, -50, 1, 4)));
+            obj["wifi_channel"] = WiFi.channel();
         }
+
+        write_ssid_to_file();
+
         WiFi.scanDelete();
 
         AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -156,16 +161,15 @@ void onPostApiConnect(AsyncWebServerRequest *request)
     JsonObject ret = json_doc.to<JsonObject>();
     JsonObject errorsObj = ret.createNestedObject("errors");
 
-    bool wizard = find_wizard_param(request);
-
     applySettings(request, errorsObj);
     
     if (!errorsObj.size()) 
     {   
-        start_connect = true;
+        start_connect_flag = true;
         LOG_INFO(F("Start connect"));
     }
 
+    bool wizard = find_wizard_param(request);
     if (wizard) {
         ret[F("redirect")] = F("/wifi_connect.html?wizard=true");
     } else {
@@ -571,27 +575,27 @@ void onPostApiSetup(AsyncWebServerRequest *request)
 void onGetApiTurnOff(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("GET ") << request->url());
-    exit_portal = true;
+    exit_portal_flag = true;
     AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "");
     request->send(response);
 }
+
 
 void onPostApiReset(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
     if (captivePortal(request))
         return;
+    
+    DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
+    JsonObject ret = json_doc.to<JsonObject>();
 
-    ESP.eraseConfig();
-    delay(100);
-    LOG_INFO(F("EEPROM erased"));
-    // The flash cache maps the physical flash into the address space at offset
-    ESP.flashEraseSector(((EEPROM_start - 0x40200000) / SPI_FLASH_SEC_SIZE));
-    LOG_INFO(F("0x40200000 erased"));
-    delay(1000);
-    ESP.reset();
+    ret[F("redirect")] = F("/");
+    
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    serializeJson(json_doc, *response);
 
-    //never happend
-    AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "");
+    factory_reset_flag = true;
+
     request->send(response);
 }

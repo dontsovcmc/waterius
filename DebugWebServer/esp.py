@@ -62,6 +62,7 @@ class Settings:
     ip: str | None = "192.168.0.100"
     gateway: str | None = "192.168.0.1"
     mask: str | None = "255.255.255.0"
+    wifi_channel: int | None = 1
     mac_address: str | None = "00-1B-63-84-45-Е6"
 
     wakeup_per_min: int | None = 1440

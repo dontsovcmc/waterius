@@ -57,7 +57,6 @@ void loop()
     // спрашиваем у Attiny85 повод пробуждения и данные true) // /
     if (true) //masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
     {
-
         // Загружаем конфигурацию из EEPROM
         config_loaded = load_config(sett);
         sett.mode = mode;

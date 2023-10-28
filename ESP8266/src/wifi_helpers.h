@@ -19,4 +19,6 @@ extern void wifi_set_mode(WiFiMode_t wifi_mode);
 extern void wifi_shutdown();
 extern String wifi_mode();
 
+extern void write_ssid_to_file();
+
 #endif

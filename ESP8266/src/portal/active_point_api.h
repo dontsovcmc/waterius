@@ -14,7 +14,7 @@
 #include <ArduinoJson.h>
 
 
-void save_param(AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj);
+void save_param(AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required = true);
 void save_param(AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj);
 void save_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj);
 void save_bool_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj);
