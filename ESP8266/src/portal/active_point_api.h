@@ -3,16 +3,15 @@
  * @brief Хэндлеры веб сервера настроки ватериуса
  * @version 0.1
  * @date 2023-10-22
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #ifndef ACTIVE_POINT_API_h_
 #define ACTIVE_POINT_API_h_
 
 #include "ESPAsyncWebServer.h"
 #include <ArduinoJson.h>
-
 
 void save_param(AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required = true);
 void save_param(AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj);

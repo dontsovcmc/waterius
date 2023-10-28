@@ -268,22 +268,20 @@ extern void generateSha256Token(char *token, const int token_len, const char *em
 	LOG_INFO(F("-- END --"));
 }
 
-
 void blink_led(int count, int period, int duty)
 {
 	pinMode(LED_PIN, OUTPUT);
 	for (int i = 0; i < count; i++)
 	{
-		digitalWrite(LED_PIN, HIGH); 
-		delay(period-duty); 
-		digitalWrite(LED_PIN, LOW); 
-		delay(duty); 
+		digitalWrite(LED_PIN, HIGH);
+		delay(period - duty);
+		digitalWrite(LED_PIN, LOW);
+		delay(duty);
 	}
 }
 
-
 /**
- * @brief Возвращает тип данных на сервер Ватериуса по названию входа. 
+ * @brief Возвращает тип данных на сервер Ватериуса по названию входа.
  *
  * @param counter_name имя счётчика в интерфейсе ESP
  * @param index номер входа
@@ -293,26 +291,26 @@ DataType data_type_by_name(uint8_t counter_name, uint8_t index)
 {
 	switch ((CounterName)counter_name)
 	{
-		case CounterName::WATER_COLD:
-			return DataType::COLD_WATER;
+	case CounterName::WATER_COLD:
+		return DataType::COLD_WATER;
 
-		case CounterName::WATER_HOT:
-			return DataType::HOT_WATER;
+	case CounterName::WATER_HOT:
+		return DataType::HOT_WATER;
 
-		case CounterName::ELECTRO:
-			return DataType::ELECTRICITY;
+	case CounterName::ELECTRO:
+		return DataType::ELECTRICITY;
 
-		case CounterName::GAS:
-			return DataType::GAS_DATA;
+	case CounterName::GAS:
+		return DataType::GAS_DATA;
 
-		case CounterName::HEAT:
-			return DataType::HEATING;
+	case CounterName::HEAT:
+		return DataType::HEATING;
 
-		case CounterName::PORTABLE_WATER:
-			return DataType::POTABLE_WATER;
+	case CounterName::PORTABLE_WATER:
+		return DataType::POTABLE_WATER;
 
-		case CounterName::OTHER:
-			return DataType::OTHER_TYPE;
+	case CounterName::OTHER:
+		return DataType::OTHER_TYPE;
 	}
 	return DataType::COLD_WATER;
 }

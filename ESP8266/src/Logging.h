@@ -25,29 +25,29 @@ inline Print &operator<<(Print &obj, T arg)
 		unsigned short ms = ((((logTime % MS_IN_DAY) % MS_IN_HOUR) % MS_IN_MINUTE) % MS_IN_SECOND);   \
 		char logFormattedTime[17];                                                                    \
 		snprintf_P(logFormattedTime, sizeof(logFormattedTime),                                        \
-		           PSTR("%02u:%02u:%03u"), minutes, seconds, ms);                                     \
+				   PSTR("%02u:%02u:%03u"), minutes, seconds, ms);                                     \
 		Serial << String(logFormattedTime);                                                           \
 	} while (0)
 
 #ifdef LOG_FREE_HEAP
 #undef LOG_FREE_HEAP
 #ifdef ESP8266
-#define LOG_FREE_HEAP                                                       \
-	do                                                                      \
-	{                                                                       \
-		char logHeap[10];                                                   \
+#define LOG_FREE_HEAP                                                                       \
+	do                                                                                      \
+	{                                                                                       \
+		char logHeap[10];                                                                   \
 		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d"), int(ESP.getFreeHeap() / 1024)); \
-		Serial << String(logHeap);                                          \
-	} while (0)                                                             
+		Serial << String(logHeap);                                                          \
+	} while (0)
 #else
-#define LOG_FREE_HEAP                                                       \
-	do                                                                      \
-	{                                                                       \
-		char logHeap[10];                                                   \
-		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d/%02d"),        \
-				   ESP_getFreeHeap1024(), ESP_getHeapFragmentation());  \
-		Serial << String(logHeap);                                          \
-	} while (0)  
+#define LOG_FREE_HEAP                                                  \
+	do                                                                 \
+	{                                                                  \
+		char logHeap[10];                                              \
+		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d/%02d"),       \
+				   ESP_getFreeHeap1024(), ESP_getHeapFragmentation()); \
+		Serial << String(logHeap);                                     \
+	} while (0)
 #endif
 #else
 #undef LOG_FREE_HEAP

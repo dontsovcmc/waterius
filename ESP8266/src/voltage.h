@@ -11,13 +11,12 @@
 
 class Voltage
 {
-private:    
+private:
     uint16_t _voltage;
     uint16_t _min_voltage;
     uint16_t _max_voltage;
     uint8_t _num_probes;
     uint16_t _probes[MAX_PROBES];
-
 
 public:
     Voltage() = default;
@@ -31,6 +30,6 @@ public:
     uint8_t get_battery_level();
 };
 
-extern Voltage* get_voltage();
+extern Voltage *get_voltage();
 
 #endif

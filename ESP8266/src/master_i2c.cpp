@@ -99,8 +99,8 @@ bool MasterI2C::getUint(uint32_t &value, uint8_t &crc)
         value |= i2;
         value = value << 8;
         value |= i1;
-        //вот так не работает из-за преобразования типов:
-        // value = i1 | (i2 << 8) | (i3 << 16) | (i4 << 24);
+        // вот так не работает из-за преобразования типов:
+        //  value = i1 | (i2 << 8) | (i3 << 16) | (i4 << 24);
         return true;
     }
     return false;
@@ -127,8 +127,9 @@ bool MasterI2C::getSlaveData(SlaveData &data)
     uint8_t dummy, crc = init_crc;
     bool good = getByte(data.version, crc);
 
-    if (data.version < 29) {
-        init_crc = 0;  // в версиях <29 инициализация идет нулём
+    if (data.version < 29)
+    {
+        init_crc = 0; // в версиях <29 инициализация идет нулём
         crc = 0;
         crc = crc_8(&data.version, 1, crc);
     }

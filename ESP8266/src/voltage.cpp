@@ -18,15 +18,15 @@ void Voltage::begin()
 void Voltage::update()
 {
     _voltage = ESP.getVcc();
-    _min_voltage = _min(_voltage,_min_voltage);
-    _max_voltage = _max(_voltage,_max_voltage);
+    _min_voltage = _min(_voltage, _min_voltage);
+    _max_voltage = _max(_voltage, _max_voltage);
     _probes[_num_probes % MAX_PROBES] = _voltage;
-    #ifdef DEBUG_VOLTAGE 
+#ifdef DEBUG_VOLTAGE
     LOG_INFO(F("VOLTAGE: Probe #: ") << _num_probes);
     LOG_INFO(F("VOLTAGE: Value (mV):") << _voltage);
     LOG_INFO(F("VOLTAGE: Min (mV):") << _min_voltage);
     LOG_INFO(F("VOLTAGE: Max (mV):") << _max_voltage);
-    #endif
+#endif
     _num_probes++;
 }
 /**
@@ -100,29 +100,32 @@ uint8_t Voltage::get_battery_level()
  */
 uint16_t Voltage::average()
 {
-    uint16_t avrg, sum=0;
+    uint16_t avrg, sum = 0;
     int count = _num_probes > MAX_PROBES ? MAX_PROBES : _num_probes;
     for (int i = 0; i < count; i++)
     {
-        sum+=_probes[i];
+        sum += _probes[i];
     }
-    if (count>0) {
+    if (count > 0)
+    {
         avrg = sum / count;
-    } else {
+    }
+    else
+    {
         avrg = _voltage;
     }
-    #ifdef DEBUG_VOLTAGE 
+#ifdef DEBUG_VOLTAGE
     LOG_INFO(F("VOLTAGE: Probes count: ") << _num_probes);
     LOG_INFO(F("VOLTAGE: Value (mV):") << _voltage);
     LOG_INFO(F("VOLTAGE: Min (mV):") << _min_voltage);
     LOG_INFO(F("VOLTAGE: Max (mV):") << _max_voltage);
     LOG_INFO(F("VOLTAGE: Average (mV):") << avrg);
-    #endif
+#endif
     return avrg;
-
 }
 
-Voltage* get_voltage(){
+Voltage *get_voltage()
+{
     static Voltage voltage;
     return &voltage;
 }

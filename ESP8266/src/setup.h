@@ -13,10 +13,10 @@
                       2. Чекбокс отображения пароля
                       3. Очистка пароля при выборе Wi-Fi
                       4. Текст счётчиков при повторной настройке другой
-                      5. Вес импульса отображается если выбрано "Авто" 
-                      
+                      5. Вес импульса отображается если выбрано "Авто"
+
 0.11.8 - 2023.08.18 - dontsovcmc
-                      1. Перепутаны названия ГВС/ХВС в HA discovery 
+                      1. Перепутаны названия ГВС/ХВС в HA discovery
 
 0.11.7 - 2023.08.09 - dontsovcmc
                       1. не дублируется список wi-fi сетей при настройке
@@ -27,7 +27,7 @@
                          - возможно устранена ошибка подключения к SSID с пробелом
 
 0.11.6 - 2023.08.05 - dontsovcmc
-                      1. версия прошивки attiny=30 
+                      1. версия прошивки attiny=30
 
 0.11.5 - 2023.04.30 - dontsovcmc
                       1. Поддержка обычной прошивки attiny < 29
@@ -48,7 +48,7 @@
                       3. Подсчет crc более компактный
 
 0.11.1 - 2023.02.28 - neitri, dontsovcmc
-                      1. Указанный пользователем NTP сервер используется. 
+                      1. Указанный пользователем NTP сервер используется.
 
 0.11.0 - 2023.01.23 - dontsovcmc Anat0liyBM vzagorovskiy
                       1. PubSubClient 2.7.0 -> 2.8.0
@@ -229,14 +229,14 @@
 #define WIFI_CONNECT_ATTEMPTS 2
 
 #define WIFI_SSID_LEN 32
-#define WIFI_PWD_LEN  64
+#define WIFI_PWD_LEN 64
 
 #define DEFAULT_GATEWAY "192.168.0.1"
 #define DEFAULT_MASK "255.255.255.0"
 #define DEFAULT_NTP_SERVER "ru.pool.ntp.org"
 
-#ifndef LED_PIN 
-#define LED_PIN 1    
+#ifndef LED_PIN
+#define LED_PIN 1
 #endif
 
 // attiny85
@@ -250,23 +250,23 @@
 
 enum CounterType
 {
-    NAMUR=0,
-    DISCRETE=1,
-    ELECTRONIC=2
+    NAMUR = 0,
+    DISCRETE = 1,
+    ELECTRONIC = 2
 };
 
 enum CounterName
 {
-    WATER_COLD=0,
-    WATER_HOT=1,
-    ELECTRO=2,
-    GAS=3,
-    HEAT=4,
-    PORTABLE_WATER=5,
-    OTHER=6
+    WATER_COLD = 0,
+    WATER_HOT = 1,
+    ELECTRO = 2,
+    GAS = 3,
+    HEAT = 4,
+    PORTABLE_WATER = 5,
+    OTHER = 6
 };
 
-// согласно 
+// согласно
 enum DataType
 {
     COLD_WATER = 0,
@@ -281,7 +281,6 @@ enum DataType
     POTABLE_WATER = 9,
     OTHER_TYPE = 10
 };
-
 
 struct CalculatedData
 {
@@ -421,7 +420,7 @@ struct Settings
     uint8_t wifi_channel = 1;
     /* Режим работы интерфейса */
     uint8_t wifi_phy_mode = 0;
-    
+
     /*
     Тип счётчика (вода, тепло, газ, электричество)
     */
@@ -435,15 +434,15 @@ struct Settings
     uint16_t factor1 = AUTO_IMPULSE_FACTOR;
 
     /* Включение передачи на офиц. сайт */
-    uint8_t waterius_on = (uint8_t)true;
+    uint8_t waterius_on = (uint8_t) true;
     /* Включение передачи по http на другой хост */
-    uint8_t http_on = (uint8_t)false;
+    uint8_t http_on = (uint8_t) false;
     /* Включение передачи по mqtt */
-    uint8_t mqtt_on = (uint8_t)false;
+    uint8_t mqtt_on = (uint8_t) false;
     /* Включение Blynk */
-    uint8_t blynk_on = (uint8_t)false;
+    uint8_t blynk_on = (uint8_t) false;
     /* Включение DHCP или статических настроек */
-    uint8_t dhcp_off = (uint8_t)false;
+    uint8_t dhcp_off = (uint8_t) false;
 
     uint8_t reserved8 = 0;
     /*

@@ -49,7 +49,7 @@ static const char ERROR_LENGTH_63[] PROGMEM = "Длина поля 63 симво
 static const char ERROR_VALUE[] PROGMEM = "Неверное значение";
 static const char ERROR_EMPTY[] PROGMEM = "Значение не может быть пустым";
 
-//logging
+// logging
 static const char PARAM_SAVED[] PROGMEM = "Saved: ";
 
 #endif

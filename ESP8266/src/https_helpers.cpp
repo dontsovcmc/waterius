@@ -56,12 +56,12 @@ bool post_data(const String &url, const char *key, const char *email, const Stri
 
     if (proto == PROTO_HTTP)
     {
-        delete (WiFiClient*)pClient;
+        delete (WiFiClient *)pClient;
     }
     else if (proto == PROTO_HTTPS)
     {
-        delete (WiFiClientSecure*)pClient;
+        delete (WiFiClientSecure *)pClient;
     }
-    
+
     return result;
 }

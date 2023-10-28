@@ -32,9 +32,8 @@ void setup()
 {
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Booted"));
-    
-    static_assert((sizeof(Settings) == 960), "sizeof Settings != 960");
 
+    static_assert((sizeof(Settings) == 960), "sizeof Settings != 960");
 
     masterI2C.begin(); // Включаем i2c master
 
@@ -46,7 +45,8 @@ void setup()
     }
 
     get_voltage()->begin();
-    voltage_ticker.attach_ms(300, [](){ get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
+    voltage_ticker.attach_ms(300, []()
+                             { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
 }
 
 void loop()
@@ -55,7 +55,7 @@ void loop()
     bool config_loaded = false;
 
     // спрашиваем у Attiny85 повод пробуждения и данные true) // /
-    if (true) //masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
+    if (true) // masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
     {
         // Загружаем конфигурацию из EEPROM
         config_loaded = load_config(sett);
@@ -72,12 +72,12 @@ void loop()
             // Запускаем точку доступа с вебсервером
 
             start_active_point(sett, data, cdata);
-            
+
             sett.setup_time = millis();
             sett.setup_finished_counter++;
 
             store_config(sett);
-    
+
             wifi_shutdown();
 
             LOG_INFO(F("Set mode MANUAL_TRANSMIT to attiny"));
@@ -173,11 +173,12 @@ void loop()
     LOG_INFO(F("Going to sleep"));
     LOG_END();
 
-    if (!config_loaded) {
+    if (!config_loaded)
+    {
         delay(500);
-        blink_led(3,1000,500);
+        blink_led(3, 1000, 500);
     }
-    
+
     masterI2C.sendCmd('Z'); // "Можешь идти спать, attiny"
 
     ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. Instant не ждет 92мс

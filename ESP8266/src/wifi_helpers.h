@@ -1,11 +1,11 @@
 /**
  * @file wifi_helpers.h
- * @brief Функции по работе c wifi 
+ * @brief Функции по работе c wifi
  * @version 0.1
  * @date 2023-02-11
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
 #ifndef WIFI_HELPERS_H_
 #define WIFI_HELPERS_H_
