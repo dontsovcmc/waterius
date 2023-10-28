@@ -153,6 +153,7 @@ bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
   return false;
 }
 
+/* Важно: вызывать функцию, после сканирования WiFi сетей */
 void write_ssid_to_file()
 {
   // LittleFS.remove("/ssid.txt");
@@ -175,7 +176,7 @@ void write_ssid_to_file()
   {
     for (int i = 0; i < n; ++i)
     {
-      const bss_info *it = ESP8266WiFiScanClass::getScanInfoByIndex(i);
+      const bss_info *it = WiFi.getScanInfoByIndex(i);
       char tmp[33];
       String s;
 
@@ -184,10 +185,10 @@ void write_ssid_to_file()
         memcpy(tmp, it->ssid, sizeof(it->ssid));
         tmp[32] = 0;
 
+        file.printf("\nSSID:%s\n", tmp);
         file.printf("bssid:%02x%02x%02x%02x%02x%02x\n",
                     it->bssid[0], it->bssid[1], it->bssid[2],
                     it->bssid[3], it->bssid[4], it->bssid[5]);
-        file.printf("SSID:%s\n", tmp);
         file.printf("ssid_len:%d\n", it->ssid_len);
         file.printf("channel:%d\n", it->channel);
         file.printf("rssi:%d\n", it->rssi);
@@ -203,7 +204,7 @@ void write_ssid_to_file()
         file.printf("phy_11g:%d\n", it->phy_11g);
         file.printf("phy_11n:%d\n", it->phy_11n);
         file.printf("wps:%d\n", it->wps);
-        file.printf("reserved:%u\n", it->reserved); // uint32_t reserved:28;
+        file.printf("reserved:%u\n=============", it->reserved); // uint32_t reserved:28;
       }
     }
   }

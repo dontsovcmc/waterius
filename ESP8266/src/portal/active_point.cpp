@@ -197,6 +197,7 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     //TODO выбирать channel исходя из настроек. 
     //Канал WiFi роутера к кому подсоединимся должен совпадать с каналом точки доступа ESP
     //https://bbs.espressif.com/viewtopic.php?t=324
+    //TODO добавить пароль для интерфейса
     if (!WiFi.softAP(get_ap_name(), "", sett.wifi_channel, 0, 4)) 
     {
         LOG_ERROR(F("AP started failed"));
@@ -205,7 +206,7 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
   
     delay(500);
 
-    LOG_INFO(F("AP started on channel 1, ssid=") << get_ap_name());
+    LOG_INFO(F("AP started on channel=") << sett.wifi_channel << F(" , ssid=") << get_ap_name());
     LOG_INFO(F("IP: ") << WiFi.softAPIP());
     
     LOG_INFO(F("Start DNS server"));

@@ -161,6 +161,9 @@ void onPostApiConnect(AsyncWebServerRequest *request)
     JsonObject ret = json_doc.to<JsonObject>();
     JsonObject errorsObj = ret.createNestedObject("errors");
 
+    //Если канал WiFi отличен от текущего канала AP ESP, то возможно отключение телефона
+    uint8_t channel = sett.wifi_channel;
+
     applySettings(request, errorsObj);
     
     if (!errorsObj.size()) 
@@ -168,11 +171,21 @@ void onPostApiConnect(AsyncWebServerRequest *request)
         start_connect_flag = true;
         LOG_INFO(F("Start connect"));
     }
-
+    
+    String params;
     bool wizard = find_wizard_param(request);
     if (wizard) {
-        ret[F("redirect")] = F("/wifi_connect.html?wizard=true");
-    } else {
+        params += F("wizard=true&");
+    }
+    if (channel != sett.wifi_channel) {
+        params += F("error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново.");
+    }
+
+    if (params.length())
+    {
+        ret[F("redirect")] = F("/wifi_connect.html?") + params;
+    } else 
+    {
         ret[F("redirect")] = F("/wifi_connect.html");
     }
 
@@ -553,8 +566,9 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
         else if(name == FPSTR(PARAM_FACTOR1)){   
             save_param(p, sett.factor1, errorsObj);
         }
- 
     }
+
+    store_config(sett);
 }
 
 void onPostApiSetup(AsyncWebServerRequest *request)
