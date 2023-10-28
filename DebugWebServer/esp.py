@@ -30,7 +30,6 @@ class Settings:
     Класс настроек в ESP
     Настройки ssid, password
     """
-
     waterius_on: bool | None = True
     waterius_host: str | None = "https://cloud.waterius.ru"
     waterius_key: str | None = "0102010200210512512052105125"
@@ -39,9 +38,9 @@ class Settings:
     http_on: bool | None = False
     http_url: str | None = ""
 
-    #blynk_on: bool | None = False
-    #blynk_key: str | None = "182191205125"
-    #blynk_host: str | None = "blynk.com"
+    blynk_on: bool | None = False
+    blynk_key: str | None = "182191205125"
+    blynk_host: str | None = "blynk.com"
 
     mqtt_on: bool | None = False
     mqtt_host: str | None = ""
@@ -59,7 +58,7 @@ class Settings:
     impulses0_start: int | None = 0
     impulses1_start: int | None = 0
 
-    dhcp_on: bool | None = True
+    dhcp_off: bool | None = False
     ip: str | None = "192.168.0.100"
     gateway: str | None = "192.168.0.1"
     mask: str | None = "255.255.255.0"
@@ -67,8 +66,8 @@ class Settings:
 
     wakeup_per_min: int | None = 1440
 
-    mqtt_auto_discovery: int | None = 0
-    mqtt_discovery_topic: str | None = ""
+    mqtt_auto_discovery: int | None = True
+    mqtt_discovery_topic: str | None = "homeassistant"
 
     ntp_server: str | None = "ru.pool.ntp.org"
 
@@ -98,10 +97,10 @@ class Settings:
             }
         }
         """
-        res = deepcopy(form_data)
+        res = {}
+        #deepcopy(form_data)
 
         if 'waterius_on' in form_data:
-
             if not form_data.get('waterius_on') \
                     and not form_data.get('http_on') \
                     and not form_data.get('mqtt_on'):
@@ -109,16 +108,47 @@ class Settings:
                     "form": "Выберите хотя бы одного получателя данных"
                 }})
 
-        static_ip_on = form_data.get('static_ip_on')
+        # Сначала bool применим
+        for k, v in form_data.items():
+            if isinstance(getattr(self, k), bool):
+                setattr(self, k, v)
 
         for k, v in form_data.items():
+            if self.waterius_on:
+                if k in ['waterius_host', 'waterius_email']:
+                    continue
 
-            if k in ['ip', 'gateway', 'mask']:
-                if static_ip_on:
-                    res.update(check_ip_address(k, v))
+            if self.blynk_on:
+                if k in ['blynk_key', 'blynk_host']:
+                    continue
+
+            if self.http_on:
+                if k in ['http_url', ]:
+                    continue
+
+            if self.mqtt_on:
+                if k in ['mqtt_host', 'mqtt_port',
+                         'mqtt_login', 'mqtt_password',
+                         'mqtt_topic']:
+                    continue
+
+                if self.mqtt_auto_discovery:
+                    if k in ['mqtt_discovery_topic']:
+                        continue
+
+            if self.dhcp_off:
+                if k in ['ip', 'gateway', 'mask']:
+                    continue
 
             if k in settings_vars:
-                setattr(self, k, v)
+                err = {}
+                if k in ['ip', 'gateway', 'mask']:
+                    err = check_ip_address(k, v)
+
+                if err:
+                    res.update(err)
+                else:
+                    setattr(self, k, v)
 
         return res
 

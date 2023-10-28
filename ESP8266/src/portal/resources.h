@@ -40,46 +40,16 @@ static const char PARAM_WATERIUS_ON[] PROGMEM = "waterius_on";
 static const char PARAM_HTTP_ON[] PROGMEM = "http_on";
 static const char PARAM_MQTT_ON[] PROGMEM = "mqtt_on";
 static const char PARAM_BLYNK_ON[] PROGMEM = "blynk_on";
-static const char PARAM_DHCP_ON[] PROGMEM = "dhcp_on";
+static const char PARAM_DHCP_OFF[] PROGMEM = "dhcp_off";
 
-static const char PARAM_WMAIL[] PROGMEM = "wmail";
-static const char PARAM_WHOST[] PROGMEM = "whost";
-static const char PARAM_MPERIOD[] PROGMEM = "mperiod";
-static const char PARAM_BHOST[] PROGMEM = "bhost";
-static const char PARAM_BKEY[] PROGMEM = "bkey";
-static const char PARAM_BMAIL[] PROGMEM = "bemail";
-static const char PARAM_BTITLE[] PROGMEM = "btitle";
-static const char PARAM_BTEMPLATE[] PROGMEM = "btemplate";
-static const char PARAM_MHOST[] PROGMEM = "mhost";
-static const char PARAM_MPORT[] PROGMEM = "mport";
-static const char PARAM_MLOGIN[] PROGMEM = "mlogin";
-static const char PARAM_MPASSWORD[] PROGMEM = "mpassword";
-static const char PARAM_MTOPIC[] PROGMEM = "mtopic";
-static const char PARAM_MDAUTO[] PROGMEM = "auto_discovery_checkbox";
-static const char PARAM_MDTOPIC[] PROGMEM = "discovery_topic";
-static const char PARAM_MAC[] PROGMEM = "mac";
-static const char PARAM_GW[] PROGMEM = "gw";
-static const char PARAM_SN[] PROGMEM = "sn";
-static const char PARAM_NTP[] PROGMEM = "ntp";
-static const char PARAM_FACTORCOLD[] PROGMEM = "factorCold";
-static const char PARAM_FACTORHOT[] PROGMEM = "factorHot";
-static const char PARAM_SERIALCOLD[] PROGMEM = "serialCold";
-static const char PARAM_SERIALHOT[] PROGMEM = "serialHot";
-static const char PARAM_CNAMEHOT[] PROGMEM = "counter0_name";
-static const char PARAM_CNAMECOLD[] PROGMEM = "counter1_name";
-static const char PARAM_CTYPEHOT[] PROGMEM = "counter_type0";
-static const char PARAM_CTYPECOLD[] PROGMEM = "counter_type1";
-static const char PARAM_CH0[] PROGMEM = "ch0";
-static const char PARAM_CH1[] PROGMEM = "ch1";
-static const char PARAM_S[] PROGMEM = "s";
-static const char PARAM_P[] PROGMEM = "p";
-
-static const char PARAM_ELAPSED[] PROGMEM = "elapsed";
-static const char PARAM_ERROR[] PROGMEM = "error";
-static const char TEXT_CONNECTERROR[] PROGMEM = "Ошибка связи с МК";
+static const char PARAM_WIZARD[] PROGMEM = "wizard";
+static const char PARAM_TRUE[] PROGMEM = "true";
 
 static const char ERROR_LENGTH_63[] PROGMEM = "Длина поля 63 символа";
 static const char ERROR_VALUE[] PROGMEM = "Неверное значение";
+static const char ERROR_EMPTY[] PROGMEM = "Значение не может быть пустым";
+
+//logging
 static const char PARAM_SAVED[] PROGMEM = "Saved: ";
 
 #endif

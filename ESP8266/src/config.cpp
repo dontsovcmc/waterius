@@ -110,10 +110,10 @@ bool load_config(Settings &sett)
         LOG_INFO(F("--- Network ---- "));
         if (sett.ip)
         {
-            if (sett.dhcp_on) {
-                LOG_INFO(F("DHCP=ON"));
-            } else {
+            if (sett.dhcp_off) {
                 LOG_INFO(F("DHCP=OFF"));
+            } else {
+                LOG_INFO(F("DHCP=ON"));
             }
             LOG_INFO(F("static_ip=") << IPAddress(sett.ip).toString());
             LOG_INFO(F("gateway=") << IPAddress(sett.gateway).toString());
@@ -162,6 +162,7 @@ bool load_config(Settings &sett)
         IPAddress network_gateway;
         network_gateway.fromString(DEFAULT_GATEWAY);
         sett.gateway = network_gateway;
+        
         IPAddress network_mask;
         network_mask.fromString(DEFAULT_MASK);
         sett.mask = network_mask;

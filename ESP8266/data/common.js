@@ -31,6 +31,8 @@ function _init(_pages) {
 
     // показ ошибки из location.search
     formError(queryParams.error);
+    // показ ошибки подключения к WiFi
+    connectStatus(queryParams.status_code);
 
     // скрыть текст: шаг 3/6
     if(!queryParams.wizard){
@@ -75,6 +77,25 @@ function formError(html){
     _fe.innerHTML = html;
     _fe.classList.remove('hd');
 }
+function connectStatus(sc){
+    if (sc == 0) {
+        formError("Повторите настройку сначала");
+    } else if (sc == 1) {
+        formError("Роутер недоступен");
+    } else if (sc == 2) {
+        formError("Сканирование сетей завершено");
+    } else if (sc == 3) {
+        formError("Подключено");
+    } else if (sc == 4) {
+        formError("Ошибка подключения");
+    } else if (sc == 5) {
+        formError("Подключение разорвано");
+    } else if (sc == 6) {
+        formError("Некорректный пароль");
+    } else if (sc == 7) {
+        formError("Отключен от точки доступа");
+    } 
+}
 function getWifiList(_pages){
     _init(_pages);
 
@@ -110,7 +131,7 @@ function getWifiRow(data, index) {
         </div>
     </a>`;
 }
-function formSubmit(event, form, action, _setup = false) {
+function formSubmit(event, form, action) {
     event.preventDefault();
 
     const data = new URLSearchParams();
@@ -152,7 +173,7 @@ function formSubmit(event, form, action, _setup = false) {
             }
         }
         */
-        if(data.errors) {
+        if(data.errors && Object.keys(data.errors).length > 0) {
             document.querySelectorAll('.f-row p.error').forEach(item => item.classList.add('hd'));
             for(let k in data.errors) {
                 const _el = document.getElementById(k + '-error');
@@ -270,6 +291,20 @@ function copyInput(id){
 function showPW(id){
     const pw=document.getElementById(id);
     pw.type == 'password' ? pw.type = 'text' : pw.type = 'password';
+}
+function getWiFiStatus() {
+    setTimeout(() => {
+        ajax('/api/connect_status', {}, data => {
+            if(data.redirect) {
+                if (data.params) {
+                    return window.location = queryParams.wizard ? data.redirect + '?wizard=true&' + data.params : data.redirect + "?" + data.params;
+                } else {
+                    return window.location = queryParams.wizard ? data.redirect + '?wizard=true' : data.redirect;
+                }
+            }
+            getWiFiStatus();
+        }, false);
+    }, 2000);
 }
 function getStatus(i, next) {
     setTimeout(() => {

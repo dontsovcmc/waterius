@@ -21,12 +21,21 @@
 #define SETUP_TIME_SEC 600UL // На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
 
 bool exit_portal = false;
+bool start_connect = false;
 
 extern SlaveData data;
 extern MasterI2C masterI2C;
 extern Settings sett;
 extern CalculatedData cdata;
 
+String template_bool(const uint8_t value)
+{
+    if (value > 0) 
+    {
+        return String(F("'value=\"1\" checked"));
+    }
+    return String();
+}
 
 String processor(const String& var)
 {
@@ -82,7 +91,7 @@ String processor(const String& var)
         return String(sett.wakeup_per_min);
 
     if(var == FPSTR(PARAM_MQTT_AUTO_DISCOVERY))
-        return String(sett.mqtt_auto_discovery);
+        return template_bool(sett.mqtt_auto_discovery);
     if(var == FPSTR(PARAM_MQTT_DISCOVERY_TOPIC))
         return String(sett.mqtt_discovery_topic);
 
@@ -113,15 +122,15 @@ String processor(const String& var)
         return String(sett.factor1);
 
     if(var == FPSTR(PARAM_WATERIUS_ON))
-        return String(sett.waterius_on);
+        return template_bool(sett.waterius_on);
     if(var == FPSTR(PARAM_HTTP_ON))
-        return String(sett.http_on);
+        return template_bool(sett.http_on);
     if(var == FPSTR(PARAM_MQTT_ON))
-        return String(sett.mqtt_on);
+        return template_bool(sett.mqtt_on);
     if(var == FPSTR(PARAM_BLYNK_ON))
-        return String(sett.blynk_on);
-    if(var == FPSTR(PARAM_DHCP_ON))
-        return String(sett.dhcp_on);
+        return template_bool(sett.blynk_on);
+    if(var == FPSTR(PARAM_DHCP_OFF))
+        return template_bool(sett.dhcp_off);
 
     return String();
 }
@@ -141,12 +150,21 @@ void onRoot(AsyncWebServerRequest *request)
     LOG_INFO(F("onRoot GET ") << request->url());
     if(captivePortal(request))
         return;
-    //request->send(LittleFS, "/start.html", String(), false, processor);
-    request->send(LittleFS, "/index.html", F("text/html"), false, processor);
+
+    if (sett.factor1 == AUTO_IMPULSE_FACTOR) 
+    {   
+        //TODO
+        //request->send(LittleFS, "/start.html", F("text/html"), false, processor);
+        request->send(LittleFS, "/index.html", F("text/html"), false, processor);  
+    } 
+    else 
+    {
+        request->send(LittleFS, "/index.html", F("text/html"), false, processor);
+    }
 }
 
 
-void start_active_point(const Settings &sett, const SlaveData &data, CalculatedData &cdata)
+void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &cdata)
 {
     if (!LittleFS.begin())
     {
@@ -254,6 +272,10 @@ void start_active_point(const Settings &sett, const SlaveData &data, CalculatedD
         request->send(LittleFS, "/waterius_logs.txt", F("text/plain"));
     });
 
+    server->on("/wifi_connect.html", HTTP_GET, [](AsyncWebServerRequest *request){
+        request->send(LittleFS, "/wifi_connect.html", F("text/html"), false, processor);
+    });
+
     server->on("/wifi_list.html", HTTP_GET, [](AsyncWebServerRequest *request){
         request->send(LittleFS, "/wifi_list.html", F("text/html"), false, processor);
     });
@@ -271,6 +293,7 @@ void start_active_point(const Settings &sett, const SlaveData &data, CalculatedD
     /*API*/
     server->on("/api/networks", HTTP_GET, onGetApiNetworks);
     server->on("/api/connect", HTTP_POST, onPostApiConnect);
+    server->on("/api/connect_status", HTTP_GET, onGetApiConnectStatus);
     server->on("/api/setup", HTTP_POST, onPostApiSetup);
     server->on("/api/main_status", HTTP_GET, onGetApiMainStatus);
     server->on("/api/status/0", HTTP_GET, onGetApiStatus0);
@@ -291,6 +314,11 @@ void start_active_point(const Settings &sett, const SlaveData &data, CalculatedD
     {
         dns->processNextRequest();
         yield();
+        
+        if (start_connect) {
+            wifi_connect(sett, WIFI_AP_STA);
+            start_connect = false;
+        }
     }
 
     if (((millis() - start) / 1000) > SETUP_TIME_SEC) {

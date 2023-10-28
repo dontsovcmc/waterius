@@ -4,7 +4,6 @@ from esp import AttinyData, attiny_link_error
 
 debug_app = FastAPI(title="debug application")
 
-
 runtime_data = AttinyData()
 
 

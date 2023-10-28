@@ -228,8 +228,8 @@
 
 #define WIFI_CONNECT_ATTEMPTS 2
 
-#define WIFI_SSID_LEN (32 + 1)
-#define WIFI_PWD_LEN (64 + 1)
+#define WIFI_SSID_LEN 32
+#define WIFI_PWD_LEN  64
 
 #define DEFAULT_GATEWAY "192.168.0.1"
 #define DEFAULT_MASK "255.255.255.0"
@@ -319,7 +319,6 @@ struct Settings
     char blynk_host[HOST_LEN] = {0};
 
     char http_url[HOST_LEN] = {0};
-    char reserved7[EMAIL_LEN + BLYNK_EMAIL_TEMPLATE_LEN] = {0};
 
     char mqtt_host[HOST_LEN] = {0};
     uint16_t mqtt_port = MQTT_DEFAULT_PORT;
@@ -444,14 +443,14 @@ struct Settings
     /* Включение Blynk */
     uint8_t blynk_on = (uint8_t)false;
     /* Включение DHCP или статических настроек */
-    uint8_t dhcp_on = (uint8_t)true;
+    uint8_t dhcp_off = (uint8_t)false;
 
     uint8_t reserved8 = 0;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved4[54] = {0};
+    uint8_t reserved4[118] = {0};
 
 }; // 960 байт
 

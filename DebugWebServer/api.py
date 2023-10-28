@@ -45,21 +45,10 @@ async def connect(form_data: ConnectModel = Depends()):
 
     res = settings.apply_settings(res)
 
-    if form_data.ssid == "ERROR_PASSWORD":
-        res.update({
-            "error": "Ошибка авторизации. Проверьте пароль",
-            "redirect": "/wifi_settings.html"
-        })
+    res.update({
+        "redirect": "/wifi_connect.html"
+    })
 
-    elif form_data.ssid == "ERROR_CONNECT":
-        res.update({
-            "error": "Ошибка подключения",
-            "redirect": "/wifi_settings.html"
-        })
-    else:
-        pass
-
-    time.sleep(1.0)
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
 
@@ -89,6 +78,39 @@ async def main_status():
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
 
+
+@api_app.get("/connect_status")
+async def connect_status():
+    """
+    Запрос странице подключения. Результат подключения будет в redirect
+
+    typedef enum {
+        WL_IDLE_STATUS      = 0,
+        WL_NO_SSID_AVAIL    = 1,
+        WL_SCAN_COMPLETED   = 2,
+        WL_CONNECTED        = 3,
+        WL_CONNECT_FAILED   = 4,
+        WL_CONNECTION_LOST  = 5,
+        WL_WRONG_PASSWORD   = 6,
+        WL_DISCONNECTED     = 7
+    } wl_status_t;
+    :return:
+    """
+    if settings.ssid == "ERROR_PASSWORD":
+        res = {
+            "redirect": "/wifi_settings.html",
+            "params": "status_code=6"
+        }
+    elif settings.ssid == "ERROR_CONNECT":
+        res = {
+            "redirect": "/wifi_settings.html",
+            "params": "status_code=4"
+        }
+    else:
+        res = {"redirect": "/setup_send.html"}
+
+    json = jsonable_encoder(res)
+    return JSONResponse(content=json)
 
 """
 @api_app.get("/status/{input}")

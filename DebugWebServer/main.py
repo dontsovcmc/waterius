@@ -134,6 +134,11 @@ async def wifi_password():
     return template_response("wifi_password.html")
 
 
+@app.get("/wifi_connect.html")
+async def wifi_settings():
+    return template_response("wifi_connect.html")
+
+
 @app.get("/wifi_settings.html")
 async def wifi_settings():
     return template_response("wifi_settings.html")

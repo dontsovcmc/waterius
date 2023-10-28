@@ -32,6 +32,9 @@ void setup()
 {
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Booted"));
+    
+    static_assert((sizeof(Settings) == 960), "sizeof Settings != 960");
+
 
     masterI2C.begin(); // Включаем i2c master
 
@@ -43,8 +46,7 @@ void setup()
     }
 
     get_voltage()->begin();
-    voltage_ticker.attach_ms(300, []()
-                             { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
+    voltage_ticker.attach_ms(300, [](){ get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
 }
 
 void loop()
@@ -159,7 +161,7 @@ void loop()
                 {
                     LOG_ERROR(F("Wakeup period wasn't set"));
                 }
-                else //"Разбуди меня через..."
+                else // Разбуди меня через...
                 {
                     LOG_INFO(F("Wakeup period, min:") << sett.wakeup_per_min);
                     LOG_INFO(F("Wakeup period (adjusted), min:") << sett.set_wakeup);

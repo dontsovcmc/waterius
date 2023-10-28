@@ -13,7 +13,7 @@
         next: '/',
         next_wizard: '/finish.html'
     })">
-        <form onsubmit="formSubmit(event, this, 'setup', true);">
+        <form onsubmit="formSubmit(event, this, 'setup');">
             <div class="wrap">
                 <div class="container f1">
                     <header>
@@ -39,8 +39,9 @@
                         <div class="f-row mt16 hd email-form">
                             <label for="waterius_email">Почта аккаунта</label>
                             <input type="email" id="waterius_email" name="waterius_email" placeholder="name@domen.ru" pattern="[^@\s]+@[^@\s]+\.[^@\s]+" value="%waterius_email%" >
-                            <p class="error hd" id="waterius_email-error">Введите E-mail</p>
+                            <p class="error hd" id="waterius_email-error">Некорректный e-mail</p>
                         </div>
+
                         <div class="toggle">
                             <input type="checkbox" name="http_on" id="http_on" onclick="checkboxToggle(this)" data-form=".server-form" %http_on%>
                             <label for="http_on">Сервер HTTP</label>
@@ -48,27 +49,45 @@
                         <div class="f-row mt16 hd server-form">
                             <label for="http_url">Адрес</label>
                             <input id="http_url" name="http_url" placeholder="http://iot.site.com:8000/cloud" value="%http_url%">
-                            <p class="error hd" id="http_url-error">Введите адрес сервера</p>
+                            <p class="error hd" id="http_url-error">Некорректный адрес</p>
                         </div>
+
+                        <div class="toggle">
+                            <input type="checkbox" name="blynk_on" id="blynk_on" onclick="checkboxToggle(this)" data-form=".blynk-form" %http_on%>
+                            <label for="blynk_on">Blynk</label>
+                        </div>
+                        <div class="hd blynk-form">
+                            <div class="f-row mt16">
+                                <label for="blynk_host">Адрес</label>
+                                <input id="blynk_host" name="blynk_host" placeholder="blynk.com" value="%blynk_host%">
+                                <p class="error hd" id="blynk_host-error">Некорректный адрес сервера</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="blynk_key">Токен</label>
+                                <input id="blynk_key" name="blynk_key" placeholder="10A1B2C3D4E5F6" value="%blynk_key%">
+                                <p class="error hd" id="blynk_key-error">Некорректный токен</p>
+                            </div>
+                        </div>
+
                         <div class="toggle">
                             <input type="checkbox" name="mqtt_on" id="mqtt_on" onclick="checkboxToggle(this)" data-form=".mqtt-form" %mqtt_on%>
-                            <label for="mqtt_on">Брокер MQTT</label>
+                            <label for="mqtt_on">MQTT</label>
                         </div>
                         <div class="hd mqtt-form">
                             <div class="f-row mt16">
                                 <label for="mqtt_host">Адрес</label>
                                 <input id="mqtt_host" name="mqtt_host" placeholder="http://broker.domen.ru" value="%mqtt_host%">
-                                <p class="error hd" id="mqtt_host-error"></p>
+                                <p class="error hd" id="mqtt_host-error">Некорректный адрес сервера</p>
                             </div>
                             <div class="f-row">
                                 <label for="mqtt_port">Порт</label>
                                 <input id="mqtt_port" name="mqtt_port" placeholder="1883" type="number" value="%mqtt_port%">
-                                <p class="error hd" id="mqtt_port-error"></p>
+                                <p class="error hd" id="mqtt_port-error">Некорректный номер порта</p>
                             </div>
                             <div class="f-row">
                                 <label for="mqtt_login">Логин</label>
                                 <input id="mqtt_login" name="mqtt_login" placeholder="Логин" value="%mqtt_login%">
-                                <p class="error hd" id="mqtt_login-error">Введите логин</p>
+                                <p class="error hd" id="mqtt_login-error">Некорректный логин</p>
                             </div>
                             <div class="f-row">
                                 <label for="mqtt_password">Пароль</label>
@@ -76,12 +95,24 @@
                                 <div class="icon" onclick="showPW('mqtt_password')">
                                     <img src="/images/icons.png">
                                 </div>
-                                <p class="error hd" id="mqtt_password-error">Введите пароль</p>
+                                <p class="error hd" id="mqtt_password-error">Некорректный пароль</p>
                             </div>
                             <div class="f-row">
                                 <label for="mqtt_topic">Topic</label>
                                 <input id="mqtt_topic" name="mqtt_topic" value="%mqtt_topic%">
-                                <p class="error hd" id="mqtt_topic-error">Введите пароль</p>
+                                <p class="error hd" id="mqtt_topic-error">Некорректный адрес топика</p>
+                            </div>
+
+                            <div class="toggle">
+                                <input type="checkbox" name="mqtt_auto_discovery" id="mqtt_auto_discovery" onclick="checkboxToggle(this)" data-form=".mqtt_auto_discovery-form" %mqtt_auto_discovery%>
+                                <label for="mqtt_auto_discovery">Авто добавление в Home Assistant</label>
+                            </div>
+                            <div class="hd mqtt_auto_discovery-form">
+                                <div class="f-row mt16">
+                                    <label for="mqtt_discovery_topic">Топик discovery Home Assistant</label>
+                                    <input id="mqtt_discovery_topic" name="mqtt_discovery_topic" placeholder="homeassistant" value="%mqtt_discovery_topic%">
+                                    <p class="error hd" id="mqtt_discovery_topic-error">Некорректный адрес топика</p>
+                                </div>
                             </div>
                         </div>
 
@@ -93,7 +124,7 @@
                                 <label for="wakeup_per_min">Период отправки</label>
                                 <input id="wakeup_per_min" name="wakeup_per_min" placeholder="1440" type="number" value="%wakeup_per_min%">
                                 <p>В минутах</p>
-                                <p class="error hd" id="wakeup_per_min-error"></p>
+                                <p class="error hd" id="wakeup_per_min-error">Некорректное значение</p>
                             </div>
                         </div>
                     </main>
