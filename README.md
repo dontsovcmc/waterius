@@ -31,7 +31,7 @@
 
 ### Где купить
 
-В России: [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github) | [Ozon](https://ozon.ru/product/vaterius-umnaya-pristavka-k-schetchikam-vody-wi-fi-dlya-impulsnyh-schetchikov-goryachego-i-366409307/?utm_source=github&utm_campaign=vendor_org_160471_sell_page&hs=1) | [Yandex.market](https://market.yandex.ru/store--waterius/product/920451755?businessId=1106573&sku=101280435941) | [Wildberries](https://global.wildberries.ru/product?card=26967283)
+В России: [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github) | [Ozon](https://ozon.ru/product/vaterius-umnaya-pristavka-k-schetchikam-vody-wi-fi-dlya-impulsnyh-schetchikov-goryachego-i-366409307/?utm_source=github&utm_campaign=vendor_org_160471_sell_page&hs=1) | [Yandex.market](https://market.yandex.ru/store--waterius/product/920451755?businessId=1106573&sku=101280435941) | [Wildberries](https://www.wildberries.ru/catalog/26967283/detail.aspx)
 
 Worldwide by Wildberries: [Armenia 🇦🇲](https://global.wildberries.ru/product?card=26967283) | [Belarus 🇧🇾](https://global.wildberries.ru/product?card=26967283) | [Kyrgyzstan 🇰🇬](https://global.wildberries.ru/product?card=26967283) | [Kazakhstan 🇰🇿](https://global.wildberries.ru/product?card=26967283)
 
