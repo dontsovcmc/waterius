@@ -27,7 +27,7 @@
 
 ✅ Электронные счётчики газа: Бетар СГБМ-4 [подробнее](https://github.com/dontsovcmc/waterius/issues/233)
 
-✅ Электронные счётчики тепла: Sanext Monu CU [подробнее](https://github.com/dontsovcmc/waterius/issues/233)
+✅ Электронные счётчики тепла: Sanext Monu CU, Берил ITELMA СТЭ 31 [подробнее](https://github.com/dontsovcmc/waterius/issues/233)
 
 ### Где купить
 
