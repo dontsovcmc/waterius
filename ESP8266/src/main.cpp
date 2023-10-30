@@ -54,8 +54,8 @@ void loop()
     uint8_t mode = SETUP_MODE; // TRANSMIT_MODE;
     bool config_loaded = false;
 
-    // спрашиваем у Attiny85 повод пробуждения и данные true) // /
-    if (true) // masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
+    // спрашиваем у Attiny85 повод пробуждения и данные true) 
+    if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
     {
         // Загружаем конфигурацию из EEPROM
         config_loaded = load_config(sett);
@@ -125,7 +125,6 @@ void loop()
                 {
                     LOG_INFO(F("HTTP: Send OK"));
                 }
-                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 #endif
 
 #ifndef BLYNK_DISABLED
@@ -133,7 +132,6 @@ void loop()
                 {
                     LOG_INFO(F("BLYNK: Send OK"));
                 }
-                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 #endif
 
 #ifndef MQTT_DISABLED
@@ -148,8 +146,6 @@ void loop()
                 {
                     LOG_INFO(F("MQTT: SKIP"));
                 }
-
-                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 #endif
                 // Все уже отправили,  wifi не нужен - выключаем
                 wifi_shutdown();

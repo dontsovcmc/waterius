@@ -20,7 +20,7 @@ extern bool init_config(Settings &sett);
 extern void update_config(Settings &sett, const SlaveData &data, const CalculatedData &cdata);
 
 /* Рассчитываем текущие показания */
-extern void calculate_values(const Settings &sett, const SlaveData &data, CalculatedData &cdata);
+extern void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cdata);
 
 /* Очищаем память и инициализируем настройки по умолчанию */
 extern void factory_reset(Settings &sett);

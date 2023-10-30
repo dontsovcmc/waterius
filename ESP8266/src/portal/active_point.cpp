@@ -234,74 +234,88 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     server->serveStatic("/images/", LittleFS, "/images/").setCacheControl("max-age=600");
     server->serveStatic("/static/", LittleFS, "/static/").setCacheControl("max-age=600");
 
+    // Об устройстве
     server->on("/about.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/about.html", F("text/html"), false, processor); });
 
     server->on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/favicon.ico", F("image/x-icon")); });
 
+    // Завершение настройки (wizard)
     server->on("/finish.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/finish.html", F("text/html"), false, processor); });
 
+    // Главная страница
     server->on("/", HTTP_GET, onRoot).setFilter(ON_AP_FILTER);
-    server->on("/fwlink", HTTP_GET, onRoot).setFilter(ON_AP_FILTER); // captive
+    server->on("/fwlink", HTTP_GET, onRoot).setFilter(ON_AP_FILTER); // Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
 
     server->on("/logs.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/logs.html", F("text/html"), false, processor); });
 
+    // Сброс к заводским настройкам
     server->on("/reset.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/reset.html", F("text/html"), false, processor); });
 
+    // Детектирование счётчика холодной воды
     server->on("/setup_cold_welcome.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/setup_cold_welcome.html", F("text/html"), false, processor); });
 
+    // Параметры счётчика холодной воды
     server->on("/setup_cold.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/setup_cold.html", F("text/html"), false, processor); });
 
+    // Детектирование счётчика горячей воды
     server->on("/setup_hot_welcome.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/setup_hot_welcome.html", F("text/html"), false, processor); });
 
+    // Параметры счётчика горячей воды
     server->on("/setup_hot.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/setup_hot.htm", F("text/html"), false, processor); });
 
+    // Отправка показаний 
     server->on("/setup_send.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/setup_send.html", F("text/html"), false, processor); });
 
+    // Первая настройка
     server->on("/start.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/start.html", F("text/html"), false, processor); });
 
     server->on("/waterius_logs.txt", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/waterius_logs.txt", F("text/plain")); });
 
+    // Процесс подключения к Wi-fi
     server->on("/wifi_connect.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/wifi_connect.html", F("text/html"), false, processor); });
 
+    // Список Wi-Fi сетей
     server->on("/wifi_list.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/wifi_list.html", F("text/html"), false, processor); });
 
+    // Ввод пароля от Wi-Fi сети
     server->on("/wifi_password.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/wifi_password.html", F("text/html"), false, processor); });
 
+    // Настройки Wi-Fi, NTP
     server->on("/wifi_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/wifi_settings.html", F("text/html"), false, processor); });
 
-    /*Debug*/
+    // Файл характеристик всех найденных Wi-Fi сетей 
     server->on("/ssid.txt", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/ssid.txt", F("text/plain")); });
 
     server->onNotFound(onNotFound);
 
     /*API*/
-    server->on("/api/networks", HTTP_GET, onGetApiNetworks);
-    server->on("/api/init_connect", HTTP_POST, onPostApiInitConnect);
-    server->on("/api/call_connect", HTTP_GET, onGetApiCallConnect);
-    server->on("/api/connect_status", HTTP_GET, onGetApiConnectStatus);
-    server->on("/api/setup", HTTP_POST, onPostApiSetup);
-    server->on("/api/main_status", HTTP_GET, onGetApiMainStatus);
-    server->on("/api/status/0", HTTP_GET, onGetApiStatus0);
-    server->on("/api/status/1", HTTP_GET, onGetApiStatus1);
-    server->on("/api/turnoff", HTTP_GET, onGetApiTurnOff);
-    server->on("/api/reset", HTTP_POST, onPostApiReset);
+    server->on("/api/networks", HTTP_GET, onGetApiNetworks);  // Список Wi-Fi сетей (из wifi_list.html)
+    server->on("/api/init_connect", HTTP_POST, onPostApiInitConnect); // Сохраняем настройки Wi-Fi + redirect: /api/connect
+    server->on("/api/call_connect", HTTP_GET, onGetApiCallConnect);  // Поднимаем флаг старта подключения и redirect в wifi_connect.html
+    server->on("/api/connect_status", HTTP_GET, onGetApiConnectStatus); // Статус подключения (из wifi_connect.html)
+    server->on("/api/setup", HTTP_POST, onPostApiSetup); // Сохраняем настройки
+    server->on("/api/main_status", HTTP_GET, onGetApiMainStatus); // Информационные сообщения на главной странице
+    server->on("/api/status/0", HTTP_GET, onGetApiStatus0);  // Статус 0-го входа (ХВС)  (из setup_cold_welcome.html)
+    server->on("/api/status/1", HTTP_GET, onGetApiStatus1);  // Статус 1-го входа (ГВС)  (из setup_cold_welcome.html)
+    server->on("/api/turnoff", HTTP_GET, onGetApiTurnOff);   // Выйти из режима настройки
+    server->on("/api/reset", HTTP_POST, onPostApiReset);     // Сброс к заводским настройкам
 
     server->begin();
 
