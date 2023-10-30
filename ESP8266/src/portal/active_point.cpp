@@ -37,6 +37,16 @@ String template_bool(const uint8_t value)
     return String();
 }
 
+/*
+* Т.к. https://github.com/me-no-dev/ESPAsyncWebServer/issues/1249
+*/
+String replace_value(const String &var)
+{
+    String out(var);
+    out.replace(F("%"), F("%%"));
+    return out;
+}
+
 String processor(const String &var)
 {
     if (var == FPSTR(PARAM_VERSION))
@@ -45,28 +55,28 @@ String processor(const String &var)
         return String(sett.version);
 
     if (var == FPSTR(PARAM_WATERIUS_HOST))
-        return String(sett.waterius_host);
+        return replace_value(sett.waterius_host);
     if (var == FPSTR(PARAM_WATERIUS_EMAIL))
-        return String(sett.waterius_email);
+        return replace_value(sett.waterius_email);
 
     if (var == FPSTR(PARAM_BLYNK_KEY))
-        return String(sett.blynk_key);
+        return replace_value(sett.blynk_key);
     if (var == FPSTR(PARAM_BLYNK_HOST))
-        return String(sett.blynk_host);
+        return replace_value(sett.blynk_host);
 
     if (var == FPSTR(PARAM_HTTP_URL))
-        return String(sett.http_url);
+        return replace_value(sett.http_url);
 
     if (var == FPSTR(PARAM_MQTT_HOST))
-        return String(sett.mqtt_host);
+        return replace_value(sett.mqtt_host);
     if (var == FPSTR(PARAM_MQTT_PORT))
         return String(sett.mqtt_port);
     if (var == FPSTR(PARAM_MQTT_LOGIN))
-        return String(sett.mqtt_login);
+        return replace_value(sett.mqtt_login);
     if (var == FPSTR(PARAM_MQTT_PASSWORD))
-        return String(sett.mqtt_password);
+        return replace_value(sett.mqtt_password);
     if (var == FPSTR(PARAM_MQTT_TOPIC))
-        return String(sett.mqtt_topic);
+        return replace_value(sett.mqtt_topic);
 
     if (var == FPSTR(PARAM_CHANNEL0_START))
         return String(sett.channel0_start);
@@ -74,9 +84,9 @@ String processor(const String &var)
         return String(sett.channel1_start);
 
     if (var == FPSTR(PARAM_SERIAL0))
-        return String(sett.serial0);
+        return replace_value(sett.serial0);
     if (var == FPSTR(PARAM_SERIAL1))
-        return String(sett.serial1);
+        return replace_value(sett.serial1);
 
     if (var == FPSTR(PARAM_IP))
         return IPAddress(sett.ip).toString();
@@ -93,15 +103,15 @@ String processor(const String &var)
     if (var == FPSTR(PARAM_MQTT_AUTO_DISCOVERY))
         return template_bool(sett.mqtt_auto_discovery);
     if (var == FPSTR(PARAM_MQTT_DISCOVERY_TOPIC))
-        return String(sett.mqtt_discovery_topic);
+        return replace_value(sett.mqtt_discovery_topic);
 
     if (var == FPSTR(PARAM_NTP_SERVER))
         return String(sett.ntp_server);
 
     if (var == FPSTR(PARAM_SSID))
-        return String(sett.wifi_ssid);
+        return replace_value(sett.wifi_ssid);
     if (var == FPSTR(PARAM_PASSWORD))
-        return String(sett.wifi_password);
+        return replace_value(sett.wifi_password);
 
     if (var == FPSTR(PARAM_WIFI_PHY_MODE))
         return String(sett.wifi_phy_mode);
@@ -221,23 +231,20 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     AsyncWebServer *server = new AsyncWebServer(80);
 
     // TODO добавить .setLastModified( и  https://github.com/GyverLibs/buildTime/releases/tag/1.0
-    server->serveStatic("/images/", LittleFS, "/images/");
+    server->serveStatic("/images/", LittleFS, "/images/").setCacheControl("max-age=600");
+    server->serveStatic("/static/", LittleFS, "/static/").setCacheControl("max-age=600");
 
     server->on("/about.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/about.html", F("text/html"), false, processor); });
 
-    server->on("/style.css", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/style.css", F("text/css")); });
-    server->on("/common.js", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/common.js", F("text/javascript")); });
     server->on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/favicon.ico", F("image/x-icon")); });
 
     server->on("/finish.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/finish.html", F("text/html"), false, processor); });
 
-    server->on("/", HTTP_GET, onRoot);
-    server->on("/fwlink", HTTP_GET, onRoot); // captive
+    server->on("/", HTTP_GET, onRoot).setFilter(ON_AP_FILTER);
+    server->on("/fwlink", HTTP_GET, onRoot).setFilter(ON_AP_FILTER); // captive
 
     server->on("/logs.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/logs.html", F("text/html"), false, processor); });
@@ -286,7 +293,8 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
 
     /*API*/
     server->on("/api/networks", HTTP_GET, onGetApiNetworks);
-    server->on("/api/connect", HTTP_POST, onPostApiConnect);
+    server->on("/api/init_connect", HTTP_POST, onPostApiInitConnect);
+    server->on("/api/call_connect", HTTP_GET, onGetApiCallConnect);
     server->on("/api/connect_status", HTTP_GET, onGetApiConnectStatus);
     server->on("/api/setup", HTTP_POST, onPostApiSetup);
     server->on("/api/main_status", HTTP_GET, onGetApiMainStatus);

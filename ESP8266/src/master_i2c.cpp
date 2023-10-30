@@ -60,6 +60,14 @@ bool MasterI2C::sendData(uint8_t *buf, size_t size)
     return true;
 }
 
+/**
+ * @brief Чтение одного байта по указателю
+ * 
+ * @param value указатель приемника
+ * @param crc контрольная сумма
+ * @return true прочитано успешно
+ * @return false данные не прочитаны
+ */
 bool MasterI2C::getByte(uint8_t &value, uint8_t &crc)
 {
     if (Wire.requestFrom(I2C_SLAVE_ADDR, 1) != 1)
@@ -119,6 +127,17 @@ bool MasterI2C::getMode(uint8_t &mode)
     return true;
 }
 
+/**
+ * @brief Чтение данных с прибора.
+ * 
+ * Данные читаются в буффер, до контрольной суммы включительно. 
+ * При успешном чтении расчитанная контрольная сумма должна быть равно 0, 
+ * в противном случае во время чтения произошла ошибка.
+ * 
+ * @param data Структура для заполнения данными
+ * @return true прочитанно успешно.
+ * @return false произошла ошибка, код ошибки в data.diagnostic
+ */
 bool MasterI2C::getSlaveData(SlaveData &data)
 {
     sendCmd('B');

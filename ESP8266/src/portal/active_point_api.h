@@ -24,7 +24,8 @@ bool find_wizard_param(AsyncWebServerRequest *request);
 void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj);
 
 bool captivePortal(AsyncWebServerRequest *request);
-void onPostApiConnect(AsyncWebServerRequest *request);
+void onPostApiInitConnect(AsyncWebServerRequest *request);
+void onGetApiCallConnect(AsyncWebServerRequest *request);
 void onGetApiConnectStatus(AsyncWebServerRequest *request);
 void onGetApiNetworks(AsyncWebServerRequest *request);
 void onGetApiMainStatus(AsyncWebServerRequest *request);

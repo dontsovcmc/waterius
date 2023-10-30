@@ -19,7 +19,8 @@ if not os.path.exists(ROOT_PATH):
 app = FastAPI(title="main application")
 app.mount("/api", api_app)
 app.mount("/debug", debug_app)
-app.mount("/images", StaticFiles(directory=os.path.join(ROOT_PATH, 'images')), name="static")
+app.mount("/images", StaticFiles(directory=os.path.join(ROOT_PATH, 'images')), name="images")
+app.mount("/static", StaticFiles(directory=os.path.join(ROOT_PATH, 'static')), name="static")
 
 
 def replace_variables(text: str, keywords: List[str], obj: Any):
@@ -52,16 +53,6 @@ def template_response(filename: str):
 @app.get("/about.html")
 async def about():
     return template_response("about.html")
-
-
-@app.get("/style.css")
-async def style():
-    return FileResponse(os.path.join(ROOT_PATH, "style.css"))
-
-
-@app.get("/common.js")
-async def common():
-    return FileResponse(os.path.join(ROOT_PATH, "common.js"))
 
 
 @app.get("/favicon.ico")
@@ -147,6 +138,6 @@ async def wifi_settings():
 if __name__ == "__main__":
     log.info(f'api: http://127.0.0.1:9000/api/docs')
     log.info(f'debug api: http://127.0.0.1:9000/debug/docs')
-    uvicorn.run("main:app", host='0.0.0.0', port=7000, reload=True)
+    uvicorn.run("main:app", host='0.0.0.0', port=9000, reload=True)
     #uvicorn.run("main:app", host='192.168.10.43', port=9000, reload=True)
 

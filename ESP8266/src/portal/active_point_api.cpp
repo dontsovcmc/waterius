@@ -95,10 +95,12 @@ void onGetApiConnectStatus(AsyncWebServerRequest *request)
         if (status == WL_CONNECTED)
         {
             ret[F("redirect")] = F("/setup_send.html");
+            
         }
         else
         {
-            ret[F("redirect")] = F("/wifi_settings.html?status_code=") + String(status);
+            ret[F("redirect")] = F("/wifi_settings.html");
+            ret[F("params")] = "status_code=" + String(status);
         }
     }
 
@@ -151,48 +153,80 @@ void onGetApiNetworks(AsyncWebServerRequest *request)
  *
  * @param request запрос
  */
-void onPostApiConnect(AsyncWebServerRequest *request)
+void onPostApiInitConnect(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
 
     DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
-    JsonObject errorsObj = ret.createNestedObject("errors");
+    JsonObject errorsObj = ret.createNestedObject(F("errors"));
 
     // Если канал WiFi отличен от текущего канала AP ESP, то возможно отключение телефона
     uint8_t channel = sett.wifi_channel;
 
     applySettings(request, errorsObj);
-
+    
+    bool wizard = find_wizard_param(request);
+    
     if (!errorsObj.size())
     {
-        start_connect_flag = true;
-        LOG_INFO(F("Start connect"));
-    }
+        ret.remove(F("errors"));
 
-    String params;
-    bool wizard = find_wizard_param(request);
-    if (wizard)
-    {
-        params += F("wizard=true&");
-    }
-    if (channel != sett.wifi_channel)
-    {
-        params += F("error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново.");
-    }
+        String params;
 
-    if (params.length())
-    {
-        ret[F("redirect")] = F("/wifi_connect.html?") + params;
-    }
-    else
-    {
-        ret[F("redirect")] = F("/wifi_connect.html");
-    }
+        if (channel != sett.wifi_channel)
+        {
+            if (wizard) 
+            {
+                params += F("wizard=true&error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново.");
+            }
+            else 
+            {
+                params += F("error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново.");
+            }
+        }
+        else 
+        {
+            if (wizard) 
+            {
+                params += F("wizard=true");
+            }
+        }
 
+        if (params.length())
+        {
+            ret[F("redirect")] = F("/api/call_connect?") + params;
+        }
+        else 
+        {
+            ret[F("redirect")] = F("/api/call_connect");
+        }
+    }
+    
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     serializeJson(json_doc, *response);
     request->send(response);
+}
+
+/**
+ * @brief Подключение к точки доступа
+ *
+ * @param request запрос
+ */
+void onGetApiCallConnect(AsyncWebServerRequest *request)
+{
+    start_connect_flag = true;
+    LOG_INFO(F("Start connect"));
+
+    bool wizard = find_wizard_param(request);
+    if (wizard)
+    {
+        request->redirect("/wifi_connect.html?wizard=true");
+    }
+    else
+    {
+        request->redirect("/wifi_connect.html");
+    }
 }
 
 /**

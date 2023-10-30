@@ -11,6 +11,7 @@
 #include "sync_time.h"
 #include "flash_hal.h"
 
+
 // Конвертируем значение переменных компиляции в строк
 #define VALUE_TO_STRING(x) #x
 #define VALUE(x) VALUE_TO_STRING(x)
@@ -37,7 +38,7 @@ void store_config(const Settings &sett)
 
 // Инициализация параметров по умолчанию
 bool init_config(Settings &sett)
-{
+{   
     sett.version = CURRENT_VERSION;
     LOG_INFO(F("cfg version=") << sett.version);
 
@@ -45,18 +46,22 @@ bool init_config(Settings &sett)
     sett.set_wakeup = DEFAULT_WAKEUP_PERIOD_MIN;
     sett.mode = SETUP_MODE;
     sett.mqtt_auto_discovery = (uint8_t)MQTT_AUTO_DISCOVERY;
-
+    
     sett.counter0_name = CounterName::WATER_HOT;
     sett.counter1_name = CounterName::WATER_COLD;
 
     sett.factor0 = AS_COLD_CHANNEL;
     sett.factor1 = AUTO_IMPULSE_FACTOR;
 
-    sett.waterius_on = (uint8_t) true;
-    sett.http_on = (uint8_t) false;
-    sett.mqtt_on = (uint8_t) false;
-    sett.blynk_on = (uint8_t) false;
-    sett.dhcp_off = (uint8_t) false;
+    sett.waterius_on = (uint8_t)true;
+    sett.http_on = (uint8_t)false;
+    sett.mqtt_on = (uint8_t)false;
+    sett.blynk_on = (uint8_t)false;
+    sett.dhcp_off = (uint8_t)false;
+
+    //можно оптимизировать и загружать из PROGMEM, но ради 2х полей смысла не вижу
+    //static const char WATERIUS_DEFAULT_DOMAIN[] PROGMEM =  "https://cloud.waterius.ru"
+    //strncpy_P(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, HOST_LEN);
 
     strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, sizeof(WATERIUS_DEFAULT_DOMAIN));
 
@@ -64,7 +69,7 @@ bool init_config(Settings &sett)
 
     String default_topic = String(MQTT_DEFAULT_TOPIC_PREFIX) + "/" + String(getChipId()) + "/";
     strncpy0(sett.mqtt_topic, default_topic.c_str(), default_topic.length() + 1);
-
+    
     String discovery_topic(DISCOVERY_TOPIC);
     strncpy0(sett.mqtt_discovery_topic, discovery_topic.c_str(), discovery_topic.length() + 1);
 
@@ -73,7 +78,7 @@ bool init_config(Settings &sett)
     IPAddress network_gateway;
     network_gateway.fromString(DEFAULT_GATEWAY);
     sett.gateway = network_gateway;
-
+    
     IPAddress network_mask;
     network_mask.fromString(DEFAULT_MASK);
     sett.mask = network_mask;
@@ -181,46 +186,34 @@ bool load_config(Settings &sett)
         LOG_INFO(F("wakeup min=") << sett.wakeup_per_min);
 
         LOG_INFO(F("--- Waterius.ru ---- "));
-        if (sett.waterius_on)
-        {
+        if (sett.waterius_on) {
             LOG_INFO(F("state=ON"));
-        }
-        else
-        {
+        } else {
             LOG_INFO(F("state=OFF"));
         }
         LOG_INFO(F("email=") << sett.waterius_email);
         LOG_INFO(F("host=") << sett.waterius_host << F(" key=") << sett.waterius_key);
 
         LOG_INFO(F("--- HTTP ---- "));
-        if (sett.http_on)
-        {
+        if (sett.http_on) {
             LOG_INFO(F("state=ON"));
-        }
-        else
-        {
+        } else {
             LOG_INFO(F("state=OFF"));
         }
         LOG_INFO(F("host=") << sett.http_url);
 
         LOG_INFO(F("--- Blynk.cc ---- "));
-        if (sett.blynk_on)
-        {
+        if (sett.blynk_on) {
             LOG_INFO(F("state=ON"));
-        }
-        else
-        {
+        } else {
             LOG_INFO(F("state=OFF"));
         }
         LOG_INFO(F("host=") << sett.blynk_host << F(" key=") << sett.blynk_key);
 
         LOG_INFO(F("--- MQTT ---- "));
-        if (sett.mqtt_on)
-        {
+        if (sett.mqtt_on) {
             LOG_INFO(F("state=ON"));
-        }
-        else
-        {
+        } else {
             LOG_INFO(F("state=OFF"));
         }
         LOG_INFO(F("host=") << sett.mqtt_host << F(" port=") << sett.mqtt_port);
@@ -231,12 +224,9 @@ bool load_config(Settings &sett)
         LOG_INFO(F("--- Network ---- "));
         if (sett.ip)
         {
-            if (sett.dhcp_off)
-            {
+            if (sett.dhcp_off) {
                 LOG_INFO(F("DHCP=OFF"));
-            }
-            else
-            {
+            } else {
                 LOG_INFO(F("DHCP=ON"));
             }
             LOG_INFO(F("static_ip=") << IPAddress(sett.ip).toString());
@@ -329,7 +319,7 @@ void update_config(Settings &sett, const SlaveData &data, const CalculatedData &
 
 void factory_reset(Settings &sett)
 {
-    // Запоминаем уникальный токен, чтобы потом восстановить
+    //Запоминаем уникальный токен, чтобы потом восстановить
     LOG_INFO(F("Save waterius_key=") << sett.waterius_key);
     String waterius_key = sett.waterius_key;
 

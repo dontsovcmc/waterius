@@ -4,13 +4,13 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
         <title>Детектирование счётчика холодной воды</title>
-        <link rel="stylesheet" href="/style.css">
-        <script src="/common.js"></script>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
     </head>
     <body onload="_init({
         back: '/',
         back_wizard: '/wifi_list.html?wizard=true',
-        next: '/',
+        next: '/setup_cold.html',
         next_wizard: '/setup_cold.html?wizard=true' //'/setup_hot_welcome.html?wizard=true'
     });
     getStatus(1, '/setup_cold.html');">

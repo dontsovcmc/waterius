@@ -292,6 +292,7 @@ function showPW(id){
     const pw=document.getElementById(id);
     pw.type == 'password' ? pw.type = 'text' : pw.type = 'password';
 }
+
 function getWiFiStatus() {
     setTimeout(() => {
         ajax('/api/connect_status', {}, data => {
