@@ -352,9 +352,11 @@ void save_param(AsyncWebParameter *p, char *dest, size_t size, JsonObject &error
         errorsObj[p->name()] = FPSTR(ERROR_EMPTY);
     }
     else
-    {
-        strncpy0(dest, p->value().c_str(), size);
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
+    {   
+        String value(p->value());
+        value.trim();  //чтобы пользователи случайно не ввели пробел
+        strncpy0(dest, value.c_str(), size);
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << value);
     }
 }
 
