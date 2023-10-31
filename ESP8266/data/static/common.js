@@ -7,8 +7,18 @@ function _init(_pages) {
     pages = _pages;
     parseQueryParams();
 
+
     if(document.querySelector('form')) {
         // заполнение полей формы из location.search
+
+        // вначале заполним из server-side rendering
+        document.querySelectorAll('select').forEach(item => {
+            if (item.getAttribute('option-value')) {
+                item.value = item.getAttribute('option-value')
+            }
+        });
+
+        // заполним из url parameters
         document.querySelectorAll('input,textarea,select,span').forEach(item => {
             if(item.type == 'checkbox'){
                 if(parseInt(queryParams[item.name]) || (queryParams[item.name] && queryParams[item.name].toLowerCase() == 'true'))//{
@@ -87,7 +97,7 @@ function connectStatus(sc){
     } else if (sc == 3) {
         formError("Подключено");
     } else if (sc == 4) {
-        formError("Ошибка подключения");
+        formError("Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.");
     } else if (sc == 5) {
         formError("Подключение разорвано");
     } else if (sc == 6) {

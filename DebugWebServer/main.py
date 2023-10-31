@@ -1,7 +1,7 @@
 import uvicorn
 import os
 from typing import List, Any
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from esp import settings, settings_vars, system_info, system_info_vars
@@ -80,24 +80,40 @@ async def reset():
     return template_response("reset.html")
 
 
-@app.get("/setup_cold_welcome.html")
-async def setup_cold_welcome():
-    return template_response("setup_cold_welcome.html")
+@app.get("/setup_blue_type.html")
+async def setup_blue_type():
+    return template_response("setup_blue_type.html")
 
 
-@app.get("/setup_cold.html")
-async def setup_cold():
-    return template_response("setup_cold.html")
+@app.get("/setup_blue_water.html")
+async def setup_blue_water():
+    return template_response("setup_blue_water.html")
 
 
-@app.get("/setup_hot_welcome.html")
-async def setup_hot_welcome():
-    return template_response("setup_hot_welcome.html")
+@app.get("/setup_blue.html")
+async def setup_blue():
+    return template_response("setup_blue.html")
 
 
-@app.get("/setup_hot.html")
-async def setup_hot():
-    return template_response("setup_hot.html")
+@app.get("/setup_red_type.html")
+async def setup_red_type():
+    return template_response("setup_red_type.html")
+
+
+@app.get("/setup_red_water.html")
+async def setup_red_water():
+    return template_response("setup_red_water.html")
+
+
+@app.get("/setup_red.html")
+async def setup_red():
+    return template_response("setup_red.html")
+
+
+@app.get("/ssid.txt")
+async def ssid_txt():
+    data = 'Тут список параметров Wi-fi сетей'
+    return PlainTextResponse(data)
 
 
 @app.get("/setup_send.html")

@@ -32,8 +32,13 @@ static const char PARAM_PASSWORD[] PROGMEM = "password";
 static const char PARAM_WIFI_PHY_MODE[] PROGMEM = "wifi_phy_mode";
 static const char PARAM_COUNTER0_NAME[] PROGMEM = "counter0_name";
 static const char PARAM_COUNTER1_NAME[] PROGMEM = "counter1_name";
+static const char PARAM_COUNTER0_TITLE[] PROGMEM = "counter0_title";
+static const char PARAM_COUNTER1_TITLE[] PROGMEM = "counter1_title";
 static const char PARAM_COUNTER0_TYPE[] PROGMEM = "counter0_type";
 static const char PARAM_COUNTER1_TYPE[] PROGMEM = "counter1_type";
+static const char PARAM_COUNTER0_INSTRUCTION[] PROGMEM = "counter0_instruction";
+static const char PARAM_COUNTER1_INSTRUCTION[] PROGMEM = "counter1_instruction";
+
 static const char PARAM_FACTOR0[] PROGMEM = "factor0";
 static const char PARAM_FACTOR1[] PROGMEM = "factor1";
 static const char PARAM_WATERIUS_ON[] PROGMEM = "waterius_on";

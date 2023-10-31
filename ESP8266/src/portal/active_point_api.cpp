@@ -25,24 +25,11 @@ extern CalculatedData cdata;
 
 #define IMPULS_LIMIT_1 3 // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
 
-uint8_t get_auto_factor(uint32_t runtime_impulses, uint32_t impulses)
+uint8_t get_auto_factor(const uint32_t runtime_impulses, const uint32_t impulses)
 {
     return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
 }
 
-uint8_t get_factor(uint8_t combobox_factor, uint32_t runtime_impulses, uint32_t impulses, uint8_t cold_factor)
-{
-
-    switch (combobox_factor)
-    {
-    case AUTO_IMPULSE_FACTOR:
-        return get_auto_factor(runtime_impulses, impulses);
-    case AS_COLD_CHANNEL:
-        return cold_factor;
-    default:
-        return combobox_factor; // 1, 10, 100
-    }
-}
 
 /**
  * @brief Captive Portal
@@ -231,7 +218,7 @@ void onGetApiCallConnect(AsyncWebServerRequest *request)
 
 /**
  * @brief Список диагностических сообщений на Главной странице вебсервера
- *
+ *        
  * @param request запрос
  */
 void onGetApiMainStatus(AsyncWebServerRequest *request)
@@ -243,10 +230,13 @@ void onGetApiMainStatus(AsyncWebServerRequest *request)
     DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonArray array = json_doc.to<JsonArray>();
 
-    JsonObject obj = array.createNestedObject();
-    obj["error"] = "Привет";
-    obj["link_text"] = "Приступить";
-    obj["link"] = "/setup_cold_welcome.html";
+    if (sett.factor1 == AUTO_IMPULSE_FACTOR)
+    {
+        JsonObject obj = array.createNestedObject();
+        obj["error"] = "Ватериус ещё не настроен";
+        obj["link_text"] = "Приступить";
+        obj["link"] = "/setup_cold_welcome.html";
+    }
 
     LOG_INFO(F("JSON: Mem usage: ") << json_doc.memoryUsage());
     LOG_INFO(F("JSON: Size: ") << measureJson(json_doc));
@@ -271,7 +261,7 @@ void onGetApiStatus1(AsyncWebServerRequest *request)
  *
  * @param request запрос
  */
-void onGetApiStatus(AsyncWebServerRequest *request, int index)
+void onGetApiStatus(AsyncWebServerRequest *request, const int index)
 {
     LOG_INFO(F("GET ") << request->url());
     if (captivePortal(request))
@@ -287,7 +277,14 @@ void onGetApiStatus(AsyncWebServerRequest *request, int index)
         {
             if (sett.factor0 == AS_COLD_CHANNEL)
             {
-                factor = sett.factor1;
+                if (sett.factor1 == AUTO_IMPULSE_FACTOR)
+                {
+                    factor = get_auto_factor(runtime_data.impulses0, data.impulses0);
+                }
+                else
+                {
+                    factor = sett.factor1;
+                }
             }
             else
             {
@@ -671,6 +668,63 @@ void onPostApiSetup(AsyncWebServerRequest *request)
     JsonObject errorsObj = ret.createNestedObject("errors");
 
     applySettings(request, errorsObj);
+
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    serializeJson(json_doc, *response);
+    request->send(response);
+}
+
+void onPostApiSetCounterType0(AsyncWebServerRequest *request)
+{
+    onPostApiSetCounterType(request, 0);
+}
+
+void onPostApiSetCounterType1(AsyncWebServerRequest *request)
+{
+    onPostApiSetCounterType(request, 1);
+}
+
+void onPostApiSetCounterType(AsyncWebServerRequest *request, const uint8_t index)
+{
+    LOG_INFO(F("POST ") << request->url());
+    DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
+    JsonObject ret = json_doc.to<JsonObject>();
+    JsonObject errorsObj = ret.createNestedObject("errors");
+
+    applySettings(request, errorsObj);
+
+    if (index == 0)
+    {   
+        switch (sett.counter0_name)
+        {
+            case CounterName::WATER_COLD:
+            case CounterName::WATER_HOT:
+            case CounterName::PORTABLE_WATER:
+                ret[F("redirect")] = F("/setup_red_water.html");
+                break;
+            default:
+                ret[F("redirect")] = F("/setup_red.html");
+        }
+    } 
+    else 
+    {
+        switch (sett.counter1_name)
+        {
+            case CounterName::WATER_COLD:
+            case CounterName::WATER_HOT:
+            case CounterName::PORTABLE_WATER:
+                ret[F("redirect")] = F("/setup_blue_water.html");
+                break;
+            default:
+                ret[F("redirect")] = F("/setup_blue.html");
+        }
+    }
+
+    bool wizard = find_wizard_param(request);
+    if (wizard)
+    {
+        ret[F("redirect")] = ret[F("redirect")] + F("?wizard=true");
+    }
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     serializeJson(json_doc, *response);

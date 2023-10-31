@@ -2,7 +2,8 @@
 from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
-from esp import settings, attiny_data, attiny_link_error, AUTO_IMPULSE_FACTOR, AS_COLD_CHANNEL
+from esp import settings, attiny_data, attiny_link_error, \
+    AUTO_IMPULSE_FACTOR, AS_COLD_CHANNEL, CounterName
 from api_debug import runtime_data
 from models import SettingsModel, ConnectModel
 import time
@@ -79,15 +80,15 @@ async def main_status():
     res = [{
         "error": "Счетчик холодной воды перестал передавать показания",
         "link_text": "Настроить заново",
-        "link": "/setup_cold_welcome.html"
+        "link": "/setup_blue_type.html"
     }, {
         "error": "Подключите заново провода холодного счётчика к Ватериусу",
         "link_text": "Приступить к настройке",
-        "link": "/setup_cold_welcome.html"
+        "link": "/setup_blue_type.html"
     }, {
         "error": "Расход холодной воды больше горячей в 30 раз",
         "link_text": "Настроить множитель",
-        "link": "/setup_cold.html"
+        "link": "/setup_blue.html"
     }]
 
     res = []
@@ -158,7 +159,10 @@ async def status(input: int):
     if input == 0:  # ГВС
 
         if settings.factor0 == AS_COLD_CHANNEL:
-            factor = settings.factor1  # как у холодной
+            if settings.factor1 == AUTO_IMPULSE_FACTOR:
+                factor = 1 if runtime_data.impulses1 - attiny_data.impulses1 > 2 else 10
+            else:
+                factor = settings.factor1  # как у холодной
         else:
             factor = settings.factor0
 
@@ -198,6 +202,36 @@ async def setup(form_data: SettingsModel = Depends()):
     # res["errors"]["serial1"] = "Введите серийный номер"
     # res["errors"]["channel1_start"] = "Введите показания счётчика"
     #  "redirect": "/finish.html"
+
+    json = jsonable_encoder(res)
+    return JSONResponse(content=json)
+
+
+@api_app.post("/set_counter_name/{input}")
+async def set_counter_name(input: int, form_data: SettingsModel = Depends()):
+    """
+    Сохранить тип счетчика.
+    Исходя из типа переходим на страницу детектирования счетчика или сразу настройки
+    :param form_data:
+    :return:
+    """
+    res = {k: v for k, v in form_data.__dict__.items() if v is not None}
+    res = settings.apply_settings(res)
+
+    if input == 0:
+        if CounterName(settings.counter0_name) in [CounterName.WATER_COLD,
+                                                   CounterName.WATER_HOT,
+                                                   CounterName.PORTABLE_WATER]:
+            res["redirect"] = "/setup_red_water.html"
+        else:
+            res["redirect"] = "/setup_red.html"
+    else:
+        if CounterName(settings.counter1_name) in [CounterName.WATER_COLD,
+                                                   CounterName.WATER_HOT,
+                                                   CounterName.PORTABLE_WATER]:
+            res["redirect"] = "/setup_blue_water.html"
+        else:
+            res["redirect"] = "/setup_blue.html"
 
     json = jsonable_encoder(res)
     return JSONResponse(content=json)

@@ -47,6 +47,73 @@ String replace_value(const String &var)
     return out;
 }
 
+String get_counter_title(const uint8_t name)
+{
+    switch (name)
+    {
+        case CounterName::WATER_COLD:
+            return F("Холодная вода");
+        case CounterName::WATER_HOT:
+            return F("Горячая вода");
+        case CounterName::ELECTRO:
+            return F("Электричество");
+        case CounterName::GAS:
+            return F("Газ");
+        case CounterName::HEAT:
+            return F("Тепло");
+        case CounterName::PORTABLE_WATER:
+            return F("Питьевая вода");
+        case CounterName::OTHER:
+        default:
+            return F("Другой");
+    }
+}
+
+String get_counter_img(const CounterName name)
+{
+    switch (name)
+    {
+        case CounterName::WATER_COLD:
+            return F("meter-cold.png");
+        case CounterName::WATER_HOT:
+            return F("meter-hot.png");
+        case CounterName::ELECTRO:
+            return F("");
+        case CounterName::GAS:
+            return F("");
+        case CounterName::HEAT:
+            return F("");
+        case CounterName::PORTABLE_WATER:
+            return F("");
+        case CounterName::OTHER:
+        default:
+            return F("");
+    } 
+}
+
+
+String get_counter_instruction(const uint8_t name)
+{
+    switch (name)
+    {
+        case CounterName::WATER_COLD:
+            return F("Спускайте воду в унитазе пока устройство не перенесёт вас на следующую страницу");
+        case CounterName::WATER_HOT:
+            return F("Откройте кран горячей воды пока устройство не перенесёт вас на следующую страницу");
+        case CounterName::ELECTRO:
+            return F("Включите электроприбор. После моргания светодиода должна открыться следующая страница. Если не открывается, значит некорректное подключение или счётчик не поддерживается.");
+        case CounterName::GAS:
+            return F("Приход импульса от газового счётчика долго ожидать, нажмите Пропустить и продолжите настройку.");
+        case CounterName::HEAT:
+            return F("Приход импульса от счётчика тепла долго ожидать, нажмите Пропустить и продолжите настройку.");
+        case CounterName::PORTABLE_WATER:
+            return F("Откройте кран питьевой воды пока устройство не перенесёт вас на следующую страницу");
+        case CounterName::OTHER:
+        default:
+            return F("При приходе импульса от счётчика устройство перенесёт вас на следующую страницу");
+    }
+}
+
 String processor(const String &var)
 {
     if (var == FPSTR(PARAM_VERSION))
@@ -121,6 +188,16 @@ String processor(const String &var)
     if (var == FPSTR(PARAM_COUNTER1_NAME))
         return String(sett.counter1_name);
 
+    if (var == FPSTR(PARAM_COUNTER0_TITLE))
+        return get_counter_title(sett.counter0_name);
+    if (var == FPSTR(PARAM_COUNTER1_TITLE))
+        return get_counter_title(sett.counter1_name);
+
+    if (var == FPSTR(PARAM_COUNTER0_INSTRUCTION))
+        return get_counter_instruction(sett.counter0_name);
+    if (var == FPSTR(PARAM_COUNTER1_INSTRUCTION))
+        return get_counter_instruction(sett.counter1_name);
+    
     if (var == FPSTR(PARAM_COUNTER0_TYPE))
         return String(data.counter_type0);
     if (var == FPSTR(PARAM_COUNTER1_TYPE))
@@ -160,10 +237,10 @@ void onRoot(AsyncWebServerRequest *request)
         return;
 
     if (sett.factor1 == AUTO_IMPULSE_FACTOR)
-    {
-        // TODO
-        // request->send(LittleFS, "/start.html", F("text/html"), false, processor);
-        request->send(LittleFS, "/index.html", F("text/html"), false, processor);
+    {   
+        // Первая настройка
+        request->send(LittleFS, "/start.html", F("text/html"), false, processor);
+        //request->send(LittleFS, "/index.html", F("text/html"), false, processor);
     }
     else
     {
@@ -256,21 +333,29 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     server->on("/reset.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/reset.html", F("text/html"), false, processor); });
 
-    // Детектирование счётчика холодной воды
-    server->on("/setup_cold_welcome.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/setup_cold_welcome.html", F("text/html"), false, processor); });
+    // Тип синего счётчика
+    server->on("/setup_blue_type.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/setup_blue_type.html", F("text/html"), false, processor); });
 
-    // Параметры счётчика холодной воды
-    server->on("/setup_cold.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/setup_cold.html", F("text/html"), false, processor); });
+    // Детектирование синего счётчика (только Холодная и Горячая вода)
+    server->on("/setup_blue_water.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/setup_blue_water.html", F("text/html"), false, processor); });
 
-    // Детектирование счётчика горячей воды
-    server->on("/setup_hot_welcome.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/setup_hot_welcome.html", F("text/html"), false, processor); });
+    // Параметры синего счётчика
+    server->on("/setup_blue.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/setup_blue.html", F("text/html"), false, processor); });
 
-    // Параметры счётчика горячей воды
-    server->on("/setup_hot.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/setup_hot.htm", F("text/html"), false, processor); });
+    // Тип красного счётчика
+    server->on("/setup_red_type.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/setup_red_type.html", F("text/html"), false, processor); });
+
+    // Детектирование красного счётчика (только Холодная и Горячая вода)
+    server->on("/setup_red_water.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/setup_red_water.html", F("text/html"), false, processor); });
+
+    // Параметры красного счётчика
+    server->on("/setup_red.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/setup_red.htm", F("text/html"), false, processor); });
 
     // Отправка показаний 
     server->on("/setup_send.html", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -311,6 +396,8 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     server->on("/api/call_connect", HTTP_GET, onGetApiCallConnect);  // Поднимаем флаг старта подключения и redirect в wifi_connect.html
     server->on("/api/connect_status", HTTP_GET, onGetApiConnectStatus); // Статус подключения (из wifi_connect.html)
     server->on("/api/setup", HTTP_POST, onPostApiSetup); // Сохраняем настройки
+    server->on("/api/set_counter_type/0", HTTP_POST, onPostApiSetCounterType0); // Сохраняем тип счётчика и переносим на страницу настройки
+    server->on("/api/set_counter_type/1", HTTP_POST, onPostApiSetCounterType1); // Сохраняем тип счётчика и переносим на страницу настройки
     server->on("/api/main_status", HTTP_GET, onGetApiMainStatus); // Информационные сообщения на главной странице
     server->on("/api/status/0", HTTP_GET, onGetApiStatus0);  // Статус 0-го входа (ХВС)  (из setup_cold_welcome.html)
     server->on("/api/status/1", HTTP_GET, onGetApiStatus1);  // Статус 1-го входа (ГВС)  (из setup_cold_welcome.html)

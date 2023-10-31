@@ -3,17 +3,17 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-        <title>Детектирование счётчика горячей воды</title>
+        <title>Детектирование счётчика: %counter0_title%</title>
         <link rel="stylesheet" href="/static/style.css">
         <script src="/static/common.js"></script>
     </head>
     <body onload="_init({
         back: '/',
-        back_wizard: '/setup_cold.html?wizard=true',
-        next: '/setup_hot.html',
-        next_wizard: '/setup_hot.html?wizard=true' //'/setup_send.html?wizard=true'
+        back_wizard: '/setup_red_type.html?wizard=true',
+        next: '/setup_red.html',
+        next_wizard: '/setup_red.html?wizard=true'
     });
-    getStatus(0, '/setup_hot.html');">
+    getStatus(0, '/setup_red.html');">
         <div class="wrap">
             <div class="container f2">
                 <header>
@@ -25,13 +25,13 @@
                     <div class="icon logo">
                         <img src="/images/icons.png">
                     </div>
-                    <div class="fr">шаг 3/6</div>
+                    <div class="fr">шаг 7/9</div>
                 </header>
                 <main>
-                    <h2>Горячая вода</h2>
-                    <img src="images/meter-hot.png" class="counter">
-                    <p class="text strong mt20">Сейчас мы настроим счётчик горячей воды, для этого:</p>
-                    <p class="text mt10">Откройте кран горячей воды пока устройство не перенесёт вас на следующую страницу</p>
+                    <h2>%counter0_title%</h2>
+                    <img src="images/%counter0_img%" class="counter">
+                    <p class="text strong mt20">Сейчас мы настроим счётчик, для этого:</p>
+                    <p class="text mt10">%counter0_instruction%</p>
                 </main>
                 <footer class="btns">
                     <p class="form-error hd "></p>

@@ -62,3 +62,6 @@ class SettingsModel:
 
     factor0: int | None = Form(None)
     factor1: int | None = Form(None)
+
+    counter0_type: int | None = Form(None)
+    counter1_type: int | None = Form(None)

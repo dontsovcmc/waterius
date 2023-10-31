@@ -3,16 +3,16 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-        <title>Ввод данных счётчика</title>
+        <title>Ввод данных счётчика: %counter0_title%</title>
         <link rel="stylesheet" href="/static/style.css">
         <script src="/static/common.js"></script>
     </head>
     <body onload="_init({
-        back: '/setup_cold_welcome.html',
-        back_wizard: '/setup_cold_welcome.html?wizard=true',
+        back: '/setup_red_type.html',
+        back_wizard: '/setup_red_type.html?wizard=true',
         next: '/',
-        next_wizard: '/setup_hot_welcome.html?wizard=true'
-    }, 1); getImpulses(1);">
+        next_wizard: '/setup_send.html?wizard=true'
+    }, 0); getImpulses(0);">
         <form onsubmit="formSubmit(event, this, 'setup');">
             <div class="wrap">
                 <div class="container f1">
@@ -25,33 +25,33 @@
                         <div class="icon logo">
                             <img src="/images/icons.png">
                         </div>
-                        <div class="fr">шаг 4/6</div>
+                        <div class="fr">шаг 8/9</div>
                     </header>
                     <main>
-                        <h2>Холодная вода</h2>
+                        <h2>%counter0_title%</h2>
                         <p class="text">Счётчик определился Ватериусом, теперь введите серийный номер и показания счётчика</p>
                         <p class="form-error hd"></p>
                         <div class="f-row">
-                            <label for="serial1">Серийный номер (опционально)</label>
-                            <input id="serial1" name="serial1" placeholder="10-12345" value="%serial1%">
+                            <label for="serial0">Серийный номер (опционально)</label>
+                            <input id="serial0" name="serial0" placeholder="10-12345" value="%serial0%">
                             <p class="error hd" id="serial1-error">Введите серийный номер</p>
                         </div>
                         <div class="f-row">
-                            <label for="channel1_start">Показания счётчика</label>
-                            <input pattern="^\s*[\d]+([,\.][\d]+)?\s*$" id="channel1_start" name="channel1_start" placeholder="356.89" value="%channel1_start%">
+                            <label for="channel0_start">Показания счётчика</label>
+                            <input pattern="^\s*[\d]+([,\.][\d]+)?\s*$" id="channel0_start" name="channel0_start" placeholder="356.89" value="%channel0_start%">
                             <p class="error hd" id="channel1_start-error">Введите показания счётчика</p>
                         </div>
                         <div class="f-row">
-                            <label for="factor1">Вес импульса</label>
-                            <select class="slct" id="factor1" name="factor1">
+                            <label for="factor0">Вес импульса</label>
+                            <select class="slct" id="factor0" name="factor0" option-value="%factor0%">
                               <option selected="" value="1">1</option>
                               <option value="10">10</option>
                               <option value="100">100</option>
                             </select>
                             <p>л/имп</p>
-                            <p class="error hd" id="factor1-error">Некорректное значение</p>
+                            <p class="error hd" id="factor0-error">Недопустимое значение</p>
                         </div>
-                        <p class="note mt16">(во время настройки вылилось около <span id="delta1">1</span>л воды)</p>
+                        <p class="note mt16">(во время настройки вылилось около <span id="delta0">1</span>л воды)</p>
                     </main>
                     <footer class="btns">
                         <button class="btn" type="submit">Сохранить</button>
