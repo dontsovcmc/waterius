@@ -69,7 +69,7 @@ String get_counter_title(const uint8_t name)
     }
 }
 
-String get_counter_img(const CounterName name)
+String get_counter_img(const uint8_t name)
 {
     switch (name)
     {
@@ -193,6 +193,11 @@ String processor(const String &var)
     if (var == FPSTR(PARAM_COUNTER1_TITLE))
         return get_counter_title(sett.counter1_name);
 
+    if (var == FPSTR(PARAM_COUNTER0_IMG))
+        return get_counter_img(sett.counter0_name);
+    if (var == FPSTR(PARAM_COUNTER1_IMG))
+        return get_counter_img(sett.counter1_name);
+
     if (var == FPSTR(PARAM_COUNTER0_INSTRUCTION))
         return get_counter_instruction(sett.counter0_name);
     if (var == FPSTR(PARAM_COUNTER1_INSTRUCTION))
@@ -204,9 +209,10 @@ String processor(const String &var)
         return String(data.counter_type1);
 
     if (var == FPSTR(PARAM_FACTOR0))
-        return String(sett.factor0);
+        return sett.factor0 == AS_COLD_CHANNEL ? F("10") : String(sett.factor0);
+
     if (var == FPSTR(PARAM_FACTOR1))
-        return String(sett.factor1);
+        return sett.factor1 == AUTO_IMPULSE_FACTOR ? F("10") : String(sett.factor1);
 
     if (var == FPSTR(PARAM_WATERIUS_ON))
         return template_bool(sett.waterius_on);
@@ -240,7 +246,6 @@ void onRoot(AsyncWebServerRequest *request)
     {   
         // Первая настройка
         request->send(LittleFS, "/start.html", F("text/html"), false, processor);
-        //request->send(LittleFS, "/index.html", F("text/html"), false, processor);
     }
     else
     {
@@ -326,6 +331,10 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     server->on("/", HTTP_GET, onRoot).setFilter(ON_AP_FILTER);
     server->on("/fwlink", HTTP_GET, onRoot).setFilter(ON_AP_FILTER); // Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
 
+    // Нужно, т.к. при первой на стройке будет start.html и надо дать возможность открыть Главное меню
+    server->on("/index.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/index.html", F("text/html"), false, processor); });
+
     server->on("/logs.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/logs.html", F("text/html"), false, processor); });
 
@@ -355,7 +364,7 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
 
     // Параметры красного счётчика
     server->on("/setup_red.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/setup_red.htm", F("text/html"), false, processor); });
+               { request->send(LittleFS, "/setup_red.html", F("text/html"), false, processor); });
 
     // Отправка показаний 
     server->on("/setup_send.html", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -396,8 +405,8 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     server->on("/api/call_connect", HTTP_GET, onGetApiCallConnect);  // Поднимаем флаг старта подключения и redirect в wifi_connect.html
     server->on("/api/connect_status", HTTP_GET, onGetApiConnectStatus); // Статус подключения (из wifi_connect.html)
     server->on("/api/setup", HTTP_POST, onPostApiSetup); // Сохраняем настройки
-    server->on("/api/set_counter_type/0", HTTP_POST, onPostApiSetCounterType0); // Сохраняем тип счётчика и переносим на страницу настройки
-    server->on("/api/set_counter_type/1", HTTP_POST, onPostApiSetCounterType1); // Сохраняем тип счётчика и переносим на страницу настройки
+    server->on("/api/set_counter_name/0", HTTP_POST, onPostApiSetCounterName0); // Сохраняем тип счётчика и переносим на страницу настройки
+    server->on("/api/set_counter_name/1", HTTP_POST, onPostApiSetCounterName1); // Сохраняем тип счётчика и переносим на страницу настройки
     server->on("/api/main_status", HTTP_GET, onGetApiMainStatus); // Информационные сообщения на главной странице
     server->on("/api/status/0", HTTP_GET, onGetApiStatus0);  // Статус 0-го входа (ХВС)  (из setup_cold_welcome.html)
     server->on("/api/status/1", HTTP_GET, onGetApiStatus1);  // Статус 1-го входа (ГВС)  (из setup_cold_welcome.html)

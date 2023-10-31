@@ -151,7 +151,7 @@ bool is_waterius_site(const String &url)
 bool is_blynk(const Settings &sett)
 {
 #ifndef BLYNK_DISABLED
-	return sett.blynk_host[0] && sett.blynk_key[0];
+	return sett.blynk_on && sett.blynk_host[0] && sett.blynk_key[0];
 #else
 	return false;
 #endif
@@ -167,7 +167,7 @@ bool is_blynk(const Settings &sett)
 bool is_mqtt(const Settings &sett)
 {
 #ifndef MQTT_DISABLED
-	return sett.mqtt_host[0];
+	return sett.mqtt_on && sett.mqtt_host[0];
 #else
 	return false;
 #endif

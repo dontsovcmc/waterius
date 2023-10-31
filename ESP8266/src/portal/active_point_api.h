@@ -15,7 +15,7 @@
 
 void save_param(AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required = true);
 void save_param(AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj);
-void save_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj);
+void save_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok = false);
 void save_bool_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj);
 void save_param(AsyncWebParameter *p, float &v, JsonObject &errorsObj);
 void save_ip_param(AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj);
@@ -27,9 +27,9 @@ bool captivePortal(AsyncWebServerRequest *request);
 void onPostApiInitConnect(AsyncWebServerRequest *request);
 void onGetApiCallConnect(AsyncWebServerRequest *request);
 void onGetApiConnectStatus(AsyncWebServerRequest *request);
-void onPostApiSetCounterType0(AsyncWebServerRequest *request); 
-void onPostApiSetCounterType1(AsyncWebServerRequest *request); 
-void onPostApiSetCounterType(AsyncWebServerRequest *request, const uint8_t index);
+void onPostApiSetCounterName0(AsyncWebServerRequest *request); 
+void onPostApiSetCounterName1(AsyncWebServerRequest *request); 
+void onPostApiSetCounterName(AsyncWebServerRequest *request, const uint8_t index);
 void onGetApiNetworks(AsyncWebServerRequest *request);
 void onGetApiMainStatus(AsyncWebServerRequest *request);
 void onGetApiStatus0(AsyncWebServerRequest *request);

@@ -81,7 +81,7 @@ void onGetApiConnectStatus(AsyncWebServerRequest *request)
 
         if (status == WL_CONNECTED)
         {
-            ret[F("redirect")] = F("/setup_send.html");
+            ret[F("redirect")] = F("/setup_blue_type.html");
             
         }
         else
@@ -235,7 +235,7 @@ void onGetApiMainStatus(AsyncWebServerRequest *request)
         JsonObject obj = array.createNestedObject();
         obj["error"] = "Ватериус ещё не настроен";
         obj["link_text"] = "Приступить";
-        obj["link"] = "/setup_cold_welcome.html";
+        obj["link"] = "/start.html";
     }
 
     LOG_INFO(F("JSON: Mem usage: ") << json_doc.memoryUsage());
@@ -374,9 +374,9 @@ void save_param(AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
     }
 }
 
-void save_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj)
+void save_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok)
 {
-    if (p->value().toInt() == 0)
+    if (!zero_ok && p->value().toInt() == 0)
     {
         LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
         errorsObj[p->name()] = FPSTR(ERROR_VALUE);
@@ -404,12 +404,13 @@ void save_bool_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj)
 
 void save_param(AsyncWebParameter *p, float &v, JsonObject &errorsObj)
 {
+    /* Позволяем вводить 0.0 у счётчиков.
     if (p->value().toFloat() == 0.0)
     {
         LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
         errorsObj[p->name()] = FPSTR(ERROR_VALUE);
     }
-    else
+    else */
     {
         v = p->value().toFloat();
         LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
@@ -617,11 +618,11 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
 
         else if (name == FPSTR(PARAM_COUNTER0_NAME))
         {
-            save_param(p, sett.counter0_name, errorsObj);
+            save_param(p, sett.counter0_name, errorsObj, true);
         }
         else if (name == FPSTR(PARAM_COUNTER1_NAME))
         {
-            save_param(p, sett.counter1_name, errorsObj);
+            save_param(p, sett.counter1_name, errorsObj, true);
         }
 
         else if (name == FPSTR(PARAM_COUNTER0_TYPE))
@@ -676,17 +677,17 @@ void onPostApiSetup(AsyncWebServerRequest *request)
     request->send(response);
 }
 
-void onPostApiSetCounterType0(AsyncWebServerRequest *request)
+void onPostApiSetCounterName0(AsyncWebServerRequest *request)
 {
-    onPostApiSetCounterType(request, 0);
+    onPostApiSetCounterName(request, 0);
 }
 
-void onPostApiSetCounterType1(AsyncWebServerRequest *request)
+void onPostApiSetCounterName1(AsyncWebServerRequest *request)
 {
-    onPostApiSetCounterType(request, 1);
+    onPostApiSetCounterName(request, 1);
 }
 
-void onPostApiSetCounterType(AsyncWebServerRequest *request, const uint8_t index)
+void onPostApiSetCounterName(AsyncWebServerRequest *request, const uint8_t index)
 {
     LOG_INFO(F("POST ") << request->url());
     DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
