@@ -16,6 +16,8 @@
 #include "Logging.h"
 #include "json.h"
 #include "https_helpers.h"
+#include "wifi_helpers.h"
+
 
 #define HTTP_SEND_ATTEMPTS 3
 

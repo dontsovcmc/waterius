@@ -17,10 +17,13 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 30 // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 31 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
+31 - 2023.10.13 - abrant
+	1. После смены типа входа теперь не нужна перезагрузка attiny.
+
 30 - 2023.08.01 - abrant
 	1. Исправлено хранилище. 
 
@@ -286,6 +289,8 @@ void loop()
 	power_all_disable(); 		// Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
 	GIMSK = _BV(PCIE);			// Включаем прерывания по фронту счетчиков и кнопки
 	PCMSK = _BV(PCINT2);
+	counter0.type = (CounterType)info.config.types.type0;
+	counter1.type = (CounterType)info.config.types.type1;
 	if (counter0.type == CounterType::ELECTRONIC)
 	{
 		PCMSK |= _BV(counter0._pin);

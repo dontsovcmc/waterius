@@ -1,5 +1,12 @@
-# Ватериус 0.11.8
-## Wi-Fi приставка для импульсных счётчиков воды и газа
+# Ватериус 0.11.10
+## Wi-Fi приставка для импульсных счётчиков воды, газа, тепла
+
+<a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
+
+![waterius2-phone_](https://user-images.githubusercontent.com/3930496/149906477-6aa47cdd-f714-4546-85ff-5541c60260a2.jpeg)
+
+[Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
+
 ✅ Протоколы HTTP, MQTT
 
 ✅ Поддержка <a href="https://www.home-assistant.io/" targe="_blank">HomeAssistant</a>,  <a href="https://www.hackster.io/dontsovcmc/domoticz-4346d5" targe="_blank">Domoticz</a>, <a href="https://spruthub.ru" targe="_blank">SprutHub</a> 
@@ -13,20 +20,20 @@
 
 ✅ Работает от 3-х батареек АА несколько лет
 
-<a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
+### Подходит к счётчикам
+✅ Все счётчики воды с [импульсным выходом](https://github.com/dontsovcmc/waterius/issues/65) (провод торчит из корпуса)
 
-![waterius2-phone_](https://user-images.githubusercontent.com/3930496/149906477-6aa47cdd-f714-4546-85ff-5541c60260a2.jpeg)
+✅ Все счётчики газа с герконом
 
-[Еnglish](https://github.com/dontsovcmc/waterius/blob/master/English.md)
+✅ Электронные счётчики газа: Бетар СГБМ-4 [подробнее](https://github.com/dontsovcmc/waterius/issues/233)
+
+✅ Электронные счётчики тепла: Sanext Monu CU, Берил ITELMA СТЭ 31 [подробнее](https://github.com/dontsovcmc/waterius/issues/233)
 
 ### Где купить
 
-В России: [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github) | [Ozon](https://ozon.ru/product/vaterius-umnaya-pristavka-k-schetchikam-vody-wi-fi-dlya-impulsnyh-schetchikov-goryachego-i-366409307/?utm_source=github&utm_campaign=vendor_org_160471_sell_page&hs=1) | [Yandex.market](https://market.yandex.ru/store--waterius/product/920451755?businessId=1106573&sku=101280435941) | [Wildberries](https://global.wildberries.ru/product?card=26967283)
+В России: [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github) | [Ozon](https://ozon.ru/product/vaterius-umnaya-pristavka-k-schetchikam-vody-wi-fi-dlya-impulsnyh-schetchikov-goryachego-i-366409307/?utm_source=github&utm_campaign=vendor_org_160471_sell_page&hs=1) | [Yandex.market](https://market.yandex.ru/store--waterius/product/920451755?businessId=1106573&sku=101280435941) | [Wildberries](https://www.wildberries.ru/catalog/26967283/detail.aspx)
 
 Worldwide by Wildberries: [Armenia 🇦🇲](https://global.wildberries.ru/product?card=26967283) | [Belarus 🇧🇾](https://global.wildberries.ru/product?card=26967283) | [Kyrgyzstan 🇰🇬](https://global.wildberries.ru/product?card=26967283) | [Kazakhstan 🇰🇿](https://global.wildberries.ru/product?card=26967283)
-
-### Совместимые счётчики
-Все счётчики с [импульсным выходом](https://github.com/dontsovcmc/waterius/issues/65) (провод торчит из корпуса)
 
 ### Характеристики
 - 2 счётчика
@@ -74,14 +81,14 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://global.wildberries.ru/produ
 Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в сутки она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого ESP8266 засыпает, а Attiny85 продолжает считать-считать-считать...
 
 ### Известные ошибки
-- Иногда не подключается к Ростелекомовским роутерам: Sercomm rv6699, Innbox e70, TP-Link AX5400. Лечится указанием статического ip в настройках или включением WPA шифрования сети. Если у вас такие, напишите в теме: [Проблемы с роутерами](https://github.com/dontsovcmc/waterius/issues/131)
+- Иногда не подключается к Ростелекомовским роутерам: Sercomm rv6699, Innbox e70, TP-Link AX5400. Лечится указанием статического ip в настройках. Если у вас такие, напишите в теме: [Проблемы с роутерами](https://github.com/dontsovcmc/waterius/issues/131)
 - До версии 0.11.7 не подключается к Wi-Fi с пробелом в названии.
+- В версии 1.0.0 изменили подключение к роутерам.
 
 ## Схема
 Заводская плата:
 
-<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" width="400"/>
-<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_top.jpg" width="400"/>
+![плата ватериуса](https://github.com/dontsovcmc/waterius/blob/master/Board/board_3_3.jpg)
 
 В репозитории ещё есть однослойная для ЛУТа.
 
@@ -90,23 +97,23 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://global.wildberries.ru/produ
 Ветка dev для pull-request
 Ветка master только для публикации прошивок
 
-- Отправка лога ESP в веб-интерфейс (JS код есть, спасибо Владимиру)
+В версии 1.0.0 (ветка async) требуется помощь:
+- Реализовать запись лога в LittleFS, чтобы можно было скачать (logs.html)
 - OTA обновления: предложить код прошивки и пример веб-сервера (можно на базе NodeMCU)
 
-Решены:
-- ~~Записать видео установки/настройки Ватериуса (можно сразу в FB, VK)~~, спасибо Денису С.
-- ~~Поддержка HTTPS~~, спасибо [marvel-m9y](https://github.com/marvel-m9y)
-- ~~Поддержка НАМУР~~, спасибо Мише и его счетчику за вдохновение
-- ~~Поддержка MQTT~~, спасибо [popsodav](https://github.com/popsodav)
-
-Датчик протечек:
-- На пине reset сделал [OloloevReal](https://github.com/OloloevReal), вот [схема](https://github.com/dontsovcmc/waterius/issues/51)
-- Есть в клоне [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F), спасибо [badenbaden]
+Хочется сделать:
+- Версию ZigBee
+- Версию с GPRS модемом
+пишите, обсудим!
 
 ### Модификации
 [ветка attiny84](https://github.com/dontsovcmc/waterius/tree/attiny84) поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками и 2мя датчиками протечек.
 
 [Waterius на ESP32 с NB-IoT](https://github.com/OloloevReal/Waterius32) от OloloevReal
+
+Датчик протечек:
+- На пине reset сделал [OloloevReal](https://github.com/OloloevReal), вот [схема](https://github.com/dontsovcmc/waterius/issues/51)
+- Есть в клоне [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F), спасибо [badenbaden]
 
 # Ответственность
 
@@ -141,6 +148,8 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://global.wildberries.ru/produ
 - Anat0liyBM за поддержку discovery HA
 - [vzagorovskiy](https://github.com/vzagorovskiy) за большое обновление [0.11.0](https://github.com/dontsovcmc/waterius/releases/tag/0.11.0-beta)
 - [abrant-ru](https://github.com/abrant-ru) за поддержку счётчиков с выходом "открытый коллектор" (короткими импульсами)
+- Даниилу Макарову за дизайн веб интерфейса
+- [videlinagbm](https://github.com/videlinagbm) за верстку веб интерфейса и js код
 
 Форумам: 
 - https://electronix.ru
