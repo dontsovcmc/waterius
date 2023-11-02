@@ -87,8 +87,7 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://global.wildberries.ru/produ
 ## Схема
 Заводская плата:
 
-<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_bottom.jpg" width="400"/>
-<img src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_top.jpg" data-canonical-src="https://github.com/dontsovcmc/waterius/raw/master/Board/waterius-factory-board2_top.jpg" width="400"/>
+![плата ватериуса](https://github.com/dontsovcmc/waterius/blob/master/Board/board_3_3.jpg)
 
 В репозитории ещё есть однослойная для ЛУТа.
 
@@ -148,6 +147,8 @@ Worldwide by Wildberries: [Armenia 🇦🇲](https://global.wildberries.ru/produ
 - Anat0liyBM за поддержку discovery HA
 - [vzagorovskiy](https://github.com/vzagorovskiy) за большое обновление [0.11.0](https://github.com/dontsovcmc/waterius/releases/tag/0.11.0-beta)
 - [abrant-ru](https://github.com/abrant-ru) за поддержку счётчиков с выходом "открытый коллектор" (короткими импульсами)
+- Даниилу Макарову за дизайн веб интерфейса
+- [videlinagbm](https://github.com/videlinagbm) за верстку веб интерфейса и js код
 
 Форумам: 
 - https://electronix.ru
