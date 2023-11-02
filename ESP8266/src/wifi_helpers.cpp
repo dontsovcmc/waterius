@@ -103,28 +103,22 @@ void wifi_shutdown()
     wifi_set_mode(WIFI_OFF);
 }
 
-String wifi_mode()
+String wifi_phy_mode_title(const WiFiPhyMode_t m)
 {
     // WiFi.setPhyMode(WIFI_PHY_MODE_11B = 1, WIFI_PHY_MODE_11G = 2, WIFI_PHY_MODE_11N = 3);
-    WiFiPhyMode_t m = WiFi.getPhyMode();
-    String mode;
     switch (m)
     {
     case WIFI_PHY_MODE_11B:
-        mode = F("B");
-        break;
+        return F("B");
     case WIFI_PHY_MODE_11G:
-        mode = F("G");
-        break;
+        return F("G");
     case WIFI_PHY_MODE_11N:
-        mode = F("N");
-        break;
+        return F("N");
     default:
-        mode = (int)m;
-        break;
+        return String((int)m);
     }
-    return mode;
 }
+
 
 bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
 {

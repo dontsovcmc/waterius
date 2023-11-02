@@ -67,6 +67,17 @@
                         </div>
 
                         <div class="f-row">
+                            <label for="wifi_phy_mode">Режим Wi-Fi</label>
+                            <select class="slct" id="wifi_phy_mode" name="wifi_phy_mode" option-value="%wifi_phy_mode%">
+                              <option selected="" value="0">Авто</option>
+                              <option selected="" value="1">B</option>
+                              <option value="2">G</option>
+                              <option value="3">N</option>
+                            </select>
+                            <p class="error hd" id="wifi_phy_mode-error">Некорректное значение</p>
+                        </div>
+
+                        <div class="f-row">
                             <label for="mac_address">MAC адрес Ватериуса</label>
                             <input id="mac_address" name="mac_address" value="00-1B-63-84-45-E6" readonly class="disabled has-icon">
                             <div class="icon copy" onclick="copyInput('mac_address')">

@@ -17,7 +17,7 @@ extern bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode = WIFI_STA);
 extern void wifi_begin(Settings &sett, WiFiMode_t wifi_mode);
 extern void wifi_set_mode(WiFiMode_t wifi_mode);
 extern void wifi_shutdown();
-extern String wifi_mode();
+extern String wifi_phy_mode_title(const WiFiPhyMode_t mode);
 
 extern void write_ssid_to_file();
 

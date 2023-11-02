@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "porting.h"
 #include "sync_time.h"
+#include "wifi_helpers.h"
 #include "flash_hal.h"
 
 
@@ -243,6 +244,7 @@ bool load_config(Settings &sett)
         LOG_INFO(F("--- WIFI ---- "));
         LOG_INFO(F("wifi_ssid=") << sett.wifi_ssid);
         LOG_INFO(F("wifi_channel=") << sett.wifi_channel);
+        LOG_INFO(F("wifi_phy_mode=") << wifi_phy_mode_title(sett.wifi_phy_mode));
 
         // Всегда одно и тоже будет
         LOG_INFO(F("--- Counters ---- "));

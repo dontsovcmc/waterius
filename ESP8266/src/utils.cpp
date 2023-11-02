@@ -127,18 +127,28 @@ void remove_trailing_slash(String &topic)
 }
 
 /**
- * @brief Возвращает признак является ли адрес адресом сайта Ватериуса
+ * @brief Возвращает признак включена ли передача на сайт Ватериуса
  *
- * @param url адрес сайта
- * @return true сайт является сайтом Ватериуса
- * @return false сайт НЕ является сайтом Ватериуса
+ * @param sett настройки устройства
+ * @return true настроена отправка на сайт Ватериус
+ * @return false НЕ настроена  отправка на сайт Ватериус
  */
-bool is_waterius_site(const String &url)
+bool is_waterius_site(const Settings &sett)
 {
-	String temp_str = url;
-	temp_str.toLowerCase();
-	// специально не используется WATERIUS_DEFAULT_DOMAIN
-	return temp_str.startsWith(F("https://cloud.waterius.ru"));
+	return sett.waterius_on && sett.waterius_host[0] && sett.waterius_key[0];
+}
+
+
+/**
+ * @brief Возвращает признак включена ли передача на веб сервер
+ *
+ * @param sett настройки устройства
+ * @return true настроена отправка на веб сервер
+ * @return false НЕ настроена  отправка на веб сервер
+ */
+bool is_http(const Settings &sett)
+{
+	return sett.http_on && sett.http_url[0];
 }
 
 /**
@@ -219,7 +229,7 @@ void log_system_info()
 	LOG_INFO(F("WIFI: SSID: ") << WiFi.SSID());
 	LOG_INFO(F("WIFI: BSID: ") << WiFi.BSSIDstr());
 	LOG_INFO(F("WIFI: Channel: ") << WiFi.channel());
-	LOG_INFO(F("WIFI: Mode: ") << wifi_mode());
+	LOG_INFO(F("WIFI: Mode current: ") << wifi_phy_mode_title(WiFi.getPhyMode()));
 	LOG_INFO(F("WIFI: RSSI: ") << WiFi.RSSI() << F("dBm"));
 	LOG_INFO(F("------------ IP Info ------------"));
 	LOG_INFO(F("IP: Host name: ") << WiFi.hostname());

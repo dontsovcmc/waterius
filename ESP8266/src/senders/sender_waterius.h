@@ -21,7 +21,7 @@
 
 bool send_waterius(const Settings &sett, DynamicJsonDocument &jsonData)
 {
-    if (!(sett.waterius_on && sett.waterius_host[0] && sett.waterius_key[0]))
+    if (!is_waterius_site(sett))
     {
         LOG_INFO(F("WATR: SKIP"));
         return false;

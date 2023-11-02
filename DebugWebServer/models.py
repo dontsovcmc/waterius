@@ -14,7 +14,7 @@ class ConnectModel:
     mask: str | None = Form(None)
     mac_address: str | None = Form(None)
     wifi_channel: int | None = Form(None)
-
+    wifi_phy_mode: int | None = Form(None)
 
 @dataclass
 class SettingsModel:

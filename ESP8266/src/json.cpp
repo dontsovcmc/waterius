@@ -8,6 +8,8 @@
 #include "porting.h"
 #include "voltage.h"
 #include "sync_time.h"
+#include "wifi_helpers.h"
+
 
 void get_json_data(const Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
 {
@@ -18,6 +20,8 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     root[F("delta1")] = cdata.delta1;
     root[F("ch0")] = cdata.channel0;
     root[F("ch1")] = cdata.channel1;
+    root[F("ch0_start")] = sett.channel0_start;
+    root[F("ch1_start")] = sett.channel1_start;
     root[F("imp0")] = data.impulses0;
     root[F("imp1")] = data.impulses1;
     root[F("f0")] = sett.factor0;
@@ -41,6 +45,8 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
 
     // Wifi и сеть
     root[F("channel")] = WiFi.channel();
+    root[F("wifi_phy_mode")] = wifi_phy_mode_title(WiFi.getPhyMode());
+    root[F("wifi_phy_mode_s")] = wifi_phy_mode_title((WiFiPhyMode_t)sett.wifi_phy_mode);
 
     uint8_t *bssid = WiFi.BSSID();
     char router_mac[18] = {0};
@@ -78,6 +84,7 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     root[F("mqtt")] = is_mqtt(sett);
     root[F("blynk")] = is_blynk(sett);
     root[F("ha")] = is_ha(sett);
+    root[F("http")] = is_http(sett);
 
     LOG_INFO(F("JSON: Mem usage: ") << json_data.memoryUsage());
     LOG_INFO(F("JSON: Size: ") << measureJson(json_data));
@@ -86,4 +93,5 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     // JSON size 0.10.6: 439
     // JSON size 0.11: 643
     // JSON size 0.11.4: 722 JSON: Mem usage: 1168
+    // JSON size 1.0.1 727 JSON: Mem usage: 1168  //no mqtt
 }

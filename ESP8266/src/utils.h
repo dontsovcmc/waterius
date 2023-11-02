@@ -28,7 +28,9 @@ extern String get_proto(const String &url);
 
 extern void remove_trailing_slash(String &topic);
 
-extern bool is_waterius_site(const String &url);
+extern bool is_waterius_site(const Settings &sett);
+
+extern bool is_http(const Settings &sett);
 
 extern bool is_mqtt(const Settings &sett);
 

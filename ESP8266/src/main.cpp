@@ -101,14 +101,15 @@ void loop()
 
                 DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
 
+#ifndef MQTT_DISABLED
                 // Подключаемся и подписываемся на мктт
                 if (is_mqtt(sett))
                 {
                     connect_and_subscribe_mqtt(sett, data, cdata, json_data);
                 }
-
+#endif
                 // устанавливать время только при использовани хттпс или мктт
-                if (is_mqtt(sett) || is_https(sett.waterius_host))
+                if (is_mqtt(sett) || is_https(sett.waterius_host) || is_https(sett.http_url))
                 {
                     sync_ntp_time(sett);
                 }
