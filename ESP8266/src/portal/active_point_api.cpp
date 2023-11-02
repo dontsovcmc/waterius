@@ -39,11 +39,11 @@ uint8_t get_auto_factor(const uint32_t runtime_impulses, const uint32_t impulses
 bool captivePortal(AsyncWebServerRequest *request)
 {
     String url = IPAddress(request->client()->getLocalAddress()).toString();
-    LOG_INFO(F("Request redirected to captive portal ") << url);
 
     if (WiFi.softAPIP() == IPAddress(request->client()->getLocalAddress()))
         return false;
 
+    LOG_INFO(F("Request redirected to captive portal ") << url);
     LOG_INFO(F("HTTP 302 to: ") << url);
     AsyncWebServerResponse *response = request->beginResponse(302, "text/plain", "");
     response->addHeader("Location", url);

@@ -23,7 +23,7 @@ bool exit_portal_flag = false;
 bool start_connect_flag = false;
 bool factory_reset_flag = false;
 
-extern SlaveData data;
+extern SlaveData runtime_data;
 extern MasterI2C masterI2C;
 extern Settings sett;
 extern CalculatedData cdata;
@@ -117,7 +117,7 @@ String get_counter_instruction(const uint8_t name)
 String processor(const String &var)
 {
     if (var == FPSTR(PARAM_VERSION))
-        return String(data.version);
+        return String(runtime_data.version);
     if (var == FPSTR(PARAM_VERSION_ESP))
         return String(sett.version);
 
@@ -204,9 +204,9 @@ String processor(const String &var)
         return get_counter_instruction(sett.counter1_name);
     
     if (var == FPSTR(PARAM_COUNTER0_TYPE))
-        return String(data.counter_type0);
+        return String(runtime_data.counter_type0);
     if (var == FPSTR(PARAM_COUNTER1_TYPE))
-        return String(data.counter_type1);
+        return String(runtime_data.counter_type1);
 
     if (var == FPSTR(PARAM_FACTOR0))
         return sett.factor0 == AS_COLD_CHANNEL ? F("10") : String(sett.factor0);

@@ -3,10 +3,13 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "1.0.0"
+#define FIRMWARE_VERSION "1.0.1"
 
 /*
 Версии прошивки для ESP
+
+1.0.1  - 2023.11.02 - dontsovcmc
+                      1. Тип входа сразу сохраняется (улучшение)
 
 1.0.0  - 2023.10.29 - dontsovcmc, neitri
                       1. WiFiManager заменён на ESPAsyncWebServer
