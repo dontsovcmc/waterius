@@ -571,14 +571,14 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
         if (name == FPSTR(PARAM_CHANNEL0_START))
         {
             save_param(p, sett.channel0_start, errorsObj);
-            sett.impulses0_start = data.impulses0;
+            sett.impulses0_start = runtime_data.impulses0;
             sett.impulses0_previous = sett.impulses0_start;
             LOG_INFO("impulses0_start=" << sett.impulses0_start);
         }
         else if (name == FPSTR(PARAM_CHANNEL1_START))
         {
             save_param(p, sett.channel1_start, errorsObj);
-            sett.impulses1_start = data.impulses1;
+            sett.impulses1_start = runtime_data.impulses1;
             sett.impulses1_previous = sett.impulses1_start;
             LOG_INFO("impulses1_start=" << sett.impulses1_start);
         }
