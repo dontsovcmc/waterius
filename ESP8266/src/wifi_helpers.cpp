@@ -91,8 +91,15 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
         WiFi.begin(sett.wifi_ssid, sett.wifi_password);
     }
 
-    WiFi.waitForConnectResult(ESP_CONNECT_TIMEOUT); //        ждем результата подключения
-    LOG_INFO(F("WIFI: status=") << WiFi.status());
+    int8_t ret = WiFi.waitForConnectResult(ESP_CONNECT_TIMEOUT); //        ждем результата подключения
+    if (ret == -1) 
+    {
+        LOG_ERROR(F("WIFI: connect timeout"));
+    } 
+    else 
+    {
+        LOG_INFO(F("WIFI: status=") << WiFi.status());
+    }
 }
 
 void wifi_shutdown()

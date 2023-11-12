@@ -56,6 +56,9 @@ static const char ERROR_LENGTH_63[] PROGMEM = "Длина поля 63 симво
 static const char ERROR_VALUE[] PROGMEM = "Неверное значение";
 static const char ERROR_EMPTY[] PROGMEM = "Значение не может быть пустым";
 
+// не из конфигурации
+static const char PARAM_BUILD_DATE_TIME[] PROGMEM = "build_date_time";
+
 // logging
 static const char PARAM_SAVED[] PROGMEM = "Saved: ";
 

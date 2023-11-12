@@ -23,6 +23,8 @@ bool exit_portal_flag = false;
 bool start_connect_flag = false;
 bool factory_reset_flag = false;
 
+const String localIPURL = "http://192.168.4.1";
+
 extern SlaveData runtime_data;
 extern MasterI2C masterI2C;
 extern Settings sett;
@@ -225,23 +227,29 @@ String processor(const String &var)
     if (var == FPSTR(PARAM_DHCP_OFF))
         return template_bool(sett.dhcp_off);
 
+    // 
+    if (var == FPSTR(PARAM_BUILD_DATE_TIME))
+        return String(__DATE__) + String(" ") + String(__TIME__);
+
     return String();
 }
 
 void onNotFound(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("onNotFound ") << request->url());
-    if (captivePortal(request))
-        return;
     request->send(404);
 };
+
+void onRedirectIP(AsyncWebServerRequest *request)
+{
+    LOG_INFO(request->url());
+    request->redirect(localIPURL);
+}
 
 void onRoot(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("onRoot GET ") << request->url());
-    if (captivePortal(request))
-        return;
-
+    
     if (sett.factor1 == AUTO_IMPULSE_FACTOR)
     {   
         // Первая настройка
@@ -288,6 +296,9 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
 
     wifi_set_mode(WIFI_AP_STA);
 
+
+    WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
+
     // TODO выбирать channel исходя из настроек.
     // Канал WiFi роутера к кому подсоединимся должен совпадать с каналом точки доступа ESP
     // https://bbs.espressif.com/viewtopic.php?t=324
@@ -305,12 +316,45 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
 
     LOG_INFO(F("Start DNS server"));
     DNSServer *dns = new DNSServer();
+    //dns->setTTL(3600);   //https://github.com/CDFER/Captive-Portal-ESP32/blob/main/src/main.cpp#L50C11-L50C25
     dns->start(53, "*", WiFi.softAPIP());
 
     LOG_INFO(F("DNS server started"));
 
     LOG_INFO(F("Start HTTP server"));
     AsyncWebServer *server = new AsyncWebServer(80);
+
+    server->onNotFound(onNotFound);
+
+    // Главная страница
+    server->on("/", HTTP_GET, onRoot); //.setFilter(ON_AP_FILTER);
+
+    //CaptivePortal
+    //https://github.com/CDFER/Captive-Portal-ESP32/blob/main/src/main.cpp#L50C11-L50C25
+
+    //======================== Webserver ========================
+	// WARNING IOS (and maybe macos) WILL NOT POP UP IF IT CONTAINS THE WORD "Success" https://www.esp8266.com/viewtopic.php?f=34&t=4398
+	// SAFARI (IOS) IS STUPID, G-ZIPPED FILES CAN'T END IN .GZ https://github.com/homieiot/homie-esp8266/issues/476 this is fixed by the webserver serve static function.
+	// SAFARI (IOS) there is a 128KB limit to the size of the HTML. The HTML can reference external resources/images that bring the total over 128KB
+	// SAFARI (IOS) popup browser has some severe limitations (javascript disabled, cookies disabled)
+
+	// Required
+	server->on("/connecttest.txt", [](AsyncWebServerRequest *request) { 
+        LOG_INFO(request->url());
+        request->redirect("http://logout.net"); });	// windows 11 captive portal workaround
+	server->on("/wpad.dat", onNotFound); // Honestly don't understand what this is but a 404 stops win 10 keep calling this repeatedly and panicking the esp32 :)
+
+	// Background responses: Probably not all are Required, but some are. Others might speed things up?
+	// A Tier (commonly used by modern systems)
+	server->on("/generate_204", onRedirectIP);		   // android captive portal redirect
+	server->on("/redirect", onRedirectIP);			   // microsoft redirect
+	server->on("/hotspot-detect.html", onRedirectIP);  // apple call home
+	server->on("/canonical.html", onRedirectIP);	   // firefox captive portal call home
+	server->on("/success.txt", onRedirectIP);					   // firefox captive portal call home
+	server->on("/ncsi.txt", onRedirectIP);			   // windows call home
+
+    server->on("/fwlink", HTTP_GET, onRoot); // Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
+
 
     // TODO добавить .setLastModified( и  https://github.com/GyverLibs/buildTime/releases/tag/1.0
     server->serveStatic("/images/", LittleFS, "/images/").setCacheControl("max-age=600");
@@ -326,10 +370,6 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     // Завершение настройки (wizard)
     server->on("/finish.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/finish.html", F("text/html"), false, processor); });
-
-    // Главная страница
-    server->on("/", HTTP_GET, onRoot).setFilter(ON_AP_FILTER);
-    server->on("/fwlink", HTTP_GET, onRoot).setFilter(ON_AP_FILTER); // Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
 
     // Нужно, т.к. при первой на стройке будет start.html и надо дать возможность открыть Главное меню
     server->on("/index.html", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -396,8 +436,6 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     // Файл характеристик всех найденных Wi-Fi сетей 
     server->on("/ssid.txt", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/ssid.txt", F("text/plain")); });
-
-    server->onNotFound(onNotFound);
 
     /*API*/
     server->on("/api/networks", HTTP_GET, onGetApiNetworks);  // Список Wi-Fi сетей (из wifi_list.html)

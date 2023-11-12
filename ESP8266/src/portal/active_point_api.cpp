@@ -30,27 +30,6 @@ uint8_t get_auto_factor(const uint32_t runtime_impulses, const uint32_t impulses
     return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
 }
 
-
-/**
- * @brief Captive Portal
- *
- * @param request запрос
- */
-bool captivePortal(AsyncWebServerRequest *request)
-{
-    String url = IPAddress(request->client()->getLocalAddress()).toString();
-
-    if (WiFi.softAPIP() == IPAddress(request->client()->getLocalAddress()))
-        return false;
-
-    LOG_INFO(F("Request redirected to captive portal ") << url);
-    LOG_INFO(F("HTTP 302 to: ") << url);
-    AsyncWebServerResponse *response = request->beginResponse(302, "text/plain", "");
-    response->addHeader("Location", url);
-    request->send(response);
-    return true;
-}
-
 /**
  * @brief Запрос состояния подключения к роутеру.
  *        После успеха или не успеха - переадресация на другую страницу.
@@ -224,8 +203,6 @@ void onGetApiCallConnect(AsyncWebServerRequest *request)
 void onGetApiMainStatus(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("GET ") << request->url());
-    if (captivePortal(request))
-        return;
 
     DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonArray array = json_doc.to<JsonArray>();
@@ -264,8 +241,6 @@ void onGetApiStatus1(AsyncWebServerRequest *request)
 void onGetApiStatus(AsyncWebServerRequest *request, const int index)
 {
     LOG_INFO(F("GET ") << request->url());
-    if (captivePortal(request))
-        return;
 
     DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
@@ -745,8 +720,6 @@ void onGetApiTurnOff(AsyncWebServerRequest *request)
 void onPostApiReset(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
-    if (captivePortal(request))
-        return;
 
     DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
