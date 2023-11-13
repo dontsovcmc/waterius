@@ -588,7 +588,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
 
         else if (name == FPSTR(PARAM_WIFI_PHY_MODE))
         {
-            save_param(p, sett.wifi_phy_mode, errorsObj);
+            save_param(p, sett.wifi_phy_mode, errorsObj, true);
         }
 
         else if (name == FPSTR(PARAM_COUNTER0_NAME))
@@ -604,8 +604,8 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
         {
             if (!masterI2C.setCountersType(p->value().toInt(), data.counter_type1))
             {
-                LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-                errorsObj[p->name()] = FPSTR(ERROR_VALUE);
+                LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
+                errorsObj[p->name()] = FPSTR(ERROR_ATTINY_ERROR);
             }
             else
             {
@@ -616,15 +616,14 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
         {
             if (!masterI2C.setCountersType(data.counter_type0, p->value().toInt()))
             {
-                LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-                errorsObj[p->name()] = FPSTR(ERROR_VALUE);
+                LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
+                errorsObj[p->name()] = FPSTR(ERROR_ATTINY_ERROR);
             }
             else
             {
                 LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
             }
         }
-
         else if (name == FPSTR(PARAM_FACTOR0))
         {
             save_param(p, sett.factor0, errorsObj);

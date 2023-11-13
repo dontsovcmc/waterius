@@ -33,6 +33,7 @@ void setup()
 {
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Booted"));
+    LOG_INFO(F("Build: ") << __DATE__ << F(" ") << __TIME__);
 
     static_assert((sizeof(Settings) == 960), "sizeof Settings != 960");
 

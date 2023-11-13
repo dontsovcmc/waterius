@@ -54,6 +54,7 @@ static const char PARAM_TRUE[] PROGMEM = "true";
 
 static const char ERROR_LENGTH_63[] PROGMEM = "Длина поля 63 символа";
 static const char ERROR_VALUE[] PROGMEM = "Неверное значение";
+static const char ERROR_ATTINY_ERROR[] PROGMEM = "Ошибка связи с attiny";
 static const char ERROR_EMPTY[] PROGMEM = "Значение не может быть пустым";
 
 // не из конфигурации
