@@ -325,7 +325,7 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     server->onNotFound(onNotFound);
 
     // Главная страница
-    server->on("/", HTTP_GET, onRoot); //.setFilter(ON_AP_FILTER);
+    server->on("/", HTTP_GET, onRoot).setFilter(ON_AP_FILTER);
 
     // CaptivePortal
     // https://github.com/CDFER/Captive-Portal-ESP32/blob/main/src/main.cpp#L50C11-L50C25

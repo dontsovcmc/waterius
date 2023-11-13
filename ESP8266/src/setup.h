@@ -11,6 +11,8 @@
 1.0.1  - 2023.11.02 - dontsovcmc
                       1. Тип входа сразу сохраняется (улучшение)
                       2. добавил в JSON wifi_phy_mode, wifi_phy_mode_s, ch0_start, ch1_start
+                      3. captive portal работает
+                      4. во время настройки терялись импульсы
 
 1.0.0  - 2023.10.29 - dontsovcmc, neitri
                       1. WiFiManager заменён на ESPAsyncWebServer
