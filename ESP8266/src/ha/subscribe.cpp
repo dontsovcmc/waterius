@@ -7,6 +7,8 @@
 #define MQTT_CONNECT_DELAY 100
 #define MQTT_SUBSCRIPTION_TOPIC "/#"
 
+extern MasterI2C masterI2C;
+
 /**
  * @brief Обновление настроек по сообщению MQTT
  *
@@ -130,7 +132,92 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
                 sett.setup_time = 0;
                 LOG_INFO(F("MQTT: CALLBACK: reset Settings.setup_time: ") << sett.setup_time);
             }
+        } else if (param.equals(F("cname0")))
+        {
+            int cname0 = payload.toInt();
+            if (sett.counter0_name != cname0)
+            {
+                LOG_INFO(F("MQTT: CALLBACK: Old Settings.counter0_name: ") << sett.counter0_name);
+                sett.counter0_name = cname0;
+                LOG_INFO(F("MQTT: CALLBACK: New Settings.counter0_name: ") << sett.counter0_name);
+                if (json_data.containsKey("cname0"))
+                {
+                    json_data[F("cname0")] = cname0;
+                    updated = true;
+                }
+                if (json_data.containsKey("data_type0"))
+                {
+                    json_data[F("data_type0")] = (uint8_t)data_type_by_name(cname0);
+                    updated = true;
+                }
+                sett.setup_time = 0;
+                LOG_INFO(F("MQTT: CALLBACK: reset Settings.setup_time: ") << sett.setup_time);
+            }
+        } else if (param.equals(F("cname1")))
+        {
+            int cname1 = payload.toInt();
+            if (sett.counter1_name != cname1)
+            {
+                LOG_INFO(F("MQTT: CALLBACK: Old Settings.counter1_name: ") << sett.counter1_name);
+                sett.counter1_name = cname1;
+                LOG_INFO(F("MQTT: CALLBACK: New Settings.counter1_name: ") << sett.counter1_name);
+                if (json_data.containsKey("cname1"))
+                {
+                    json_data[F("cname1")] = cname1;
+                    updated = true;
+                }
+                if (json_data.containsKey("data_type1"))
+                {
+                    json_data[F("data_type1")] = (uint8_t)data_type_by_name(cname1);
+                    updated = true;
+                }
+                sett.setup_time = 0;
+                LOG_INFO(F("MQTT: CALLBACK: reset Settings.setup_time: ") << sett.setup_time);
+            }
+        } else if (param.equals(F("itype0")))
+        {
+            int itype0 = payload.toInt();
+            if (data.counter_type0 != itype0)
+            {
+                LOG_INFO(F("MQTT: CALLBACK: Old data.counter_type0: ") << data.counter_type0);
+
+                if (masterI2C.setCountersType(itype0, data.counter_type1))
+                {
+                    updated = true;
+
+                    LOG_INFO(F("MQTT: CALLBACK: New data.counter_type0: ") << itype0);
+                    if (json_data.containsKey("itype0"))
+                    {
+                        json_data[F("itype0")] = itype0;
+                        
+                    }
+                }
+                sett.setup_time = 0;
+                LOG_INFO(F("MQTT: CALLBACK: reset Settings.setup_time: ") << sett.setup_time);
+            }
+        } else if (param.equals(F("itype1")))
+        {
+            int itype1 = payload.toInt();
+            if (data.counter_type1 != itype1)
+            {
+                LOG_INFO(F("MQTT: CALLBACK: Old data.counter_type1: ") << data.counter_type1);
+
+                if (masterI2C.setCountersType(data.counter_type0, itype1))
+                {
+                    updated = true;
+
+                    LOG_INFO(F("MQTT: CALLBACK: New data.counter_type1: ") << itype1);
+                    if (json_data.containsKey("itype1"))
+                    {
+                        json_data[F("itype1")] = itype1;
+                        
+                    }
+                }
+                sett.setup_time = 0;
+                LOG_INFO(F("MQTT: CALLBACK: reset Settings.setup_time: ") << sett.setup_time);
+            }
         }
+
     }
     return updated;
 }

@@ -294,10 +294,9 @@ void blink_led(int count, int period, int duty)
  * @brief Возвращает тип данных на сервер Ватериуса по названию входа.
  *
  * @param counter_name имя счётчика в интерфейсе ESP
- * @param index номер входа
  * @return тип данных на сервере Ватериуса
  */
-DataType data_type_by_name(uint8_t counter_name, uint8_t index)
+DataType data_type_by_name(uint8_t counter_name)
 {
 	switch ((CounterName)counter_name)
 	{

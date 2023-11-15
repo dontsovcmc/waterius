@@ -119,7 +119,7 @@ void onGetApiNetworks(AsyncWebServerRequest *request)
  *
  * @param request запрос
  */
-void onPostApiInitConnect(AsyncWebServerRequest *request)
+void onPostApiSetupConnect(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
 
@@ -207,12 +207,35 @@ void onGetApiMainStatus(AsyncWebServerRequest *request)
     DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonArray array = json_doc.to<JsonArray>();
 
-    if (sett.factor1 == AUTO_IMPULSE_FACTOR)
+    wl_status_t status = WiFi.status();
+    LOG_INFO(F("WIFI: status=") << status);
+    
+    if (status == WL_CONNECT_FAILED || status == WL_CONNECTION_LOST || status == WL_WRONG_PASSWORD)
     {
         JsonObject obj = array.createNestedObject();
-        obj["error"] = "Ватериус ещё не настроен";
-        obj["link_text"] = "Приступить";
-        obj["link"] = "/start.html";
+        obj["error"] = F("Ошибка подключения к Wi-Fi");
+        obj["link_text"] = F("Настроить");
+        obj["link"] = F("/wifi_settings.html?status_code=") + String(status);
+    }
+    else
+    {
+        if (sett.factor1 == AUTO_IMPULSE_FACTOR)
+        {
+            if (status == WL_CONNECTED)
+            {
+                JsonObject obj = array.createNestedObject();
+                obj["error"] = F("Ватериус успешно подключился к Wi-Fi. Теперь настроим счётчики.");
+                obj["link_text"] = F("Настроить");
+                obj["link"] = F("/setup_blue_type.html");
+            }
+            else 
+            {
+                JsonObject obj = array.createNestedObject();
+                obj["error"] = F("Ватериус ещё не настроен");
+                obj["link_text"] = F("Приступить");
+                obj["link"] = F("/start.html");
+            }
+        }
     }
 
     LOG_INFO(F("JSON: Mem usage: ") << json_doc.memoryUsage());

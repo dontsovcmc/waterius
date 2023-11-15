@@ -163,96 +163,105 @@ bool load_config(Settings &sett)
     uint16_t calculated_crc = get_checksum(tmp_sett);
     if (crc == calculated_crc)
     {
-        sett = tmp_sett;
-        LOG_INFO(F("Configuration CRC ok"));
-
-        // Для безопасной работы с буферами,  в библиотеках может не быть проверок
-        sett.waterius_host[HOST_LEN - 1] = 0;
-        sett.waterius_key[WATERIUS_KEY_LEN - 1] = 0;
-        sett.waterius_email[EMAIL_LEN - 1] = 0;
-
-        sett.http_url[HOST_LEN - 1] = 0;
-
-        sett.blynk_key[BLYNK_KEY_LEN - 1] = 0;
-        sett.blynk_host[HOST_LEN - 1] = 0;
-
-        sett.mqtt_host[HOST_LEN - 1] = 0;
-        sett.mqtt_login[MQTT_LOGIN_LEN - 1] = 0;
-        sett.mqtt_password[MQTT_PASSWORD_LEN - 1] = 0;
-        sett.mqtt_topic[MQTT_TOPIC_LEN - 1] = 0;
-        sett.mqtt_discovery_topic[MQTT_TOPIC_LEN - 1] = 0;
-
-        sett.ntp_server[HOST_LEN - 1] = 0;
-
-        LOG_INFO(F("wakeup min=") << sett.wakeup_per_min);
-
-        LOG_INFO(F("--- Waterius.ru ---- "));
-        if (sett.waterius_on) {
-            LOG_INFO(F("state=ON"));
-        } else {
-            LOG_INFO(F("state=OFF"));
-        }
-        LOG_INFO(F("email=") << sett.waterius_email);
-        LOG_INFO(F("host=") << sett.waterius_host << F(" key=") << sett.waterius_key);
-
-        LOG_INFO(F("--- HTTP ---- "));
-        if (sett.http_on) {
-            LOG_INFO(F("state=ON"));
-        } else {
-            LOG_INFO(F("state=OFF"));
-        }
-        LOG_INFO(F("host=") << sett.http_url);
-
-        LOG_INFO(F("--- Blynk.cc ---- "));
-        if (sett.blynk_on) {
-            LOG_INFO(F("state=ON"));
-        } else {
-            LOG_INFO(F("state=OFF"));
-        }
-        LOG_INFO(F("host=") << sett.blynk_host << F(" key=") << sett.blynk_key);
-
-        LOG_INFO(F("--- MQTT ---- "));
-        if (sett.mqtt_on) {
-            LOG_INFO(F("state=ON"));
-        } else {
-            LOG_INFO(F("state=OFF"));
-        }
-        LOG_INFO(F("host=") << sett.mqtt_host << F(" port=") << sett.mqtt_port);
-        LOG_INFO(F("login=") << sett.mqtt_login << F(" pass=") << sett.mqtt_password);
-        LOG_INFO(F("auto discovery=") << sett.mqtt_auto_discovery);
-        LOG_INFO(F("discovery topic=") << sett.mqtt_discovery_topic);
-
-        LOG_INFO(F("--- Network ---- "));
-        if (sett.ip)
+        if (tmp_sett.version == sett.version)
         {
-            if (sett.dhcp_off) {
-                LOG_INFO(F("DHCP=OFF"));
+            LOG_INFO(F("ESP has old configuration version=") << tmp_sett.version);
+            LOG_INFO(F("Init configuration version=") << sett.version);
+            return init_config(sett);
+        }
+        else 
+        {
+            sett = tmp_sett;
+            LOG_INFO(F("Configuration CRC ok"));
+
+            // Для безопасной работы с буферами,  в библиотеках может не быть проверок
+            sett.waterius_host[HOST_LEN - 1] = 0;
+            sett.waterius_key[WATERIUS_KEY_LEN - 1] = 0;
+            sett.waterius_email[EMAIL_LEN - 1] = 0;
+
+            sett.http_url[HOST_LEN - 1] = 0;
+
+            sett.blynk_key[BLYNK_KEY_LEN - 1] = 0;
+            sett.blynk_host[HOST_LEN - 1] = 0;
+
+            sett.mqtt_host[HOST_LEN - 1] = 0;
+            sett.mqtt_login[MQTT_LOGIN_LEN - 1] = 0;
+            sett.mqtt_password[MQTT_PASSWORD_LEN - 1] = 0;
+            sett.mqtt_topic[MQTT_TOPIC_LEN - 1] = 0;
+            sett.mqtt_discovery_topic[MQTT_TOPIC_LEN - 1] = 0;
+
+            sett.ntp_server[HOST_LEN - 1] = 0;
+
+            LOG_INFO(F("wakeup min=") << sett.wakeup_per_min);
+
+            LOG_INFO(F("--- Waterius.ru ---- "));
+            if (sett.waterius_on) {
+                LOG_INFO(F("state=ON"));
             } else {
-                LOG_INFO(F("DHCP=ON"));
+                LOG_INFO(F("state=OFF"));
             }
-            LOG_INFO(F("static_ip=") << IPAddress(sett.ip).toString());
-            LOG_INFO(F("gateway=") << IPAddress(sett.gateway).toString());
-            LOG_INFO(F("mask=") << IPAddress(sett.mask).toString());
+            LOG_INFO(F("email=") << sett.waterius_email);
+            LOG_INFO(F("host=") << sett.waterius_host << F(" key=") << sett.waterius_key);
+
+            LOG_INFO(F("--- HTTP ---- "));
+            if (sett.http_on) {
+                LOG_INFO(F("state=ON"));
+            } else {
+                LOG_INFO(F("state=OFF"));
+            }
+            LOG_INFO(F("host=") << sett.http_url);
+
+            LOG_INFO(F("--- Blynk.cc ---- "));
+            if (sett.blynk_on) {
+                LOG_INFO(F("state=ON"));
+            } else {
+                LOG_INFO(F("state=OFF"));
+            }
+            LOG_INFO(F("host=") << sett.blynk_host << F(" key=") << sett.blynk_key);
+
+            LOG_INFO(F("--- MQTT ---- "));
+            if (sett.mqtt_on) {
+                LOG_INFO(F("state=ON"));
+            } else {
+                LOG_INFO(F("state=OFF"));
+            }
+            LOG_INFO(F("host=") << sett.mqtt_host << F(" port=") << sett.mqtt_port);
+            LOG_INFO(F("login=") << sett.mqtt_login << F(" pass=") << sett.mqtt_password);
+            LOG_INFO(F("auto discovery=") << sett.mqtt_auto_discovery);
+            LOG_INFO(F("discovery topic=") << sett.mqtt_discovery_topic);
+
+            LOG_INFO(F("--- Network ---- "));
+            if (sett.ip)
+            {
+                if (sett.dhcp_off) {
+                    LOG_INFO(F("DHCP=OFF"));
+                } else {
+                    LOG_INFO(F("DHCP=ON"));
+                }
+                LOG_INFO(F("static_ip=") << IPAddress(sett.ip).toString());
+                LOG_INFO(F("gateway=") << IPAddress(sett.gateway).toString());
+                LOG_INFO(F("mask=") << IPAddress(sett.mask).toString());
+            }
+            else
+            {
+                LOG_INFO(F("DHCP is on"));
+            }
+
+            LOG_INFO(F("ntp_server=") << sett.ntp_server);
+
+            LOG_INFO(F("--- WIFI ---- "));
+            LOG_INFO(F("wifi_ssid=") << sett.wifi_ssid);
+            LOG_INFO(F("wifi_channel=") << sett.wifi_channel);
+            LOG_INFO(F("wifi_phy_mode=") << wifi_phy_mode_title((WiFiPhyMode_t)sett.wifi_phy_mode));
+
+            // Всегда одно и тоже будет
+            LOG_INFO(F("--- Counters ---- "));
+            LOG_INFO(F("channel0 start=") << sett.channel0_start << F(", impulses=") << sett.impulses0_start << F(", factor=") << sett.factor0 << F(", name=") << sett.counter0_name);
+            LOG_INFO(F("channel1 start=") << sett.channel1_start << F(", impulses=") << sett.impulses1_start << F(", factor=") << sett.factor1 << F(", name=") << sett.counter1_name);
+
+            LOG_INFO(F("Config succesfully loaded"));
+            return true;
         }
-        else
-        {
-            LOG_INFO(F("DHCP is on"));
-        }
-
-        LOG_INFO(F("ntp_server=") << sett.ntp_server);
-
-        LOG_INFO(F("--- WIFI ---- "));
-        LOG_INFO(F("wifi_ssid=") << sett.wifi_ssid);
-        LOG_INFO(F("wifi_channel=") << sett.wifi_channel);
-        LOG_INFO(F("wifi_phy_mode=") << wifi_phy_mode_title((WiFiPhyMode_t)sett.wifi_phy_mode));
-
-        // Всегда одно и тоже будет
-        LOG_INFO(F("--- Counters ---- "));
-        LOG_INFO(F("channel0 start=") << sett.channel0_start << F(", impulses=") << sett.impulses0_start << F(", factor=") << sett.factor0 << F(", name=") << sett.counter0_name);
-        LOG_INFO(F("channel1 start=") << sett.channel1_start << F(", impulses=") << sett.impulses1_start << F(", factor=") << sett.factor1 << F(", name=") << sett.counter1_name);
-
-        LOG_INFO(F("Config succesfully loaded"));
-        return true;
     }
     else
     {

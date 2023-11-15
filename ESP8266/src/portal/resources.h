@@ -59,6 +59,8 @@ static const char ERROR_EMPTY[] PROGMEM = "Значение не может бы
 
 // не из конфигурации
 static const char PARAM_BUILD_DATE_TIME[] PROGMEM = "build_date_time";
+static const char PARAM_FS_SIZE[] PROGMEM = "fs_size";
+static const char PARAM_FS_FREE[] PROGMEM = "fs_free";
 
 // logging
 static const char PARAM_SAVED[] PROGMEM = "Saved: ";

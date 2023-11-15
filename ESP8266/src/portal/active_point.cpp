@@ -25,6 +25,9 @@ bool factory_reset_flag = false;
 
 const String localIPURL = "http://192.168.4.1";
 
+FSInfo fs_info;
+
+extern SlaveData data;
 extern SlaveData runtime_data;
 extern MasterI2C masterI2C;
 extern Settings sett;
@@ -118,7 +121,8 @@ String get_counter_instruction(const uint8_t name)
 String processor(const String &var)
 {
     if (var == FPSTR(PARAM_VERSION))
-        return String(runtime_data.version);
+        return String(data.version);  // data! runtime_data ещё не прочиталась
+
     if (var == FPSTR(PARAM_VERSION_ESP))
         return String(sett.version);
 
@@ -229,6 +233,10 @@ String processor(const String &var)
     //
     if (var == FPSTR(PARAM_BUILD_DATE_TIME))
         return String(__DATE__) + String(" ") + String(__TIME__);
+    if (var == FPSTR(PARAM_FS_SIZE))
+        return String(fs_info.totalBytes);
+    if (var == FPSTR(PARAM_FS_FREE))
+        return String(fs_info.totalBytes - fs_info.usedBytes);
 
     return String();
 }
@@ -252,11 +260,13 @@ void onRoot(AsyncWebServerRequest *request)
     if (sett.factor1 == AUTO_IMPULSE_FACTOR)
     {
         // Первая настройка
+        LOG_INFO(F("> start.html"));
         request->send(LittleFS, "/start.html", F("text/html"), false);
     }
     else
     {
-        request->send(LittleFS, "/index.html", F("text/html"), false);
+        LOG_INFO(F("> captive_portal.html"));
+        request->send(LittleFS, "/captive_portal.html", F("text/html"), false);
     }
 }
 
@@ -264,10 +274,15 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
 {
     if (!LittleFS.begin())
     {
-        LOG_INFO(F("An Error has occurred while mounting LittleFS"));
+        LOG_INFO(F("FS: Mounting LittleFS error"));
         return;
     }
-    LOG_INFO(F("LittleFS mounted"));
+    LOG_INFO(F("FS: LittleFS mounted"));
+    
+    LittleFS.info(fs_info);
+
+    LOG_INFO(F("FS: ") << fs_info.totalBytes << F(" bytes, size"));
+    LOG_INFO(F("FS: ") << fs_info.totalBytes - fs_info.usedBytes << F(" bytes, used"));
 
     // Если настройки есть в конфиге то присваиваем их
     if (sett.wifi_ssid[0])
@@ -437,7 +452,7 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
 
     /*API*/
     server->on("/api/networks", HTTP_GET, onGetApiNetworks);                    // Список Wi-Fi сетей (из wifi_list.html)
-    server->on("/api/init_connect", HTTP_POST, onPostApiInitConnect);           // Сохраняем настройки Wi-Fi + redirect: /api/connect
+    server->on("/api/setup_connect", HTTP_POST, onPostApiSetupConnect);           // Сохраняем настройки Wi-Fi + redirect: /api/connect
     server->on("/api/call_connect", HTTP_GET, onGetApiCallConnect);             // Поднимаем флаг старта подключения и redirect в wifi_connect.html
     server->on("/api/connect_status", HTTP_GET, onGetApiConnectStatus);         // Статус подключения (из wifi_connect.html)
     server->on("/api/setup", HTTP_POST, onPostApiSetup);                        // Сохраняем настройки

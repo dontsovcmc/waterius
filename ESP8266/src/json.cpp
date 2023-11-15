@@ -34,8 +34,8 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     root[F("itype1")] = data.counter_type1;
     root[F("cname0")] = sett.counter0_name;
     root[F("cname1")] = sett.counter1_name;
-    root[F("data_type0")] = (uint8_t)data_type_by_name(sett.counter0_name, 0);
-    root[F("data_type1")] = (uint8_t)data_type_by_name(sett.counter1_name, 1);
+    root[F("data_type0")] = (uint8_t)data_type_by_name(sett.counter0_name);
+    root[F("data_type1")] = (uint8_t)data_type_by_name(sett.counter1_name);
 
     // Battery & Voltage
     root[F("voltage")] = voltage->average() / 1000.0;

@@ -3,10 +3,15 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "1.0.1"
+#define FIRMWARE_VERSION "1.0.2"
 
 /*
 Версии прошивки для ESP
+
+1.0.2  - 2023.11.14 - dontsovcmc
+                      1. about.html версия attiny корректна
+                      2. captive portal после переподключения на титуле статус подключения к wi-fi
+                      3. 
 
 1.0.1  - 2023.11.02 - dontsovcmc
                       1. Тип входа сразу сохраняется (улучшение)
@@ -193,7 +198,8 @@
 #define VER_8 8
 #define VER_9 9
 #define VER_10 10
-#define CURRENT_VERSION VER_10
+#define VER_11 11
+#define CURRENT_VERSION VER_11
 
 #define EMAIL_LEN 40
 
@@ -206,7 +212,7 @@
 #define BLYNK_EMAIL_TEMPLATE_LEN 200
 
 #define MQTT_LOGIN_LEN 32
-#define MQTT_PASSWORD_LEN 32
+#define MQTT_PASSWORD_LEN 66 //ansible образ home assistant генерирует пароль длиной 64
 #define MQTT_TOPIC_LEN 64
 
 #define MQTT_DEFAULT_TOPIC_PREFIX BRAND_NAME // Проверка: mosquitto_sub -h test.mosquitto.org -t "waterius/#" -v
@@ -468,7 +474,7 @@ struct Settings
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved4[118] = {0};
+    uint8_t reserved4[84] = {0};
 
 }; // 960 байт
 

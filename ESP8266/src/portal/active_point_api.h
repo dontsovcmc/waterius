@@ -23,7 +23,7 @@ void save_ip_param(AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj);
 bool find_wizard_param(AsyncWebServerRequest *request);
 void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj);
 
-void onPostApiInitConnect(AsyncWebServerRequest *request);
+void onPostApiSetupConnect(AsyncWebServerRequest *request);
 void onGetApiCallConnect(AsyncWebServerRequest *request);
 void onGetApiConnectStatus(AsyncWebServerRequest *request);
 void onPostApiSetCounterName0(AsyncWebServerRequest *request);
