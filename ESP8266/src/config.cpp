@@ -163,7 +163,7 @@ bool load_config(Settings &sett)
     uint16_t calculated_crc = get_checksum(tmp_sett);
     if (crc == calculated_crc)
     {
-        if (tmp_sett.version == sett.version)
+        if (tmp_sett.version != sett.version)
         {
             LOG_INFO(F("ESP has old configuration version=") << tmp_sett.version);
             LOG_INFO(F("Init configuration version=") << sett.version);
