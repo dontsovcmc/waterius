@@ -167,7 +167,13 @@ bool load_config(Settings &sett)
         {
             LOG_INFO(F("ESP has old configuration version=") << tmp_sett.version);
             LOG_INFO(F("Init configuration version=") << sett.version);
-            return init_config(sett);
+            bool ret = init_config(sett);
+            
+            strncpy0(sett.waterius_key, tmp_sett.waterius_key, WATERIUS_KEY_LEN);
+            LOG_INFO(F("Restore waterius_key=") << sett.waterius_key);
+            store_config(sett);
+
+            return ret;
         }
         else 
         {
