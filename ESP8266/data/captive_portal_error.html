@@ -6,7 +6,7 @@
         <title>Приветствие</title>
         <link rel="stylesheet" href="/static/style.css">
     </head>
-    <body>
+    <body onload="getWiFiStatus();">
         <div class="wrap">
             <div class="container f1">
                 <header>
@@ -20,10 +20,12 @@
                 </header>
                 <main>
                     <h2>Настройка</h2>
-                    <p class="text">Привет, это Ватериус! Перейдите в Главное меню для настройки.</p>
+                    <p class="text">Ошибка подключения к Wi-Fi. Уточните настройки.</p>
                 </main>
                 <footer class="btns">
-                    <a class="btn" href="/index.html">Главное меню</a>
+                    <p class="form-error hd "></p>
+                    <p class="text mt10"><a class="link" href="/index.html">Главное меню</a></p>
+                    <a class="btn" href="/wifi_settings.html?wizard=true">Настройка подключения</a>
                 </footer>
             </div>
         </div>

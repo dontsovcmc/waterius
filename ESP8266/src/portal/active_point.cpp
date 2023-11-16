@@ -22,6 +22,7 @@
 bool exit_portal_flag = false;
 bool start_connect_flag = false;
 bool factory_reset_flag = false;
+wl_status_t wifi_connect_status = WL_DISCONNECTED;
 
 const String localIPURL = "http://192.168.4.1";
 
@@ -237,6 +238,18 @@ String processor(const String &var)
         return String(fs_info.totalBytes);
     if (var == FPSTR(PARAM_FS_FREE))
         return String(fs_info.totalBytes - fs_info.usedBytes);
+    if (var == FPSTR(PARAM_WIFI_CONNECT_STATUS))
+    {   
+        switch (wifi_connect_status)
+        {   
+            case WL_NO_SSID_AVAIL:
+            case WL_CONNECT_FAILED:
+            case WL_CONNECTION_LOST:
+                return String(F("Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей."));
+            case WL_WRONG_PASSWORD:
+                return String(F("Ошибка подключения: Некорректный пароль"));
+        }
+    }    
 
     return String();
 }
@@ -257,11 +270,26 @@ void onRoot(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("onRoot GET ") << request->url());
 
+    LOG_INFO(F("WIFI: wifi_connect_status=") << wifi_connect_status);
+
     if (sett.factor1 == AUTO_IMPULSE_FACTOR)
     {
-        // Первая настройка
-        LOG_INFO(F("> start.html"));
-        request->send(LittleFS, "/start.html", F("text/html"), false);
+        if (wifi_connect_status == WL_CONNECT_FAILED || wifi_connect_status == WL_CONNECTION_LOST || wifi_connect_status == WL_WRONG_PASSWORD)
+        {
+            LOG_INFO(F("> captive_portal_error.html"));
+            request->send(LittleFS, "/captive_portal_error.html", F("text/html"), false);
+        }
+        else if (wifi_connect_status == WL_CONNECTED)
+        {
+            LOG_INFO(F("> captive_portal_connected.html"));
+            request->send(LittleFS, "/captive_portal_connected.html", F("text/html"), false);
+        }   
+        else 
+        {
+            // Первая настройка
+            LOG_INFO(F("> captive_portal_start.html"));
+            request->send(LittleFS, "/captive_portal_start.html", F("text/html"), false);
+        }
     }
     else
     {
@@ -481,6 +509,7 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
         if (start_connect_flag)
         {
             wifi_connect(sett, WIFI_AP_STA);
+            wifi_connect_status = WiFi.status();
             start_connect_flag = false;
         }
         if (factory_reset_flag)

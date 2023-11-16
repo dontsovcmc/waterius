@@ -250,10 +250,10 @@ class Settings:
         return res
 
 
-
 class SystemInfo:
     version_esp: str = '0.11.9'
     version: int = 31
+    wifi_connect_status: int = 0
 
 
 settings = Settings()

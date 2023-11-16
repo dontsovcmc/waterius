@@ -41,8 +41,6 @@ function _init(_pages) {
 
     // показ ошибки из location.search
     formError(queryParams.error);
-    // показ ошибки подключения к WiFi
-    connectStatus(queryParams.status_code);
 
     // скрыть текст: шаг 3/6
     if(!queryParams.wizard){
@@ -86,24 +84,6 @@ function formError(html){
     if(!html) return _fe.classList.add('hd');
     _fe.innerHTML = html;
     _fe.classList.remove('hd');
-}
-
-function connectStatus(c) {
-    const t = {
-        0: 'Повторите настройку сначала',
-        1: 'Роутер недоступен',
-        2: 'Сканирование сетей завершено',
-        3: 'Подключено',
-        4: "Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.",
-        5: 'Подключение разорвано',
-        6: 'Некорректный пароль',
-        7: 'Отключен от точки доступа',
-    };
-    if (t.hasOwnProperty(c)) {
-        formError(t[c]);
-    } else if (c > 0) {
-        formError('Неизвестная ошибка ' + c);
-    }
 }
 
 function getWifiList(_pages){

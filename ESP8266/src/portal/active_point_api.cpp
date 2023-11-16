@@ -15,6 +15,7 @@
 
 extern bool exit_portal_flag;
 extern bool start_connect_flag;
+extern wl_status_t wifi_connect_status;
 extern bool factory_reset_flag;
 
 SlaveData runtime_data;
@@ -45,28 +46,20 @@ void onGetApiConnectStatus(AsyncWebServerRequest *request)
 
     if (start_connect_flag)
     {
-        ret["status"] = F("connecting...");
+        ret["status"] = F("выполняется подключение...");
         LOG_INFO(F("WIFI: connecting..."));
     }
     else
     {
-        // request->params();
-        // for (int i = 0; i < paramsNr; i++)
-        // AsyncWebParameter* p = request->getParam(i);
-        // Serial.println(p->name());
+        LOG_INFO(F("WIFI: wifi_connect_status=") << wifi_connect_status);
 
-        wl_status_t status = WiFi.status();
-        LOG_INFO(F("WIFI: status=") << status);
-
-        if (status == WL_CONNECTED)
+        if (wifi_connect_status == WL_CONNECTED)
         {
             ret[F("redirect")] = F("/setup_blue_type.html");
-            
         }
         else
         {
             ret[F("redirect")] = F("/wifi_settings.html");
-            ret[F("params")] = "status_code=" + String(status);
         }
     }
 
@@ -182,6 +175,7 @@ void onPostApiSetupConnect(AsyncWebServerRequest *request)
 void onGetApiCallConnect(AsyncWebServerRequest *request)
 {
     start_connect_flag = true;
+    wifi_connect_status = WL_DISCONNECTED;
     LOG_INFO(F("Start connect"));
 
     bool wizard = find_wizard_param(request);

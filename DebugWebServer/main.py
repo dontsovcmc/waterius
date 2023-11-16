@@ -50,6 +50,11 @@ def template_response(filename: str):
         raise HTTPException(status_code=404, detail="File not found")
 
 
+def html_response(file_name: str):
+    with open(os.path.join(ROOT_PATH, file_name), "r") as file:
+        return HTMLResponse(content=file.read())
+
+
 @app.get("/about.html")
 async def about():
     return template_response("about.html")
@@ -67,7 +72,38 @@ async def finish():
 
 @app.get("/")
 async def index():
+    # тут нужно добавить статус
+    return template_response("captive_portal.html")
+
+
+@app.get("/index.html")
+async def index():
     return template_response("index.html")
+
+
+@app.get("/captive_portal.html")
+async def index():
+    return html_response("captive_portal.html")
+
+
+@app.get("/captive_portal_connected.html")
+async def index():
+    return html_response("captive_portal_connected.html")
+
+
+@app.get("/captive_portal_error.html")
+async def index():
+    return html_response("captive_portal_error.html")
+
+
+@app.get("/captive_portal_error_pwd.html")
+async def index():
+    return html_response("captive_portal_error_pwd.html")
+
+
+@app.get("/captive_portal_start.html")
+async def index():
+    return html_response("captive_portal_start.html")
 
 
 @app.get("/logs.html")

@@ -62,6 +62,8 @@ static const char PARAM_BUILD_DATE_TIME[] PROGMEM = "build_date_time";
 static const char PARAM_FS_SIZE[] PROGMEM = "fs_size";
 static const char PARAM_FS_FREE[] PROGMEM = "fs_free";
 
+static const char PARAM_WIFI_CONNECT_STATUS[] PROGMEM = "wifi_connect_status";
+
 // logging
 static const char PARAM_SAVED[] PROGMEM = "Saved: ";
 

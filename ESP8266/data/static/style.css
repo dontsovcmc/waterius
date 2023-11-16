@@ -185,7 +185,7 @@ input:focus,select:focus{border:1px solid #1655F5;}
 input::placeholder{color: #C3BDBD;}
 input:disabled{color: #C3BDBD;}
 .f-row p{margin-top:10px;}
-.form-error{border-radius: 8px;border:1px solid #F3F6FE;padding:16px;margin-top: 16px;background: linear-gradient(0deg, #F0EBEB, #F0EBEB),linear-gradient(0deg, #F3F6FE, #F3F6FE);}
+.form-error, .wifi-error{border-radius: 8px;border:1px solid #F3F6FE;padding:16px;margin-top: 16px;background: linear-gradient(0deg, #F0EBEB, #F0EBEB),linear-gradient(0deg, #F3F6FE, #F3F6FE);}
 .error{color:#F53410;}
 
 #wifi-form,
