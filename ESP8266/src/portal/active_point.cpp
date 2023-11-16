@@ -408,6 +408,20 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     server->on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/favicon.ico", F("image/x-icon")); });
 
+    // Captive portal
+    // Он отобразится через / onRoot, но кажется кнопки "назад" поведут в эти хэндлеры
+    server->on("/captive_portal.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/captive_portal.html", F("text/html"), false); });
+
+    server->on("/captive_portal_start.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/captive_portal_start.html", F("text/html"), false); });
+
+    server->on("/captive_portal_error.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/captive_portal_error.html", F("text/html"), false); });
+
+    server->on("/captive_portal_connected.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/captive_portal_connected.html", F("text/html"), false); });
+
     // Завершение настройки (wizard)
     server->on("/finish.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/finish.html", F("text/html"), false, processor); });
