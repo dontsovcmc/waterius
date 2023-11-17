@@ -93,9 +93,17 @@ function getWifiList(_pages){
     ajax('/api/networks', {}, data => {
         //if(data && data.length) {
             let html = '';
-            data.forEach((item, index) => {
+            var sorted = data.sort(function(a, b) {
+                return a.level - b.level;
+            });
+
+            sorted.forEach((item, index) => {
                 html += getWifiRow(item, index);
             });
+
+            if(data.length === 0) {
+                html = `<button type="button" class="btn-serv mt20" onclick="refreshPage()">Обновить список сетей</button>`
+            }
             document.querySelector('.wifi-list').innerHTML = html;
             if(data.length > 10) {
                 showAllBtn.classList.remove('hd');
@@ -103,10 +111,13 @@ function getWifiList(_pages){
                     document.querySelectorAll('.link-row.hd').forEach(item => item.classList.remove('hd'));
                     showAllBtn.classList.add('hd');
                 }
-            }
+            } 
         //}
         document.getElementById('wifi-name').classList.remove('hd');
     });
+}
+function refreshPage() {
+    location.reload();
 }
 function getWifiRow(data, index) {
     let cl = ''

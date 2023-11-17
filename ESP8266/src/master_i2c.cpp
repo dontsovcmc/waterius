@@ -181,7 +181,7 @@ bool MasterI2C::getSlaveData(SlaveData &data)
     case WATERIUS_BAD_CRC:
         LOG_ERROR(F("!!! CRC wrong !!!!, go to sleep"));
     case WATERIUS_OK:
-        LOG_INFO(F("v") << data.version << F(" setups:") << data.setup_started_counter << F("resets:") << data.resets << F("ctype0:") << data.counter_type0 << F("ctype1:") << data.counter_type1 << F("imp0: ") << data.impulses0 << F("imp1: ") << data.impulses1 << F("adc0: ") << data.adc0 << F("adc1: ") << data.adc1);
+        LOG_INFO(F("v") << data.version << F(" setups:") << data.setup_started_counter << F(" resets:") << data.resets << F(" ctype0:") << data.counter_type0 << F(" ctype1:") << data.counter_type1 << F(" imp0:") << data.impulses0 << F(" imp1:") << data.impulses1 << F(" adc0:") << data.adc0 << F(" adc1:") << data.adc1);
         break;
     case WATERIUS_NO_LINK:
         LOG_ERROR(F("Data failed"));
