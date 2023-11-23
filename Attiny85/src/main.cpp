@@ -17,10 +17,14 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 30 // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 31 // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
+31 - 2023.11.17 - abrant
+	1. Добавлен тип входа "Датчик Холла", он требует питания, которое подается вместо второго канала.
+	2. Реализовано переключение типов входа.
+
 30 - 2023.08.01 - abrant
 	1. Исправлено хранилище. 
 
@@ -126,8 +130,8 @@ TinyDebugSerial mySerial;
 //
 // https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x5.md
 
-static CounterB counter0(4, 2); // Вход 1, Blynk: V0, горячая вода PB4 ADC2
-static CounterB counter1(3, 3); // Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
+static CounterB counter0(4, 2, 3); 	// Вход 1, Blynk: V0, горячая вода PB4 ADC2
+static CounterB counter1(3, 3); 	// Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
 
 static ButtonB button(2);  // PB2 кнопка (на линии SCL)
 						   // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
@@ -171,9 +175,9 @@ ISR(PCINT0_vect)
 
 // Проверяем входы на замыкание.
 // Замыкание засчитывается только при повторной проверке.
-inline void counting()
+inline void counting(CounterEvent ev)
 {
-	if (counter0.is_impuls(event))
+	if (counter0.is_impuls(ev))
 	{
 		info.data.value0++; 				//нужен т.к. при пробуждении запрашиваем данные
 		info.adc.adc0 = counter0.adc;
@@ -184,7 +188,7 @@ inline void counting()
 		}
 	}
 #ifndef LOG_ON
-	if (counter1.is_impuls(event))
+	if (counter1.is_impuls(ev))
 	{
 		info.data.value1++;
 		info.adc.adc1 = counter1.adc;
@@ -194,6 +198,15 @@ inline void counting()
 			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
 		}
 	}
+#endif
+
+#ifdef COUNTER_DEBUG
+	noInterrupts();
+	if (counter0.on_time || counter1.on_time)
+    	PORTB |= _BV(1);
+	else
+        PORTB &= ~_BV(1);
+	interrupts();
 #endif
 
 	adc_disable();
@@ -225,8 +238,8 @@ void setup()
 		// Конфигурация найдена
 		config.get(info.config);
 		info.config.resets++;
-		counter0.type = (CounterType)info.config.types.type0;
-		counter1.type = (CounterType)info.config.types.type1;
+		counter0.set_type((CounterType)info.config.types.type0);
+		counter1.set_type((CounterType)info.config.types.type1);
 	}
 	else
 	{
@@ -274,8 +287,11 @@ void counting_1ms(uint8_t &delay_loop_count)
 	if (event != CounterEvent::NONE)
 	{
 		// Если получили фронт изменения сигнала или набежало время - проверяем входы
-		counting();
+		noInterrupts();
+		CounterEvent ev = event;
 		event = CounterEvent::NONE;
+		interrupts();
+		counting(ev);
 	}
 	delayMicroseconds(1000);
 }
@@ -285,27 +301,29 @@ void loop()
 {
 	power_all_disable(); 		// Отключаем все лишнее: ADC, Timer 0 and 1, serial interface
 
-    pinMode(1, OUTPUT);
+    pinMode(1, OUTPUT);			// Переключаем пин питания ESP на выход
+	
 	GIMSK = _BV(PCIE);			// Включаем прерывания по фронту счетчиков и кнопки
 	PCMSK = _BV(PCINT2);
-	counter0.type = (CounterType)info.config.types.type0;
-	counter1.type = (CounterType)info.config.types.type1;
-	if (counter0.type == CounterType::ELECTRONIC)
-	{
-		PCMSK |= _BV(counter0._pin);
-	}
-	if (counter1.type == CounterType::ELECTRONIC)
-	{
-		PCMSK |= _BV(counter1._pin);
-	}
+
+	counter0.set_type((CounterType)info.config.types.type0);
+	counter1.set_type((CounterType)info.config.types.type1);
 
 	wdt_count = 0;
 	while ((wdt_count < wakeup_period) && !button.pressed(event))
 	{
-		counting();
+		noInterrupts();
+		CounterEvent ev = event;
 		event = CounterEvent::NONE;
-		WDTCR |= _BV(WDIE);
-		sleep_mode();
+		interrupts();
+
+		counting(ev);
+
+		if (event == CounterEvent::NONE)
+		{
+			WDTCR |= _BV(WDIE);
+			sleep_mode();
+		}
 	}
 
 	storage.add(info.data);
