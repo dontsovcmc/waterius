@@ -3,15 +3,25 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "1.0.2"
+#define FIRMWARE_VERSION "1.0.4"
 
 /*
 Версии прошивки для ESP
 
+1.0.4  - 2023.11.25 - dontsovcmc
+                      1. Исправлена ошибка установки типа входа
+                      2. reset.html поправлен текст
+                      3. wifi_list.html Исправлены ссылки на титул
+                      
+1.0.3  - 2023.11.17 - dontsovcmc
+                      1. Новый тип входа датчик холла
+
 1.0.2  - 2023.11.14 - dontsovcmc
                       1. about.html версия attiny корректна
                       2. captive portal после переподключения на титуле статус подключения к wi-fi
-                      3. 
+                      3. wifi_settings.html сортировка wi-fi сетей по мощности
+                      4. wifi_settings.html кнопка "обновить список сетей"
+                      5. wifi_settings.html отображение статуса подключения
 
 1.0.1  - 2023.11.02 - dontsovcmc
                       1. Тип входа сразу сохраняется (улучшение)
@@ -277,7 +287,9 @@ enum CounterType
 {
     NAMUR = 0,
     DISCRETE = 1,
-    ELECTRONIC = 2
+    ELECTRONIC = 2,
+    HALL = 3, 
+    NONE = 0xFF 
 };
 
 enum CounterName

@@ -248,6 +248,12 @@ String processor(const String &var)
                 return String(F("Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей."));
             case WL_WRONG_PASSWORD:
                 return String(F("Ошибка подключения: Некорректный пароль"));
+            case WL_NO_SHIELD:
+            case WL_IDLE_STATUS:
+            case WL_SCAN_COMPLETED:
+            case WL_CONNECTED:
+            case WL_DISCONNECTED:
+                break;
         }
     }    
 

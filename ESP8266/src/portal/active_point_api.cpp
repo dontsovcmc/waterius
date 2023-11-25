@@ -227,7 +227,7 @@ void onGetApiMainStatus(AsyncWebServerRequest *request)
                 JsonObject obj = array.createNestedObject();
                 obj["error"] = F("Ватериус ещё не настроен");
                 obj["link_text"] = F("Приступить");
-                obj["link"] = F("/start.html");
+                obj["link"] = F("/captive_portal_start.html");
             }
         }
     }
@@ -626,6 +626,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
             }
             else
             {
+                data.counter_type0 = p->value().toInt();
                 LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
             }
         }
@@ -638,6 +639,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
             }
             else
             {
+                data.counter_type1 = p->value().toInt();
                 LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
             }
         }

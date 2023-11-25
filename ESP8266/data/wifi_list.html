@@ -8,8 +8,8 @@
         <script src="/static/common.js"></script>
     </head>
     <body onload="getWifiList({
-        back: '/',
-        back_wizard: '/start.html',
+        back: '/index.html',
+        back_wizard: '/captive_portal_start.html',
         next: '/wifi_password.html',
         next_wizard: '/wifi_password.html?wizard=true'
     });">
@@ -34,7 +34,7 @@
                     </div>                    
                     <button type="button" class="btn-serv mt20 hd" id="show-all">Показать все сети</button>
                     <div class="clr "></div>
-                    <a type="button" class="btn-serv mt20 hd" id="wifi-name" onclick="_goto(true)">Ввести название сети</a>
+                    <a type="button" class="btn-serv mt20 hd" id="wifi-name" onclick="_goto(true)">Ввести название вручную</a>
                 </main>
             </div>
         </div>
