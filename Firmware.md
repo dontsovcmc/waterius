@@ -35,9 +35,11 @@ http://www.avislab.com/blog/wp-content/uploads/2012/12/avrdude.zip
 + питание!
 
 В platfomio.ini:
+```
 upload_protocol = arduino
 upload_flags = -P$UPLOAD_PORT
 upload_speed = 19200
+```
 
 #### Распиновка разъема Ватериус для прошивки attiny
 (вид сверху)
@@ -103,7 +105,7 @@ C:\Users\Админ\AppData\Local\Programs\Python\Python38-32\Scripts
 2. pip install esptool
 3. Скачивем [прошивку ESP8266](https://github.com/dontsovcmc/waterius/releases) файл esp8266.bin
 4. Подключаем USB-TTL с ESP8266 замкнув GPIO0 на GND
-5. `python -m esptool --baud 115200 --port COM7 write_flash --flash_freq 40m --flash_size 1MB --flash_mode qio --verify 0x0 esp8266.bin`
+5. `python -m esptool --port COM7--baud 115200 write_flash --flash_freq 40m --flash_size 1MB --flash_mode qio 0x0 esp8266-1.0.2.bin 0xbb000 esp8266-1.0.2-fs.bin`
 
 COM7 замените на свой порт
 
@@ -134,35 +136,6 @@ Flash params set to 0x0220
 Verifying 0x57da0 (359840) bytes @ 0x00000000 in flash against esp.bin...
 -- verify OK (digest matched)
 Hard resetting via RTS pin...
-```
-</details>
-
-5b. Чуть больше ключей:
-`python -m esptool --chip esp8266 --port /dev/cu.wchusbserial1410 --baud 115200 --after no_reset write_flash --flash_freq 40m --flash_size 1MB --flash_mode qio --verify 0x0 .pio/build/esp01_1m/firmware.bin`
-
-<details>
- <summary>output log (esptool 2.2.1)</summary>
-	
-```
-esptool.py v2.2.1
-Connecting........_____....._____....._____....._
-Chip is ESP8266EX
-Uploading stub...
-Running stub...
-Stub running...
-Configuring flash size...
-Flash params set to 0x0220
-Compressed 512800 bytes to 359241...
-Wrote 512800 bytes (359241 compressed) at 0x00000000 in 38.1 seconds (effective 107.8 kbit/s)...
-Hash of data verified.
-
-Leaving...
-Verifying just-written flash...
-(This option is deprecated, flash contents are now always read back after flashing.)
-Flash params set to 0x0220
-Verifying 0x7d320 (512800) bytes @ 0x00000000 in flash against .pio/build/esp01_1m/firmware.bin...
--- verify OK (digest matched)
-Staying in bootloader.
 ```
 </details>
 
@@ -249,6 +222,14 @@ pio device monitor --port /dev/cu.wchusbserial1410 --baud 115200
 000:00:00:00:400  NOTICE    (ESP) : Going to sleep
 000:00:00:00:404  ERROR     (I2C) : end error:2
 ```
-</details>
-ЕSP включается, запрашивает режим включения у Attiny, нет ответа, идёт спать.
 
+ЕSP включается, запрашивает режим включения у Attiny, нет ответа, идёт спать.
+</details>
+
+<details>
+<summary>2. Проверка без ESP, что attiny прошилась</summary>
+	
+- Замыкаете на разъеме ESP выводы TX и EN.
+- Жмёте кнопку 1 сек, отпускаете
+- Проверяете, что загорелся светодиод — attiny прошита корректно
+</details>
