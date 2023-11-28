@@ -73,7 +73,10 @@ async def finish():
 @app.get("/")
 async def index():
     # тут нужно добавить статус
-    return template_response("captive_portal.html")
+    #return template_response("captive_portal_error.html")
+    #return template_response("captive_portal_connected.html")
+    #return template_response("captive_portal.html")
+    return template_response("captive_portal_start.html")
 
 
 @app.get("/index.html")

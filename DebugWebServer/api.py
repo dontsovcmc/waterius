@@ -8,7 +8,7 @@ from api_debug import runtime_data
 from models import SettingsModel, ConnectModel
 import time
 from log import log
-
+from esp import system_info
 
 api_app = FastAPI(title="api application")
 
@@ -34,8 +34,8 @@ async def networks():
     return JSONResponse(content=json_networks)
 
 
-@api_app.post("/init_connect")
-async def init_connect(form_data: ConnectModel = Depends()):
+@api_app.post("/setup_connect")
+async def setup_connect(form_data: ConnectModel = Depends(), wizard: bool | None = False):
     """
     Инициирует подключение ESP к Wi-Fi роутеру.
     Успешное подключение: /setup_cold_welcome.html
@@ -51,23 +51,35 @@ async def init_connect(form_data: ConnectModel = Depends()):
 
     if settings.wifi_channel != ap_channel:
         # При подключении к Роутеру на другой частоте связь с точкой доступа оборвется
-        res.update({
-            "redirect": "/api/call_connect?error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново."
-        })
+        if wizard:
+            res.update({
+                "redirect": "/api/call_connect?wizard=true&error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново."
+            })
+        else:
+            res.update({
+                "redirect": "/api/call_connect?error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново."
+            })
     else:
-        res.update({
-            "redirect": "/api/call_connect"
-        })
+        if wizard:
+            res.update({
+                "redirect": "/api/call_connect?wizard=true"
+            })
+        else:
+            res.update({
+                "redirect": "/api/call_connect"
+            })
 
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
 
 
 @api_app.get("/call_connect")
-async def call_connect():
+async def call_connect(wizard: bool | None = False):
     global connect_flag
     connect_flag = True
     log.info(f'connect_flag = True')
+    if wizard:
+        return RedirectResponse("/wifi_connect.html?wizard=true")
     return RedirectResponse("/wifi_connect.html")
 
 
@@ -114,18 +126,12 @@ async def connect_status():
     } wl_status_t;
     :return:
     """
-    if settings.ssid == "ERROR_PASSWORD":
-        res = {
-            "redirect": "/wifi_settings.html",
-            "params": "status_code=6"
-        }
-    elif settings.ssid == "ERROR_CONNECT":
-        res = {
-            "redirect": "/wifi_settings.html",
-            "params": "status_code=4"
-        }
+    log.info("WIFI: wifi_connect_status=" + system_info.wifi_connect_status)
+
+    if not system_info.wifi_connect_status:  # == WL_CONNECTED
+        res = {"redirect": "/setup_blue_type.html"}
     else:
-        res = {"redirect": "/setup_send.html"}
+        res = {"redirect": "/wifi_settings.html"}
 
     json = jsonable_encoder(res)
     return JSONResponse(content=json)

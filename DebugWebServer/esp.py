@@ -253,7 +253,24 @@ class Settings:
 class SystemInfo:
     version_esp: str = '0.11.9'
     version: int = 31
-    wifi_connect_status: int = 0
+    fs_size = 256000
+    fs_free = 50000
+    build_date_time = '27 Nov 2023 12:00:00'
+
+    @property
+    def wifi_connect_status(self):
+        # WL_NO_SSID_AVAIL
+        # WL_CONNECT_FAILED
+        # WL_CONNECTION_LOST
+        #return "Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class=\"link\" href=\"http://192.168.4.1/ssid.txt\">файл</a> параметров wi-fi сетей.'
+        # WL_WRONG_PASSWORD
+        #return 'Ошибка подключения: Некорректный пароль'
+        # WL_NO_SHIELD
+        # WL_IDLE_STATUS
+        # WL_SCAN_COMPLETED
+        # WL_CONNECTED
+        # WL_DISCONNECTED
+        return ''
 
 
 settings = Settings()
