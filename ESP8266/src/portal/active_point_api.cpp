@@ -37,7 +37,7 @@ uint8_t get_auto_factor(const uint32_t runtime_impulses, const uint32_t impulses
  *
  * @param request запрос
  */
-void onGetApiConnectStatus(AsyncWebServerRequest *request)
+void get_api_connect_status(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("GET ") << request->url());
 
@@ -73,7 +73,7 @@ void onGetApiConnectStatus(AsyncWebServerRequest *request)
  *
  * @param request запрос
  */
-void onGetApiNetworks(AsyncWebServerRequest *request)
+void get_api_networks(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("GET ") << request->url());
 
@@ -112,7 +112,7 @@ void onGetApiNetworks(AsyncWebServerRequest *request)
  *
  * @param request запрос
  */
-void onPostApiSetupConnect(AsyncWebServerRequest *request)
+void post_api_setup_connect(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
 
@@ -172,7 +172,7 @@ void onPostApiSetupConnect(AsyncWebServerRequest *request)
  *
  * @param request запрос
  */
-void onGetApiCallConnect(AsyncWebServerRequest *request)
+void get_api_call_connect(AsyncWebServerRequest *request)
 {
     start_connect_flag = true;
     wifi_connect_status = WL_DISCONNECTED;
@@ -194,7 +194,7 @@ void onGetApiCallConnect(AsyncWebServerRequest *request)
  *        
  * @param request запрос
  */
-void onGetApiMainStatus(AsyncWebServerRequest *request)
+void get_api_main_status(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("GET ") << request->url());
 
@@ -240,14 +240,14 @@ void onGetApiMainStatus(AsyncWebServerRequest *request)
     request->send(response);
 }
 
-void onGetApiStatus0(AsyncWebServerRequest *request)
+void get_api_status_0(AsyncWebServerRequest *request)
 {
-    onGetApiStatus(request, 0);
+    get_api_status(request, 0);
 }
 
-void onGetApiStatus1(AsyncWebServerRequest *request)
+void get_api_status_1(AsyncWebServerRequest *request)
 {
-    onGetApiStatus(request, 1);
+    get_api_status(request, 1);
 }
 
 /**
@@ -255,7 +255,7 @@ void onGetApiStatus1(AsyncWebServerRequest *request)
  *
  * @param request запрос
  */
-void onGetApiStatus(AsyncWebServerRequest *request, const int index)
+void get_api_status(AsyncWebServerRequest *request, const int index)
 {
     LOG_INFO(F("GET ") << request->url());
 
@@ -656,7 +656,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
     store_config(sett);
 }
 
-void onPostApiSetup(AsyncWebServerRequest *request)
+void post_api_setup(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
     DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
@@ -670,17 +670,17 @@ void onPostApiSetup(AsyncWebServerRequest *request)
     request->send(response);
 }
 
-void onPostApiSetCounterName0(AsyncWebServerRequest *request)
+void post_api_set_counter_name_0(AsyncWebServerRequest *request)
 {
-    onPostApiSetCounterName(request, 0);
+    post_api_set_counter_name(request, 0);
 }
 
-void onPostApiSetCounterName1(AsyncWebServerRequest *request)
+void post_api_set_counter_name_1(AsyncWebServerRequest *request)
 {
-    onPostApiSetCounterName(request, 1);
+    post_api_set_counter_name(request, 1);
 }
 
-void onPostApiSetCounterName(AsyncWebServerRequest *request, const uint8_t index)
+void post_api_set_counter_name(AsyncWebServerRequest *request, const uint8_t index)
 {
     LOG_INFO(F("POST ") << request->url());
     DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
@@ -727,7 +727,7 @@ void onPostApiSetCounterName(AsyncWebServerRequest *request, const uint8_t index
     request->send(response);
 }
 
-void onGetApiTurnOff(AsyncWebServerRequest *request)
+void get_api_turnoff(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("GET ") << request->url());
     exit_portal_flag = true;
@@ -735,7 +735,7 @@ void onGetApiTurnOff(AsyncWebServerRequest *request)
     request->send(response);
 }
 
-void onPostApiReset(AsyncWebServerRequest *request)
+void post_api_reset(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
 

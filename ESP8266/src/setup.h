@@ -3,11 +3,14 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "1.0.4"
+#define FIRMWARE_VERSION "1.0.5"
 
 /*
 Версии прошивки для ESP
 
+1.0.5  - 2023.11.27 - dontsovcmc
+                      1. Сортировка wi-fi сетей
+                      
 1.0.4  - 2023.11.25 - dontsovcmc
                       1. Исправлена ошибка установки типа входа
                       2. reset.html поправлен текст

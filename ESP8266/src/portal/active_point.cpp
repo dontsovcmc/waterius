@@ -125,7 +125,7 @@ String processor(const String &var)
         return String(data.version);  // data! runtime_data ещё не прочиталась
 
     if (var == FPSTR(PARAM_VERSION_ESP))
-        return String(sett.version);
+        return FIRMWARE_VERSION;
 
     if (var == FPSTR(PARAM_WATERIUS_HOST))
         return replace_value(sett.waterius_host);
@@ -272,9 +272,9 @@ void onRedirectIP(AsyncWebServerRequest *request)
     request->redirect(localIPURL);
 }
 
-void onRoot(AsyncWebServerRequest *request)
+void on_root(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("onRoot GET ") << request->url());
+    LOG_INFO(F("on_root GET ") << request->url());
 
     LOG_INFO(F("WIFI: wifi_connect_status=") << wifi_connect_status);
 
@@ -374,7 +374,7 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     server->onNotFound(onNotFound);
 
     // Главная страница
-    server->on("/", HTTP_GET, onRoot).setFilter(ON_AP_FILTER);
+    server->on("/", HTTP_GET, on_root).setFilter(ON_AP_FILTER);
 
     // CaptivePortal
     // https://github.com/CDFER/Captive-Portal-ESP32/blob/main/src/main.cpp#L50C11-L50C25
@@ -401,7 +401,7 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
     server->on("/canonical.html", onRedirectIP);      // firefox captive portal call home
     server->on("/success.txt", onRedirectIP);         // firefox captive portal call home
     server->on("/ncsi.txt", onRedirectIP);            // windows call home
-    server->on("/fwlink", HTTP_GET, onRoot);          // Microsoft captive portal. 
+    server->on("/fwlink", HTTP_GET, on_root);          // Microsoft captive portal. 
 
     // TODO добавить .setLastModified( и  https://github.com/GyverLibs/buildTime/releases/tag/1.0
     server->serveStatic("/images/", LittleFS, "/images/").setCacheControl("max-age=600");
@@ -415,7 +415,7 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
                { request->send(LittleFS, "/favicon.ico", F("image/x-icon")); });
 
     // Captive portal
-    // Он отобразится через / onRoot, но кажется кнопки "назад" поведут в эти хэндлеры
+    // Он отобразится через / on_root, но кажется кнопки "назад" поведут в эти хэндлеры
     server->on("/captive_portal.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/captive_portal.html", F("text/html"), false); });
 
@@ -499,18 +499,18 @@ void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &c
                { request->send(LittleFS, "/ssid.txt", F("text/plain")); });
 
     /*API*/
-    server->on("/api/networks", HTTP_GET, onGetApiNetworks);                    // Список Wi-Fi сетей (из wifi_list.html)
-    server->on("/api/setup_connect", HTTP_POST, onPostApiSetupConnect);           // Сохраняем настройки Wi-Fi + redirect: /api/connect
-    server->on("/api/call_connect", HTTP_GET, onGetApiCallConnect);             // Поднимаем флаг старта подключения и redirect в wifi_connect.html
-    server->on("/api/connect_status", HTTP_GET, onGetApiConnectStatus);         // Статус подключения (из wifi_connect.html)
-    server->on("/api/setup", HTTP_POST, onPostApiSetup);                        // Сохраняем настройки
-    server->on("/api/set_counter_name/0", HTTP_POST, onPostApiSetCounterName0); // Сохраняем тип счётчика и переносим на страницу настройки
-    server->on("/api/set_counter_name/1", HTTP_POST, onPostApiSetCounterName1); // Сохраняем тип счётчика и переносим на страницу настройки
-    server->on("/api/main_status", HTTP_GET, onGetApiMainStatus);               // Информационные сообщения на главной странице
-    server->on("/api/status/0", HTTP_GET, onGetApiStatus0);                     // Статус 0-го входа (ХВС)  (из setup_cold_welcome.html)
-    server->on("/api/status/1", HTTP_GET, onGetApiStatus1);                     // Статус 1-го входа (ГВС)  (из setup_cold_welcome.html)
-    server->on("/api/turnoff", HTTP_GET, onGetApiTurnOff);                      // Выйти из режима настройки
-    server->on("/api/reset", HTTP_POST, onPostApiReset);                        // Сброс к заводским настройкам
+    server->on("/api/networks", HTTP_GET, get_api_networks);                       // Список Wi-Fi сетей (из wifi_list.html)
+    server->on("/api/setup_connect", HTTP_POST, post_api_setup_connect);           // Сохраняем настройки Wi-Fi + redirect: /api/connect
+    server->on("/api/call_connect", HTTP_GET, get_api_call_connect);               // Поднимаем флаг старта подключения и redirect в wifi_connect.html
+    server->on("/api/connect_status", HTTP_GET, get_api_connect_status);           // Статус подключения (из wifi_connect.html)
+    server->on("/api/setup", HTTP_POST, post_api_setup);                           // Сохраняем настройки
+    server->on("/api/set_counter_name/0", HTTP_POST, post_api_set_counter_name_0); // Сохраняем тип счётчика и переносим на страницу настройки
+    server->on("/api/set_counter_name/1", HTTP_POST, post_api_set_counter_name_1); // Сохраняем тип счётчика и переносим на страницу настройки
+    server->on("/api/main_status", HTTP_GET, get_api_main_status);                 // Информационные сообщения на главной странице
+    server->on("/api/status/0", HTTP_GET, get_api_status_0);                       // Статус 0-го входа (ХВС)  (из setup_cold_welcome.html)
+    server->on("/api/status/1", HTTP_GET, get_api_status_1);                       // Статус 1-го входа (ГВС)  (из setup_cold_welcome.html)
+    server->on("/api/turnoff", HTTP_GET, get_api_turnoff);                         // Выйти из режима настройки
+    server->on("/api/reset", HTTP_POST, post_api_reset);                           // Сброс к заводским настройкам
 
     server->begin();
 

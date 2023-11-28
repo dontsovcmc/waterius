@@ -23,19 +23,19 @@ void save_ip_param(AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj);
 bool find_wizard_param(AsyncWebServerRequest *request);
 void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj);
 
-void onPostApiSetupConnect(AsyncWebServerRequest *request);
-void onGetApiCallConnect(AsyncWebServerRequest *request);
-void onGetApiConnectStatus(AsyncWebServerRequest *request);
-void onPostApiSetCounterName0(AsyncWebServerRequest *request);
-void onPostApiSetCounterName1(AsyncWebServerRequest *request);
-void onPostApiSetCounterName(AsyncWebServerRequest *request, const uint8_t index);
-void onGetApiNetworks(AsyncWebServerRequest *request);
-void onGetApiMainStatus(AsyncWebServerRequest *request);
-void onGetApiStatus0(AsyncWebServerRequest *request);
-void onGetApiStatus1(AsyncWebServerRequest *request);
-void onGetApiStatus(AsyncWebServerRequest *request, const int index);
-void onPostApiSetup(AsyncWebServerRequest *request);
-void onGetApiTurnOff(AsyncWebServerRequest *request);
-void onPostApiReset(AsyncWebServerRequest *request);
+void post_api_setup_connect(AsyncWebServerRequest *request);
+void get_api_call_connect(AsyncWebServerRequest *request);
+void get_api_connect_status(AsyncWebServerRequest *request);
+void post_api_set_counter_name_0(AsyncWebServerRequest *request);
+void post_api_set_counter_name_1(AsyncWebServerRequest *request);
+void post_api_set_counter_name(AsyncWebServerRequest *request, const uint8_t index);
+void get_api_networks(AsyncWebServerRequest *request);
+void get_api_main_status(AsyncWebServerRequest *request);
+void get_api_status_0(AsyncWebServerRequest *request);
+void get_api_status_1(AsyncWebServerRequest *request);
+void get_api_status(AsyncWebServerRequest *request, const int index);
+void post_api_setup(AsyncWebServerRequest *request);
+void get_api_turnoff(AsyncWebServerRequest *request);
+void post_api_reset(AsyncWebServerRequest *request);
 
 #endif

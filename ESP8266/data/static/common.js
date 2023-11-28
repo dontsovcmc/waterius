@@ -94,7 +94,7 @@ function getWifiList(_pages){
         //if(data && data.length) {
             let html = '';
             var sorted = data.sort(function(a, b) {
-                return a.level - b.level;
+                return b.level - a.level;
             });
 
             sorted.forEach((item, index) => {
