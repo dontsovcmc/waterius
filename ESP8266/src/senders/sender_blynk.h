@@ -15,7 +15,6 @@
 #include "utils.h"
 #include "voltage.h"
 
-
 bool send_blynk(const Settings &sett, DynamicJsonDocument &jsonData)
 {
     if (!is_blynk(sett))
@@ -32,7 +31,7 @@ bool send_blynk(const Settings &sett, DynamicJsonDocument &jsonData)
 
         Blynk.virtualWrite(V0, jsonData[F("ch0")].as<float>());
         Blynk.virtualWrite(V1, jsonData[F("ch1")].as<float>());
-        Blynk.virtualWrite(V2, jsonData[F("voltage")].as<float>()); 
+        Blynk.virtualWrite(V2, jsonData[F("voltage")].as<float>());
         Blynk.virtualWrite(V3, jsonData[F("delta0")].as<int>());
         Blynk.virtualWrite(V4, jsonData[F("delta1")].as<int>());
         Blynk.virtualWrite(V5, jsonData[F("resets")].as<int>());

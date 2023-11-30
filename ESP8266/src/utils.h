@@ -28,7 +28,9 @@ extern String get_proto(const String &url);
 
 extern void remove_trailing_slash(String &topic);
 
-extern bool is_waterius_site(const String &url);
+extern bool is_waterius_site(const Settings &sett);
+
+extern bool is_http(const Settings &sett);
 
 extern bool is_mqtt(const Settings &sett);
 
@@ -46,6 +48,6 @@ extern void generateSha256Token(char *token, const int token_len, const char *em
 
 extern void blink_led(int count = 1, int period = 300, int duty = 150);
 
-extern DataType data_type_by_name(uint8_t counter_name, uint8_t index);
+extern DataType data_type_by_name(uint8_t counter_name);
 
 #endif

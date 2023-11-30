@@ -298,17 +298,17 @@ bool sync_ntp_time()
 
 /**
  * @brief Синхронизирует время по настройкам пользователя
- * 
+ *
  * @param sett настройки устройства
  * @return true время синхронизировано
  * @return false время НЕ синхронизировано
  */
 bool sync_ntp_time(const Settings &sett)
 {
-    
+
     String ntp_server = sett.ntp_server;
 
-    if (sett.ntp_server[0] && !ntp_server.equalsIgnoreCase(String(DEFAULT_NTP_SERVER))) //проверяем что сервер указан и не равняется по умолчанию
+    if (sett.ntp_server[0] && !ntp_server.equalsIgnoreCase(String(DEFAULT_NTP_SERVER))) // проверяем что сервер указан и не равняется по умолчанию
     {
         // Пробуем получить время с пользовательского сервера
         if (sync_ntp_time(ntp_server))
@@ -339,10 +339,10 @@ String get_current_time()
 
 /**
  * @brief Проверка валидно ли время,
- * дата должна быть больше чем 1 Января 2020 года 
- * 
- * @param time 
- * @return true время валидно 
+ * дата должна быть больше чем 1 Января 2020 года
+ *
+ * @param time
+ * @return true время валидно
  * @return false время невалидно
  */
 bool is_valid_time(time_t time)

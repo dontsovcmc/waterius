@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Настройки</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
+    </head>
+    <body onload="mainStatus()">
+        <div class="wrap">
+            <div class="container f1">
+                <header>
+                    <div class="main-logo">
+                        <div class="icon">
+                            <img src="/images/icons.png">
+                        </div>
+                        Ватериус
+                    </div>
+                    <!---<a href="#" class="lang fr">Eng</a>--->
+                </header>
+                <main>
+                    <h2>Настройки</h2>
+                    <p class="text">Здесь вы можете внести изменения в настройки Ватериуса. Не забудьте нажать на кнопку &laquo;Завершить&raquo;, как внесёте все необходимые изменения настроек</p>
+
+                    <div id="mainInfoText"></div>
+
+                    <h3 class="mt24">Счётчики</h3>
+                    <a class="link-row" href="/setup_blue_type.html">
+                        <div class="circle"></div>
+                        %counter1_title%
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
+                    <a class="link-row" href="/setup_red_type.html">
+                        <div class="circle hot"></div>
+                        %counter0_title%
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
+
+                    <h3 class="mt24">Сетевые настройки</h3>
+                    <a class="link-row" href="/wifi_list.html">
+                        <div class="icon l5">
+                            <img src="/images/icons.png">
+                        </div>
+                        Сменить Wi-Fi сеть
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
+                    <a class="link-row" href="/wifi_settings.html">
+                        <div class="icon l6">
+                            <img src="/images/icons.png">
+                        </div>
+                        Изменить настройки
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
+
+                    <h3 class="mt24">Прочие</h3>
+                    <a class="link-row" href="/setup_send.html">
+                        <div class="icon l4 r">
+                            <img src="/images/icons.png">
+                        </div>
+                        Получатели данных
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
+                    <!---<a class="link-row" href="/logs.html">
+                        <div class="icon l5 r">
+                            <img src="/images/icons.png">
+                        </div>
+                        Логи
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>--->
+                    <a class="link-row" href="/reset.html">
+                        <div class="icon l6 r">
+                            <img src="/images/icons.png">
+                        </div>
+                        Сброс до заводских настроек
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
+                    <a class="link-row" href="/about.html">
+                        <div class="icon l5 r">
+                            <img src="/images/icons.png">
+                        </div>
+                        Об устройстве
+                        <div class="icon arrow">
+                            <img src="/images/icons.png">
+                        </div>
+                    </a>
+                    <!--div class="link-row">
+                        <div class="icon l6 r">
+                            <img src="/images/icons.png">
+                        </div>
+                        Об устройстве
+                        <a href="#">
+                            <div class="icon arrow">
+                                <img src="/images/icons.png">
+                            </div>
+                        </a>
+                    </div-->
+
+                </main>
+                <footer class="btns">
+                    <button class="btn btn-red" type="button" onclick="finish(this);">Завершить</button>
+                </footer>
+            </div>
+        </div>
+    </body>
+</html>

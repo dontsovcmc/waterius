@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Подключение к WiFi</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
+    </head>
+    <body onload="_init({
+        back: '/wifi_settings.html',
+        back_wizard: '/wifi_settings.html?wizard=true',
+        next: '/index.html',
+        next_wizard: '/setup_blue_type.html?wizard=true'
+    });
+    getWiFiStatus();">
+        <div class="wrap">
+            <div class="container f2">
+                <header>
+                    <a onclick="_goto()">
+                        <div class="icon bf">
+                            <img src="/images/icons.png">
+                        </div>
+                        Назад</a>
+                    <div class="icon logo">
+                        <img src="/images/icons.png">
+                    </div>
+                    <div class="fr">шаг 2/6</div>
+                </header>
+                <main>
+                    <h2>Подключение к WiFi</h2>
+                    <p class="text">Ватериус может отключиться от телефона для подключения к роутеру. Выберите вновь Ватериус в списке Wi-Fi сетей.</p>
+                </main>
+                <footer class="btns">
+                    <p class="form-error hd "></p>
+                    <div class="btn mt20">
+                        <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
+                    </div>
+                </footer>
+            </div>
+        </div>
+    </body>
+</html>

@@ -60,6 +60,14 @@ bool MasterI2C::sendData(uint8_t *buf, size_t size)
     return true;
 }
 
+/**
+ * @brief Чтение одного байта по указателю
+ * 
+ * @param value указатель приемника
+ * @param crc контрольная сумма
+ * @return true прочитано успешно
+ * @return false данные не прочитаны
+ */
 bool MasterI2C::getByte(uint8_t &value, uint8_t &crc)
 {
     if (Wire.requestFrom(I2C_SLAVE_ADDR, 1) != 1)
@@ -99,8 +107,8 @@ bool MasterI2C::getUint(uint32_t &value, uint8_t &crc)
         value |= i2;
         value = value << 8;
         value |= i1;
-        //вот так не работает из-за преобразования типов:
-        // value = i1 | (i2 << 8) | (i3 << 16) | (i4 << 24);
+        // вот так не работает из-за преобразования типов:
+        //  value = i1 | (i2 << 8) | (i3 << 16) | (i4 << 24);
         return true;
     }
     return false;
@@ -119,6 +127,17 @@ bool MasterI2C::getMode(uint8_t &mode)
     return true;
 }
 
+/**
+ * @brief Чтение данных с прибора.
+ * 
+ * Данные читаются в буффер, до контрольной суммы включительно. 
+ * При успешном чтении расчитанная контрольная сумма должна быть равно 0, 
+ * в противном случае во время чтения произошла ошибка.
+ * 
+ * @param data Структура для заполнения данными
+ * @return true прочитанно успешно.
+ * @return false произошла ошибка, код ошибки в data.diagnostic
+ */
 bool MasterI2C::getSlaveData(SlaveData &data)
 {
     sendCmd('B');
@@ -127,8 +146,9 @@ bool MasterI2C::getSlaveData(SlaveData &data)
     uint8_t dummy, crc = init_crc;
     bool good = getByte(data.version, crc);
 
-    if (data.version < 29) {
-        init_crc = 0;  // в версиях <29 инициализация идет нулём
+    if (data.version < 29)
+    {
+        init_crc = 0; // в версиях <29 инициализация идет нулём
         crc = 0;
         crc = crc_8(&data.version, 1, crc);
     }
@@ -161,18 +181,7 @@ bool MasterI2C::getSlaveData(SlaveData &data)
     case WATERIUS_BAD_CRC:
         LOG_ERROR(F("!!! CRC wrong !!!!, go to sleep"));
     case WATERIUS_OK:
-        LOG_INFO(F("version: ") << data.version);
-        LOG_INFO(F("service: ") << data.service);
-        LOG_INFO(F("setup_started_counter: ") << data.setup_started_counter);
-        LOG_INFO(F("resets: ") << data.resets);
-        LOG_INFO(F("MODEL: ") << data.model);
-        LOG_INFO(F("counter_type0: ") << data.counter_type0);
-        LOG_INFO(F("counter_type1: ") << data.counter_type1);
-        LOG_INFO(F("impulses0: ") << data.impulses0);
-        LOG_INFO(F("impulses1: ") << data.impulses1);
-        LOG_INFO(F("adc0: ") << data.adc0);
-        LOG_INFO(F("adc1: ") << data.adc1);
-        LOG_INFO(F("CRC ok"));
+        LOG_INFO(F("v") << data.version << F(" setups:") << data.setup_started_counter << F(" resets:") << data.resets << F(" ctype0:") << data.counter_type0 << F(" ctype1:") << data.counter_type1 << F(" imp0:") << data.impulses0 << F(" imp1:") << data.impulses1 << F(" adc0:") << data.adc0 << F(" adc1:") << data.adc1);
         break;
     case WATERIUS_NO_LINK:
         LOG_ERROR(F("Data failed"));

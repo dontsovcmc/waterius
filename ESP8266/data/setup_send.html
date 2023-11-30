@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Отправка показаний</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
+    </head>
+    <body onload="_init({
+        back: '/index.html',
+        back_wizard: '/setup_red.html?wizard=true',
+        next: '/index.html',
+        next_wizard: '/finish.html'
+    })">
+        <form onsubmit="formSubmit(event, this, 'setup');">
+            <div class="wrap">
+                <div class="container f1">
+                    <header>
+                        <a onclick="_goto()">
+                            <div class="icon bf">
+                                <img src="/images/icons.png">
+                            </div>
+                            Назад</a>
+                        <div class="icon logo">
+                            <img src="/images/icons.png">
+                        </div>
+                        <div class="fr">шаг 9/9</div>
+                    </header>
+                    <main>
+                        <h2>Отправка показаний</h2>
+                        <p class="text">Выберите куда Ватериусу отправлять показания счётчиков и введите необходимые данные</p>
+                        <p class="form-error hd"></p>
+
+                        <div class="toggle mt24">
+                            <input type="checkbox" name="waterius_on" id="waterius_on" onclick="checkboxToggle(this)" data-form=".email-form" %waterius_on%>
+                            <label for="waterius_on">Waterius.ru</label>
+                        </div>
+                        <div class="f-row mt16 hd email-form">
+                            <label for="waterius_email">Почта аккаунта</label>
+                            <input type="email" id="waterius_email" name="waterius_email" placeholder="name@domen.ru" pattern="[^@\s]+@[^@\s]+\.[^@\s]+" value="%waterius_email%" >
+                            <p class="error hd" id="waterius_email-error">Некорректный e-mail</p>
+                        </div>
+
+                        <div class="toggle">
+                            <input type="checkbox" name="http_on" id="http_on" onclick="checkboxToggle(this)" data-form=".server-form" %http_on%>
+                            <label for="http_on">Сервер HTTP</label>
+                        </div>
+                        <div class="f-row mt16 hd server-form">
+                            <label for="http_url">Адрес</label>
+                            <input id="http_url" name="http_url" placeholder="http://iot.site.com:8000/cloud" value="%http_url%">
+                            <p class="error hd" id="http_url-error">Некорректный адрес</p>
+                        </div>
+
+                        <div class="toggle">
+                            <input type="checkbox" name="blynk_on" id="blynk_on" onclick="checkboxToggle(this)" data-form=".blynk-form" %http_on%>
+                            <label for="blynk_on">Blynk</label>
+                        </div>
+                        <div class="hd blynk-form">
+                            <div class="f-row mt16">
+                                <label for="blynk_host">Адрес</label>
+                                <input id="blynk_host" name="blynk_host" placeholder="blynk.com" value="%blynk_host%">
+                                <p class="error hd" id="blynk_host-error">Некорректный адрес сервера</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="blynk_key">Токен</label>
+                                <input id="blynk_key" name="blynk_key" placeholder="10A1B2C3D4E5F6" value="%blynk_key%">
+                                <p class="error hd" id="blynk_key-error">Некорректный токен</p>
+                            </div>
+                        </div>
+
+                        <div class="toggle">
+                            <input type="checkbox" name="mqtt_on" id="mqtt_on" onclick="checkboxToggle(this)" data-form=".mqtt-form" %mqtt_on%>
+                            <label for="mqtt_on">MQTT (Home Assistant)</label>
+                        </div>
+                        <div class="hd mqtt-form">
+                            <div class="f-row mt16">
+                                <label for="mqtt_host">Адрес</label>
+                                <input id="mqtt_host" name="mqtt_host" placeholder="http://broker.domen.ru" value="%mqtt_host%">
+                                <p class="error hd" id="mqtt_host-error">Некорректный адрес сервера</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="mqtt_port">Порт</label>
+                                <input id="mqtt_port" name="mqtt_port" placeholder="1883" type="number" value="%mqtt_port%">
+                                <p class="error hd" id="mqtt_port-error">Некорректный номер порта</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="mqtt_login">Логин</label>
+                                <input id="mqtt_login" name="mqtt_login" placeholder="Логин" value="%mqtt_login%">
+                                <p class="error hd" id="mqtt_login-error">Некорректный логин</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="mqtt_password">Пароль</label>
+                                <input id="mqtt_password" type="password" name="mqtt_password" class="has-icon" placeholder="Пароль" value="%mqtt_password%">
+                                <div class="icon" onclick="showPW('mqtt_password')">
+                                    <img src="/images/icons.png">
+                                </div>
+                                <p class="error hd" id="mqtt_password-error">Некорректный пароль</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="mqtt_topic">Topic</label>
+                                <input id="mqtt_topic" name="mqtt_topic" value="%mqtt_topic%">
+                                <p class="error hd" id="mqtt_topic-error">Некорректный адрес топика</p>
+                            </div>
+
+                            <div class="toggle">
+                                <input type="checkbox" name="mqtt_auto_discovery" id="mqtt_auto_discovery" onclick="checkboxToggle(this)" data-form=".mqtt_auto_discovery-form" %mqtt_auto_discovery%>
+                                <label for="mqtt_auto_discovery">Авто добавление в Home Assistant</label>
+                            </div>
+                            <div class="hd mqtt_auto_discovery-form">
+                                <div class="f-row mt16">
+                                    <label for="mqtt_discovery_topic">Топик discovery Home Assistant</label>
+                                    <input id="mqtt_discovery_topic" name="mqtt_discovery_topic" placeholder="homeassistant" value="%mqtt_discovery_topic%">
+                                    <p class="error hd" id="mqtt_discovery_topic-error">Некорректный адрес топика</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="mt24">
+                                <h2>Параметры</h2>
+                            </div>
+                            <div class="f-row">
+                                <label for="wakeup_per_min">Период отправки</label>
+                                <input id="wakeup_per_min" name="wakeup_per_min" placeholder="1440" type="number" value="%wakeup_per_min%">
+                                <p>В минутах</p>
+                                <p class="error hd" id="wakeup_per_min-error">Некорректное значение</p>
+                            </div>
+                        </div>
+                    </main>
+                    <footer class="btns">
+                        <button class="btn" type="submit">Сохранить</button>
+                    </footer>
+                </div>
+            </div>
+        </form>
+    </body>
+</html>

@@ -3,10 +3,43 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "0.11.10"
+#define FIRMWARE_VERSION "1.0.5"
 
 /*
 Версии прошивки для ESP
+
+1.0.5  - 2023.11.27 - dontsovcmc
+                      1. Сортировка wi-fi сетей
+                      
+1.0.4  - 2023.11.25 - dontsovcmc
+                      1. Исправлена ошибка установки типа входа
+                      2. reset.html поправлен текст
+                      3. wifi_list.html Исправлены ссылки на титул
+                      
+1.0.3  - 2023.11.17 - dontsovcmc
+                      1. Новый тип входа датчик холла
+
+1.0.2  - 2023.11.14 - dontsovcmc
+                      1. about.html версия attiny корректна
+                      2. captive portal после переподключения на титуле статус подключения к wi-fi
+                      3. wifi_settings.html сортировка wi-fi сетей по мощности
+                      4. wifi_settings.html кнопка "обновить список сетей"
+                      5. wifi_settings.html отображение статуса подключения
+
+1.0.1  - 2023.11.02 - dontsovcmc
+                      1. Тип входа сразу сохраняется (улучшение)
+                      2. добавил в JSON wifi_phy_mode, wifi_phy_mode_s, ch0_start, ch1_start
+                      3. captive portal работает
+                      4. во время настройки терялись импульсы
+
+1.0.0  - 2023.10.29 - dontsovcmc, neitri
+                      1. WiFiManager заменён на ESPAsyncWebServer
+                      2. Файловая система LittleFS
+                      3. Весь интерфейс настройки изменён
+                      4. Добавили сброс до заводских настроек
+                      5. Добавил обнуление стартового значения импульсов, если приходят меньше #269
+                      6. Добавил загрузку информации про wi-fi сети http://192.168.4.1/ssid.txt
+                      7. Добавлена отправка на свой сервер параллельно waterius.ru
 
 0.11.10 - 2023.10.13 - abrant
                       attiny version 31
@@ -17,10 +50,10 @@
                       2. Чекбокс отображения пароля
                       3. Очистка пароля при выборе Wi-Fi
                       4. Текст счётчиков при повторной настройке другой
-                      5. Вес импульса отображается если выбрано "Авто" 
-                      
+                      5. Вес импульса отображается если выбрано "Авто"
+
 0.11.8 - 2023.08.18 - dontsovcmc
-                      1. Перепутаны названия ГВС/ХВС в HA discovery 
+                      1. Перепутаны названия ГВС/ХВС в HA discovery
 
 0.11.7 - 2023.08.09 - dontsovcmc
                       1. не дублируется список wi-fi сетей при настройке
@@ -31,7 +64,7 @@
                          - возможно устранена ошибка подключения к SSID с пробелом
 
 0.11.6 - 2023.08.05 - dontsovcmc
-                      1. версия прошивки attiny=30 
+                      1. версия прошивки attiny=30
 
 0.11.5 - 2023.04.30 - dontsovcmc
                       1. Поддержка обычной прошивки attiny < 29
@@ -52,7 +85,7 @@
                       3. Подсчет crc более компактный
 
 0.11.1 - 2023.02.28 - neitri, dontsovcmc
-                      1. Указанный пользователем NTP сервер используется. 
+                      1. Указанный пользователем NTP сервер используется.
 
 0.11.0 - 2023.01.23 - dontsovcmc Anat0liyBM vzagorovskiy
                       1. PubSubClient 2.7.0 -> 2.8.0
@@ -177,7 +210,9 @@
 
 #define VER_8 8
 #define VER_9 9
-#define CURRENT_VERSION VER_9
+#define VER_10 10
+#define VER_11 11
+#define CURRENT_VERSION VER_11
 
 #define EMAIL_LEN 40
 
@@ -190,7 +225,7 @@
 #define BLYNK_EMAIL_TEMPLATE_LEN 200
 
 #define MQTT_LOGIN_LEN 32
-#define MQTT_PASSWORD_LEN 32
+#define MQTT_PASSWORD_LEN 66 //ansible образ home assistant генерирует пароль длиной 64
 #define MQTT_TOPIC_LEN 64
 
 #define MQTT_DEFAULT_TOPIC_PREFIX BRAND_NAME // Проверка: mosquitto_sub -h test.mosquitto.org -t "waterius/#" -v
@@ -231,15 +266,15 @@
 
 #define WIFI_CONNECT_ATTEMPTS 2
 
-#define WIFI_SSID_LEN 32 + 1
-#define WIFI_PWD_LEN 64 + 1
+#define WIFI_SSID_LEN 32
+#define WIFI_PWD_LEN 64
 
 #define DEFAULT_GATEWAY "192.168.0.1"
 #define DEFAULT_MASK "255.255.255.0"
 #define DEFAULT_NTP_SERVER "ru.pool.ntp.org"
 
-#ifndef LED_PIN 
-#define LED_PIN 1    
+#ifndef LED_PIN
+#define LED_PIN 1
 #endif
 
 // attiny85
@@ -253,23 +288,25 @@
 
 enum CounterType
 {
-    NAMUR=0,
-    DISCRETE=1,
-    ELECTRONIC=2
+    NAMUR = 0,
+    DISCRETE = 1,
+    ELECTRONIC = 2,
+    HALL = 3, 
+    NONE = 0xFF 
 };
 
 enum CounterName
 {
-    WATER_COLD=0,
-    WATER_HOT=1,
-    ELECTRO=2,
-    GAS=3,
-    HEAT=4,
-    PORTABLE_WATER=5,
-    OTHER=6
+    WATER_COLD = 0,
+    WATER_HOT = 1,
+    ELECTRO = 2,
+    GAS = 3,
+    HEAT = 4,
+    PORTABLE_WATER = 5,
+    OTHER = 6
 };
 
-// согласно 
+// согласно
 enum DataType
 {
     COLD_WATER = 0,
@@ -284,7 +321,6 @@ enum DataType
     POTABLE_WATER = 9,
     OTHER_TYPE = 10
 };
-
 
 struct CalculatedData
 {
@@ -304,7 +340,7 @@ struct Settings
 {
     uint8_t version = CURRENT_VERSION; // Версия конфигурации
 
-    uint8_t reserved = 0;
+    uint8_t reserved0 = 0;
 
     // SEND_WATERIUS
 
@@ -321,7 +357,7 @@ struct Settings
     // сервер blynk.com или свой blynk сервер
     char blynk_host[HOST_LEN] = {0};
 
-    char reserved7[EMAIL_LEN + BLYNK_EMAIL_TITLE_LEN + BLYNK_EMAIL_TEMPLATE_LEN] = {0};
+    char http_url[HOST_LEN] = {0};
 
     char mqtt_host[HOST_LEN] = {0};
     uint16_t mqtt_port = MQTT_DEFAULT_PORT;
@@ -405,7 +441,7 @@ struct Settings
     uint8_t setup_finished_counter = 0;
 
     /* Публиковать данные для автоматического добавления в Homeassistant */
-    uint8_t mqtt_auto_discovery = MQTT_AUTO_DISCOVERY;
+    uint8_t mqtt_auto_discovery = (uint8_t)MQTT_AUTO_DISCOVERY;
     uint8_t reserved2 = 0;
 
     /* Топик MQTT*/
@@ -421,13 +457,14 @@ struct Settings
     /* mac сети Wifi */
     uint8_t wifi_bssid[6] = {0};
     /* Wifi канал */
-    uint8_t wifi_channel = 0;
-    uint8_t wifi_phy_mode = 0; // Режим работы интерфейса
-    
+    uint8_t wifi_channel = 1;
+    /* Режим работы интерфейса */
+    uint8_t wifi_phy_mode = 0;
+
     /*
     Тип счётчика (вода, тепло, газ, электричество)
     */
-    uint8_t counter0_name = CounterName::WATER_HOT;  //enum CounterName
+    uint8_t counter0_name = CounterName::WATER_HOT;
     uint8_t counter1_name = CounterName::WATER_COLD;
 
     /*
@@ -435,11 +472,24 @@ struct Settings
     */
     uint16_t factor0 = AS_COLD_CHANNEL;
     uint16_t factor1 = AUTO_IMPULSE_FACTOR;
+
+    /* Включение передачи на офиц. сайт */
+    uint8_t waterius_on = (uint8_t) true;
+    /* Включение передачи по http на другой хост */
+    uint8_t http_on = (uint8_t) false;
+    /* Включение передачи по mqtt */
+    uint8_t mqtt_on = (uint8_t) false;
+    /* Включение Blynk */
+    uint8_t blynk_on = (uint8_t) false;
+    /* Включение DHCP или статических настроек */
+    uint8_t dhcp_off = (uint8_t) false;
+
+    uint8_t reserved8 = 0;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved4[60] = {0};
+    uint8_t reserved4[84] = {0};
 
 }; // 960 байт
 

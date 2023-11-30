@@ -127,18 +127,28 @@ void remove_trailing_slash(String &topic)
 }
 
 /**
- * @brief Возвращает признак является ли адрес адресом сайта Ватериуса
+ * @brief Возвращает признак включена ли передача на сайт Ватериуса
  *
- * @param url адрес сайта
- * @return true сайт является сайтом Ватериуса
- * @return false сайт НЕ является сайтом Ватериуса
+ * @param sett настройки устройства
+ * @return true настроена отправка на сайт Ватериус
+ * @return false НЕ настроена  отправка на сайт Ватериус
  */
-bool is_waterius_site(const String &url)
+bool is_waterius_site(const Settings &sett)
 {
-	String temp_str = url;
-	temp_str.toLowerCase();
-	// специально не используется WATERIUS_DEFAULT_DOMAIN
-	return temp_str.startsWith(F("https://cloud.waterius.ru"));
+	return sett.waterius_on && sett.waterius_host[0] && sett.waterius_key[0];
+}
+
+
+/**
+ * @brief Возвращает признак включена ли передача на веб сервер
+ *
+ * @param sett настройки устройства
+ * @return true настроена отправка на веб сервер
+ * @return false НЕ настроена  отправка на веб сервер
+ */
+bool is_http(const Settings &sett)
+{
+	return sett.http_on && sett.http_url[0];
 }
 
 /**
@@ -151,7 +161,7 @@ bool is_waterius_site(const String &url)
 bool is_blynk(const Settings &sett)
 {
 #ifndef BLYNK_DISABLED
-	return sett.blynk_host[0] && sett.blynk_key[0];
+	return sett.blynk_on && sett.blynk_host[0] && sett.blynk_key[0];
 #else
 	return false;
 #endif
@@ -167,7 +177,7 @@ bool is_blynk(const Settings &sett)
 bool is_mqtt(const Settings &sett)
 {
 #ifndef MQTT_DISABLED
-	return sett.mqtt_host[0];
+	return sett.mqtt_on && sett.mqtt_host[0];
 #else
 	return false;
 #endif
@@ -199,7 +209,7 @@ bool is_ha(const Settings &sett)
 
 bool is_dhcp(const Settings &sett)
 {
-	return sett.ip != 0;
+	return sett.dhcp_off == 0;
 }
 
 /**
@@ -219,7 +229,7 @@ void log_system_info()
 	LOG_INFO(F("WIFI: SSID: ") << WiFi.SSID());
 	LOG_INFO(F("WIFI: BSID: ") << WiFi.BSSIDstr());
 	LOG_INFO(F("WIFI: Channel: ") << WiFi.channel());
-	LOG_INFO(F("WIFI: Mode: ") << wifi_mode());
+	LOG_INFO(F("WIFI: Mode current: ") << wifi_phy_mode_title(WiFi.getPhyMode()));
 	LOG_INFO(F("WIFI: RSSI: ") << WiFi.RSSI() << F("dBm"));
 	LOG_INFO(F("------------ IP Info ------------"));
 	LOG_INFO(F("IP: Host name: ") << WiFi.hostname());
@@ -268,51 +278,48 @@ extern void generateSha256Token(char *token, const int token_len, const char *em
 	LOG_INFO(F("-- END --"));
 }
 
-
 void blink_led(int count, int period, int duty)
 {
 	pinMode(LED_PIN, OUTPUT);
 	for (int i = 0; i < count; i++)
 	{
-		digitalWrite(LED_PIN, HIGH); 
-		delay(period-duty); 
-		digitalWrite(LED_PIN, LOW); 
-		delay(duty); 
+		digitalWrite(LED_PIN, HIGH);
+		delay(period - duty);
+		digitalWrite(LED_PIN, LOW);
+		delay(duty);
 	}
 }
 
-
 /**
- * @brief Возвращает тип данных на сервер Ватериуса по названию входа. 
+ * @brief Возвращает тип данных на сервер Ватериуса по названию входа.
  *
  * @param counter_name имя счётчика в интерфейсе ESP
- * @param index номер входа
  * @return тип данных на сервере Ватериуса
  */
-DataType data_type_by_name(uint8_t counter_name, uint8_t index)
+DataType data_type_by_name(uint8_t counter_name)
 {
 	switch ((CounterName)counter_name)
 	{
-		case CounterName::WATER_COLD:
-			return DataType::COLD_WATER;
+	case CounterName::WATER_COLD:
+		return DataType::COLD_WATER;
 
-		case CounterName::WATER_HOT:
-			return DataType::HOT_WATER;
+	case CounterName::WATER_HOT:
+		return DataType::HOT_WATER;
 
-		case CounterName::ELECTRO:
-			return DataType::ELECTRICITY;
+	case CounterName::ELECTRO:
+		return DataType::ELECTRICITY;
 
-		case CounterName::GAS:
-			return DataType::GAS_DATA;
+	case CounterName::GAS:
+		return DataType::GAS_DATA;
 
-		case CounterName::HEAT:
-			return DataType::HEATING;
+	case CounterName::HEAT:
+		return DataType::HEATING;
 
-		case CounterName::PORTABLE_WATER:
-			return DataType::POTABLE_WATER;
+	case CounterName::PORTABLE_WATER:
+		return DataType::POTABLE_WATER;
 
-		case CounterName::OTHER:
-			return DataType::OTHER_TYPE;
+	case CounterName::OTHER:
+		return DataType::OTHER_TYPE;
 	}
 	return DataType::COLD_WATER;
 }

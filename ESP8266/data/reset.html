@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Сброс устройства</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
+    </head>
+    <body onload="_init({
+        back: '/index.html',
+        back_wizard: '/index.html',
+        next: '/index.html',
+        next_wizard: '/index.html'
+    })">
+        <form onsubmit="formSubmit(event, this, 'reset');">
+            <div class="wrap">
+                <div class="container f1">
+                    <header>
+                        <a href="/index.html">
+                            <div class="icon bf">
+                                <img src="/images/icons.png">
+                            </div>
+                            Назад</a>
+                        <div class="icon logo">
+                            <img src="/images/icons.png">
+                        </div>
+                    </header>
+                    <main>
+                        <h2>Сброс устройства</h2>
+                        <p class="text">Данное действие вернёт устройство к заводским настройкам.</p>
+                        <p class="text mt10">Устройство удалит текущие настройки и перезагрузится.</p>
+                        <p class="text mt10">Подключитесь к точке доступа Ватериуса заново.</p>
+                    </main>
+                    <footer class="btns">
+                        <button class="btn" type="submit">Сбросить устройство</button>
+                    </footer>
+                </div>
+            </div>
+        </form>
+    </body>
+</html>

@@ -13,6 +13,12 @@
     #define LOG_ON
 */
 
+/*
+    Включение отладки сигнала со счетчиков на пин питания ESP
+    
+    #define COUNTER_DEBUG
+*/
+
 #ifndef LOG_ON
 #define LOG_BEGIN(x)
 #define LOG(x)

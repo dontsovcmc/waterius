@@ -22,19 +22,19 @@ enum Status_t
 struct SlaveData
 {
     // Header
-    uint8_t version;    //Версия ПО Attiny
-    uint8_t service;    //Причина загрузки Attiny
-    uint16_t reserved4; //Напряжение питания в мВ (после включения wi-fi под нагрузкой )
+    uint8_t version;    // Версия ПО Attiny
+    uint8_t service;    // Причина загрузки Attiny
+    uint16_t reserved4; // Напряжение питания в мВ (после включения wi-fi под нагрузкой )
     uint8_t reserved;
     uint8_t setup_started_counter;
     uint8_t resets;
-    uint8_t model;      // WATERIUS_CLASSIC или  WATERIUS_4C2W
-    uint8_t counter_type0;     //Тип входа, вход 0
-    uint8_t counter_type1;     //           вход 1
-    uint32_t impulses0; //Импульсов, канал 0
-    uint32_t impulses1; //           канал 1
-    uint16_t adc0;      //Уровень,   канал 0
-    uint16_t adc1;      //           канал 1
+    uint8_t model;         // WATERIUS_CLASSIC или  WATERIUS_4C2W
+    uint8_t counter_type0; // Тип входа, вход 0
+    uint8_t counter_type1; //           вход 1
+    uint32_t impulses0;    // Импульсов, канал 0
+    uint32_t impulses1;    //           канал 1
+    uint16_t adc0;         // Уровень,   канал 0
+    uint16_t adc1;         //           канал 1
 
     // HEADER_DATA_SIZE
 
@@ -57,6 +57,9 @@ protected:
     bool getUint16(uint16_t &value, uint8_t &crc);
     bool getByte(uint8_t &value, uint8_t &crc);
     bool sendData(uint8_t *buf, size_t size);
+
+    bool getByte(uint8_t *value, uint8_t &crc);
+    bool getBytes(uint8_t *value, uint8_t count, uint8_t &crc);
 
 public:
     void begin();
