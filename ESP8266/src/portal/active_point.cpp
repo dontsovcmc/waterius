@@ -130,7 +130,8 @@ String processor(const String &var)
     if (var == FPSTR(PARAM_WATERIUS_HOST))
         return replace_value(sett.waterius_host);
     if (var == FPSTR(PARAM_WATERIUS_EMAIL))
-        return replace_value(sett.waterius_email);
+        if (!strstr(sett.waterius_email, "@waterius.ru"))
+            return replace_value(sett.waterius_email);
 
     if (var == FPSTR(PARAM_BLYNK_KEY))
         return replace_value(sett.blynk_key);

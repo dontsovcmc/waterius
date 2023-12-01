@@ -3,10 +3,12 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "1.0.5"
+#define FIRMWARE_VERSION "1.0.6"
 
 /*
 Версии прошивки для ESP
+
+1.0.6  - 2023.12.02 - dontsovcmc
 
 1.0.5  - 2023.11.27 - dontsovcmc
                       1. Сортировка wi-fi сетей
