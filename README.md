@@ -9,7 +9,7 @@
 
 ✅ Протоколы HTTP, MQTT
 
-✅ Поддержка <a href="https://www.home-assistant.io/" targe="_blank">HomeAssistant</a>,  <a href="https://www.hackster.io/dontsovcmc/domoticz-4346d5" targe="_blank">Domoticz</a>, <a href="https://spruthub.ru" targe="_blank">SprutHub</a> 
+✅ Поддержка <a href="https://yandex.ru/alice/smart-home" targe="_blank">Умного дома Яндекса</a>, <a href="https://www.home-assistant.io/" targe="_blank">HomeAssistant</a>,  <a href="https://www.hackster.io/dontsovcmc/domoticz-4346d5" targe="_blank">Domoticz</a>, <a href="https://spruthub.ru" targe="_blank">SprutHub</a> 
 
 ✅ Личный кабинет <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">waterius.ru</a>
 
@@ -46,6 +46,7 @@
 
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github">waterius.ru</a>
+* в Приложении <a href="https://yandex.ru/alice/smart-home">Умный дом с Алисой от Яндекса</a>
 * в HomeAssistant [инструкция с пояснениями](Home_Assistant_setup.md), [конфигурация](https://github.com/dontsovcmc/waterius/blob/master/homeassistant.configuration.yaml), [обсуждение](https://github.com/dontsovcmc/waterius/issues/86)
 * в Domoticz [инструкция](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
 * в SprutHub [инструкция](https://wiki.spruthub.ru/%D0%A1%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5_%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D0%BB%D0%B5%D1%80%D0%B0_MQTT)
