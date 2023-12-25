@@ -53,7 +53,7 @@ void setup()
 
 void loop()
 {
-    uint8_t mode = SETUP_MODE; // TRANSMIT_MODE;
+    uint8_t mode = TRANSMIT_MODE; // TRANSMIT_MODE;
     bool config_loaded = false;
 
     // спрашиваем у Attiny85 повод пробуждения и данные true) 
@@ -73,7 +73,7 @@ void loop()
             // Режим настройки - запускаем точку доступа на 192.168.4.1
             // Запускаем точку доступа с вебсервером
 
-            start_active_point(sett, data, cdata);
+            start_active_point(sett, cdata);
 
             sett.setup_time = millis();
             sett.setup_finished_counter++;

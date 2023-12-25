@@ -122,7 +122,7 @@ String get_counter_instruction(const uint8_t name)
 String processor(const String &var)
 {
     if (var == FPSTR(PARAM_VERSION))
-        return String(data.version);  // data! runtime_data ещё не прочиталась
+        return String(runtime_data.version);
 
     if (var == FPSTR(PARAM_VERSION_ESP))
         return FIRMWARE_VERSION;
@@ -305,8 +305,11 @@ void on_root(AsyncWebServerRequest *request)
     }
 }
 
-void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &cdata)
-{
+void start_active_point(Settings &sett, CalculatedData &cdata)
+{   
+    //Т.к. интерфейс берёт данные из runtime_data, то туда нужно загрузить их
+    runtime_data = data;
+
     if (!LittleFS.begin())
     {
         LOG_INFO(F("FS: Mounting LittleFS error"));

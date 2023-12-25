@@ -14,6 +14,6 @@ class Settings;
 class SlaveData;
 class CalculatedData;
 
-void start_active_point(Settings &sett, const SlaveData &data, CalculatedData &cdata);
+void start_active_point(Settings &sett, CalculatedData &cdata);
 
 #endif

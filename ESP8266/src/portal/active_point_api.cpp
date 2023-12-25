@@ -619,27 +619,27 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
 
         else if (name == FPSTR(PARAM_COUNTER0_TYPE))
         {
-            if (!masterI2C.setCountersType(p->value().toInt(), data.counter_type1))
+            if (!masterI2C.setCountersType(p->value().toInt(), runtime_data.counter_type1))
             {
                 LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
                 errorsObj[p->name()] = FPSTR(ERROR_ATTINY_ERROR);
             }
             else
             {
-                data.counter_type0 = p->value().toInt();
+                runtime_data.counter_type0 = p->value().toInt();
                 LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
             }
         }
         else if (name == FPSTR(PARAM_COUNTER1_TYPE))
         {
-            if (!masterI2C.setCountersType(data.counter_type0, p->value().toInt()))
+            if (!masterI2C.setCountersType(runtime_data.counter_type0, p->value().toInt()))
             {
                 LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
                 errorsObj[p->name()] = FPSTR(ERROR_ATTINY_ERROR);
             }
             else
             {
-                data.counter_type1 = p->value().toInt();
+                runtime_data.counter_type1 = p->value().toInt();
                 LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
             }
         }
