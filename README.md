@@ -9,7 +9,7 @@
 
 ✅ Протоколы HTTP, MQTT
 
-✅ Поддержка <a href="https://www.home-assistant.io/" targe="_blank">HomeAssistant</a>,  <a href="https://www.hackster.io/dontsovcmc/domoticz-4346d5" targe="_blank">Domoticz</a>, <a href="https://spruthub.ru" targe="_blank">SprutHub</a> 
+✅ Поддержка <a href="https://yandex.ru/alice/smart-home" targe="_blank">Умного дома Яндекса</a>, <a href="https://www.home-assistant.io/" targe="_blank">HomeAssistant</a>,  <a href="https://www.hackster.io/dontsovcmc/domoticz-4346d5" targe="_blank">Domoticz</a>, <a href="https://spruthub.ru" targe="_blank">SprutHub</a> 
 
 ✅ Личный кабинет <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">waterius.ru</a>
 
@@ -46,6 +46,7 @@
 
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github">waterius.ru</a>
+* в Приложении <a href="https://yandex.ru/alice/smart-home">Умный дом с Алисой от Яндекса</a>
 * в HomeAssistant [инструкция с пояснениями](Home_Assistant_setup.md), [конфигурация](https://github.com/dontsovcmc/waterius/blob/master/homeassistant.configuration.yaml), [обсуждение](https://github.com/dontsovcmc/waterius/issues/86)
 * в Domoticz [инструкция](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
 * в SprutHub [инструкция](https://wiki.spruthub.ru/%D0%A1%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5_%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D0%BB%D0%B5%D1%80%D0%B0_MQTT)
@@ -77,9 +78,9 @@
 Счётчик импульсов состоит из двух микросхем. Attiny85 считает импульсы в режиме сна и сохраняет их в EEPROM. Раз в сутки она будит ESP8266 и слушает i2c линию. ESP8266 спрашивает у Attiny85 данные и отправляет их на сервер. После этого ESP8266 засыпает, а Attiny85 продолжает считать-считать-считать...
 
 ### Известные ошибки
+- Иногда не надёжно подключается к некоторым роутера Asus, Kineetic. Укажите в настройках Вай-фая ватериуса "only G". 
 - До версии 0.11.8: Иногда не подключается к Ростелекомовским роутерам: Sercomm rv6699, Innbox e70, e80 (192.168.0.1), TP-Link AX5400. Лечится указанием статического ip в настройках. Если у вас такие, напишите в теме: [Проблемы с роутерами](https://github.com/dontsovcmc/waterius/issues/131)
 - До версии 0.11.7 не подключается к Wi-Fi с пробелом в названии.
-- В версии 1.0.0 изменили подключение к роутерам.
 
 ## Схема
 Заводская плата:
