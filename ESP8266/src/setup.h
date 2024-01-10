@@ -3,13 +3,14 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "1.0.6"
+#define FIRMWARE_VERSION "1.0.7"
 
 /*
 Версии прошивки для ESP
 
 1.0.7  - 2023.12.24 - dontsovcmc 
                       1. Не отображался тип входа при повторной настройке входов
+                      2. TRANSMIT_MODE по умолчанию. гипотеза, что это поможет при кривом включении кнопкой.
 
 1.0.6  - 2023.12.02 - dontsovcmc
 
