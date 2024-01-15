@@ -67,6 +67,7 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
 
     // настройки и события
     root[F("waketime")] = sett.wake_time;
+    root[F("period_min_tuned")] = sett.set_wakeup;
     root[F("period_min")] = sett.wakeup_per_min;
     root[F("setuptime")] = sett.setup_time;
     root[F("good")] = data.diagnostic;
