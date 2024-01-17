@@ -32,6 +32,7 @@ enum CounterType
     DISCRETE,
     ELECTRONIC,
     HALL,
+    LEAKAGE,
     NONE = 0xFF
 };
 
@@ -40,6 +41,14 @@ enum class CounterEvent
     NONE,
     FRONT,
     TIME,
+};
+
+enum class CounterAlarm 
+{ 
+    NORM = 0, 
+    LEAKAGE,
+    FLOW, 
+    VOLUME 
 };
 
 struct CounterB
@@ -56,8 +65,18 @@ struct CounterB
     CounterState    state;      // состояние входа
     CounterType     type;       // тип выхода счетчика
 
+    CounterAlarm    alarm;      // сигнализация аварий
+    bool            new_alarm;  // признак новой аварии
+    uint16_t        interval_time;                  // интервал времени между импульсами, в 0.25с
+    uint16_t        min_interval_time;              // минимальный интервал, соответствующий максимальному мгновенному расходу
+    uint16_t	    control_time;                   // счетчик контрольного времени
+    const uint16_t	max_control_time = 30*60*4;     // контрольное время для расчета среднего расхода, в 0.25с, константа 30 минут
+    uint16_t        control_volume;                 // счетчик импульсов за контрольное время
+    uint16_t        max_control_volume;             // максимальное число импульсов за контрольное время
+
     explicit CounterB(uint8_t pin, uint8_t apin = 0, uint8_t power = (uint8_t)-1)
-        : _pin(pin), _power(power), _apin(apin), on_time(0), off_time(0), adc(0), state(CounterState::CLOSE), type(CounterType::NAMUR)
+        : _pin(pin), _power(power), _apin(apin), on_time(0), off_time(0), adc(0), state(CounterState::CLOSE), type(CounterType::NAMUR), 
+        interval_time(0), min_interval_time(0), control_time(0), control_volume(0)
     {
         set_type(type);
     }
@@ -254,19 +273,71 @@ struct CounterB
 
     bool is_impuls(CounterEvent event = CounterEvent::NONE)
     {
+        bool pulse;
         switch (type) 
         {
             case CounterType::ELECTRONIC:
-                return electronic(event);
+                pulse = electronic(event);
+                break;
             case CounterType::HALL:
-                return hall(event);
+                pulse = hall(event);
+                break;
             case CounterType::NAMUR:
             case CounterType::DISCRETE:
-                return discrete(event);
+                pulse = discrete(event);
+                break;
+            case CounterType::LEAKAGE:
+                pulse = electronic(event);
+                if (state == CounterState::CLOSE)
+                {
+                    if (alarm != CounterAlarm::LEAKAGE) new_alarm = true;
+                    alarm = CounterAlarm::LEAKAGE;
+                }
+                return pulse;
             case CounterType::NONE:
             default:
-                return false;
+                pulse = false;
         }
+        // Контроль аварийных ситуаций
+        if (pulse) 
+        {
+            // Обнаружен новый импульс
+            if (interval_time && min_interval_time && (interval_time < min_interval_time))
+            {
+                // С момента начала прошлого импульса прошло времени меньше чем "min_interval_time"
+                if (alarm != CounterAlarm::FLOW) new_alarm = true;
+                alarm = CounterAlarm::FLOW;
+            }
+            interval_time = 0;
+            if (control_time == 0) 
+            {
+                // Контрольное время истекло, запускаем контроль по-новой
+                control_time = max_control_time;
+                control_volume = 0;
+            }
+            if (control_volume < UINT16_MAX) control_volume++;
+            if (max_control_volume && (control_volume > max_control_volume))
+            {
+                // Объем воды за контрольное время превышен
+                if (alarm != CounterAlarm::VOLUME) new_alarm = true;
+                alarm = CounterAlarm::VOLUME;
+            }
+        } 
+        else if (event == CounterEvent::TIME) 
+        {
+            if (interval_time < UINT16_MAX) interval_time++;
+            if (control_time)
+            {
+                control_time--;
+                if (control_time == 0) 
+                {
+                    // Контрольное время истекло
+                    // По-новой не запускаем, что-бы новое контрольное время пошло с начала следующего импульса
+                    control_volume = 0;
+                }
+            }
+        }
+        return pulse;
     }
 
     // Возвращаем текущее состояние входа

@@ -43,7 +43,7 @@
 /*
     Период отправки данных на сервер, мин.
 */
-#define WAKEUP_PERIOD_DEFAULT 15L * ONE_MINUTE
+#define WAKEUP_PERIOD_DEFAULT 15
 
 
 /*
@@ -67,6 +67,10 @@
 */
 #define DELAY_SENT_SLEEP 20000
        
+/*
+    количество каналов
+*/
+#define CH_COUNT 2
 
 struct Data
 {
@@ -80,19 +84,30 @@ struct CounterTypes
     uint8_t type1;
 };
 
-struct ADCLevel
+struct CounterConfig
 {
-    uint16_t adc0;
-    uint16_t adc1;
+    uint8_t     type;
+    uint8_t     padding;
+    uint16_t    min_interval;
+    uint16_t    max_volume;
 };
+
+struct CounterStatus
+{
+    uint16_t    adc;
+    uint8_t     alarm;
+    uint8_t     state;
+}; // 4 байта
 
 struct Config
 {
     uint8_t setup_started_counter;      // Включение режима настройки
     uint8_t resets;                     // Количество перезагрузок
     uint8_t model;                      // Модификация: 0 - Классический. 2 счетчика, 1 - 4C2W. 4 счетчика
-    CounterTypes types;                 // Типы входов счетчиков
-};
+    uint8_t padding;
+    uint16_t wakeup_period;             // значение периода пробуждения, в минутах
+    CounterConfig ch[2];                // Настройка входа счетчиков
+}; // 18 байт
 
 struct Header
 {
@@ -113,36 +128,38 @@ struct Header
     9  - 1001 - WDRF + PORF
     10 - 1010 - WDRF + EXTRF
     */
-    uint8_t service;
+    uint8_t     service;
 
     /*
     ver 24: убрал напряжение
     */
-    uint16_t reserved;
+    uint16_t    reserved;
 
     /*
     Для совместимости с 0.10.0.
     */
-    uint8_t reserved2;
+    uint16_t    reserved2;
 
     /*
     Конфигурация
     */
-    Config config;
+    Config      config;         // 18 байт
 
     /*
     Текущие данные
     */
-    Data data;           // 8 байт
-    ADCLevel adc;        // 4 байта
+    Data        data;           // 8 байт
+    CounterStatus state[2];     // 8 байт
 
     // HEADER_DATA_SIZE
 
     uint8_t crc;
     uint8_t reserved3;
-}; // 24 байт
+    uint8_t reserved4;
+    uint8_t reserved5;
+}; // 44 байта
 
-#define HEADER_DATA_SIZE 22
+#define HEADER_DATA_SIZE 40
 
 #define TX_BUFFER_SIZE HEADER_DATA_SIZE + 2
 
@@ -150,6 +167,7 @@ struct Header
 #define ASSERT_CONCAT(a, b) ASSERT_CONCAT_(a, b)
 #define ct_assert(e) enum { ASSERT_CONCAT(assert_line_, __LINE__) = 1/(!!(e)) }
 
-ct_assert(sizeof(Header)==24);
+ct_assert(sizeof(Config)==18);
+ct_assert(sizeof(Header)==44);
 
 #endif

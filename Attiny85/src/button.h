@@ -28,9 +28,9 @@ struct ButtonB
         PORTB &= ~_BV(_pin); // Disable pull-up
     }
 
-    inline bool digBit()
+    bool released()
     {
-        return bit_is_set(PINB, _pin);
+        return bit_is_set(PINB, _pin) == HIGH;
     }
 
     // Проверка нажатия кнопки

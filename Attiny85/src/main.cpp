@@ -17,7 +17,7 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 32  // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 33  // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
@@ -142,7 +142,14 @@ static ButtonB button(2);  // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1); // Питание на ESP
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, {0, 0, WATERIUS_2C, {counter0.type, counter1.type}}, {0, 0}, {0, 0}, 0, 0};
+struct Header info = 
+{
+	FIRMWARE_VER, 0, 0, 0, 
+	{0, 0, WATERIUS_2C, 0, WAKEUP_PERIOD_DEFAULT, {counter0.type, counter1.type}}, 
+	{0, 0}, 
+	{{0, 0, 0}, {0, 0, 0}}, 
+	0, 0
+};
 
 uint32_t wakeup_period;
 
@@ -151,7 +158,7 @@ uint32_t wakeup_period;
 //Записывается каждый импульс, поэтому для 10л/импульс срок службы памяти 10 000м3
 // 100к * 20 = 2 млн * 10 л / 2 счетчика = 10 000 000 л или 10 000 м3
 static EEPROMStorage<Data> storage(20); // 8 byte * 20 + crc * 20
-static EEPROMStorage<Config> config(2, storage.size()); // 5 byte * 2 + crc * 2
+static EEPROMStorage<Config> config(2, storage.size()); // 18 byte * 2 + crc * 2
 
 SlaveI2C slaveI2C;
 
@@ -183,7 +190,6 @@ inline void counting(CounterEvent ev)
 	if (counter0.is_impuls(ev))
 	{
 		info.data.value0++; 				//нужен т.к. при пробуждении запрашиваем данные
-		info.adc.adc0 = counter0.adc;
 		if (storage_write_limit == 0)
 		{
 			storage.add(info.data);
@@ -194,7 +200,6 @@ inline void counting(CounterEvent ev)
 	if (counter1.is_impuls(ev))
 	{
 		info.data.value1++;
-		info.adc.adc1 = counter1.adc;
 		if (storage_write_limit == 0)
 		{
 			storage.add(info.data);
@@ -241,16 +246,15 @@ void setup()
 		// Конфигурация найдена
 		config.get(info.config);
 		info.config.resets++;
-		counter0.set_type((CounterType)info.config.types.type0);
-		counter1.set_type((CounterType)info.config.types.type1);
 	}
 	else
 	{
 		// Конфигурации нет или повреждена
 		info.config.resets = 0;
 		info.config.setup_started_counter = 0;
-		info.config.types.type0 = counter0.type;
-		info.config.types.type1 = counter1.type;
+		info.config.wakeup_period = WAKEUP_PERIOD_DEFAULT;
+		info.config.ch[0].type = counter0.type;
+		info.config.ch[1].type = counter1.type;
 	}
 	saveConfig();
 
@@ -258,8 +262,6 @@ void setup()
 	{
 		storage.get(info.data);
 	}
-
-	wakeup_period = WAKEUP_PERIOD_DEFAULT;
 
 	LOG_BEGIN(9600);
 	LOG(F("==== START ===="));
@@ -307,15 +309,21 @@ void loop()
 	GIMSK = _BV(PCIE);			// Включаем прерывания по фронту счетчиков и кнопки
 	PCMSK = _BV(PCINT2);
 
-	counter0.set_type((CounterType)info.config.types.type0);
-	counter1.set_type((CounterType)info.config.types.type1);
+	// Применяем конфигурацию
+	wakeup_period = ONE_MINUTE * info.config.wakeup_period;
+	counter0.set_type((CounterType)info.config.ch[0].type);
+	counter0.min_interval_time = info.config.ch[0].min_interval;
+	counter0.max_control_volume = info.config.ch[0].max_volume;
+	counter1.set_type((CounterType)info.config.ch[1].type);
+	counter1.min_interval_time = info.config.ch[1].min_interval;
+	counter1.max_control_volume = info.config.ch[1].max_volume;
 
 	wdt_count = 0;
-	while ((wdt_count < wakeup_period) && !button.pressed(event))
+	while ((wdt_count < wakeup_period) && !button.pressed(event) && !(counter0.new_alarm || counter1.new_alarm))
 	{
 		noInterrupts();
 		CounterEvent ev = event;
-		event = CounterEvent::NONE;
+		event = CounterEvent::NONE;	
 		interrupts();
 
 		counting(ev);
@@ -327,6 +335,13 @@ void loop()
 		}
 	}
 
+	// Обновляем состояние
+	info.state[0].adc = counter0.adc;
+	info.state[0].alarm = (uint8_t)counter0.alarm;
+	info.state[0].state = counter0.state;
+	info.state[1].adc = counter1.adc;
+	info.state[1].alarm = (uint8_t)counter1.alarm;
+	info.state[1].state = counter1.state;
 	storage.add(info.data);
 	power_all_enable();
 
@@ -338,6 +353,11 @@ void loop()
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит
 	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания
+	uint8_t delay_loop_count = 0;		
+	while (!button.released())
+	{
+		counting_1ms(delay_loop_count);
+	}
 
 	unsigned long wake_up_limit;
 	if (button.press == ButtonPressType::LONG)
@@ -356,9 +376,14 @@ void loop()
 			LOG(F("Manual transmit wake up"));
 			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
 		}
+		else if (counter0.new_alarm || counter1.new_alarm)
+		{
+			LOG(F("Alarm transmit wake up"));
+			slaveI2C.begin(ALARM_MODE);
+		}
 		else
 		{
-			LOG(F("wake up for transmitting"));
+			LOG(F("Wake up for transmitting"));
 			slaveI2C.begin(TRANSMIT_MODE);
 		}
 		wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
@@ -367,10 +392,14 @@ void loop()
 	// Нажатие кнопки обработали и удаляем
 	button.press = ButtonPressType::NONE;
 
+	// События после передачи уже не новые
+	counter0.new_alarm = false;
+	counter1.new_alarm = false;
+
 	esp.power(true);
 	LOG(F("ESP turn on"));
 
-	uint8_t delay_loop_count = 0;		
+	delay_loop_count = 0;		
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit))
 	{
 		counting_1ms(delay_loop_count);
