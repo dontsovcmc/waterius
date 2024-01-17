@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <avr/wdt.h>
-#include <counter.h>
+#include "counter.h"
 
 enum class ButtonPressType
 {
