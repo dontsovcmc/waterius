@@ -21,20 +21,19 @@ void save_param(AsyncWebParameter *p, float &v, JsonObject &errorsObj);
 void save_ip_param(AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj);
 
 bool find_wizard_param(AsyncWebServerRequest *request);
+void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, const uint8_t input);
 void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj);
 
-void post_api_setup_connect(AsyncWebServerRequest *request);
-void get_api_call_connect(AsyncWebServerRequest *request);
+void post_api_save_connect(AsyncWebServerRequest *request);
+void get_api_start_connect(AsyncWebServerRequest *request);
 void get_api_connect_status(AsyncWebServerRequest *request);
-void post_api_set_counter_name_0(AsyncWebServerRequest *request);
-void post_api_set_counter_name_1(AsyncWebServerRequest *request);
-void post_api_set_counter_name(AsyncWebServerRequest *request, const uint8_t index);
+void post_api_save_input_type(AsyncWebServerRequest *request);
 void get_api_networks(AsyncWebServerRequest *request);
 void get_api_main_status(AsyncWebServerRequest *request);
 void get_api_status_0(AsyncWebServerRequest *request);
 void get_api_status_1(AsyncWebServerRequest *request);
 void get_api_status(AsyncWebServerRequest *request, const int index);
-void post_api_setup(AsyncWebServerRequest *request);
+void post_api_save(AsyncWebServerRequest *request);
 void get_api_turnoff(AsyncWebServerRequest *request);
 void post_api_reset(AsyncWebServerRequest *request);
 

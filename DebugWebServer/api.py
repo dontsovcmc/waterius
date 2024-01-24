@@ -2,13 +2,12 @@
 from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
-from esp import settings, attiny_data, attiny_link_error, \
-    AUTO_IMPULSE_FACTOR, AS_COLD_CHANNEL, CounterName
-from api_debug import runtime_data
-from models import SettingsModel, ConnectModel
-import time
+from esp import (settings, AUTO_IMPULSE_FACTOR, AS_COLD_CHANNEL,
+                 CounterName, input1_settings, input0_settings)
+from api_debug import input1_runtime, input0_runtime
+from models import SettingsModel, ConnectModel, InputModel
 from log import log
-from esp import system_info
+from esp import system_info, attiny_link_error
 
 api_app = FastAPI(title="api application")
 
@@ -34,8 +33,8 @@ async def networks():
     return JSONResponse(content=json_networks)
 
 
-@api_app.post("/setup_connect")
-async def setup_connect(form_data: ConnectModel = Depends(), wizard: bool | None = False):
+@api_app.post("/save_connect")
+async def save_connect(form_data: ConnectModel = Depends(), wizard: bool | None = False):
     """
     Инициирует подключение ESP к Wi-Fi роутеру.
     Успешное подключение: /setup_cold_welcome.html
@@ -53,27 +52,27 @@ async def setup_connect(form_data: ConnectModel = Depends(), wizard: bool | None
         # При подключении к Роутеру на другой частоте связь с точкой доступа оборвется
         if wizard:
             res.update({
-                "redirect": "/api/call_connect?wizard=true&error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново."
+                "redirect": "/api/start_connect?wizard=true&error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново."
             })
         else:
             res.update({
-                "redirect": "/api/call_connect?error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново."
+                "redirect": "/api/start_connect?error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново."
             })
     else:
         if wizard:
             res.update({
-                "redirect": "/api/call_connect?wizard=true"
+                "redirect": "/api/start_connect?wizard=true"
             })
         else:
             res.update({
-                "redirect": "/api/call_connect"
+                "redirect": "/api/start_connect"
             })
 
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
 
 
-@api_app.get("/call_connect")
+@api_app.get("/start_connect")
 async def call_connect(wizard: bool | None = False):
     global connect_flag
     connect_flag = True
@@ -92,15 +91,15 @@ async def main_status():
     res = [{
         "error": "Счетчик холодной воды перестал передавать показания",
         "link_text": "Настроить заново",
-        "link": "/setup_blue_type.html"
+        "link": "/input/1/setup.html"
     }, {
         "error": "Подключите заново провода холодного счётчика к Ватериусу",
         "link_text": "Приступить к настройке",
-        "link": "/setup_blue_type.html"
+        "link": "/input/1/setup.html"
     }, {
         "error": "Расход холодной воды больше горячей в 30 раз",
         "link_text": "Настроить множитель",
-        "link": "/setup_blue.html"
+        "link": "/input/0/settings.html"
     }]
 
     res = []
@@ -129,7 +128,7 @@ async def connect_status():
     log.info("WIFI: wifi_connect_status=" + system_info.wifi_connect_status)
 
     if not system_info.wifi_connect_status:  # == WL_CONNECTED
-        res = {"redirect": "/setup_blue_type.html"}
+        res = {"redirect": "/input/1/setup.html"}
     else:
         res = {"redirect": "/wifi_settings.html"}
 
@@ -164,32 +163,32 @@ async def status(input: int):
 
     if input == 0:  # ГВС
 
-        if settings.factor0 == AS_COLD_CHANNEL:
-            if settings.factor1 == AUTO_IMPULSE_FACTOR:
-                factor = 1 if runtime_data.impulses1 - attiny_data.impulses1 > 2 else 10
+        if input0_runtime.factor == AS_COLD_CHANNEL:
+            if input1_runtime.factor == AUTO_IMPULSE_FACTOR:
+                factor = 1 if input1_runtime.impulses - input1_settings.impulses > 2 else 10
             else:
-                factor = settings.factor1  # как у холодной
+                factor = input1_runtime.factor  # как у холодной
         else:
-            factor = settings.factor0
+            factor = input0_runtime.factor
 
         status = {
-            "state": int(runtime_data.impulses0 > attiny_data.impulses0),
+            "state": int(input0_runtime.impulses > input0_settings.impulses),
             "factor": factor,
-            "impulses": runtime_data.impulses0 - attiny_data.impulses0,
+            "impulses": input0_runtime.impulses - input0_settings.impulses,
             "error": error_str
         }
     elif input == 1:  # ХВС
 
-        if settings.factor1 == AUTO_IMPULSE_FACTOR:
+        if input1_runtime.factor == AUTO_IMPULSE_FACTOR:
             # если первичная настройка, то множитель определяем по слитой воде
-            factor = 1 if runtime_data.impulses1 - attiny_data.impulses1 > 2 else 10
+            factor = 1 if input1_runtime.impulses - input1_settings.impulses > 2 else 10
         else:
-            factor = settings.factor1
+            factor = input1_runtime.factor
 
         status = {
-            "state": int(runtime_data.impulses1 > attiny_data.impulses1),
+            "state": int(input1_runtime.impulses > input1_settings.impulses),
             "factor": factor,
-            "impulses": runtime_data.impulses1 - attiny_data.impulses1,
+            "impulses": input1_runtime.impulses - input1_settings.impulses,
             "error": error_str
         }
     else:
@@ -199,10 +198,15 @@ async def status(input: int):
     return JSONResponse(content=json_status)
 
 
-@api_app.post("/setup")
-async def setup(form_data: SettingsModel = Depends()):
-    res = {k: v for k, v in form_data.__dict__.items() if v is not None}
-    res = settings.apply_settings(res)
+@api_app.post("/save")
+async def save(form_data: SettingsModel = Depends()):
+    data = {k: v for k, v in form_data.__dict__.items() if v is not None}
+    res = settings.apply_settings(data)
+    input = data.get('input', None)
+    if input == 0:
+        res.update(input0_settings.apply_settings(data))
+    if input == 1:
+        res.update(input1_settings.apply_settings(data))
 
     # res["errors"]["form"] = "Ошибка формы сообщение"
     # res["errors"]["serial1"] = "Введите серийный номер"
@@ -213,31 +217,33 @@ async def setup(form_data: SettingsModel = Depends()):
     return JSONResponse(content=json)
 
 
-@api_app.post("/set_counter_name/{input}")
-async def set_counter_name(input: int, form_data: SettingsModel = Depends()):
+@api_app.post("/save_input_type")
+async def save_input_type(form_data: InputModel = Depends()):
     """
     Сохранить тип счетчика.
     Исходя из типа переходим на страницу детектирования счетчика или сразу настройки
     :param form_data:
     :return:
     """
-    res = {k: v for k, v in form_data.__dict__.items() if v is not None}
-    res = settings.apply_settings(res)
+    data = {k: v for k, v in form_data.__dict__.items() if v is not None}
+    input = data.get('input', None)
 
     if input == 0:
-        if CounterName(settings.counter0_name) in [CounterName.WATER_COLD,
+        res = input0_settings.apply_settings(data)
+        if CounterName(input0_settings.counter_name) in [CounterName.WATER_COLD,
                                                    CounterName.WATER_HOT,
                                                    CounterName.PORTABLE_WATER]:
-            res["redirect"] = "/setup_red_water.html"
+            res["redirect"] = "/input/0/detect.html"
         else:
-            res["redirect"] = "/setup_red.html"
+            res["redirect"] = "/input/0/settings.html"
     else:
-        if CounterName(settings.counter1_name) in [CounterName.WATER_COLD,
+        res = input1_settings.apply_settings(data)
+        if CounterName(input1_settings.counter_name) in [CounterName.WATER_COLD,
                                                    CounterName.WATER_HOT,
                                                    CounterName.PORTABLE_WATER]:
-            res["redirect"] = "/setup_blue_water.html"
+            res["redirect"] = "/input/1/detect.html"
         else:
-            res["redirect"] = "/setup_blue.html"
+            res["redirect"] = "/input/1/settings.html"
 
     json = jsonable_encoder(res)
     return JSONResponse(content=json)

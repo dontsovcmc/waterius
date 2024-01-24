@@ -1,6 +1,15 @@
 const queryParams = {};
 let pages = {};
 
+function fill_input_color(index) {
+    var q = document.getElementById('input_color');
+    if (index == 0) {
+        q.innerHTML = 'Красный вход';
+    } else if (index == 1) {
+        q.innerHTML = 'Синий вход';
+    }
+}
+
 function _init(_pages) {
     // Должна выполняться при загрузке каждой страницы
     
@@ -147,7 +156,7 @@ function formSubmit(event, form, action) {
         data.append(inp.name, inp.value.trim());
     });
     
-    ajax('/api/' + action, {
+    ajax(action, {
         method: 'POST',
         headers: {
             "Content-Type": "application/x-www-form-urlencoded"
@@ -312,7 +321,7 @@ function getStatus(i, next) {
     setTimeout(() => {
         ajax('/api/status/' + i, {}, data => {
             if(data.state == 1)
-                return window.location = (queryParams.wizard ? next + '?wizard=true' + '&' : next + '?') + 'factor' + i + '=' + data.factor + '&delta' + i + '=' + data.impulses * data.factor;
+                return window.location = (queryParams.wizard ? next + '?wizard=true' + '&' : next + '?') + 'factor' + '=' + data.factor + '&delta' + '=' + data.impulses * data.factor;
             formError(data.error);
             getStatus(i, next);
         }, false);
@@ -321,7 +330,7 @@ function getStatus(i, next) {
 function getImpulses(i) {
     setTimeout(() => {
         ajax('/api/status/' + i, {}, data => {
-            document.getElementById('delta' + i).textContent = data.impulses * parseInt(document.getElementById('factor' + i).value);
+            document.getElementById('delta').textContent = data.impulses * parseInt(document.getElementById('factor').value);
             formError(data.error);
             getImpulses(i);
         }, false);

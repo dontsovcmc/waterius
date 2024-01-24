@@ -40,7 +40,7 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
                     LOG_INFO(F("MQTT: CALLBACK: Old Settings.wakeup_per_min: ") << sett.wakeup_per_min);
                     sett.wakeup_per_min = period_min;
                     // если есть ключ то время уже получено и json уже сформирован, можно отправлять
-                    if (json_data.containsKey("period_min"))
+                    if (json_data.containsKey("period_min"))   //todo добавить F("")
                     {
                         json_data[F("period_min")] = period_min;
                         updated = true;

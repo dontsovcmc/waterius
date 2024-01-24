@@ -9,11 +9,11 @@
     </head>
     <body onload="_init({
         back: '/index.html',
-        back_wizard: '/setup_red.html?wizard=true',
+        back_wizard: '/input/0/settings.html?wizard=true',
         next: '/index.html',
         next_wizard: '/finish.html'
     })">
-        <form onsubmit="formSubmit(event, this, 'setup');">
+        <form onsubmit="formSubmit(event, this, '/api/setup');">
             <div class="wrap">
                 <div class="container f1">
                     <header>
@@ -53,7 +53,7 @@
                         </div>
 
                         <div class="toggle">
-                            <input type="checkbox" name="blynk_on" id="blynk_on" onclick="checkboxToggle(this)" data-form=".blynk-form" %http_on%>
+                            <input type="checkbox" name="blynk_on" id="blynk_on" onclick="checkboxToggle(this)" data-form=".blynk-form" %blynk_on%>
                             <label for="blynk_on">Blynk</label>
                         </div>
                         <div class="hd blynk-form">

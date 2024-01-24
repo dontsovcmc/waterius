@@ -1,10 +1,14 @@
 import uvicorn
 import os
+from enum import Enum
 from typing import List, Any
 from fastapi.responses import HTMLResponse, FileResponse, PlainTextResponse
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from esp import settings, settings_vars, system_info, system_info_vars
+from esp import (settings, settings_vars,
+                 system_info, system_info_vars,
+                 input0_settings, input0_settings_vars,
+                 input1_settings, input1_settings_vars)
 from api import api_app
 from api_debug import debug_app
 from log import log
@@ -32,17 +36,23 @@ def replace_variables(text: str, keywords: List[str], obj: Any):
                     text = text.replace(f'%{name}%', 'value="1" checked')
                 else:
                     text = text.replace(f'%{name}%', '')
+            elif isinstance(v, Enum):
+                text = text.replace(f'%{name}%', str(v.value))
             else:
                 text = text.replace(f'%{name}%', str(v))
     return text
 
 
-def template_response(filename: str):
+def template_response(filename: str, input: int | None = None):
     try:
         with open(os.path.join(ROOT_PATH, filename), "r") as file:
             html_content = file.read()
 
             html_content = replace_variables(html_content, settings_vars, settings)
+            if input == 0:
+                html_content = replace_variables(html_content, input0_settings_vars, input0_settings)
+            if input == 1:
+                html_content = replace_variables(html_content, input1_settings_vars, input1_settings)
             html_content = replace_variables(html_content, system_info_vars, system_info)
 
         return HTMLResponse(content=html_content)
@@ -119,34 +129,32 @@ async def reset():
     return template_response("reset.html")
 
 
-@app.get("/setup_blue_type.html")
+@app.get("/input/0/setup.html")
 async def setup_blue_type():
-    return template_response("setup_blue_type.html")
+    return template_response("input_setup.html", 0)
 
-
-@app.get("/setup_blue_water.html")
-async def setup_blue_water():
-    return template_response("setup_blue_water.html")
-
-
-@app.get("/setup_blue.html")
-async def setup_blue():
-    return template_response("setup_blue.html")
-
-
-@app.get("/setup_red_type.html")
+@app.get("/input/1/setup.html")
 async def setup_red_type():
-    return template_response("setup_red_type.html")
+    return template_response("input_setup.html", 1)
 
 
-@app.get("/setup_red_water.html")
+@app.get("/input/0/detect.html")
+async def setup_blue_water():
+    return template_response("input_detect.html", 0)
+
+@app.get("/input/1/detect.html")
 async def setup_red_water():
-    return template_response("setup_red_water.html")
+    return template_response("input_detect.html", 1)
 
 
-@app.get("/setup_red.html")
-async def setup_red():
-    return template_response("setup_red.html")
+@app.get("/input/0/settings.html")
+async def setup_blue():
+    return template_response("input_settings.html", 0)
+
+
+@app.get("/input/1/settings.html")
+async def setup_red(factor: int | None = None, delta: int | None = None):
+    return template_response("input_settings.html", 1)
 
 
 @app.get("/ssid.txt")

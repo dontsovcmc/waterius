@@ -16,4 +16,6 @@ class CalculatedData;
 
 void start_active_point(Settings &sett, CalculatedData &cdata);
 
+String processor_main(const String &var, const uint8_t input = 0xFF);
+
 #endif

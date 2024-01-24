@@ -55,7 +55,7 @@ void get_api_connect_status(AsyncWebServerRequest *request)
 
         if (wifi_connect_status == WL_CONNECTED)
         {
-            ret[F("redirect")] = F("/setup_blue_type.html");
+            ret[F("redirect")] = F("/input/1/setup.html");
         }
         else
         {
@@ -112,7 +112,7 @@ void get_api_networks(AsyncWebServerRequest *request)
  *
  * @param request запрос
  */
-void post_api_setup_connect(AsyncWebServerRequest *request)
+void post_api_save_connect(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
 
@@ -154,11 +154,11 @@ void post_api_setup_connect(AsyncWebServerRequest *request)
 
         if (params.length())
         {
-            ret[F("redirect")] = F("/api/call_connect?") + params;
+            ret[F("redirect")] = F("/api/start_connect?") + params;
         }
         else 
         {
-            ret[F("redirect")] = F("/api/call_connect");
+            ret[F("redirect")] = F("/api/start_connect");
         }
     }
     
@@ -172,7 +172,7 @@ void post_api_setup_connect(AsyncWebServerRequest *request)
  *
  * @param request запрос
  */
-void get_api_call_connect(AsyncWebServerRequest *request)
+void get_api_start_connect(AsyncWebServerRequest *request)
 {
     start_connect_flag = true;
     wifi_connect_status = WL_DISCONNECTED;
@@ -220,7 +220,7 @@ void get_api_main_status(AsyncWebServerRequest *request)
                 JsonObject obj = array.createNestedObject();
                 obj["error"] = F("Ватериус успешно подключился к Wi-Fi. Теперь настроим счётчики.");
                 obj["link_text"] = F("Настроить");
-                obj["link"] = F("/setup_blue_type.html");
+                obj["link"] = F("/input/1/setup.html");
             }
             else 
             {
@@ -326,7 +326,7 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
  *      Если есть ошибки:
  *      {...form_data...
  *          "errors": {
- *              "serial1": "ошибка"
+ *              "serial": "ошибка"
  *          }
  *      }
  */
@@ -437,6 +437,121 @@ bool find_wizard_param(AsyncWebServerRequest *request)
     return false;
 }
 
+uint8_t get_param_uint8(AsyncWebServerRequest *request, const String &name)
+{
+    for (size_t i = 0; i < request->params(); i++)
+    {
+        AsyncWebParameter *p = request->getParam(i);
+        if (p->name() == name)
+        {
+            return p->value().toInt();
+        }
+    }
+    return 0xFF;
+}
+
+void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, const uint8_t input)
+{
+    const int params = request->params();
+
+    LOG_INFO(F("Apply ") << params << " parameters");
+
+    for (int i = 0; i < params; i++)
+    {
+        AsyncWebParameter *p = request->getParam(i);
+        const String &name = p->name();
+        
+        if (name == FPSTR(PARAM_CHANNEL_START))
+        {
+            switch (input) 
+            {
+                case 0: 
+                    save_param(p, sett.channel0_start, errorsObj);
+                    sett.impulses0_start = runtime_data.impulses0;
+                    sett.impulses0_previous = sett.impulses0_start;
+                    LOG_INFO("impulses0_start=" << sett.impulses0_start);
+                    break;
+                case 1:
+                    save_param(p, sett.channel1_start, errorsObj);
+                    sett.impulses1_start = runtime_data.impulses1;
+                    sett.impulses1_previous = sett.impulses1_start;
+                    LOG_INFO("impulses1_start=" << sett.impulses1_start);
+                    break;
+            }
+        }
+        else if (name == FPSTR(PARAM_SERIAL))
+        {
+            switch (input)
+            {
+                case 0: 
+                    save_param(p, sett.serial0, SERIAL_LEN, errorsObj, false);
+                    break;
+                case 1: 
+                    save_param(p, sett.serial1, SERIAL_LEN, errorsObj, false);
+                    break;
+            }
+        }
+        else if (name == FPSTR(PARAM_COUNTER_NAME))
+        {   
+            switch(input) 
+            {
+                case 0: 
+                    save_param(p, sett.counter0_name, errorsObj, true);
+                    break;
+                case 1:
+                    save_param(p, sett.counter1_name, errorsObj, true);
+                    break;
+            }
+            
+        }
+        else if (name == FPSTR(PARAM_COUNTER_TYPE))
+        {   
+            switch (input) 
+            {
+                case 0:
+                    if (!masterI2C.setCountersType(p->value().toInt(), runtime_data.counter_type1))
+                    {
+                        LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
+                        errorsObj[p->name()] = FPSTR(ERROR_ATTINY_ERROR);
+                    }
+                    else
+                    {
+                        runtime_data.counter_type0 = p->value().toInt();
+                        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
+                    }
+                    break;
+                case 1:
+                    if (!masterI2C.setCountersType(runtime_data.counter_type0, p->value().toInt()))
+                    {
+                        LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
+                        errorsObj[p->name()] = FPSTR(ERROR_ATTINY_ERROR);
+                    }
+                    else
+                    {
+                        runtime_data.counter_type1 = p->value().toInt();
+                        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
+                    }
+                    break;
+            }
+            
+        }
+        else if (name == FPSTR(PARAM_FACTOR))
+        {
+            switch (input) 
+            {
+                case 0: 
+                    save_param(p, sett.factor0, errorsObj);
+                    break;
+                case 1:
+                    save_param(p, sett.factor1, errorsObj);
+                    break;
+            }
+        }
+    }
+
+    store_config(sett);
+}
+
 void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
 {
     const int params = request->params();
@@ -491,8 +606,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
                 save_param(p, sett.waterius_email, EMAIL_LEN, errorsObj);
             }
         }
-
-        if (sett.blynk_on)
+        else if (sett.blynk_on)
         {
             if (name == FPSTR(PARAM_BLYNK_KEY))
             {
@@ -503,16 +617,14 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
                 save_param(p, sett.blynk_host, HOST_LEN, errorsObj);
             }
         }
-
-        if (sett.http_on)
+        else if (sett.http_on)
         {
             if (name == FPSTR(PARAM_HTTP_URL))
             {
                 save_param(p, sett.http_url, HOST_LEN, errorsObj);
             }
         }
-
-        if (sett.mqtt_on)
+        else if (sett.mqtt_on)
         {
             if (name == FPSTR(PARAM_MQTT_HOST))
             {
@@ -543,8 +655,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
                 }
             }
         }
-
-        if (sett.dhcp_off)
+        else if (sett.dhcp_off)
         {
             if (name == FPSTR(PARAM_IP))
             {
@@ -558,30 +669,6 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
             {
                 save_ip_param(p, sett.mask, errorsObj);
             }
-        }
-
-        if (name == FPSTR(PARAM_CHANNEL0_START))
-        {
-            save_param(p, sett.channel0_start, errorsObj);
-            sett.impulses0_start = runtime_data.impulses0;
-            sett.impulses0_previous = sett.impulses0_start;
-            LOG_INFO("impulses0_start=" << sett.impulses0_start);
-        }
-        else if (name == FPSTR(PARAM_CHANNEL1_START))
-        {
-            save_param(p, sett.channel1_start, errorsObj);
-            sett.impulses1_start = runtime_data.impulses1;
-            sett.impulses1_previous = sett.impulses1_start;
-            LOG_INFO("impulses1_start=" << sett.impulses1_start);
-        }
-
-        else if (name == FPSTR(PARAM_SERIAL0))
-        {
-            save_param(p, sett.serial0, SERIAL_LEN, errorsObj, false);
-        }
-        else if (name == FPSTR(PARAM_SERIAL1))
-        {
-            save_param(p, sett.serial1, SERIAL_LEN, errorsObj, false);
         }
         else if (name == FPSTR(PARAM_WAKEUP_PER_MIN))
         {
@@ -607,56 +694,12 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
         {
             save_param(p, sett.wifi_phy_mode, errorsObj, true);
         }
-
-        else if (name == FPSTR(PARAM_COUNTER0_NAME))
-        {
-            save_param(p, sett.counter0_name, errorsObj, true);
-        }
-        else if (name == FPSTR(PARAM_COUNTER1_NAME))
-        {
-            save_param(p, sett.counter1_name, errorsObj, true);
-        }
-
-        else if (name == FPSTR(PARAM_COUNTER0_TYPE))
-        {
-            if (!masterI2C.setCountersType(p->value().toInt(), runtime_data.counter_type1))
-            {
-                LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
-                errorsObj[p->name()] = FPSTR(ERROR_ATTINY_ERROR);
-            }
-            else
-            {
-                runtime_data.counter_type0 = p->value().toInt();
-                LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
-            }
-        }
-        else if (name == FPSTR(PARAM_COUNTER1_TYPE))
-        {
-            if (!masterI2C.setCountersType(runtime_data.counter_type0, p->value().toInt()))
-            {
-                LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
-                errorsObj[p->name()] = FPSTR(ERROR_ATTINY_ERROR);
-            }
-            else
-            {
-                runtime_data.counter_type1 = p->value().toInt();
-                LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
-            }
-        }
-        else if (name == FPSTR(PARAM_FACTOR0))
-        {
-            save_param(p, sett.factor0, errorsObj);
-        }
-        else if (name == FPSTR(PARAM_FACTOR1))
-        {
-            save_param(p, sett.factor1, errorsObj);
-        }
     }
 
     store_config(sett);
 }
 
-void post_api_setup(AsyncWebServerRequest *request)
+void post_api_save(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
     DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
@@ -664,55 +707,50 @@ void post_api_setup(AsyncWebServerRequest *request)
     JsonObject errorsObj = ret.createNestedObject("errors");
 
     applySettings(request, errorsObj);
+
+    uint8_t input = get_param_uint8(request, FPSTR(PARAM_INPUT));
+    applyInputSettings(request, errorsObj, input);
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     serializeJson(json_doc, *response);
     request->send(response);
 }
 
-void post_api_set_counter_name_0(AsyncWebServerRequest *request)
-{
-    post_api_set_counter_name(request, 0);
-}
-
-void post_api_set_counter_name_1(AsyncWebServerRequest *request)
-{
-    post_api_set_counter_name(request, 1);
-}
-
-void post_api_set_counter_name(AsyncWebServerRequest *request, const uint8_t index)
+void post_api_save_input_type(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
     DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
     JsonObject errorsObj = ret.createNestedObject("errors");
 
-    applySettings(request, errorsObj);
+    uint8_t input = get_param_uint8(request, FPSTR(PARAM_INPUT));
+    //applySettings(request, errorsObj); ? нужно ли тут
+    applyInputSettings(request, errorsObj, input);
 
-    if (index == 0)
+    if (input == 0)
     {   
         switch (sett.counter0_name)
         {
             case CounterName::WATER_COLD:
             case CounterName::WATER_HOT:
             case CounterName::PORTABLE_WATER:
-                ret[F("redirect")] = F("/setup_red_water.html");
+                ret[F("redirect")] = F("/input/0/detect.html");
                 break;
             default:
-                ret[F("redirect")] = F("/setup_red.html");
+                ret[F("redirect")] = F("/input/0/settings.html");
         }
     } 
-    else 
+    else if (input == 1)
     {
         switch (sett.counter1_name)
         {
             case CounterName::WATER_COLD:
             case CounterName::WATER_HOT:
             case CounterName::PORTABLE_WATER:
-                ret[F("redirect")] = F("/setup_blue_water.html");
+                ret[F("redirect")] = F("/input/1/detect.html");
                 break;
             default:
-                ret[F("redirect")] = F("/setup_blue.html");
+                ret[F("redirect")] = F("/input/1/settings.html");
         }
     }
 

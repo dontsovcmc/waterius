@@ -1,10 +1,12 @@
 
 from fastapi import FastAPI
-from esp import AttinyData, attiny_link_error
+from esp import attiny_link_error, input0_settings, input1_settings
+from copy import deepcopy
 
 debug_app = FastAPI(title="debug application")
 
-runtime_data = AttinyData()
+input0_runtime = deepcopy(input0_settings)
+input1_runtime = deepcopy(input1_settings)
 
 
 @debug_app.get("/input0")
@@ -12,8 +14,8 @@ async def input0():
     """
     ДЛЯ ТЕСТА: Замкнуть Вход 0 (Горячий счетчик)
     """
-    runtime_data.impulses0 += 1
-    return str(runtime_data.impulses0)
+    input0_runtime.impulses += 1
+    return str(input0_runtime.impulses)
 
 
 @debug_app.get("/input1")
@@ -21,8 +23,8 @@ async def input1():
     """
     ДЛЯ ТЕСТА: Замкнуть Вход 1 (Холодный счетчик)
     """
-    runtime_data.impulses1 += 1
-    return str(runtime_data.impulses1)
+    input1_runtime.impulses += 1
+    return str(input1_runtime.impulses)
 
 
 @debug_app.post("/attiny_error")

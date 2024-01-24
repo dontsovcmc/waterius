@@ -16,6 +16,8 @@ class ConnectModel:
     wifi_channel: int | None = Form(None)
     wifi_phy_mode: int | None = Form(None)
 
+    wizard: bool | None = Form(None)
+
 @dataclass
 class SettingsModel:
     """
@@ -27,7 +29,7 @@ class SettingsModel:
     waterius_on: bool | None = Form(None)
     waterius_email: str | None = Form(None)
 
-    blink_on: bool | None = Form(None)
+    blynk_on: bool | None = Form(None)
     blynk_key: str | None = Form(None)
     blynk_host: str | None = Form(None)
 
@@ -43,13 +45,6 @@ class SettingsModel:
 
     wakeup_per_min: int | None = Form(None)
 
-    #
-    channel0_start: float | None = Form(None)
-    serial0: str | None = Form(None)
-
-    channel1_start: float | None = Form(None)
-    serial1: str | None = Form(None)
-
     mqtt_auto_discovery: int | None = Form(None)
     mqtt_discovery_topic: str | None = Form(None)
 
@@ -57,11 +52,20 @@ class SettingsModel:
 
     wifi_phy_mode: int | None = Form(None)
 
-    counter0_name: int | None = Form(None)
-    counter1_name: int | None = Form(None)
+    # for save
+    input: int | None = Form(None)  # input_setup.html
+    counter_name: int | None = Form(None)
+    factor: int | None = Form(None)
+    counter_type: int | None = Form(None)
+    channel_start: float | None = Form(None)
+    serial: str | None = Form(None)
 
-    factor0: int | None = Form(None)
-    factor1: int | None = Form(None)
 
-    counter0_type: int | None = Form(None)
-    counter1_type: int | None = Form(None)
+@dataclass
+class InputModel:
+    input: int | None = Form(None)  # input_setup.html
+    counter_name: int | None = Form(None)
+    factor: int | None = Form(None)
+    counter_type: int | None = Form(None)
+    channel_start: float | None = Form(None)
+    serial: str | None = Form(None)

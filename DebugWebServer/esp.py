@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import List
 from copy import deepcopy
 import ipaddress
 
@@ -15,6 +16,14 @@ class CounterName(Enum):
     HEAT = 4
     PORTABLE_WATER = 5
     OTHER = 6
+
+
+class CounterType(Enum):
+    NAMUR = 0
+    DISCRETE = 1
+    ELECTRONIC = 2
+    HALL = 3
+    NONE = 0xFF
 
 
 def check_ip_address(name, value):
@@ -68,16 +77,69 @@ def get_counter_instruction(name):
     return "При приходе импульса от счётчика устройство перенесёт вас на следующую страницу"
 
 
-class AttinyData:
-    impulses0: int = 0
-    impulses1: int = 0
-    counter_type0: int = 0
-    counter_type1: int = 0
-    model: int = 30
-
-
-attiny_data = AttinyData()
 attiny_link_error = False  # имитировать ошибку связи с МК
+
+
+def variables_dictionary(obj) -> List[str]:
+    return [attr for attr in dir(obj) if
+                 not callable(getattr(obj, attr)) and
+                 not attr.startswith("__")]
+
+
+class InputSettings:
+    input: int = 0  # служебный input_setup.html
+
+    channel_start: float = 0.0
+    serial: str = "000000"
+    impulses_start: int = 0
+    impulses: int = 0
+    factor: int = 0
+
+    # attiny
+    counter_type: int = 0
+
+    counter_name: int = 0   # преобразовать enum в int
+
+    @property
+    def counter_title(self):
+        return get_counter_title(self.counter_name)
+
+    @property
+    def counter_instruction(self):
+        return get_counter_instruction(self.counter_name)
+
+    @property
+    def counter_img(self):
+        return get_counter_img(self.counter_name)
+
+    def __init__(self, **kwargs):
+        self.apply_settings(dict(kwargs))
+
+    def apply_settings(self, form_data):
+        res = {}
+
+        for k, v in form_data.items():
+            if getattr(self, k) is not None:
+                setattr(self, k, v)
+
+        return res
+
+input0_settings = InputSettings(
+    input=0,
+    counter_name=CounterName.WATER_HOT,
+    factor=AS_COLD_CHANNEL,
+    counter_type=CounterType.DISCRETE
+)
+input0_settings_vars = variables_dictionary(input0_settings)
+
+
+input1_settings = InputSettings(
+    input=1,
+    counter_name=CounterName.WATER_COLD,
+    factor=AUTO_IMPULSE_FACTOR,
+    counter_type=CounterType.DISCRETE
+)
+input1_settings_vars = variables_dictionary(input1_settings)
 
 
 class Settings:
@@ -104,15 +166,6 @@ class Settings:
     mqtt_password: str | None = ""
     mqtt_topic: str | None = "waterius/2713320"
 
-    channel0_start: float | None = 0.0
-    channel1_start: float | None = 0.0
-
-    serial0: str | None = "00-hot"
-    serial1: str | None = "10-cold"
-
-    impulses0_start: int | None = 0
-    impulses1_start: int | None = 0
-
     dhcp_off: bool | None = False
     ip: str | None = "192.168.0.100"
     gateway: str | None = "192.168.0.1"
@@ -132,52 +185,15 @@ class Settings:
 
     wifi_phy_mode: int | None = 0
 
-    counter0_name: int | None = 1  # CounterName.WATER_HOT
-    counter1_name: int | None = 0  # CounterName.WATER_COLD
-
-    factor0: int | None = AS_COLD_CHANNEL
-    factor1: int | None = AUTO_IMPULSE_FACTOR
-
-
-    @property
-    def counter0_type(self):
-        return attiny_data.counter_type0
-
-    @counter0_type.setter
-    def counter0_type(self, value):
-        attiny_data.counter_type0 = value
-
-    @property
-    def counter1_type(self):
-        return attiny_data.counter_type1
-
-    @counter1_type.setter
-    def counter1_type(self, value):
-        attiny_data.counter_type1 = value
+    attiny_version: int = 0
 
     @property
     def counter0_title(self):
-        return get_counter_title(self.counter0_name)
+        return get_counter_title(input0_settings.counter_name)
 
     @property
     def counter1_title(self):
-        return get_counter_title(self.counter1_name)
-
-    @property
-    def counter0_instruction(self):
-        return get_counter_instruction(self.counter0_name)
-
-    @property
-    def counter1_instruction(self):
-        return get_counter_instruction(self.counter1_name)
-
-    @property
-    def counter1_img(self):
-        return get_counter_img(self.counter1_name)
-
-    @property
-    def counter0_img(self):
-        return get_counter_img(self.counter0_name)
+        return get_counter_title(input1_settings.counter_name)
 
     def apply_settings(self, form_data):
         """
@@ -207,7 +223,7 @@ class Settings:
 
         # Сначала bool применим
         for k, v in form_data.items():
-            if isinstance(getattr(self, k), bool):
+            if hasattr(self, k) and isinstance(getattr(self, k), bool):
                 setattr(self, k, v)
 
         for k, v in form_data.items():
@@ -245,7 +261,8 @@ class Settings:
                 if err:
                     res.update(err)
                 else:
-                    setattr(self, k, v)
+                    if hasattr(self, k):
+                        setattr(self, k, v)
 
         return res
 
@@ -273,12 +290,10 @@ class SystemInfo:
         return ''
 
 
+
 settings = Settings()
-settings_vars = [attr for attr in dir(settings) if
-                 not callable(getattr(settings, attr)) and
-                 not attr.startswith("__")]
+settings_vars = variables_dictionary(settings)
+
 
 system_info = SystemInfo()
-system_info_vars = [attr for attr in dir(system_info) if
-                    not callable(getattr(system_info, attr)) and
-                    not attr.startswith("__")]
+system_info_vars = variables_dictionary(system_info)
