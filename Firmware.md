@@ -165,8 +165,10 @@ platformio run --target upload
 - откройте в командной строке папку waterius/ESP8266
 - измените в файле platfomio.ini порт на свой:
 upload_port = /dev/tty.usbmodem1411
-- выполните:
-platformio run --target upload
+- прошейте сначала файл прошивки:
+platformio run --target upload --environment esp01_1m
+- затем прошейте файловую систему:
+platformio run --target uploadfs --environment esp01_1m
 
 
 ## Прошивка с помощью Arduino IDE
