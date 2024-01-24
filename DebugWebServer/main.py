@@ -130,31 +130,50 @@ async def reset():
 
 
 @app.get("/input/0/setup.html")
-async def setup_blue_type():
+async def input_0_setup():
     return template_response("input_setup.html", 0)
 
 @app.get("/input/1/setup.html")
-async def setup_red_type():
+async def input_1_setup():
     return template_response("input_setup.html", 1)
 
 
 @app.get("/input/0/detect.html")
-async def setup_blue_water():
+async def input_0_detect():
     return template_response("input_detect.html", 0)
 
 @app.get("/input/1/detect.html")
-async def setup_red_water():
+async def input_1_detect():
     return template_response("input_detect.html", 1)
 
 
+@app.get("/input/0/hall_detect.html")
+async def input_0_hall_detect():
+    return template_response("input_hall_detect.html", 0)
+
+@app.get("/input/1/hall_detect.html")
+async def input_1_hall_detect():
+    return template_response("input_hall_detect.html", 1)
+
+
 @app.get("/input/0/settings.html")
-async def setup_blue():
+async def input_0_settings():
     return template_response("input_settings.html", 0)
 
 
 @app.get("/input/1/settings.html")
-async def setup_red(factor: int | None = None, delta: int | None = None):
+async def input_1_settings(factor: int | None = None, delta: int | None = None):
     return template_response("input_settings.html", 1)
+
+
+@app.get("/input/0/hall_settings.html")
+async def input_0_hall_settings():
+    return template_response("input_hall_settings.html", 0)
+
+
+@app.get("/input/1/hall_settings.html")
+async def input_1_hall_settings(factor: int | None = None, delta: int | None = None):
+    return template_response("input_hall_settings.html", 1)
 
 
 @app.get("/ssid.txt")

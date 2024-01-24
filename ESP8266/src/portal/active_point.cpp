@@ -523,10 +523,15 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
                { request->send(LittleFS, "/input_detect.html", F("text/html"), false, processor1); });
 
     // Параметры счётчика
-    server->on("/input/0/settings.html.html", HTTP_GET, [](AsyncWebServerRequest *request)
+    server->on("/input/0/settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/input_settings.html", F("text/html"), false, processor0); });
-    server->on("/input/1/settings.html.html", HTTP_GET, [](AsyncWebServerRequest *request)
+    server->on("/input/1/settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/input_settings.html", F("text/html"), false, processor1); });
+               
+    server->on("/input/0/hall_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/input_hall_settings.html", F("text/html"), false, processor0); });
+    server->on("/input/1/hall_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/input_hall_settings.html", F("text/html"), false, processor1); });
 
     // Отправка показаний
     server->on("/setup_send.html", HTTP_GET, [](AsyncWebServerRequest *request)

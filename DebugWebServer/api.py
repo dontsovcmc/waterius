@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
 from esp import (settings, AUTO_IMPULSE_FACTOR, AS_COLD_CHANNEL,
-                 CounterName, input1_settings, input0_settings)
+                 CounterName, CounterType, input1_settings, input0_settings)
 from api_debug import input1_runtime, input0_runtime
 from models import SettingsModel, ConnectModel, InputModel
 from log import log
@@ -226,24 +226,30 @@ async def save_input_type(form_data: InputModel = Depends()):
     :return:
     """
     data = {k: v for k, v in form_data.__dict__.items() if v is not None}
-    input = data.get('input', None)
+    input = data.get("input", None)
 
     if input == 0:
         res = input0_settings.apply_settings(data)
-        if CounterName(input0_settings.counter_name) in [CounterName.WATER_COLD,
-                                                   CounterName.WATER_HOT,
-                                                   CounterName.PORTABLE_WATER]:
-            res["redirect"] = "/input/0/detect.html"
+        if CounterType(input0_settings.counter_type) in [CounterType.HALL,]:
+            res["redirect"] = "/input/0/hall_detect.html"
         else:
-            res["redirect"] = "/input/0/settings.html"
+            if CounterName(input0_settings.counter_name) in [CounterName.WATER_COLD,
+                                                       CounterName.WATER_HOT,
+                                                       CounterName.PORTABLE_WATER]:
+                res["redirect"] = "/input/0/detect.html"
+            else:
+                res["redirect"] = "/input/0/settings.html"
     else:
         res = input1_settings.apply_settings(data)
-        if CounterName(input1_settings.counter_name) in [CounterName.WATER_COLD,
-                                                   CounterName.WATER_HOT,
-                                                   CounterName.PORTABLE_WATER]:
-            res["redirect"] = "/input/1/detect.html"
+        if CounterType(input1_settings.counter_type) in [CounterType.HALL,]:
+            res["redirect"] = "/input/1/hall_detect.html"
         else:
-            res["redirect"] = "/input/1/settings.html"
+            if CounterName(input1_settings.counter_name) in [CounterName.WATER_COLD,
+                                                       CounterName.WATER_HOT,
+                                                       CounterName.PORTABLE_WATER]:
+                res["redirect"] = "/input/1/detect.html"
+            else:
+                res["redirect"] = "/input/1/settings.html"
 
     json = jsonable_encoder(res)
     return JSONResponse(content=json)

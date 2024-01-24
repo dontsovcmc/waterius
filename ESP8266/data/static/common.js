@@ -68,6 +68,16 @@ function _init(_pages) {
 
         return;
     }
+    
+    if(document.getElementById('hall_model'))
+    {
+        document.getElementById('hall_model').addEventListener('change', function() {
+            var v = document.getElementById('hall_model').value;
+            if (v != '') {
+                document.getElementById('factor').value = v;
+            }
+        }, false);
+    }
 }
 function parseQueryParams(){
     // parse location.search
@@ -333,6 +343,17 @@ function getImpulses(i) {
             document.getElementById('delta').textContent = data.impulses * parseInt(document.getElementById('factor').value);
             formError(data.error);
             getImpulses(i);
+        }, false);
+    }, 2000);
+}
+function getImpulsesHall(i) {
+    setTimeout(() => {
+        ajax('/api/status/' + i, {}, data => {
+            value = data.impulses / parseInt(document.getElementById('factor').value);
+            value = parseFloat(value.toPrecision(3));
+            document.getElementById('delta').textContent = value;
+            formError(data.error);
+            getImpulsesHall(i);
         }, false);
     }, 2000);
 }

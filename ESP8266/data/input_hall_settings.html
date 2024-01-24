@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Настройка счётчика: %counter_title%</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
+    </head>
+    <body onload="_init({
+        back: '/input/%input%/setup.html',
+        back_wizard: '/input/%input%/setup.html?wizard=true',
+        next: '/index.html',
+        next_wizard: '/input/0/setup.html?wizard=true'
+    }); getImpulsesHall(%input%);">
+        <form onsubmit="formSubmit(event, this, '/api/save');">
+            <div class="wrap">
+                <div class="container f1">
+                    <header>
+                        <a onclick="_goto()">
+                            <div class="icon bf">
+                                <img src="/images/icons.png">
+                            </div>
+                            Назад</a>
+                        <div class="icon logo">
+                            <img src="/images/icons.png">
+                        </div>
+                        <div class="fr">шаг 5/9</div>
+                    </header>
+                    <main>
+                        <h2>%counter_title%</h2>
+                        <p class="text">Счётчик определился Ватериусом, теперь выберите модель или укажите кол-во импульсов на литр вручную</p>
+                        <p class="form-error hd"></p>
+                        <input id="input" name="input" type="hidden" value="%input%">
+                        <div class="f-row">
+                            <label for="serial">Серийный номер (опционально)</label>
+                            <input id="serial" name="serial" placeholder="10-12345" value="%serial%">
+                            <p class="error hd" id="serial-error">Введите серийный номер</p>
+                        </div>
+                        <div class="f-row">
+                            <label for="channel_start">Показания счётчика</label>
+                            <input pattern="^\s*[\d]+([,\.][\d]+)?\s*$" id="channel_start" name="channel_start" placeholder="0.0" value="%channel_start%">
+                            <p class="error hd" id="channel_start-error">Введите показания счётчика</p>
+                        </div>
+                        <div class="f-row">
+                            <label for="factor">Модель счётчика</label>
+                            <select class="slct" id="hall_model" name="hall_model" option-value="0">
+                                <option selected="" value="">Указать вручную</option>
+                                <option value="4380">YF-S402b (4380)</option>
+                                <option value="450">YF-S201 (450)</option>
+                                <option value="1000">1000</option>
+                              </select>
+                            </select>
+                        </div>
+                        <div class="f-row">
+                            <label for="factor">Количество импульсов на литр</label>
+                            <input pattern="^\s*[\d]+([,\.][\d]+)?\s*$" id="factor" name="factor" placeholder="0" value="%factor%">
+                            <p class="error hd" id="factor-error">Некорректное значение</p>
+                        </div>
+                        <p class="note mt16">(во время настройки вылилось около <span id="delta">0</span>л воды)</p>
+                    </main>
+                    <footer class="btns">
+                        <button class="btn" type="submit">Сохранить</button>
+                    </footer>
+                </div>
+            </div>
+        </form>
+    </body>
+</html>

@@ -287,26 +287,47 @@ void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cda
     LOG_INFO(F("new impulses=") << data.impulses0 << " " << data.impulses1);
     LOG_INFO(F("factor0=") << sett.factor0 << F(" factor1=") << sett.factor1);
 
-    if ((sett.factor1 > 0) && (sett.factor0 > 0))
+    if (sett.factor0 > 0) 
     {
         if (data.impulses0 < sett.impulses0_start) {
             sett.impulses0_start = data.impulses0;
             // Лучше потеряем в точности, чем будет показания миллионы
             LOG_ERROR(F("Impulses0 less than start. Reset impulses0_start"));
         }
-        cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.factor0;
 
+        if (data.counter_type0 == HALL)
+        {
+            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 / sett.factor0;
+            cdata.delta0 = (data.impulses0 - sett.impulses0_previous) / sett.factor0;
+        }
+        else 
+        {
+            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.factor0;
+            cdata.delta0 = (data.impulses0 - sett.impulses0_previous) * sett.factor0;
+        }
+        LOG_INFO(F("new value0=") << cdata.channel0 << F(" delta0=") << cdata.delta0);
+    }
+
+    if (sett.factor1 > 0) 
+    {
         if (data.impulses1 < sett.impulses1_start) {
             sett.impulses1_start = data.impulses1;
             LOG_ERROR(F("Impulses1 less than start. Reset impulses1_start"));
         }
-        cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.factor1;
-        LOG_INFO(F("new value0=") << cdata.channel0 << F(" value1=") << cdata.channel1);
 
-        cdata.delta0 = (data.impulses0 - sett.impulses0_previous) * sett.factor0;
-        cdata.delta1 = (data.impulses1 - sett.impulses1_previous) * sett.factor1;
-        LOG_INFO(F("delta0=") << cdata.delta0 << F(" delta1=") << cdata.delta1);
+        if (data.counter_type1 == HALL)
+        {
+            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 / sett.factor1;
+            cdata.delta1 = (data.impulses1 - sett.impulses1_previous) / sett.factor1;
+        }
+        else 
+        {
+            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.factor1;
+            cdata.delta1 = (data.impulses1 - sett.impulses1_previous) * sett.factor1;
+        }
+        LOG_INFO(F("new value1=") << cdata.channel1 << F(" delta1=") << cdata.delta1);
     }
+
 }
 
 /* Обновляем значения в конфиге*/
