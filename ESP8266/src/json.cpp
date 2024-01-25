@@ -70,7 +70,6 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     root[F("period_min_tuned")] = sett.set_wakeup;
     root[F("period_min")] = sett.wakeup_per_min;
     root[F("setuptime")] = sett.setup_time;
-    root[F("good")] = data.diagnostic;
     root[F("boot")] = data.service;
     root[F("resets")] = data.resets;
     root[F("mode")] = sett.mode;
@@ -83,7 +82,6 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
 
     // Интеграции с системами
     root[F("mqtt")] = is_mqtt(sett);
-    root[F("blynk")] = is_blynk(sett);
     root[F("ha")] = is_ha(sett);
     root[F("http")] = is_http(sett);
 

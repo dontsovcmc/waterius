@@ -151,21 +151,6 @@ bool is_http(const Settings &sett)
 	return sett.http_on && sett.http_url[0];
 }
 
-/**
- * @brief Возвращает признак настроена ли интеграция с Blynk
- *
- * @param sett настройки устройства
- * @return true настроена интеграция с Blynk
- * @return false НЕ настроена интеграция с Blynk
- */
-bool is_blynk(const Settings &sett)
-{
-#ifndef BLYNK_DISABLED
-	return sett.blynk_on && sett.blynk_host[0] && sett.blynk_key[0];
-#else
-	return false;
-#endif
-}
 
 /**
  * @brief Возвращает признак настроена ли интеграция с MQTT

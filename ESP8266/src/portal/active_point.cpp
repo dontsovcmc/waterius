@@ -149,11 +149,6 @@ String processor_main(const String &var, const uint8_t input)
         if (!strstr(sett.waterius_email, "@waterius.ru"))
             return replace_value(sett.waterius_email);
     }
-    else if (var == FPSTR(PARAM_BLYNK_KEY))
-        return replace_value(sett.blynk_key);
-    else if (var == FPSTR(PARAM_BLYNK_HOST))
-        return replace_value(sett.blynk_host);
-
     else if (var == FPSTR(PARAM_HTTP_URL))
         return replace_value(sett.http_url);
 
@@ -193,8 +188,8 @@ String processor_main(const String &var, const uint8_t input)
     {
         switch (input)
         {
-            case 0: return String(sett.counter0_name);
-            case 1: return String(sett.counter1_name);
+            case 0: return get_counter_title(sett.counter0_name);
+            case 1: return get_counter_title(sett.counter1_name);
         }
     }
 
@@ -287,8 +282,6 @@ String processor_main(const String &var, const uint8_t input)
         return template_bool(sett.http_on);
     else if (var == FPSTR(PARAM_MQTT_ON))
         return template_bool(sett.mqtt_on);
-    else if (var == FPSTR(PARAM_BLYNK_ON))
-        return template_bool(sett.blynk_on);
     else if (var == FPSTR(PARAM_DHCP_OFF))
         return template_bool(sett.dhcp_off);
 
@@ -309,11 +302,15 @@ String processor_main(const String &var, const uint8_t input)
                 return String(F("Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей."));
             case WL_WRONG_PASSWORD:
                 return String(F("Ошибка подключения: Некорректный пароль"));
-            case WL_NO_SHIELD:
             case WL_IDLE_STATUS:
-            case WL_SCAN_COMPLETED:
-            case WL_CONNECTED:
+                return String(F("Ошибка подключения: Код 0"));
             case WL_DISCONNECTED:
+                return String(F("Ошибка подключения: Отключен"));
+            case WL_NO_SHIELD:
+                return String(F("Ошибка подключения: Код 255"));
+            case WL_SCAN_COMPLETED:
+                return String(F("Ошибка подключения: Код 2"));
+            case WL_CONNECTED:
                 break;
         }
     }    

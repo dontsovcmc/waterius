@@ -7,7 +7,6 @@
 #include "master_i2c.h"
 #include "senders/sender_waterius.h"
 #include "senders/sender_http.h"
-#include "senders/sender_blynk.h"
 #include "senders/sender_mqtt.h"
 #include "portal/active_point.h"
 #include "voltage.h"
@@ -134,13 +133,6 @@ void loop()
                 if (send_http(sett, json_data))
                 {
                     LOG_INFO(F("HTTP: Send OK"));
-                }
-#endif
-
-#ifndef BLYNK_DISABLED
-                if (send_blynk(sett, json_data))
-                {
-                    LOG_INFO(F("BLYNK: Send OK"));
                 }
 #endif
 

@@ -34,8 +34,6 @@ extern bool is_http(const Settings &sett);
 
 extern bool is_mqtt(const Settings &sett);
 
-extern bool is_blynk(const Settings &sett);
-
 extern bool is_ha(const Settings &sett);
 
 extern bool is_dhcp(const Settings &sett);

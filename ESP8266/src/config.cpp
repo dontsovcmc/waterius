@@ -2,7 +2,6 @@
 #include "config.h"
 #include "Logging.h"
 
-#include "Blynk/BlynkConfig.h"
 #include <ESP8266WiFi.h>
 #include <IPAddress.h>
 #include <EEPROM.h>
@@ -57,7 +56,6 @@ bool init_config(Settings &sett)
     sett.waterius_on = (uint8_t)true;
     sett.http_on = (uint8_t)false;
     sett.mqtt_on = (uint8_t)false;
-    sett.blynk_on = (uint8_t)false;
     sett.dhcp_off = (uint8_t)false;
 
     //можно оптимизировать и загружать из PROGMEM, но ради 2х полей смысла не вижу
@@ -65,8 +63,6 @@ bool init_config(Settings &sett)
     //strncpy_P(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, HOST_LEN);
 
     strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, sizeof(WATERIUS_DEFAULT_DOMAIN));
-
-    strncpy0(sett.blynk_host, BLYNK_DEFAULT_DOMAIN, sizeof(BLYNK_DEFAULT_DOMAIN));
 
     String default_topic = String(MQTT_DEFAULT_TOPIC_PREFIX) + "/" + String(getChipId()) + "/";
     strncpy0(sett.mqtt_topic, default_topic.c_str(), default_topic.length() + 1);
@@ -85,13 +81,6 @@ bool init_config(Settings &sett)
     sett.mask = network_mask;
 
     // Можно задать константы при компиляции, чтобы Ватериус сразу заработал
-
-#ifdef BLYNK_KEY
-#pragma message(VAR_NAME_VALUE(BLYNK_KEY))
-    String key = VALUE(BLYNK_KEY);
-    strncpy0(sett.blynk_key, key.c_str(), BLYNK_KEY_LEN);
-    LOG_INFO(F("default Blynk key=") << key);
-#endif
 
 #ifdef WATERIUS_HOST
 #pragma message(VAR_NAME_VALUE(WATERIUS_HOST))
@@ -187,9 +176,6 @@ bool load_config(Settings &sett)
 
             sett.http_url[HOST_LEN - 1] = 0;
 
-            sett.blynk_key[BLYNK_KEY_LEN - 1] = 0;
-            sett.blynk_host[HOST_LEN - 1] = 0;
-
             sett.mqtt_host[HOST_LEN - 1] = 0;
             sett.mqtt_login[MQTT_LOGIN_LEN - 1] = 0;
             sett.mqtt_password[MQTT_PASSWORD_LEN - 1] = 0;
@@ -216,14 +202,6 @@ bool load_config(Settings &sett)
                 LOG_INFO(F("state=OFF"));
             }
             LOG_INFO(F("host=") << sett.http_url);
-
-            LOG_INFO(F("--- Blynk.cc ---- "));
-            if (sett.blynk_on) {
-                LOG_INFO(F("state=ON"));
-            } else {
-                LOG_INFO(F("state=OFF"));
-            }
-            LOG_INFO(F("host=") << sett.blynk_host << F(" key=") << sett.blynk_key);
 
             LOG_INFO(F("--- MQTT ---- "));
             if (sett.mqtt_on) {

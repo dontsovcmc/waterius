@@ -9,13 +9,6 @@
 #define SDA_PIN 0
 #define SCL_PIN 2
 
-enum Status_t
-{
-    WATERIUS_NO_LINK = 0, // нет связи по i2c
-    WATERIUS_OK = 1,
-    WATERIUS_BAD_CRC = 2
-};
-
 /*
 Данные принимаемые от Attiny
 */
@@ -40,9 +33,8 @@ struct SlaveData
 
     uint8_t crc = 0; // Всегда в конце структуры данных
     uint8_t reserved2 = 0;
-
-    enum Status_t diagnostic = WATERIUS_NO_LINK;
     uint8_t reserved3 = 0;
+    uint8_t reserved5 = 0;
     // Кратно 16bit https://github.com/esp8266/Arduino/issues/1825
 };
 

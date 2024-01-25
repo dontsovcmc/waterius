@@ -517,7 +517,7 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
                     else
                     {
                         runtime_data.counter_type0 = p->value().toInt();
-                        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
+                        LOG_INFO(FPSTR(PARAM_SAVED0) << p->name() << F("=") << p->value());
                     }
                     break;
                 case 1:
@@ -529,7 +529,7 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
                     else
                     {
                         runtime_data.counter_type1 = p->value().toInt();
-                        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << p->value());
+                        LOG_INFO(FPSTR(PARAM_SAVED1) << p->name() << F("=") << p->value());
                     }
                     break;
             }
@@ -576,10 +576,6 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
         {
             save_bool_param(p, sett.mqtt_on, errorsObj);
         }
-        else if (name == FPSTR(PARAM_BLYNK_ON))
-        {
-            save_bool_param(p, sett.blynk_on, errorsObj);
-        }
         else if (name == FPSTR(PARAM_DHCP_OFF))
         {
             save_bool_param(p, sett.dhcp_off, errorsObj);
@@ -604,17 +600,6 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
             else if (name == FPSTR(PARAM_WATERIUS_EMAIL))
             {
                 save_param(p, sett.waterius_email, EMAIL_LEN, errorsObj);
-            }
-        }
-        else if (sett.blynk_on)
-        {
-            if (name == FPSTR(PARAM_BLYNK_KEY))
-            {
-                save_param(p, sett.blynk_key, BLYNK_KEY_LEN, errorsObj, false);
-            }
-            else if (name == FPSTR(PARAM_BLYNK_HOST))
-            {
-                save_param(p, sett.blynk_host, HOST_LEN, errorsObj);
             }
         }
         else if (sett.http_on)

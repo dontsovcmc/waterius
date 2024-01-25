@@ -136,12 +136,11 @@ bool MasterI2C::getMode(uint8_t &mode)
  * 
  * @param data Структура для заполнения данными
  * @return true прочитанно успешно.
- * @return false произошла ошибка, код ошибки в data.diagnostic
+ * @return false произошла ошибка
  */
 bool MasterI2C::getSlaveData(SlaveData &data)
 {
     sendCmd('B');
-    data.diagnostic = WATERIUS_NO_LINK;
 
     uint8_t dummy, crc = init_crc;
     bool good = getByte(data.version, crc);
@@ -173,21 +172,21 @@ bool MasterI2C::getSlaveData(SlaveData &data)
 
     if (good)
     {
-        data.diagnostic = (data.crc == crc) ? WATERIUS_OK : WATERIUS_BAD_CRC;
+        if (data.crc != crc)
+        {
+            LOG_ERROR(F("!!! CRC wrong !!!!, go to sleep"));
+        }
+        else
+        {
+            LOG_INFO(F("v") << data.version << F(" setups:") << data.setup_started_counter << F(" resets:") << data.resets << F(" ctype0:") << data.counter_type0 << F(" ctype1:") << data.counter_type1 << F(" imp0:") << data.impulses0 << F(" imp1:") << data.impulses1 << F(" adc0:") << data.adc0 << F(" adc1:") << data.adc1);
+            if (data.version >= 30)
+                return true;
+
+            LOG_ERROR(F("ATTINY: unsupported firmware ver.") << data.version);
+        }
     }
-
-    switch (data.diagnostic)
-    {
-    case WATERIUS_BAD_CRC:
-        LOG_ERROR(F("!!! CRC wrong !!!!, go to sleep"));
-    case WATERIUS_OK:
-        LOG_INFO(F("v") << data.version << F(" setups:") << data.setup_started_counter << F(" resets:") << data.resets << F(" ctype0:") << data.counter_type0 << F(" ctype1:") << data.counter_type1 << F(" imp0:") << data.impulses0 << F(" imp1:") << data.impulses1 << F(" adc0:") << data.adc0 << F(" adc1:") << data.adc1);
-        break;
-    case WATERIUS_NO_LINK:
-        LOG_ERROR(F("Data failed"));
-    };
-
-    return data.diagnostic == WATERIUS_OK;
+    LOG_ERROR(F("Data failed"));
+    return false;
 }
 
 bool MasterI2C::setWakeUpPeriod(uint16_t period)

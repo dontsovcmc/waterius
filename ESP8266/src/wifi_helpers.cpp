@@ -142,7 +142,11 @@ bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
             uint8_t *bssid = WiFi.BSSID();
             memcpy((void *)&sett.wifi_bssid, (void *)bssid, sizeof(sett.wifi_bssid)); // сохраняем для быстрого коннекта
             LOG_INFO(F("WIFI: Connected."));
-            LOG_INFO(F("WIFI: SSID: ") << WiFi.SSID() << F(" Channel: ") << WiFi.channel() << F(" BSSID: ") << WiFi.BSSIDstr());
+            LOG_INFO(F("WIFI: SSID: ") << WiFi.SSID() 
+                << F(" Channel: ") << WiFi.channel() 
+                << F(" BSSID: ") << WiFi.BSSIDstr()
+                << F(" mode: ") << wifi_phy_mode_title(WiFi.getPhyMode()));
+
             LOG_INFO(F("WIFI: Time spent ") << millis() - start_time << F(" ms"));
             return true;
         }
