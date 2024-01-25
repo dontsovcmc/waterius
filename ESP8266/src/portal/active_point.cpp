@@ -188,8 +188,8 @@ String processor_main(const String &var, const uint8_t input)
     {
         switch (input)
         {
-            case 0: return get_counter_title(sett.counter0_name);
-            case 1: return get_counter_title(sett.counter1_name);
+            case 0: return String(sett.counter0_name);
+            case 1: return String(sett.counter1_name);
         }
     }
 
