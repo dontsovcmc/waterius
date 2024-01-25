@@ -454,13 +454,14 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
 {
     const int params = request->params();
 
-    LOG_INFO(F("Apply ") << params << " parameters");
+    LOG_INFO(F("Apply Input ") << params << " parameters");
 
     for (int i = 0; i < params; i++)
     {
         AsyncWebParameter *p = request->getParam(i);
         const String &name = p->name();
         
+        LOG_INFO(F("parameter ") << name << "=" << p->value());
         if (name == FPSTR(PARAM_CHANNEL_START))
         {
             switch (input) 
@@ -564,6 +565,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
         AsyncWebParameter *p = request->getParam(i);
         const String &name = p->name();
 
+        LOG_INFO(F("parameter ") << name << "=" << p->value());
         if (name == FPSTR(PARAM_WATERIUS_ON))
         {
             save_bool_param(p, sett.waterius_on, errorsObj);
@@ -602,14 +604,16 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
                 save_param(p, sett.waterius_email, EMAIL_LEN, errorsObj);
             }
         }
-        else if (sett.http_on)
+        
+        if (sett.http_on)
         {
             if (name == FPSTR(PARAM_HTTP_URL))
             {
                 save_param(p, sett.http_url, HOST_LEN, errorsObj);
             }
         }
-        else if (sett.mqtt_on)
+        
+        if (sett.mqtt_on)
         {
             if (name == FPSTR(PARAM_MQTT_HOST))
             {
@@ -640,7 +644,8 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
                 }
             }
         }
-        else if (sett.dhcp_off)
+        
+        if (sett.dhcp_off)
         {
             if (name == FPSTR(PARAM_IP))
             {
@@ -655,17 +660,16 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
                 save_ip_param(p, sett.mask, errorsObj);
             }
         }
-        else if (name == FPSTR(PARAM_WAKEUP_PER_MIN))
+        
+        if (name == FPSTR(PARAM_WAKEUP_PER_MIN))
         {
             save_param(p, sett.wakeup_per_min, errorsObj);
             sett.set_wakeup = sett.wakeup_per_min;
         }
-
         else if (name == FPSTR(PARAM_NTP_SERVER))
         {
             save_param(p, sett.ntp_server, HOST_LEN, errorsObj);
         }
-
         else if (name == FPSTR(PARAM_SSID))
         {
             save_param(p, sett.wifi_ssid, WIFI_SSID_LEN, errorsObj);
