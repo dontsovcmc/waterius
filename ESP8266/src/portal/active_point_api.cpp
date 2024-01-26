@@ -722,18 +722,13 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
         {
             ret[F("redirect")] = F("/input/0/hall_detect.html");
         }
+        else if (runtime_data.counter_type0 == CounterType::NONE)
+        {
+            ret[F("redirect")] = F("/index.html");
+        }
         else 
         {
-            switch (sett.counter0_name)
-            {
-                case CounterName::WATER_COLD:
-                case CounterName::WATER_HOT:
-                case CounterName::PORTABLE_WATER:
-                    ret[F("redirect")] = F("/input/0/detect.html");
-                    break;
-                default:
-                    ret[F("redirect")] = F("/input/0/settings.html");
-            }
+            ret[F("redirect")] = F("/input/0/detect.html");
         }
     } 
     else if (input == 1)
@@ -742,18 +737,13 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
         {
             ret[F("redirect")] = F("/input/1/hall_detect.html");
         }
+        else if (runtime_data.counter_type1 == CounterType::NONE)
+        {
+            ret[F("redirect")] = F("/index.html");
+        }
         else 
         {
-            switch (sett.counter1_name)
-            {
-                case CounterName::WATER_COLD:
-                case CounterName::WATER_HOT:
-                case CounterName::PORTABLE_WATER:
-                    ret[F("redirect")] = F("/input/1/detect.html");
-                    break;
-                default:
-                    ret[F("redirect")] = F("/input/1/settings.html");
-            }
+            ret[F("redirect")] = F("/input/1/detect.html");
         }
     }
 

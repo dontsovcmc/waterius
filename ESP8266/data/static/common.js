@@ -1,15 +1,6 @@
 const queryParams = {};
 let pages = {};
 
-function fill_input_color(index) {
-    var q = document.getElementById('input_color');
-    if (index == 0) {
-        q.innerHTML = 'Красный вход';
-    } else if (index == 1) {
-        q.innerHTML = 'Синий вход';
-    }
-}
-
 function _init(_pages) {
     // Должна выполняться при загрузке каждой страницы
     

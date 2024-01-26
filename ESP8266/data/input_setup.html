@@ -6,6 +6,7 @@
         <title>Выбор счётчика</title>
         <link rel="stylesheet" href="/static/style.css">
         <script src="/static/common.js"></script>
+        <script src="/static/strings.js"></script>
     </head>
     <body onload="fill_input_color(%input%); _init({
         back: '/index.html',
@@ -53,7 +54,7 @@
                               <option selected="" value="0">Намур</option>
                               <option value="1">Дискретный</option>
                               <option value="2">Электронный</option>
-                              <option value="3">Датчик Холла</option>
+                              <option value="3">Датчик Холла (красный вход!)</option>
                               <option value="255">Выключен</option>
                             </select>
                             <p class="error hd" id="counter_type-error">Некорректное значение</p>

@@ -75,47 +75,49 @@ String get_counter_title(const uint8_t name)
     }
 }
 
-String get_counter_img(const uint8_t name)
+String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ctype)
 {
-    switch (name)
+    if (ctype == CounterType::HALL) 
     {
-    case CounterName::WATER_COLD:
-        return F("meter-cold.png");
-    case CounterName::WATER_HOT:
-        return F("meter-hot.png");
-    case CounterName::ELECTRO:
-        return F("");
-    case CounterName::GAS:
-        return F("");
-    case CounterName::HEAT:
-        return F("");
-    case CounterName::PORTABLE_WATER:
-        return F("");
-    case CounterName::OTHER:
-    default:
-        return F("");
+        switch (input)
+        {
+            case 0: return F("meter-hall-0.png");
+            case 1: return F("meter-hall-1.png");
+        }
+        
     }
-}
-
-String get_counter_instruction(const uint8_t name)
-{
-    switch (name)
+    else if (ctype == CounterType::ELECTRONIC)
     {
-    case CounterName::WATER_COLD:
-        return F("Спускайте воду в унитазе пока устройство не перенесёт вас на следующую страницу");
-    case CounterName::WATER_HOT:
-        return F("Откройте кран горячей воды пока устройство не перенесёт вас на следующую страницу");
-    case CounterName::ELECTRO:
-        return F("Включите электроприбор. После моргания светодиода должна открыться следующая страница. Если не открывается, значит некорректное подключение или счётчик не поддерживается.");
-    case CounterName::GAS:
-        return F("Приход импульса от газового счётчика долго ожидать, нажмите Пропустить и продолжите настройку.");
-    case CounterName::HEAT:
-        return F("Приход импульса от счётчика тепла долго ожидать, нажмите Пропустить и продолжите настройку.");
-    case CounterName::PORTABLE_WATER:
-        return F("Откройте кран питьевой воды пока устройство не перенесёт вас на следующую страницу");
-    case CounterName::OTHER:
-    default:
-        return F("При приходе импульса от счётчика устройство перенесёт вас на следующую страницу");
+        switch (input)
+        {
+            case 0: return F("meter-electro-0.png");
+            case 1: return F("meter-electro-1.png");
+        }
+    }
+    else if (name == CounterName::WATER_HOT)
+    {
+        switch (input)
+        {
+            case 0: return F("meter-hot-0.png");
+            case 1: return F("meter-hot-1.png");
+        }
+    }
+    else if (name == CounterName::GAS)
+    {
+        switch (input)
+        {
+            case 0: return F("meter-gas-0.png");
+            case 1: return F("meter-gas-1.png");
+        }
+    }
+    //if (name == CounterName::WATER_COLD)
+    switch (input)
+    {
+        case 0: 
+            return F("meter-cold-0.png");
+        case 1: 
+        default:
+            return F("meter-cold-1.png");
     }
 }
 
@@ -204,28 +206,23 @@ String processor_main(const String &var, const uint8_t input)
 
     else if (var == FPSTR(PARAM_COUNTER0_TITLE)) // index.html
     {
-        return String(sett.counter0_name);
+        if (runtime_data.counter_type0 == CounterType::NONE)
+            return F("Отключен");
+        return get_counter_title(sett.counter0_name);
     }
     else if (var == FPSTR(PARAM_COUNTER1_TITLE)) // index.html
     {
-        return String(sett.counter1_name);
+        if (runtime_data.counter_type1 == CounterType::NONE)
+            return F("Отключен");
+        return get_counter_title(sett.counter1_name);
     }
 
     else if (var == FPSTR(PARAM_COUNTER_IMG))
     {
         switch (input)
         {
-            case 0: return get_counter_img(sett.counter0_name);
-            case 1: return get_counter_img(sett.counter1_name);
-        }
-    }
-
-    else if (var == FPSTR(PARAM_COUNTER_INSTRUCTION))
-    {
-        switch (input)
-        {
-            case 0: return get_counter_instruction(sett.counter0_name);
-            case 1: return get_counter_instruction(sett.counter1_name);
+            case 0: return get_counter_img(0, sett.counter0_name, runtime_data.counter_type0);
+            case 1: return get_counter_img(1, sett.counter1_name, runtime_data.counter_type1);
         }
     }
 
@@ -518,6 +515,11 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
                { request->send(LittleFS, "/input_detect.html", F("text/html"), false, processor0); });
     server->on("/input/1/detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/input_detect.html", F("text/html"), false, processor1); });
+
+    server->on("/input/0/hall_detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/input_hall_detect.html", F("text/html"), false, processor0); });
+    server->on("/input/1/hall_detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { request->send(LittleFS, "/input_hall_detect.html", F("text/html"), false, processor1); });
 
     // Параметры счётчика
     server->on("/input/0/settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
