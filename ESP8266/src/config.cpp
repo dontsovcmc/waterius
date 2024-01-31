@@ -116,15 +116,9 @@ bool init_config(Settings &sett)
     LOG_INFO(F("default waterius email=") << VALUE(WATERIUS_EMAIL));
 #endif
 
-#ifdef WATERIUS_KEY
-#pragma message(VAR_NAME_VALUE(WATERIUS_KEY))
-    strncpy0(sett.waterius_key, VALUE(WATERIUS_KEY), WATERIUS_KEY_LEN);
-    LOG_INFO(F("default waterius key=") << VALUE(WATERIUS_KEY));
-#else
     LOG_INFO(F("Generate waterius key"));
     generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
     LOG_INFO(F("waterius key=") << sett.waterius_key);
-#endif
 
 #ifdef WIFI_SSID
 #pragma message(VAR_NAME_VALUE(WIFI_SSID))
