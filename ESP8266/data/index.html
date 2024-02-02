@@ -8,7 +8,9 @@
         <script src="/static/common.js"></script>
         <script src="/static/strings.js"></script>
     </head>
-    <body onload="mainStatus()">
+    <body onload="fill_counter0_title(%counter0_name%, %counter0_type%); 
+    fill_counter1_title(%counter1_name%, %counter1_type%);
+        mainStatus()">
         <div class="wrap">
             <div class="container f1">
                 <header>
@@ -28,15 +30,13 @@
 
                     <h3 class="mt24">Счётчики</h3>
                     <a class="link-row" href="/input/1/setup.html">
-                        <div class="circle"></div>
-                        %counter1_title%
+                        <div class="circle"></div><span id="counter1_title"></span>
                         <div class="icon arrow">
                             <img src="/images/icons.png">
                         </div>
                     </a>
                     <a class="link-row" href="/input/0/setup.html">
-                        <div class="circle hot"></div>
-                        %counter0_title%
+                        <div class="circle hot"></div><span id="counter0_title"></span>
                         <div class="icon arrow">
                             <img src="/images/icons.png">
                         </div>

@@ -208,6 +208,7 @@ async def save(form_data: SettingsModel = Depends()):
     if input == 1:
         res.update(input1_settings.apply_settings(data))
 
+
     # res["errors"]["form"] = "Ошибка формы сообщение"
     # res["errors"]["serial1"] = "Введите серийный номер"
     # res["errors"]["channel1_start"] = "Введите показания счётчика"
@@ -230,27 +231,20 @@ async def save_input_type(form_data: InputModel = Depends()):
 
     if input == 0:
         res = input0_settings.apply_settings(data)
-        if CounterType(input0_settings.counter_type) in [CounterType.HALL,]:
+        if input0_settings.counter_type == CounterType.HALL.value:
             res["redirect"] = "/input/0/hall_detect.html"
+        elif input0_settings.counter_type == CounterType.NONE.value:
+            res["redirect"] = "/index.html"
         else:
-            if CounterName(input0_settings.counter_name) in [CounterName.WATER_COLD,
-                                                       CounterName.WATER_HOT,
-                                                       CounterName.PORTABLE_WATER]:
-                res["redirect"] = "/input/0/detect.html"
-            else:
-                res["redirect"] = "/input/0/settings.html"
+            res["redirect"] = "/input/0/detect.html"
     else:
         res = input1_settings.apply_settings(data)
-        if CounterType(input1_settings.counter_type) in [CounterType.HALL,]:
+        if input1_settings.counter_type == CounterType.HALL.value:
             res["redirect"] = "/input/1/hall_detect.html"
+        elif input1_settings.counter_type == CounterType.NONE.value:
+            res["redirect"] = "/index.html"
         else:
-            if CounterName(input1_settings.counter_name) in [CounterName.WATER_COLD,
-                                                       CounterName.WATER_HOT,
-                                                       CounterName.PORTABLE_WATER]:
-                res["redirect"] = "/input/1/detect.html"
-            else:
-                res["redirect"] = "/input/1/settings.html"
-
+            res["redirect"] = "/input/1/detect.html"
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
 

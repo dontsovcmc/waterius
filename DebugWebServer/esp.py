@@ -26,6 +26,16 @@ class CounterType(Enum):
     NONE = 0xFF
 
 
+WL_NO_SHIELD        = 255
+WL_IDLE_STATUS      = 0
+WL_NO_SSID_AVAIL    = 1
+WL_SCAN_COMPLETED   = 2
+WL_CONNECTED        = 3
+WL_CONNECT_FAILED   = 4
+WL_CONNECTION_LOST  = 5
+WL_WRONG_PASSWORD   = 6
+WL_DISCONNECTED     = 7
+
 def check_ip_address(name, value):
     try:
         ipaddress.ip_address(value)
@@ -34,47 +44,32 @@ def check_ip_address(name, value):
     return {}
 
 
-def get_counter_title(name):
-
-    titles = {
-        CounterName.WATER_COLD: "Холодная вода",
-        CounterName.WATER_HOT: "Горячая вода",
-        CounterName.ELECTRO: "Электричество",
-        CounterName.GAS: "Газ",
-        CounterName.HEAT: "Тепло",
-        CounterName.PORTABLE_WATER: "Питьевая вода",
-        CounterName.OTHER: "Другой"
-    }
-    if CounterName(name) in titles:
-        return titles[CounterName(name)]
-    return "Другой"
-
-
-def get_counter_img(name):
-    img = {
-        CounterName.WATER_COLD: "meter-cold.png",
-        CounterName.WATER_HOT: "meter-hot.png",
-    }
-    if CounterName(name) in img:
-        return img[CounterName(name)]
+def get_counter_img(i, name, ctype):
+    if ctype == CounterType.HALL.value:
+        if i == 0:
+            return "meter-hall-0.png"
+        if i == 1:
+            return "meter-hall-1.png"
+    elif ctype == CounterType.ELECTRONIC.value:
+        if i == 0:
+            return "meter-electro-0.png"
+        if i == 1:
+            return "meter-electro-1.png"
+    elif name == CounterName.WATER_HOT.value:
+        if i == 0:
+            return "meter-hot-0.png"
+        if i == 1:
+            return "meter-hot-1.png"
+    elif name == CounterName.GAS.value:
+        if i == 0:
+            return "meter-gas-0.png"
+        if i == 1:
+            return "meter-gas-1.png"
+    if i == 0:
+        return "meter-cold-0.png"
+    if i == 1:
+        return "meter-cold-1.png"
     return ""
-
-
-def get_counter_instruction(name):
-
-    instr = {
-        CounterName.WATER_COLD: "Спускайте воду в унитазе пока устройство не перенесёт вас на следующую страницу",
-        CounterName.WATER_HOT: "Откройте кран горячей воды пока устройство не перенесёт вас на следующую страницу",
-        CounterName.ELECTRO: "Включите электроприбор. После моргания светодиода должна открыться следующая страница. "
-                             "Если не открывается, значит некорректное подключение или счётчик не поддерживается.",
-        CounterName.GAS: "Приход импульса от газового счётчика долго ожидать, нажмите Пропустить и продолжите настройку.",
-        CounterName.HEAT: "Приход импульса от счётчика тепла долго ожидать, нажмите Пропустить и продолжите настройку.",
-        CounterName.PORTABLE_WATER: "Откройте кран питьевой воды пока устройство не перенесёт вас на следующую страницу",
-    }
-
-    if CounterName(name) in instr:
-        return instr[CounterName(name)]
-    return "При приходе импульса от счётчика устройство перенесёт вас на следующую страницу"
 
 
 attiny_link_error = False  # имитировать ошибку связи с МК
@@ -101,16 +96,8 @@ class InputSettings:
     counter_name: int = 0   # преобразовать enum в int
 
     @property
-    def counter_title(self):
-        return get_counter_title(self.counter_name)
-
-    @property
-    def counter_instruction(self):
-        return get_counter_instruction(self.counter_name)
-
-    @property
     def counter_img(self):
-        return get_counter_img(self.counter_name)
+        return get_counter_img(self.input, self.counter_name, self.counter_type)
 
     def __init__(self, **kwargs):
         self.apply_settings(dict(kwargs))
@@ -123,6 +110,7 @@ class InputSettings:
                 setattr(self, k, v)
 
         return res
+
 
 input0_settings = InputSettings(
     input=0,
@@ -187,13 +175,40 @@ class Settings:
 
     attiny_version: int = 0
 
-    @property
-    def counter0_title(self):
-        return get_counter_title(input0_settings.counter_name)
 
     @property
-    def counter1_title(self):
-        return get_counter_title(input1_settings.counter_name)
+    def counter0_name(self):
+        return input0_settings.counter_name
+
+    @property
+    def counter1_name(self):
+        return input1_settings.counter_name
+
+    @property
+    def counter0_type(self):
+        return input0_settings.counter_type
+
+    @property
+    def counter1_type(self):
+        return input1_settings.counter_type
+
+    @property
+    def wifi_connect_status(self):
+        if system_info.wifi_connect_status in [WL_NO_SSID_AVAIL, WL_CONNECT_FAILED, WL_CONNECTION_LOST]:
+            return '8'  # S_WIFI_CONNECTION_LOST "Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.";
+        elif system_info.wifi_connect_status == WL_WRONG_PASSWORD:
+            return '9'  # S_WL_WRONG_PASSWORD "Ошибка подключения: Некорректный пароль";
+        elif system_info.wifi_connect_status == WL_IDLE_STATUS:
+            return '10'  # S_WL_IDLE_STATUS "Ошибка подключения: Код 0";
+        elif system_info.wifi_connect_status == WL_DISCONNECTED:
+            return '11'  # S_WL_DISCONNECTED "Ошибка подключения: Отключен";
+        elif system_info.wifi_connect_status == WL_NO_SHIELD:
+            return '12'  # S_WL_NO_SHIELD "Ошибка подключения: Код 255";
+        elif system_info.wifi_connect_status == WL_SCAN_COMPLETED:
+            return '13'  # S_WL_SCAN_COMPLETED "Ошибка подключения: Код 2";
+        elif system_info.wifi_connect_status == WL_CONNECTED:
+            pass
+        return ''
 
     def apply_settings(self, form_data):
         """
@@ -264,6 +279,13 @@ class Settings:
                     if hasattr(self, k):
                         setattr(self, k, v)
 
+            if k == 'ssid':
+                if v == 'ERROR_PASSWORD':
+                    system_info.wifi_connect_status = WL_WRONG_PASSWORD
+                elif v == 'ERROR_CONNECT':
+                    system_info.wifi_connect_status = WL_CONNECT_FAILED
+                else:
+                    system_info.wifi_connect_status = WL_CONNECTED
         return res
 
 
@@ -273,22 +295,7 @@ class SystemInfo:
     fs_size = 256000
     fs_free = 50000
     build_date_time = '27 Nov 2023 12:00:00'
-
-    @property
-    def wifi_connect_status(self):
-        # WL_NO_SSID_AVAIL
-        # WL_CONNECT_FAILED
-        # WL_CONNECTION_LOST
-        #return "Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class=\"link\" href=\"http://192.168.4.1/ssid.txt\">файл</a> параметров wi-fi сетей.'
-        # WL_WRONG_PASSWORD
-        #return 'Ошибка подключения: Некорректный пароль'
-        # WL_NO_SHIELD
-        # WL_IDLE_STATUS
-        # WL_SCAN_COMPLETED
-        # WL_CONNECTED
-        # WL_DISCONNECTED
-        return ''
-
+    wifi_connect_status: int = WL_IDLE_STATUS
 
 
 settings = Settings()

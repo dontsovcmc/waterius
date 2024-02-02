@@ -46,7 +46,7 @@ void get_api_connect_status(AsyncWebServerRequest *request)
 
     if (start_connect_flag)
     {
-        ret["status"] = F("выполняется подключение...");
+        //ret["status"] = F("4");  // S_CONNECTING "выполняется подключение..." not used?
         LOG_INFO(F("WIFI: connecting..."));
     }
     else
@@ -137,11 +137,11 @@ void post_api_save_connect(AsyncWebServerRequest *request)
         {
             if (wizard) 
             {
-                params += F("wizard=true&error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново.");
+                params += F("wizard=true&error=0");  // ERROR_ANOTHER_CHANNEL "Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново." 
             }
             else 
             {
-                params += F("error=Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново.");
+                params += F("error=0"); // ERROR_ANOTHER_CHANNEL
             }
         }
         else 
@@ -207,8 +207,8 @@ void get_api_main_status(AsyncWebServerRequest *request)
     if (status == WL_CONNECT_FAILED || status == WL_CONNECTION_LOST || status == WL_WRONG_PASSWORD)
     {
         JsonObject obj = array.createNestedObject();
-        obj["error"] = F("Ошибка подключения к Wi-Fi");
-        obj["link_text"] = F("Настроить");
+        obj["error"] = F("1");  // S_WIFI_CONNECT "Ошибка подключения к Wi-Fi"
+        obj["link_text"] = F("5"); // S_SETUP Настроить
         obj["link"] = F("/wifi_settings.html?status_code=") + String(status);
     }
     else
@@ -218,15 +218,15 @@ void get_api_main_status(AsyncWebServerRequest *request)
             if (status == WL_CONNECTED)
             {
                 JsonObject obj = array.createNestedObject();
-                obj["error"] = F("Ватериус успешно подключился к Wi-Fi. Теперь настроим счётчики.");
-                obj["link_text"] = F("Настроить");
+                obj["error"] = F("2");  // S_SETUP_COUNTERS "Ватериус успешно подключился к Wi-Fi. Теперь настроим счётчики."
+                obj["link_text"] = F("5"); // S_SETUP Настроить
                 obj["link"] = F("/input/1/setup.html");
             }
             else 
             {
                 JsonObject obj = array.createNestedObject();
-                obj["error"] = F("Ватериус ещё не настроен");
-                obj["link_text"] = F("Приступить");
+                obj["error"] = F("3");  // S_NEED_SETUP "Ватериус ещё не настроен"
+                obj["link_text"] = F("6"); // S_LETSGO Приступить
                 obj["link"] = F("/captive_portal_start.html");
             }
         }
@@ -304,7 +304,7 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
     }
     else
     {
-        ret[F("error")] = F("Ошибка связи с МК");
+        ret[F("error")] = F("7"); // S_NO_LINK Ошибка связи с МК
     }
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");

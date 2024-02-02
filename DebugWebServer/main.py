@@ -133,6 +133,7 @@ async def reset():
 async def input_0_setup():
     return template_response("input_setup.html", 0)
 
+
 @app.get("/input/1/setup.html")
 async def input_1_setup():
     return template_response("input_setup.html", 1)
@@ -142,6 +143,7 @@ async def input_1_setup():
 async def input_0_detect():
     return template_response("input_detect.html", 0)
 
+
 @app.get("/input/1/detect.html")
 async def input_1_detect():
     return template_response("input_detect.html", 1)
@@ -150,6 +152,7 @@ async def input_1_detect():
 @app.get("/input/0/hall_detect.html")
 async def input_0_hall_detect():
     return template_response("input_hall_detect.html", 0)
+
 
 @app.get("/input/1/hall_detect.html")
 async def input_1_hall_detect():

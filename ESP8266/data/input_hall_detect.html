@@ -3,12 +3,13 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-        <title>Детектирование счётчика: %counter_title%</title>
+        <title>Детектирование счётчика: <span id="counter_title"></span></title>
         <link rel="stylesheet" href="/static/style.css">
         <script src="/static/common.js"></script>
         <script src="/static/strings.js"></script>
     </head>
     <body onload="fill_instruction(%counter_name%); 
+    fill_counter_title(%counter_name%);
     _init({
         back: '/input/%input%/setup.html',
         back_wizard: '/input/%input%/setup.html?wizard=true',
@@ -30,7 +31,7 @@
                     <div class="fr">шаг 4/9</div>
                 </header>
                 <main>
-                    <h2>%counter_title%</h2>
+                    <h2 id="counter_title-2"></h2>
                     <img src="/images/%counter_img%" class="counter">
                     <p class="text strong mt20">Сейчас мы настроим счётчик, для этого:</p>
                     <p class="text mt10" id="counter_instruction"></p>

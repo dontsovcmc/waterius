@@ -53,28 +53,6 @@ String replace_value(const String &var)
     return out;
 }
 
-String get_counter_title(const uint8_t name)
-{
-    switch (name)
-    {
-    case CounterName::WATER_COLD:
-        return F("Холодная вода");
-    case CounterName::WATER_HOT:
-        return F("Горячая вода");
-    case CounterName::ELECTRO:
-        return F("Электричество");
-    case CounterName::GAS:
-        return F("Газ");
-    case CounterName::HEAT:
-        return F("Тепло");
-    case CounterName::PORTABLE_WATER:
-        return F("Питьевая вода");
-    case CounterName::OTHER:
-    default:
-        return F("Другой");
-    }
-}
-
 String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ctype)
 {
     if (ctype == CounterType::HALL) 
@@ -195,26 +173,14 @@ String processor_main(const String &var, const uint8_t input)
         }
     }
 
-    else if (var == FPSTR(PARAM_COUNTER_TITLE))
+    else if (var == FPSTR(PARAM_COUNTER0_NAME))
     {
-        switch (input)
-        {
-            case 0: return get_counter_title(sett.counter0_name);
-            case 1: return get_counter_title(sett.counter1_name);
-        }
+        return String(sett.counter0_name);
     }
 
-    else if (var == FPSTR(PARAM_COUNTER0_TITLE)) // index.html
+    else if (var == FPSTR(PARAM_COUNTER1_NAME))
     {
-        if (runtime_data.counter_type0 == CounterType::NONE)
-            return F("Отключен");
-        return get_counter_title(sett.counter0_name);
-    }
-    else if (var == FPSTR(PARAM_COUNTER1_TITLE)) // index.html
-    {
-        if (runtime_data.counter_type1 == CounterType::NONE)
-            return F("Отключен");
-        return get_counter_title(sett.counter1_name);
+        return String(sett.counter1_name);
     }
 
     else if (var == FPSTR(PARAM_COUNTER_IMG))
@@ -233,6 +199,16 @@ String processor_main(const String &var, const uint8_t input)
             case 0: return String(runtime_data.counter_type0);
             case 1: return String(runtime_data.counter_type1);
         }
+    }
+
+    else if (var == FPSTR(PARAM_COUNTER0_TYPE))
+    {
+        return String(runtime_data.counter_type0);
+    }
+
+    else if (var == FPSTR(PARAM_COUNTER1_TYPE))
+    {
+        return String(runtime_data.counter_type1);
     }
 
     else if (var == FPSTR(PARAM_FACTOR))
@@ -296,17 +272,17 @@ String processor_main(const String &var, const uint8_t input)
             case WL_NO_SSID_AVAIL:
             case WL_CONNECT_FAILED:
             case WL_CONNECTION_LOST:
-                return String(F("Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей."));
+                return String(F("8")); //S_WIFI_CONNECTION_LOST "Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.";
             case WL_WRONG_PASSWORD:
-                return String(F("Ошибка подключения: Некорректный пароль"));
+                return String(F("9")); //S_WL_WRONG_PASSWORD "Ошибка подключения: Некорректный пароль";
             case WL_IDLE_STATUS:
-                return String(F("Ошибка подключения: Код 0"));
+                return String(F("10")); //S_WL_IDLE_STATUS "Ошибка подключения: Код 0";
             case WL_DISCONNECTED:
-                return String(F("Ошибка подключения: Отключен"));
+                return String(F("11")); //S_WL_DISCONNECTED "Ошибка подключения: Отключен";
             case WL_NO_SHIELD:
-                return String(F("Ошибка подключения: Код 255"));
+                return String(F("12")); //S_WL_NO_SHIELD "Ошибка подключения: Код 255";
             case WL_SCAN_COMPLETED:
-                return String(F("Ошибка подключения: Код 2"));
+                return String(F("13")); //S_WL_SCAN_COMPLETED "Ошибка подключения: Код 2";
             case WL_CONNECTED:
                 break;
         }

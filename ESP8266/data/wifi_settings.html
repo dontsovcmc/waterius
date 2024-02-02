@@ -8,7 +8,8 @@
         <script src="/static/common.js"></script>
         <script src="/static/strings.js"></script>
     </head>
-    <body onload="_init({
+    <body onload="fill_tr_id(%wifi_connect_status%, 'wifi_connect_status');
+    _init({
         back: '/index.html',
         back_wizard: '/wifi_list.html?wizard=true',
         next: '/index.html',
@@ -30,7 +31,7 @@
                     </header>
                     <main>
                         <h2>Сетевые настройки</h2>
-                        <p class="wifi-error">%wifi_connect_status%</p>
+                        <p class="wifi-error" id="wifi_connect_status"></p>
                         <p class="form-error"></p>
                         <div class="f-row">
                             <label for="ssid">Название сети</label>

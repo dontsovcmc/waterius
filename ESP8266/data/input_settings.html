@@ -3,16 +3,17 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-        <title>Ввод данных счётчика: %counter_title%</title>
+        <title>Ввод данных счётчика: <span id="counter_title"></span></title>
         <link rel="stylesheet" href="/static/style.css">
         <script src="/static/common.js"></script>
         <script src="/static/strings.js"></script>
     </head>
-    <body onload="_init({
+    <body onload="fill_counter_title(%counter_name%);
+    _init({
         back: '/input/%input%/setup.html',
         back_wizard: '/input/%input%/setup.html?wizard=true',
         next: '/index.html',
-        next_wizard: '/input/0/setup.html?wizard=true'
+        next_wizard: get_next_wizard_by_input(%input%)
     }); getImpulses(%input%);">
         <form onsubmit="formSubmit(event, this, '/api/save');">
             <div class="wrap">
@@ -29,7 +30,7 @@
                         <div class="fr">шаг 5/9</div>
                     </header>
                     <main>
-                        <h2>%counter_title%</h2>
+                        <h2 id="counter_title-2"></h2>
                         <p class="text">Счётчик определился Ватериусом, теперь введите серийный номер и показания счётчика</p>
                         <img src="/images/tableau.png" class="counter mt20">
                         <p class="form-error hd"></p>

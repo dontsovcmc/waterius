@@ -34,10 +34,11 @@ static const char PARAM_INPUT[] PROGMEM = "input";
 static const char PARAM_CHANNEL_START[] PROGMEM = "channel_start";
 static const char PARAM_SERIAL[] PROGMEM = "serial";
 static const char PARAM_COUNTER_NAME[] PROGMEM = "counter_name";
-static const char PARAM_COUNTER_TITLE[] PROGMEM = "counter_title";
-static const char PARAM_COUNTER0_TITLE[] PROGMEM = "counter0_title";
-static const char PARAM_COUNTER1_TITLE[] PROGMEM = "counter1_title";
+static const char PARAM_COUNTER0_NAME[] PROGMEM = "counter0_name";
+static const char PARAM_COUNTER1_NAME[] PROGMEM = "counter1_name";
 static const char PARAM_COUNTER_TYPE[] PROGMEM = "counter_type";
+static const char PARAM_COUNTER0_TYPE[] PROGMEM = "counter0_type";
+static const char PARAM_COUNTER1_TYPE[] PROGMEM = "counter1_type";
 static const char PARAM_COUNTER_IMG[] PROGMEM = "counter_img";
 static const char PARAM_FACTOR[] PROGMEM = "factor";
 
