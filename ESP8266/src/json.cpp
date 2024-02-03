@@ -75,6 +75,7 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     root[F("mode")] = sett.mode;
     root[F("setup_finished")] = sett.setup_finished_counter;
     root[F("setup_started")] = data.setup_started_counter;
+    root[F("ntp_errors")] = sett.ntp_error_counter;
 
     // waterius
     root[F("key")] = sett.waterius_key;

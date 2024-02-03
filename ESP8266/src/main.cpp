@@ -111,7 +111,9 @@ void loop()
                 // устанавливать время только при использовани хттпс или мктт
                 if (is_mqtt(sett) || is_https(sett.waterius_host) || is_https(sett.http_url))
                 {
-                    sync_ntp_time(sett);
+                    if (!sync_ntp_time(sett)) {
+                        sett.ntp_error_counter++;
+                    }
                 }
 
                 voltage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными

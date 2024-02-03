@@ -3,7 +3,9 @@
 
 #include <Arduino.h>
 
-#define FIRMWARE_VERSION "1.0.8"
+#ifndef FIRMWARE_VERSION
+#error "Please define environment variable FIRMWARE_VERSION=x.x.x"
+#endif 
 
 /*
 Версии прошивки для ESP
@@ -448,7 +450,7 @@ struct Settings
 
     /* Публиковать данные для автоматического добавления в Homeassistant */
     uint8_t mqtt_auto_discovery = (uint8_t)MQTT_AUTO_DISCOVERY;
-    uint8_t reserved2 = 0;
+    uint8_t ntp_error_counter = 0;
 
     /* Топик MQTT*/
     char mqtt_discovery_topic[MQTT_TOPIC_LEN] = DISCOVERY_TOPIC;
