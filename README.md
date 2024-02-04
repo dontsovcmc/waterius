@@ -1,4 +1,4 @@
-# Ватериус 1.0.6
+# Ватериус 1.1.0
 ## Wi-Fi приставка для импульсных счётчиков воды, газа, тепла
 
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
