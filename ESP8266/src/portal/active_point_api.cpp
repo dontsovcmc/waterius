@@ -404,7 +404,9 @@ void save_param(AsyncWebParameter *p, float &v, JsonObject &errorsObj)
     }
     else */
     {
-        v = p->value().toFloat();
+        String value = p->value();
+        value.replace(',', '.');
+        v = value.toFloat();  // только 2 знака после точки
         LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
     }
 }
