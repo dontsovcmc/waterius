@@ -214,6 +214,6 @@ void write_ssid_to_file()
         }
     }
 
-    delay(500); // Make sure the CREATE and LASTWRITE times are different
+    delay(50); // Make sure the CREATE and LASTWRITE times are different
     file.close();
 }

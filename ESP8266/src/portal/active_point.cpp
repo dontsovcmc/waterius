@@ -536,7 +536,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
                { request->send(LittleFS, "/wifi_settings.html", F("text/html"), false, processor); });
 
     // Файл характеристик всех найденных Wi-Fi сетей
-    server->on("/ssid.txt", HTTP_GET, [](AsyncWebServerRequest *request)
+    server->on("/ssid.txt", HTTP_GET, [](AsyncWebServerRequest *request) 
                { request->send(LittleFS, "/ssid.txt", F("text/plain")); });
 
     /*API*/
