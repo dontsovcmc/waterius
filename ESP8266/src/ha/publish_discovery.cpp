@@ -95,16 +95,16 @@ void publish_discovery_general_entities(PubSubClient &mqtt_client, String &topic
     // добавляем одиночные сенсоры из массива GENERAL_ENTITIES с индекса 0 ("Battery Voltage") до  7 ("RSSI")
     // всего 7 сенсоров без атрибутов
     bool extended = false;
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 10 + 1; i++)
     {
         extended = i == 0; // в первый сенсор дописываем всю информацию про устройство
         publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, GENERAL_ENTITIES, i, extended);
     }
     // добавляем сенсор с атрибутами из массива GENERAL_ENTITIES
     // основной сенсор 5 ("Battery Voltage") атрибуты 6 (Voltage diff)
-    publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, GENERAL_ENTITIES, 5, false, 6, 1);
+    //publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, GENERAL_ENTITIES, 5, false, 6, 1);
     // основной сенсор 8 ("RSSI") атрибуты 8,9,10 (mac router, mac, ip)
-    publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, GENERAL_ENTITIES, 7, false, 8, 3);
+    //publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, GENERAL_ENTITIES, 7, false, 8, 3);
 }
 
 /**
@@ -126,7 +126,15 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client, String &topic
         case CounterName::WATER_HOT:
         case CounterName::PORTABLE_WATER:
         case CounterName::OTHER:
-            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 0, false, 1, 5, 0, sett.counter0_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 0, false, 1, 8, 0, sett.counter0_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 1, false, 1, 8, 0, sett.counter0_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 2, false, 1, 8, 0, sett.counter0_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 3, false, 1, 8, 0, sett.counter0_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 4, false, 1, 8, 0, sett.counter0_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 5, false, 1, 8, 0, sett.counter0_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 6, false, 1, 8, 0, sett.counter0_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 7, false, 1, 8, 0, sett.counter0_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 8, false, 1, 8, 0, sett.counter0_name);
             break;
         case CounterName::GAS:
             publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_GAS_ENTITIES, 0, false, 1, 5, 0, sett.counter0_name);
@@ -144,7 +152,16 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client, String &topic
         case CounterName::WATER_HOT:
         case CounterName::PORTABLE_WATER:
         case CounterName::OTHER:
-            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 0, false, 1, 5, 1, sett.counter1_name);
+            //publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 0, false, 1, 5, 1, sett.counter1_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 0, false, 1, 8, 1, sett.counter1_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 1, false, 1, 8, 1, sett.counter1_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 2, false, 1, 8, 1, sett.counter1_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 3, false, 1, 8, 1, sett.counter1_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 4, false, 1, 8, 1, sett.counter1_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 5, false, 1, 8, 1, sett.counter1_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 6, false, 1, 8, 1, sett.counter1_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 7, false, 1, 8, 1, sett.counter1_name);
+            publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_WATER_ENTITIES, 8, false, 1, 8, 1, sett.counter1_name);
             break;
         case CounterName::GAS:
             publish_discovery_entity(mqtt_client, topic, discovery_topic, data, device_id, device_mac, CHANNEL_GAS_ENTITIES, 0, false, 1, 5, 1, sett.counter1_name);

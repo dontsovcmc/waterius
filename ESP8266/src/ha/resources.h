@@ -27,6 +27,7 @@
  */
 static const char s_sensor[] PROGMEM = "sensor";
 static const char s_number[] PROGMEM = "number";
+static const char s_select[] PROGMEM = "select";
 static const char s_measurement[] PROGMEM = "measurement";
 static const char s_voltage[] PROGMEM = "voltage";
 static const char s_diagnostic[] PROGMEM = "diagnostic";
@@ -91,6 +92,10 @@ static const char s_icon_identifier[] PROGMEM = "mdi:identifier";
 static const char s_f_name[] PROGMEM = "Factor";
 static const char s_f[] PROGMEM = "f";
 static const char s_icon_numeric[] PROGMEM = "mdi:numeric";
+static const char s_cname_name[] PROGMEM = "Dev Type";
+static const char s_cname[] PROGMEM = "cname";
+static const char s_itype_name[] PROGMEM = "Connect Type";
+static const char s_itype[] PROGMEM = "itype";
 
 /**
  * @brief массив с общими сущностями с указанием их атрибутов в MQTT
@@ -122,34 +127,37 @@ static const char *const GENERAL_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
 static const char *const CHANNEL_WATER_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
     // sensor_type, sensor_name, sensor_id, state_class, device_class,unit_of_meas,entity_category,icon
     /* Сенсор с атрибутами */
-    {s_number, s_total_name, s_ch, s_total, s_water, s_m3, "", ""},                       // chN Показания
+    {s_sensor, s_total_name, s_ch, s_total, s_water, s_m3, "", ""},                       // chN Показания
+    {s_number, s_total_name, s_ch, s_total, s_water, s_m3, s_config, ""},                 // chN Для измениния из интерфейса HASSIO / MQTT
     {s_sensor, s_imp_name, s_imp, s_measurement, "", "", s_diagnostic, s_icon_pulse},     // impN Количество импульсов
     {s_sensor, s_delta_name, s_delta, s_measurement, "", "", s_diagnostic, s_icon_delta}, // deltaN Разница с предыдущими показаниями, л
     {s_sensor, s_adc_name, s_adc, s_measurement, "", "", s_diagnostic, s_icon_counter},   // adcN Аналоговый уровень
     {s_sensor, s_serial_name, s_serial, "", "", "", s_diagnostic, s_icon_identifier},     // serialN Серийный номер счетчика
-    {s_number, s_f_name, s_f, "", "", "", s_config, s_icon_numeric},                      // fN  Вес импульса
+    {s_number, s_f_name, s_f, "", "", "", s_config, s_icon_numeric},                      // fN Вес импульса
+    {s_select, s_cname_name, s_cname, "", "", "", s_config, ""},                          // cnameN Назание канала из enum CounterName
+    {s_number, s_itype_name, s_itype, "", "", "", s_config, ""},                          // itypeN ?Тип подключения
 };
 
 static const char *const CHANNEL_GAS_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
     // sensor_type, sensor_name, sensor_id, state_class, device_class, unit_of_meas, entity_category, icon
     /* Сенсор с атрибутами */
-    {s_number, s_total_name, s_ch, s_total, s_gas, s_m3, "", ""},                         // chN Показания
+    {s_sensor, s_total_name, s_ch, s_total, s_gas, s_m3, "", ""},                         // chN Показания
     {s_sensor, s_imp_name, s_imp, s_measurement, "", "", s_diagnostic, s_icon_pulse},     // impN Количество импульсов
     {s_sensor, s_delta_name, s_delta, s_measurement, "", "", s_diagnostic, s_icon_delta}, // deltaN Разница с предыдущими показаниями, л
     {s_sensor, s_adc_name, s_adc, s_measurement, "", "", s_diagnostic, s_icon_counter},   // adcN Аналоговый уровень
     {s_sensor, s_serial_name, s_serial, "", "", "", s_diagnostic, s_icon_identifier},     // serialN Серийный номер счетчика
-    {s_number, s_f_name, s_f, "", "", "", s_config, s_icon_numeric},                      // fN  Вес импульса
+    {s_sensor, s_f_name, s_f, "", "", "", s_config, s_icon_numeric},                      // fN  Вес импульса
 };
 
 static const char *const CHANNEL_ENERGY_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
     // sensor_type, sensor_name, sensor_id, state_class, device_class, unit_of_meas, entity_category, icon
     /* Сенсор с атрибутами */
-    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWh, "", ""},                     // chN Показания
+    {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWh, "", ""},                     // chN Показания
     {s_sensor, s_imp_name, s_imp, s_measurement, "", "", s_diagnostic, s_icon_pulse},     // impN Количество импульсов
     {s_sensor, s_delta_name, s_delta, s_measurement, "", "", s_diagnostic, s_icon_delta}, // deltaN Разница с предыдущими показаниями, л
     {s_sensor, s_adc_name, s_adc, s_measurement, "", "", s_diagnostic, s_icon_counter},   // adcN Аналоговый уровень
     {s_sensor, s_serial_name, s_serial, "", "", "", s_diagnostic, s_icon_identifier},     // serialN Серийный номер счетчика
-    {s_number, s_f_name, s_f, "", "", "", s_config, s_icon_numeric},                      // fN  Вес импульса
+    {s_sensor, s_f_name, s_f, "", "", "", s_config, s_icon_numeric},                      // fN  Вес импульса
 };
 
 

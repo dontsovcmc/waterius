@@ -122,7 +122,7 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("json_attributes_template")] = json_attributes_template;
     }
 
-    if (strcmp(entity_type, "number") == 0)
+    if (strcmp(entity_type, "number") == 0)  // << Тут нужно добавить max min step... для коректной установки значений
     {
         // https://www.home-assistant.io/integrations/number.mqtt
         String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
@@ -135,6 +135,55 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("min")] = 1;     // min
         entity[F("max")] = 65535; // max
         entity[F("step")] = 1;    // step
+
+        entity[F("optimistic")] = true; // optimistic
+        entity[F("retain")] = true; //retain
+        entity[F("qos")] = 1; //qos
+    }
+
+    if (strcmp(entity_type, "select") == 0) // пока что ввиде грабли =(
+    {
+        // https://www.home-assistant.io/integrations/number.mqtt
+        String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
+        entity[F("cmd_t")] = command_topic; // command_topic
+
+       // entity[F("cmd_tpl")] = F("{{value | round(0) | int}}"); // command_template
+
+        //entity[F("mode")] = F("box"); // mode "box"
+
+        //entity[F("min")] = 1;     // min
+        //entity[F("max")] = 65535; // max
+        //entity[F("step")] = 1;    // step
+
+        //"options": ["WATER_COLD","WATER_HOT","ELECTRO","GAS","HEAT","PORTABLE_WATER","OTHER"],
+        entity[F("options")] = F("['WATER_COLD','WATER_HOT','ELECTRO','GAS','HEAT','PORTABLE_WATER','OTHER']");
+
+        JsonArray options = json_doc.createNestedArray("options");
+        options.add("WATER_COLD");
+        options.add("WATER_HOT");
+        options.add("ELECTRO");
+        options.add("GAS");
+        options.add("HEAT");
+        options.add("PORTABLE_WATER");
+        options.add("OTHER");
+
+        //"value_template": "{% set values = { \"0\":\"WATER_COLD\", \"1\":\"WATER_HOT\", \"2\":\"ELECTRO\", \"3\":\"GAS\", \"4\":\"HEAT\", \"5\":\"PORTABLE_WATER\", \"6\": \"OTHER\" } %} {{ values[ value_json.cname0 ] if value_json.cname0 in values.keys() else \"6\" }}",
+        //String value_template = String(F("{% set values = { '0':\"WATER_COLD\", '1':\"WATER_HOT\", '2':\"ELECTRO\", '3':\"GAS\", '4':\"HEAT\", '5':\"PORTABLE_WATER\", '6': \"OTHER\" } %} {{ values[ value_json.")) + entity_id + F(" ] if value_json.") + entity_id + F(" in values.keys() else '6' }}");
+        String value_template = String("") + 
+            F("{% if value_json.")   + entity_id + F("==0 %} WATER_COLD ") +
+            F("{% elif value_json.") + entity_id + F("==1 %} WATER_HOT ") +
+            F("{% elif value_json.") + entity_id + F("==2 %} ELECTRO ") +
+            F("{% elif value_json.") + entity_id + F("==3 %} GAS ") +
+            F("{% elif value_json.") + entity_id + F("==4 %} HEAT ") +
+            F("{% elif value_json.") + entity_id + F("==5 %} PORTABLE_WATER ") +
+            F("{% elif value_json.") + entity_id + F("==6 %} OTHER ") + 
+            F("{% endif %}");
+
+        entity[F("val_tpl")] = value_template;
+
+        //"command_template": "{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1,  \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %}  {{ values[value] if value in values.keys() else 6 }}",
+        String cmd_tpl = F("{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1, \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %}  {{ values[value] if value in values.keys() else 6 }}");
+        entity[F("cmd_tpl")] = cmd_tpl;
 
         entity[F("optimistic")] = true; // optimistic
         entity[F("retain")] = true; //retain
