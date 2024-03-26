@@ -36,6 +36,7 @@ WL_CONNECTION_LOST  = 5
 WL_WRONG_PASSWORD   = 6
 WL_DISCONNECTED     = 7
 
+
 def check_ip_address(name, value):
     try:
         ipaddress.ip_address(value)
@@ -79,6 +80,19 @@ def variables_dictionary(obj) -> List[str]:
     return [attr for attr in dir(obj) if
                  not callable(getattr(obj, attr)) and
                  not attr.startswith("__")]
+
+
+class SystemInfo:
+    version_esp: str = '0.11.9'
+    version: int = 31
+    fs_size = 256000
+    fs_free = 50000
+    build_date_time = '27 Nov 2023 12:00:00'
+    wifi_connect_status: int = WL_IDLE_STATUS
+
+
+system_info = SystemInfo()
+system_info_vars = variables_dictionary(system_info)
 
 
 class InputSettings:
@@ -289,18 +303,5 @@ class Settings:
         return res
 
 
-class SystemInfo:
-    version_esp: str = '0.11.9'
-    version: int = 31
-    fs_size = 256000
-    fs_free = 50000
-    build_date_time = '27 Nov 2023 12:00:00'
-    wifi_connect_status: int = WL_IDLE_STATUS
-
-
 settings = Settings()
 settings_vars = variables_dictionary(settings)
-
-
-system_info = SystemInfo()
-system_info_vars = variables_dictionary(system_info)
