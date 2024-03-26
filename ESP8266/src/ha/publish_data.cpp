@@ -13,6 +13,7 @@ void publish_data_to_single_topic(PubSubClient &mqtt_client, String &topic, Dyna
 {
     String payload = "";
     serializeJson(json_data, payload);
+    LOG_INFO(F("MQTT: Publish src data: ") << payload);
     publish(mqtt_client, topic, payload);
 }
 

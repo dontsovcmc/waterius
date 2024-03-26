@@ -46,6 +46,7 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
     String unit_of_meas = FPSTR(entities[entity_indx][5]);
     String entity_category = FPSTR(entities[entity_indx][6]);
     String icon = FPSTR(entities[entity_indx][7]);
+    String advanced_conf = FPSTR(entities[entity_indx][8]);
     String json_attributes_topic = "";
     String json_attributes_template = "";
 
@@ -77,7 +78,8 @@ void publish_discovery_entity(PubSubClient &mqtt_client, String &topic, String &
                                             device_id.c_str(), device_mac.c_str(),
                                             true, device_name.c_str(), device_manufacturer.c_str(),
                                             device_model.c_str(), sw_version.c_str(), hw_version.c_str(),
-                                            json_attributes_topic.c_str(), json_attributes_template.c_str());
+                                            json_attributes_topic.c_str(), json_attributes_template.c_str(),
+                                            advanced_conf.c_str());
 
     String entity_discovery_topic = String(discovery_topic) + "/" + entity_type + "/" + uniqueId_prefix + "/" + entity_id + "/config";
     publish(mqtt_client, entity_discovery_topic, payload);

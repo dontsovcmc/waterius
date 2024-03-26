@@ -32,7 +32,8 @@ extern String build_entity_discovery(const char *mqtt_topic,
                                    const char *sw_version = "",
                                    const char *hw_version = "",
                                    const char *json_attributes_topic = "",
-                                   const char *json_attributes_template = "");
+                                   const char *json_attributes_template = "",
+                                   const char *advanced_conf = "");
 
 extern void update_channel_names(int channel, int channel_name, String &entity_id, String &entity_name);
 

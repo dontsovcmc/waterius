@@ -26,7 +26,7 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
         int endslash = topic.lastIndexOf('/');
         int prevslash = topic.lastIndexOf('/', endslash - 1);
         String param = topic.substring(prevslash + 1, endslash);
-        LOG_INFO(F("MQTT CALLBACK: Parameter ") << param);
+        LOG_INFO(F("MQTT: CALLBACK: Parameter ") << param);
 
         // period_min
         if (param.equals(F("period_min")))
@@ -89,14 +89,14 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
             }
         } else if (param.equals(F("ch0")))
         {
-            float ch0 = payload.toFloat();
+            float ch0 = payload.toFloat(); // Преобразовали во флоат просто для проверки на условие в следующей строке
             if (ch0 > 0)
             {
                 updated = true;
                 LOG_INFO(F("MQTT: CALLBACK: Old Settings.channel0_start: ") << sett.channel0_start);
                 LOG_INFO(F("MQTT: CALLBACK: Old Settings.impulses0_start: ") << sett.impulses0_start);
 
-                sett.channel0_start = ch0;
+                sett.channel0_start = ch0; // В сиде строки сохранили в параметрах (передали превильно без большого кол-ва нулей после запятой)
                 sett.impulses0_start = data.impulses0;
 
                 LOG_INFO(F("MQTT: CALLBACK: New Settings.channel0_start: ") << sett.channel0_start);
@@ -104,7 +104,7 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
 
                 if (json_data.containsKey("ch0"))
                 {
-                    json_data[F("ch0")] = ch0;
+                    json_data[F("ch0")] = (int)(ch0 * 1000 + 5) / 1000.0;  // исправляем округление
                 }
                 sett.setup_time = 0;
                 LOG_INFO(F("MQTT: CALLBACK: reset Settings.setup_time: ") << sett.setup_time);
@@ -126,7 +126,7 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
 
                 if (json_data.containsKey("ch1"))
                 {
-                    json_data[F("ch1")] = ch1;
+                    json_data[F("ch1")] = (int)(ch1 * 1000 + 5) / 1000.0;
                 }
 
                 sett.setup_time = 0;
@@ -217,7 +217,6 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
                 LOG_INFO(F("MQTT: CALLBACK: reset Settings.setup_time: ") << sett.setup_time);
             }
         }
-
     }
     return updated;
 }

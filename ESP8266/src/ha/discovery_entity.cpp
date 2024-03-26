@@ -11,9 +11,7 @@
  * https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery
  * https://developers.home-assistant.io/docs/core/entity/sensor/
  *
- * @param mqtt_client mqtt клиент
  * @param mqtt_topic корневой топик для публикации показаний как правил waterius-XXXXXX
- * @param mqtt_discovery_topic корневой топик для дискавери как правило /homeassistant
  * @param entity_type тип сенсора sensor, number и т.д.
  * @param entity_name название сенсора
  * @param entity_id идентификатор сенсора
@@ -49,7 +47,8 @@ String build_entity_discovery(const char *mqtt_topic,
                               const char *sw_version,
                               const char *hw_version,
                               const char *json_attributes_topic,
-                              const char *json_attributes_template)
+                              const char *json_attributes_template,
+                              const char *advanced_conf)
 {
     DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
     JsonObject entity = json_doc.to<JsonObject>();
@@ -122,7 +121,7 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("json_attributes_template")] = json_attributes_template;
     }
 
-    if (strcmp(entity_type, "number") == 0)  // << Тут нужно добавить max min step... для коректной установки значений
+    if (strcmp(entity_type, "number") == 0 && strcmp(advanced_conf, "50") == 0)  // format 5.0. TODO: добавить max min step... для коректной установки значений
     {
         // https://www.home-assistant.io/integrations/number.mqtt
         String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
@@ -133,7 +132,7 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("mode")] = F("box"); // mode "box"
 
         entity[F("min")] = 1;     // min
-        entity[F("max")] = 65535; // max
+        entity[F("max")] = 99999; // max
         entity[F("step")] = 1;    // step
 
         entity[F("optimistic")] = true; // optimistic
@@ -141,23 +140,34 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("qos")] = 1; //qos
     }
 
-    if (strcmp(entity_type, "select") == 0) // пока что ввиде грабли =(
+    if (strcmp(entity_type, "number") == 0 &&  strcmp(advanced_conf, "63") == 0)  // format 6.3
+    //if (strcmp(entity_id, "ch") == 0)
     {
         // https://www.home-assistant.io/integrations/number.mqtt
         String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
         entity[F("cmd_t")] = command_topic; // command_topic
 
-       // entity[F("cmd_tpl")] = F("{{value | round(0) | int}}"); // command_template
+        entity[F("cmd_tpl")] = F("{{value | round(2) }}"); // command_template
 
-        //entity[F("mode")] = F("box"); // mode "box"
+        entity[F("mode")] = F("box"); // mode "box"
 
-        //entity[F("min")] = 1;     // min
-        //entity[F("max")] = 65535; // max
-        //entity[F("step")] = 1;    // step
+        entity[F("min")] = 0;     // min
+        entity[F("max")] = 999999; // max
+        entity[F("step")] = 0.01;    // step
+
+        entity[F("optimistic")] = true; // optimistic
+        entity[F("retain")] = true; //retain
+        entity[F("qos")] = 1; //qos
+    }
+
+    if (strcmp(entity_type, "select") == 0 && strcmp(advanced_conf, "cname") == 0)
+    //if (strcmp(entity_id, "cname") == 0)
+    {
+        // https://www.home-assistant.io/integrations/number.mqtt
+        String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
+        entity[F("cmd_t")] = command_topic; // command_topic
 
         //"options": ["WATER_COLD","WATER_HOT","ELECTRO","GAS","HEAT","PORTABLE_WATER","OTHER"],
-        entity[F("options")] = F("['WATER_COLD','WATER_HOT','ELECTRO','GAS','HEAT','PORTABLE_WATER','OTHER']");
-
         JsonArray options = json_doc.createNestedArray("options");
         options.add("WATER_COLD");
         options.add("WATER_HOT");
@@ -182,7 +192,43 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("val_tpl")] = value_template;
 
         //"command_template": "{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1,  \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %}  {{ values[value] if value in values.keys() else 6 }}",
-        String cmd_tpl = F("{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1, \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %}  {{ values[value] if value in values.keys() else 6 }}");
+        String cmd_tpl = F("{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1, \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %} {{ values[value] if value in values.keys() else 6 }}");
+        entity[F("cmd_tpl")] = cmd_tpl;
+
+        entity[F("optimistic")] = true; // optimistic
+        entity[F("retain")] = true; //retain
+        entity[F("qos")] = 1; //qos
+    }
+
+    if (strcmp(entity_type, "select") == 0 && strcmp(advanced_conf, "itype") == 0)
+    //if (strcmp(entity_id, "itype") == 0)
+    {
+        // https://www.home-assistant.io/integrations/number.mqtt
+        String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
+        entity[F("cmd_t")] = command_topic; // command_topic
+
+        JsonArray options = json_doc.createNestedArray("options");
+
+        options.add("NAMUR");
+        options.add("DISCRETE");
+        options.add("ELECTRONIC");
+        options.add("HALL");
+        options.add("NONE");
+
+        //"value_template": "{% set values = { \"0\":\"WATER_COLD\", \"1\":\"WATER_HOT\", \"2\":\"ELECTRO\", \"3\":\"GAS\", \"4\":\"HEAT\", \"5\":\"PORTABLE_WATER\", \"6\": \"OTHER\" } %} {{ values[ value_json.cname0 ] if value_json.cname0 in values.keys() else \"6\" }}",
+        //String value_template = String(F("{% set values = { '0':\"WATER_COLD\", '1':\"WATER_HOT\", '2':\"ELECTRO\", '3':\"GAS\", '4':\"HEAT\", '5':\"PORTABLE_WATER\", '6': \"OTHER\" } %} {{ values[ value_json.")) + entity_id + F(" ] if value_json.") + entity_id + F(" in values.keys() else '6' }}");
+        String value_template = String("") + 
+            F("{% if value_json.")   + entity_id + F("==0 %} NAMUR ") +
+            F("{% elif value_json.") + entity_id + F("==1 %} DISCRETE ") +
+            F("{% elif value_json.") + entity_id + F("==2 %} ELECTRONIC ") +
+            F("{% elif value_json.") + entity_id + F("==3 %} HALL ") +
+            F("{% elif value_json.") + entity_id + F("==255 %} NONE ") + 
+            F("{% endif %}");
+
+        entity[F("val_tpl")] = value_template;
+
+        //"command_template": "{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1,  \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %}  {{ values[value] if value in values.keys() else 6 }}",
+        String cmd_tpl = F("{% set values = { \"NAMUR\":0, \"DISCRETE\":1, \"ELECTRONIC\":2, \"HALL\":3, \"NONE\":255} %} {{ values[value] if value in values.keys() else 255 }}");
         entity[F("cmd_tpl")] = cmd_tpl;
 
         entity[F("optimistic")] = true; // optimistic
