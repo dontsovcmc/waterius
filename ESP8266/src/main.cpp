@@ -192,5 +192,5 @@ void loop()
         ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. (выключили Instant не ждет 92мс)
     } 
     
-    while(true);
+    while(true) yield();
 }
