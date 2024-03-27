@@ -266,7 +266,7 @@ void setup()
 	LOG(F("MCUSR"));
 	LOG(info.service);
 	LOG(F("RESET"));
-	LOG(info.resets);
+	LOG(info.config.resets);
 	LOG(F("EEPROM used:"));
 	LOG(storage.size() + config.size());
 	LOG(F("Data:"));
