@@ -62,6 +62,8 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     root[F("version")] = data.version;
     root[F("version_esp")] = FIRMWARE_VERSION;
     root[F("esp_id")] = getChipId();
+    root[F("flash_id")] = ESP.getFlashChipId();
+
     root[F("freemem")] = ESP.getFreeHeap();
     root[F("timestamp")] = get_current_time();
 

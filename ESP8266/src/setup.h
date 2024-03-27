@@ -10,6 +10,11 @@
 /*
 Версии прошивки для ESP
 
+1.1.3  - 2024.03.27 - hardworr dontsovcmc
+                      1. корректировка getVcc 
+                      2. Добавил в json поле flash_id
+                      3. Если чип памяти производителя с кодом C4, то засыпаем без deepsleep (https://github.com/dontsovcmc/waterius/issues/318) 
+
 1.1.2  - 2024.03.12 - Anat0liyBM dontsovcmc
                       1. Поддержка изменения по mqtt из ha: текущих показаний, веса импульса, типа входа
                       2. Поменял regexp вводных данных ^(\d{1,8}([.,]\d{1,3})?)$

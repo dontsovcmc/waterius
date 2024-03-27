@@ -44,6 +44,8 @@ void setup()
         HeapSelectDram ephemeral;
         LOG_INFO(F("DRAM free: ") << ESP.getFreeHeap() << F(" bytes"));
     }
+    LOG_INFO(F("ChipId: ") << String(getChipId(), HEX));
+    LOG_INFO(F("FlashChipId: ") << String(ESP.getFlashChipId(), HEX));
 
     get_voltage()->begin();
     voltage_ticker.attach_ms(300, []()
@@ -54,6 +56,7 @@ void loop()
 {
     uint8_t mode = TRANSMIT_MODE; // TRANSMIT_MODE;
     bool config_loaded = false;
+
 
     // спрашиваем у Attiny85 повод пробуждения и данные true) 
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
@@ -170,16 +173,24 @@ void loop()
             }
         }
     }
-    LOG_INFO(F("Going to sleep"));
-    LOG_END();
-
+    
     if (!config_loaded)
     {
         delay(500);
         blink_led(3, 1000, 500);
     }
 
-    masterI2C.sendCmd('Z'); // "Можешь идти спать, attiny"
+    LOG_END();
 
-    ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. Instant не ждет 92мс
+    masterI2C.sendCmd('Z'); // через 20мс attiny отключит EN
+    
+    uint8_t vendor_id = ESP.getFlashChipVendorId();
+
+    // { 0xC4, "Giantec Semiconductor, Inc." }, https://github.com/elitak/freeipmi/blob/master/libfreeipmi/spec/ipmi-jedec-manufacturer-identification-code-spec.c
+    if (vendor_id != 0xC4) 
+    {
+        ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. (выключили Instant не ждет 92мс)
+    } 
+    
+    while(true);
 }

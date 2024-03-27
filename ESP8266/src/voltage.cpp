@@ -3,7 +3,7 @@
 
 void Voltage::begin()
 {
-    _voltage = ESP.getVcc();
+    _voltage = ESP.getVcc() / 1.024;  // system_get_vdd33
     _min_voltage = _voltage;
     _max_voltage = _voltage;
     _num_probes = 0;
@@ -17,7 +17,7 @@ void Voltage::begin()
  */
 void Voltage::update()
 {
-    _voltage = ESP.getVcc();
+    _voltage = ESP.getVcc() / 1.024;
     _min_voltage = _min(_voltage, _min_voltage);
     _max_voltage = _max(_voltage, _max_voltage);
     _probes[_num_probes % MAX_PROBES] = _voltage;
