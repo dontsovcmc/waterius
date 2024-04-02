@@ -10,7 +10,7 @@
 // https://github.com/letscontrolit/ESPEasy/blob/mega/src/src/Helpers/ESPEasy_time.cpp
 // https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_support/support_wifi.ino
 
-#define START_VALID_TIME 1577826000UL // Wed Jan 01 2020 00:00:00
+#define START_VALID_TIME 1704067201UL // Jan 01 2024 00:00:01
 #define DNS_TIMEOUT 1000              // 1 секунда
 #define NTP_TIMEOUT 300               // обычно ответ приходит за 30-50 мсек
 #define NTP_PORT 123
@@ -245,11 +245,15 @@ uint64_t get_ntp_nanos(const String &ntp_server_name)
  */
 bool sync_ntp_time(const String &ntp_server_name)
 {
+    struct timeval tv;
+    tv.tv_sec = START_VALID_TIME;
+    tv.tv_usec = 0;
+    settimeofday(&tv, NULL);
+
     uint32_t start_time = millis();
 
     uint64_t ntp_nanos = get_ntp_nanos(ntp_server_name);
 
-    struct timeval tv;
     tv.tv_sec = ntp_nanos / NSEC;
     tv.tv_usec = (ntp_nanos % NSEC) / 1000;
 
