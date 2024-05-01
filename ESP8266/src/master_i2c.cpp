@@ -120,7 +120,7 @@ bool MasterI2C::getMode(uint8_t &mode)
     mode = TRANSMIT_MODE;
     if (!sendCmd('M') || !getByte(mode, crc))
     {
-        LOG_ERROR(F("GetMode failed. Check i2c line."));
+        LOG_ERROR(F("Attiny not found."));
         return false;
     }
     LOG_INFO("mode: " << mode);

@@ -31,7 +31,7 @@ Ticker voltage_ticker;
 void setup()
 {
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
-    LOG_INFO(F("Booted"));
+    LOG_INFO(F("Waterius\n========\n"));
     LOG_INFO(F("Build: ") << __DATE__ << F(" ") << __TIME__);
 
     static_assert((sizeof(Settings) == 960), "sizeof Settings != 960");
@@ -56,7 +56,6 @@ void loop()
 {
     uint8_t mode = TRANSMIT_MODE; // TRANSMIT_MODE;
     bool config_loaded = false;
-
 
     // спрашиваем у Attiny85 повод пробуждения и данные true) 
     if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
@@ -180,12 +179,13 @@ void loop()
         blink_led(3, 1000, 500);
     }
 
+    LOG_INFO(F("Going to sleep"));
     LOG_END();
+
+    uint8_t vendor_id = ESP.getFlashChipVendorId();
 
     masterI2C.sendCmd('Z'); // через 20мс attiny отключит EN
     
-    uint8_t vendor_id = ESP.getFlashChipVendorId();
-
     // { 0xC4, "Giantec Semiconductor, Inc." }, https://github.com/elitak/freeipmi/blob/master/libfreeipmi/spec/ipmi-jedec-manufacturer-identification-code-spec.c
     if (vendor_id != 0xC4) 
     {
