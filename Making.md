@@ -16,12 +16,10 @@
 | 9 | Пин на плату | 1 | Любой для прошивки | [chipdip](https://www.chipdip.ru/product/tyco-826629-2) |
 | 10 | ESP8266-01 | 1 | ESP8266-01 потребляют 0-10мкА зависит от продавца и думаю чипа памяти | [ali (CN888 Store)](https://s.click.aliexpress.com/e/_d89oOKR)( качество, быстрая доставка) [yandex](https://yandex.ru/search/?text=ESP8266-01&lr=213) |
 | 11 | Закрытый батарейный отсек 4xAA | 1 | У ЧипДип KLS5-812-B, качество не очень. | [aliexpress](http://s.click.aliexpress.com/e/43K45ruk)(проверенный) [chipdip](https://www.chipdip.ru/product/fc1-5230) |
-| 12 | Стабилизатор MCP1700T-3002E-TT | 1 |  | [terraelectronica](https://www.terraelectronica.ru/product/241237) Не покупайте на ali, нужен оригинальный. |
-| 13 | Разъем под кабель на плату 4 контакта 2.54мм | 1 | Без винтов: DG141V-2.54-04P-14-00AH | [terraelectronica](https://www.terraelectronica.ru/product/1072180) |
-| 14 | [Плата](waterius-factory-board2_bottom.jpg) | 1 | или [ЛУТ](https://github.com/dontsovcmc/ImpCounter/raw/master/Board/waterius-homemade-board.png) | [заказ на OshPark](https://oshpark.com/shared_projects/gJDtn5z5), [Gerber файлы](https://github.com/dontsovcmc/Board/waterius-factory-3.1_2021-03-30.zip) |
+| 12 | Стабилизатор MCP1700T-3002E-TT | 1 |  | [chipdip](https://www.chipdip.ru/product/mcp1700t-3002e-tt-microchip) Не покупайте на ali, нужен оригинальный. |
+| 13 | Разъем под кабель на плату 4 контакта 2.54мм | 1 | Без винтов: DG141V-2.54-04P-14-00AH | [chipdip](https://www.chipdip.ru/product0/8011963447) |
+| 14 | [Плата](Board/board_3_3.jpg) | 1 | или [ЛУТ](Board/1.0-homemade/waterius-homemade-board.png) | [заказ на OshPark](https://oshpark.com/shared_projects/gJDtn5z5), [Gerber файлы](Board) |
 + программаторы для Attiny85 и ESP8266-01
-
-Магазины компонентов: terraelectronica.ru
 
 ## Схема
 
