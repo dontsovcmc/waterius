@@ -94,9 +94,9 @@ static const char s_icon_identifier[] PROGMEM = "mdi:identifier";
 static const char s_f_name[] PROGMEM = "Factor";
 static const char s_f[] PROGMEM = "f";
 static const char s_icon_numeric[] PROGMEM = "mdi:numeric";
-static const char s_cname_name[] PROGMEM = "Dev Type";
+static const char s_cname_name[] PROGMEM = "Resource Type";
 static const char s_cname[] PROGMEM = "cname";
-static const char s_itype_name[] PROGMEM = "Connect Type";
+static const char s_itype_name[] PROGMEM = "Input Type";
 static const char s_itype[] PROGMEM = "itype";
 static const char s_format50[] PROGMEM = "50";   // float format 5.0f
 static const char s_format63[] PROGMEM = "63";   // float format 6.3f
@@ -114,7 +114,7 @@ static const char *const GENERAL_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
     {s_sensor, s_resets_name, s_resets, s_measurement, "", "", s_diagnostic, s_icon_cog_refresh,""}, // resets
     {s_sensor, s_time_name, s_timestamp, "", s_timestamp, "", s_diagnostic, s_clock,""},             // Время
     /*{s_sensor, s_wake_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},*/ // Настройка для автоматического добавления времени пробуждения в Home Assistant
-    {s_number, s_wake_name, s_period_min, "", "", "", s_config, s_icon_bed_clock,""},
+    {s_number, s_wake_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50},
     /* Сенсор с атрибутами  Группа №1 */
     {s_sensor, s_bvolt_name, s_voltage, s_measurement, s_voltage, s_v, s_diagnostic, "",""},      // voltage
     {s_sensor, s_vdiff_name, s_vdiff, s_measurement, s_voltage, s_v, s_diagnostic, s_icon_ba,""}, // Просадка напряжения voltage_diff, В

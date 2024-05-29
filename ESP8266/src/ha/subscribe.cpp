@@ -1,5 +1,6 @@
 #include "subscribe.h"
 #include "Logging.h"
+#include "publish.h"
 #include "publish_data.h"
 #include "utils.h"
 
@@ -235,6 +236,7 @@ void mqtt_callback(Settings &sett, const SlaveData &data, DynamicJsonDocument &j
 {
     String topic = raw_topic;
     String payload;
+    String zero_payload("");
     payload.reserve(length);
 
     LOG_INFO(F("MQTT: CALLBACK: Message arrived to: ") << topic);
@@ -250,6 +252,8 @@ void mqtt_callback(Settings &sett, const SlaveData &data, DynamicJsonDocument &j
         // если данные изменились то переопубликуем их сразу не ожидая следующего сеанса связи
         publish_data(mqtt_client, mqtt_topic, json_data, true);
     }
+    LOG_INFO(F("MQTT: Remove retain message: ") << topic);
+    publish(mqtt_client, topic, zero_payload, PUBLISH_MODE_SIMPLE);
 }
 
 /**

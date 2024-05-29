@@ -213,7 +213,7 @@ String build_entity_discovery(const char *mqtt_topic,
         options.add("DISCRETE");
         options.add("ELECTRONIC");
         options.add("HALL");
-        options.add("NONE");
+        options.add("NOT_USED");
 
         //"value_template": "{% set values = { \"0\":\"WATER_COLD\", \"1\":\"WATER_HOT\", \"2\":\"ELECTRO\", \"3\":\"GAS\", \"4\":\"HEAT\", \"5\":\"PORTABLE_WATER\", \"6\": \"OTHER\" } %} {{ values[ value_json.cname0 ] if value_json.cname0 in values.keys() else \"6\" }}",
         //String value_template = String(F("{% set values = { '0':\"WATER_COLD\", '1':\"WATER_HOT\", '2':\"ELECTRO\", '3':\"GAS\", '4':\"HEAT\", '5':\"PORTABLE_WATER\", '6': \"OTHER\" } %} {{ values[ value_json.")) + entity_id + F(" ] if value_json.") + entity_id + F(" in values.keys() else '6' }}");
@@ -222,13 +222,13 @@ String build_entity_discovery(const char *mqtt_topic,
             F("{% elif value_json.") + entity_id + F("==1 %} DISCRETE ") +
             F("{% elif value_json.") + entity_id + F("==2 %} ELECTRONIC ") +
             F("{% elif value_json.") + entity_id + F("==3 %} HALL ") +
-            F("{% elif value_json.") + entity_id + F("==255 %} NONE ") + 
+            F("{% elif value_json.") + entity_id + F("==255 %} NOT_USED ") + 
             F("{% endif %}");
 
         entity[F("val_tpl")] = value_template;
 
         //"command_template": "{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1,  \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %}  {{ values[value] if value in values.keys() else 6 }}",
-        String cmd_tpl = F("{% set values = { \"NAMUR\":0, \"DISCRETE\":1, \"ELECTRONIC\":2, \"HALL\":3, \"NONE\":255} %} {{ values[value] if value in values.keys() else 255 }}");
+        String cmd_tpl = F("{% set values = { \"NAMUR\":0, \"DISCRETE\":1, \"ELECTRONIC\":2, \"HALL\":3, \"NOT_USED\":255} %} {{ values[value] if value in values.keys() else 255 }}");
         entity[F("cmd_tpl")] = cmd_tpl;
 
         entity[F("optimistic")] = true; // optimistic
