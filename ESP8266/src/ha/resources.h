@@ -32,7 +32,7 @@ static const char s_measurement[] PROGMEM = "measurement";
 static const char s_voltage[] PROGMEM = "voltage";
 static const char s_diagnostic[] PROGMEM = "diagnostic";
 static const char s_v[] PROGMEM = "V";
-static const char s_bvolt_name[] PROGMEM = "Battery Voltage";
+static const char s_bvolt_name[] PROGMEM = "Voltage Battery";
 static const char s_vdiff_name[] PROGMEM = "Voltage Diff";
 static const char s_vdiff[] PROGMEM = "voltage_diff";
 static const char s_icon_ba[] PROGMEM = "mdi:battery-alert";
@@ -153,10 +153,11 @@ static const char *const ENTITY_ELECTRO_TOTAL[MQTT_PARAM_COUNT] PROGMEM =
 static const char *const ENTITY_ELECTRO_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
     {s_number, s_total_name, s_ch, s_total, s_energy, s_kWh, s_config, "", s_format63};  // chN Для изменения из интерфейса HASSIO / MQTT
 
+// пока нет типа данных https://github.com/home-assistant/core/blob/dev/homeassistant/components/sensor/const.py#L587
 static const char *const ENTITY_HEAT_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_sensor, s_total_name, s_ch, s_total, s_heat, s_gCal, "", "", ""};                 // chN Показания
+    {s_sensor, s_total_name, s_ch, s_total, s_energy, s_gCal, "", "", ""};                 // chN Показания
 static const char *const ENTITY_HEAT_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_number, s_total_name, s_ch, s_total, s_heat, s_gCal, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
+    {s_number, s_total_name, s_ch, s_total, s_energy, s_gCal, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
       
 
 // Channel attributes

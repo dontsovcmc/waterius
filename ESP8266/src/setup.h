@@ -10,6 +10,14 @@
 /*
 Версии прошивки для ESP
 
+1.1.4  - 2024.06.01 - dontsovcmc
+                      1. Исправлена запись параметров из HomeAssistant. 
+                      (Напомню, после записи нужно нажать кнопку, чтобы Ватериус принял новые значения.)
+                      2. Если отключить канал, то в HomeAssistant discovery пропадёт сенсор и параметры, кроме "типа канала".
+                      3. Добавил переменные компиляции LOG_LEVEL_DEBUG, LOG_LEVEL_INFO 
+                      4. Поля itype0, itype1 переименованы в ctype0, ctype1
+                      5. kWh, GCal в HomeAssistant
+
 1.1.3  - 2024.03.27 - hardworr dontsovcmc
                       1. корректировка getVcc 
                       2. Добавил в json поле flash_id
