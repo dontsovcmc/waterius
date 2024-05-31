@@ -308,3 +308,13 @@ DataType data_type_by_name(uint8_t counter_name)
 	}
 	return DataType::COLD_WATER;
 }
+
+/**
+ * @brief Используется ли канал пользователем. Нужно для HA discovery, чтобы не отображался лишний sensor и настройки.
+ *
+ * @param ctype тип входа из Attiny
+ */
+bool channel_is_work(const uint8_t ctype)
+{
+	return ctype != CounterType::NONE;
+}

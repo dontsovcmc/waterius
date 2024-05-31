@@ -105,10 +105,13 @@ static const char s_format63[] PROGMEM = "63";   // float format 6.3f
  * @brief массив с общими сущностями с указанием их атрибутов в MQTT
  *
  */
+
+/* Некорректно это считать, т.к. напряжение измеряется после регулятора. И просадка может скакать.
 static const char *const ENTITY_VOLTAGE_LOW[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_bat_low_name, s_voltage_low, "", "", "", s_diagnostic, s_icon_ba, ""};               // voltage_low Батарейка разряжена >
 static const char *const ENTITY_BATTERY[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_bat_name, s_battery, s_measurement, s_battery, s_perc, s_diagnostic, "", ""};        // процент зарядки батареи
+*/
 static const char *const ENTITY_RESETS[MQTT_PARAM_COUNT] PROGMEM =    
     {s_sensor, s_resets_name, s_resets, s_measurement, "", "", s_diagnostic, s_icon_cog_refresh, ""}; // resets
 static const char *const ENTITY_TIMESTAMP[MQTT_PARAM_COUNT] PROGMEM =    
@@ -138,22 +141,22 @@ static const char *const ENTITY_IP[MQTT_PARAM_COUNT] PROGMEM =
 static const char *const ENTITY_WATER_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_total_name, s_ch, s_total, s_water, s_m3, "", "", ""};                  // chN Показания
 static const char *const ENTITY_WATER_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_number, s_total_name, s_ch, s_total, s_water, s_m3, s_config, "", s_format63};    // chN Для измениния из интерфейса HASSIO / MQTT
+    {s_number, s_total_name, s_ch, s_total, s_water, s_m3, s_config, "", s_format63};    // chN Для изменения из интерфейса HASSIO / MQTT
 
 static const char *const ENTITY_GAS_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_total_name, s_ch, s_total, s_gas, s_m3, "", "", ""};                    // chN Показания
 static const char *const ENTITY_GAS_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_number, s_total_name, s_ch, s_total, s_gas, s_m3, s_config, "", s_format63};      // chN Для измениния из интерфейса HASSIO / MQTT
+    {s_number, s_total_name, s_ch, s_total, s_gas, s_m3, s_config, "", s_format63};      // chN Для изменения из интерфейса HASSIO / MQTT
  
 static const char *const ENTITY_ELECTRO_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWh, "", "", ""};                // chN Показания
 static const char *const ENTITY_ELECTRO_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWh, s_config, "", s_format63};  // chN Для измениния из интерфейса HASSIO / MQTT
+    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWh, s_config, "", s_format63};  // chN Для изменения из интерфейса HASSIO / MQTT
 
 static const char *const ENTITY_HEAT_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_total_name, s_ch, s_total, s_heat, s_gCal, "", "", ""};                 // chN Показания
 static const char *const ENTITY_HEAT_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_number, s_total_name, s_ch, s_total, s_heat, s_gCal, s_config, "", s_format63};   // chN Для измениния из интерфейса HASSIO / MQTT
+    {s_number, s_total_name, s_ch, s_total, s_heat, s_gCal, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
       
 
 // Channel attributes

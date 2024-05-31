@@ -76,7 +76,12 @@ inline Print &operator<<(Print &obj, T arg)
 	{                      \
 	} while (0)
 
-#ifdef LOGLEVEL
+#define LOG_DEBUG(content) \
+	do                     \
+	{                      \
+	} while (0)
+
+#if defined(LOG_LEVEL_INFO) || defined(LOG_LEVEL_DEBUG)
 // Depending on log level, add code for logging
 #undef LOG_ERROR
 #define LOG_ERROR(content)                           \
@@ -86,6 +91,7 @@ inline Print &operator<<(Print &obj, T arg)
 		LOG_FREE_HEAP;                               \
 		Serial << "  ERROR : " << content << "\r\n"; \
 	} while (0)
+
 #undef LOG_INFO
 #define LOG_INFO(content)                            \
 	do                                               \
@@ -95,5 +101,16 @@ inline Print &operator<<(Print &obj, T arg)
 		Serial << "  INFO  : " << content << "\r\n"; \
 	} while (0)
 
-#endif // LOGLEVEL >= 0
+#ifdef LOG_LEVEL_DEBUG
+#undef LOG_DEBUG
+#define LOG_DEBUG(content)                           \
+	do                                               \
+	{                                                \
+		LOG_FORMAT_TIME;                             \
+		LOG_FREE_HEAP;                               \
+		Serial << "  DEBUG : " << content << "\r\n"; \
+	} while (0)
+#endif
+#endif
+
 #endif
