@@ -52,7 +52,7 @@ String build_entity_discovery(const char *mqtt_topic,
 {
     DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
     JsonObject entity = json_doc.to<JsonObject>();
-
+    
     entity[F("name")] = entity_name; // name
 
     String uniqueId_prefix = get_device_name();
@@ -67,19 +67,20 @@ String build_entity_discovery(const char *mqtt_topic,
     value_template = String("{{ value_json.") + entity_id + String(" | is_defined }}");
     entity[F("val_tpl")] = value_template.c_str();
 
-    if (state_class[0])
+
+    if (state_class && state_class[0])
         entity[F("stat_cla")] = state_class; // state_class https://developers.home-assistant.io/docs/core/entity/sensor/#available-state-classes
 
-    if (device_class[0])
+    if (device_class && device_class[0])
         entity[F("dev_cla")] = device_class; // device_class
 
-    if (unit_of_meas[0])
+    if (unit_of_meas && unit_of_meas[0])
         entity[F("unit_of_meas")] = unit_of_meas; // unit_of_measurement
 
-    if (entity_category[0])
+    if (entity_category && entity_category[0])
         entity[F("ent_cat")] = entity_category; // entity_category
 
-    if (icon[0])
+    if (icon && icon[0])
         entity[F("ic")] = icon; // icon
 
     if (enabled_by_default)
@@ -95,19 +96,19 @@ String build_entity_discovery(const char *mqtt_topic,
     identifiers[0] = device_id;
     identifiers[1] = device_mac;
 
-    if (device_name[0])
+    if (device_name)
         device[F("name")] = device_name; // name
 
-    if (device_manufacturer[0])
+    if (device_manufacturer)
         device[F("manufacturer")] = device_manufacturer; // manufacturer //mf
 
-    if (device_model[0])
+    if (device_model)
         device[F("model")] = device_model; // model //mdl
 
-    if (sw_version[0])
+    if (sw_version)
         device[F("sw_version")] = sw_version; // sw_version //sw
 
-    if (hw_version[0])
+    if (hw_version)
         device[F("hw_version")] = hw_version; // hw_version //hw
 
     //"connections": [["mac", "02:5b:26:a8:dc:12"]]
@@ -115,7 +116,7 @@ String build_entity_discovery(const char *mqtt_topic,
 
     entity[F("device")] = device; // device //dv
 
-    if (json_attributes_topic[0] && json_attributes_template[0])
+    if (json_attributes_topic && json_attributes_template)
     {
         entity[F("json_attributes_topic")] = json_attributes_topic;
         entity[F("json_attributes_template")] = json_attributes_template;
@@ -141,7 +142,6 @@ String build_entity_discovery(const char *mqtt_topic,
     }
 
     if (strcmp(entity_type, "number") == 0 &&  strcmp(advanced_conf, "63") == 0)  // format 6.3
-    //if (strcmp(entity_id, "ch") == 0)
     {
         // https://www.home-assistant.io/integrations/number.mqtt
         String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
@@ -161,7 +161,6 @@ String build_entity_discovery(const char *mqtt_topic,
     }
 
     if (strcmp(entity_type, "select") == 0 && strcmp(advanced_conf, "cname") == 0)
-    //if (strcmp(entity_id, "cname") == 0)
     {
         // https://www.home-assistant.io/integrations/number.mqtt
         String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
@@ -201,7 +200,6 @@ String build_entity_discovery(const char *mqtt_topic,
     }
 
     if (strcmp(entity_type, "select") == 0 && strcmp(advanced_conf, "itype") == 0)
-    //if (strcmp(entity_id, "itype") == 0)
     {
         // https://www.home-assistant.io/integrations/number.mqtt
         String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");

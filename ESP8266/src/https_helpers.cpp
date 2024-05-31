@@ -35,11 +35,11 @@ bool post_data(const String &url, const char *key, const char *email, const Stri
     if (httpClient.begin(*(WiFiClient *)pClient, url))
     {
         httpClient.addHeader(F("Content-Type"), F("application/json"));
-        if (key[0])
+        if (key)
         {
             httpClient.addHeader(F("Waterius-Token"), key);
         }
-        if (email[0])
+        if (email)
         {
             httpClient.addHeader(F("Waterius-Email"), email);
         }

@@ -319,7 +319,7 @@ enum CounterType
     DISCRETE = 1,
     ELECTRONIC = 2,
     HALL = 3, 
-    NONE = 0xFF 
+    NONE = 0xFF   // 255
 };
 
 enum CounterName

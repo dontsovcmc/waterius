@@ -105,97 +105,83 @@ static const char s_format63[] PROGMEM = "63";   // float format 6.3f
  * @brief массив с общими сущностями с указанием их атрибутов в MQTT
  *
  */
-#define GENERAL_ENTITIES_LEN 11
-static const char *const GENERAL_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
-    // sensor_type, sensor_name, sensor_id, state_class, device_class,unit_of_meas,entity_category,icon
-    /* Одиночные сенсоры */
-    {s_sensor, s_bat_low_name, s_voltage_low, "", "", "", s_diagnostic, s_icon_ba,""},               // voltage_low Батарейка разряжена >
-    {s_sensor, s_bat_name, s_battery, s_measurement, s_battery, s_perc, s_diagnostic, "",""},        // процент зарядки батареи
-    {s_sensor, s_resets_name, s_resets, s_measurement, "", "", s_diagnostic, s_icon_cog_refresh,""}, // resets
-    {s_sensor, s_time_name, s_timestamp, "", s_timestamp, "", s_diagnostic, s_clock,""},             // Время
+static const char *const ENTITY_VOLTAGE_LOW[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_bat_low_name, s_voltage_low, "", "", "", s_diagnostic, s_icon_ba, ""};               // voltage_low Батарейка разряжена >
+static const char *const ENTITY_BATTERY[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_bat_name, s_battery, s_measurement, s_battery, s_perc, s_diagnostic, "", ""};        // процент зарядки батареи
+static const char *const ENTITY_RESETS[MQTT_PARAM_COUNT] PROGMEM =    
+    {s_sensor, s_resets_name, s_resets, s_measurement, "", "", s_diagnostic, s_icon_cog_refresh, ""}; // resets
+static const char *const ENTITY_TIMESTAMP[MQTT_PARAM_COUNT] PROGMEM =    
+    {s_sensor, s_time_name, s_timestamp, "", s_timestamp, "", s_diagnostic, s_clock, ""};            // Время
     /*{s_sensor, s_wake_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},*/ // Настройка для автоматического добавления времени пробуждения в Home Assistant
-    {s_number, s_wake_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50},
+static const char *const ENTITY_PERIOD_MIN[MQTT_PARAM_COUNT] PROGMEM =  
+    {s_number, s_wake_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50};
     /* Сенсор с атрибутами  Группа №1 */
-    {s_sensor, s_bvolt_name, s_voltage, s_measurement, s_voltage, s_v, s_diagnostic, "",""},      // voltage
-    {s_sensor, s_vdiff_name, s_vdiff, s_measurement, s_voltage, s_v, s_diagnostic, s_icon_ba,""}, // Просадка напряжения voltage_diff, В
+static const char *const ENTITY_VOLTAGE[MQTT_PARAM_COUNT] PROGMEM =  
+    {s_sensor, s_bvolt_name, s_voltage, s_measurement, s_voltage, s_v, s_diagnostic, "", ""};      // voltage
+static const char *const ENTITY_VOLTAGE_DIFF[MQTT_PARAM_COUNT] PROGMEM =  
+    {s_sensor, s_vdiff_name, s_vdiff, s_measurement, s_voltage, s_v, s_diagnostic, s_icon_ba, ""}; // Просадка напряжения voltage_diff, В
     /* Сенсор с атрибутами  Группа №2 */
-    {s_sensor, s_rssi_name, s_rssi, s_measurement, s_signal_strength, s_dbm, s_diagnostic, "",""}, // rssi
-    {s_sensor, s_router_mac_name, s_router_mac, "", "", "", s_diagnostic, "",""},                  // Мак роутера
-    {s_sensor, s_mac_name, s_mac, "", "", "", s_diagnostic, "",""},                                // Мак ESP
-    {s_sensor, s_ip_name, s_ip, "", "", "", s_diagnostic, s_icon_ip,""},                           // IP
-};
-
+static const char *const ENTITY_RSSI[MQTT_PARAM_COUNT] PROGMEM =  
+    {s_sensor, s_rssi_name, s_rssi, s_measurement, s_signal_strength, s_dbm, s_diagnostic, "", ""}; // rssi
+static const char *const ENTITY_ROUTER_MAC[MQTT_PARAM_COUNT] PROGMEM =  
+    {s_sensor, s_router_mac_name, s_router_mac, "", "", "", s_diagnostic, "", ""};                  // Мак роутера
+static const char *const ENTITY_MAC[MQTT_PARAM_COUNT] PROGMEM =    
+    {s_sensor, s_mac_name, s_mac, "", "", "", s_diagnostic, "", ""};                                // Мак ESP
+static const char *const ENTITY_IP[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_ip_name, s_ip, "", "", "", s_diagnostic, s_icon_ip, ""};                           // IP
+    
 /**
  * @brief массив с сущностями для одного канала
  *        https://www.home-assistant.io/integrations/sensor/
  */
-#define CHANNEL_WATER_ENTITIES_LEN 9
-static const char *const CHANNEL_WATER_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
-    // sensor_type, sensor_name, sensor_id, state_class, device_class,unit_of_meas,entity_category,icon
-    /* Сенсор с атрибутами */
-    {s_sensor, s_total_name, s_ch, s_total, s_water, s_m3, "", "",""},                       // chN Показания
-    {s_number, s_total_name, s_ch, s_total, s_water, s_m3, s_config, "",s_format63},         // chN Для измениния из интерфейса HASSIO / MQTT
-    {s_sensor, s_imp_name, s_imp, s_measurement, "", "", s_diagnostic, s_icon_pulse,""},     // impN Количество импульсов
-    {s_sensor, s_delta_name, s_delta, s_measurement, "", "", s_diagnostic, s_icon_delta,""}, // deltaN Разница с предыдущими показаниями, л
-    {s_sensor, s_adc_name, s_adc, s_measurement, "", "", s_diagnostic, s_icon_counter,""},   // adcN Аналоговый уровень
-    {s_sensor, s_serial_name, s_serial, "", "", "", s_diagnostic, s_icon_identifier,""},     // serialN Серийный номер счетчика
-    {s_number, s_f_name, s_f, "", "", "", s_config, s_icon_numeric,s_format50},              // fN Вес импульса
-    {s_select, s_cname_name, s_cname, "", "", "", s_config, "",s_cname},                     // cnameN Название канала из enum CounterName
-    {s_select, s_itype_name, s_itype, "", "", "", s_config, "",s_itype},                     // itypeN Тип входа attiny
-};
+static const char *const ENTITY_WATER_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_total_name, s_ch, s_total, s_water, s_m3, "", "", ""};                  // chN Показания
+static const char *const ENTITY_WATER_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_number, s_total_name, s_ch, s_total, s_water, s_m3, s_config, "", s_format63};    // chN Для измениния из интерфейса HASSIO / MQTT
 
+static const char *const ENTITY_GAS_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_total_name, s_ch, s_total, s_gas, s_m3, "", "", ""};                    // chN Показания
+static const char *const ENTITY_GAS_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_number, s_total_name, s_ch, s_total, s_gas, s_m3, s_config, "", s_format63};      // chN Для измениния из интерфейса HASSIO / MQTT
+ 
+static const char *const ENTITY_ELECTRO_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWh, "", "", ""};                // chN Показания
+static const char *const ENTITY_ELECTRO_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWh, s_config, "", s_format63};  // chN Для измениния из интерфейса HASSIO / MQTT
 
-#define CHANNEL_GAS_ENTITIES_LEN 9
-static const char *const CHANNEL_GAS_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
-    // sensor_type, sensor_name, sensor_id, state_class, device_class, unit_of_meas, entity_category, icon
-    /* Сенсор с атрибутами */
-    {s_sensor, s_total_name, s_ch, s_total, s_gas, s_m3, "", "",""},                         // chN Показания
-    {s_number, s_total_name, s_ch, s_total, s_gas, s_m3, s_config, "",s_format63},           // chN Для измениния из интерфейса HASSIO / MQTT
-    {s_sensor, s_imp_name, s_imp, s_measurement, "", "", s_diagnostic, s_icon_pulse,""},     // impN Количество импульсов
-    {s_sensor, s_delta_name, s_delta, s_measurement, "", "", s_diagnostic, s_icon_delta,""}, // deltaN Разница с предыдущими показаниями, л
-    {s_sensor, s_adc_name, s_adc, s_measurement, "", "", s_diagnostic, s_icon_counter,""},   // adcN Аналоговый уровень
-    {s_sensor, s_serial_name, s_serial, "", "", "", s_diagnostic, s_icon_identifier,""},     // serialN Серийный номер счетчика
-    {s_number, s_f_name, s_f, "", "", "", s_config, s_icon_numeric,s_format50},              // fN  Вес импульса
-    {s_select, s_cname_name, s_cname, "", "", "", s_config, "",s_cname},                     // cnameN Назание канала из enum CounterName
-    {s_select, s_itype_name, s_itype, "", "", "", s_config, "",s_itype},                     // itypeN Тип входа attiny
-};
+static const char *const ENTITY_HEAT_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_total_name, s_ch, s_total, s_heat, s_gCal, "", "", ""};                 // chN Показания
+static const char *const ENTITY_HEAT_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_number, s_total_name, s_ch, s_total, s_heat, s_gCal, s_config, "", s_format63};   // chN Для измениния из интерфейса HASSIO / MQTT
+      
 
+// Channel attributes
+static const char *const ENTITY_CHANNEL_IMP[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_imp_name, s_imp, s_measurement, "", "", s_diagnostic, s_icon_pulse, ""};     // impN Количество импульсов
 
-#define CHANNEL_ELECTRO_ENTITIES_LEN 9
-static const char *const CHANNEL_ELECTRO_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
-    // sensor_type, sensor_name, sensor_id, state_class, device_class, unit_of_meas, entity_category, icon
-    /* Сенсор с атрибутами */
-    {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWh, "", "",""},                     // chN Показания
-    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWh, s_config, "",s_format63},       // chN Для измениния из интерфейса HASSIO / MQTT
-    {s_sensor, s_imp_name, s_imp, s_measurement, "", "", s_diagnostic, s_icon_pulse,""},     // impN Количество импульсов
-    {s_sensor, s_delta_name, s_delta, s_measurement, "", "", s_diagnostic, s_icon_delta,""}, // deltaN Разница с предыдущими показаниями, л
-    {s_sensor, s_adc_name, s_adc, s_measurement, "", "", s_diagnostic, s_icon_counter,""},   // adcN Аналоговый уровень
-    {s_sensor, s_serial_name, s_serial, "", "", "", s_diagnostic, s_icon_identifier,""},     // serialN Серийный номер счетчика
-    {s_number, s_f_name, s_f, "", "", "", s_config, s_icon_numeric,s_format50},              // fN  Вес импульса
-    {s_select, s_cname_name, s_cname, "", "", "", s_config, "", s_cname},                    // cnameN Назание канала из enum CounterName
-    {s_select, s_itype_name, s_itype, "", "", "", s_config, "", s_itype},                    // itypeN Тип входа attiny
-};
+static const char *const ENTITY_CHANNEL_DELTA[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_delta_name, s_delta, s_measurement, "", "", s_diagnostic, s_icon_delta, ""}; // deltaN Разница с предыдущими показаниями, л
 
+static const char *const ENTITY_CHANNEL_ADC[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_adc_name, s_adc, s_measurement, "", "", s_diagnostic, s_icon_counter, ""};   // adcN Аналоговый уровень
 
-#define CHANNEL_HEAT_ENTITIES_LEN 9
-static const char *const CHANNEL_HEAT_ENTITIES[][MQTT_PARAM_COUNT] PROGMEM = {
-    // sensor_type, sensor_name, sensor_id, state_class, device_class, unit_of_meas, entity_category, icon
-    /* Сенсор с атрибутами */
-    {s_sensor, s_total_name, s_ch, s_total, s_heat, s_gCal, "", "",""},                     // chN Показания
-    {s_number, s_total_name, s_ch, s_total, s_heat, s_gCal, s_config, "",s_format63},       // chN Для измениния из интерфейса HASSIO / MQTT
-    {s_sensor, s_imp_name, s_imp, s_measurement, "", "", s_diagnostic, s_icon_pulse,""},     // impN Количество импульсов
-    {s_sensor, s_delta_name, s_delta, s_measurement, "", "", s_diagnostic, s_icon_delta,""}, // deltaN Разница с предыдущими показаниями, л
-    {s_sensor, s_adc_name, s_adc, s_measurement, "", "", s_diagnostic, s_icon_counter,""},   // adcN Аналоговый уровень
-    {s_sensor, s_serial_name, s_serial, "", "", "", s_diagnostic, s_icon_identifier,""},     // serialN Серийный номер счетчика
-    {s_number, s_f_name, s_f, "", "", "", s_config, s_icon_numeric,s_format50},              // fN  Вес импульса
-    {s_select, s_cname_name, s_cname, "", "", "", s_config, "", s_cname},                    // cnameN Назание канала из enum CounterName
-    {s_select, s_itype_name, s_itype, "", "", "", s_config, "", s_itype},                    // itypeN Тип входа attiny
-};
+static const char *const ENTITY_CHANNEL_SERIAL[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_serial_name, s_serial, "", "", "", s_diagnostic, s_icon_identifier, ""};     // serialN Серийный номер счетчика
+
+static const char *const ENTITY_CHANNEL_FACTOR[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_number, s_f_name, s_f, "", "", "", s_config, s_icon_numeric, s_format50};              // fN Вес импульса
+
+static const char *const ENTITY_CHANNEL_CNAME[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_select, s_cname_name, s_cname, "", "", "", s_config, "", s_cname};                     // cnameN Название канала из enum CounterName
+
+static const char *const ENTITY_CHANNEL_ITYPE[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_select, s_itype_name, s_itype, "", "", "", s_config, "", s_itype};                     // itypeN Тип входа attiny
+
 
 /**
- * @brief Названия каналов
- *        enum CounterName
- */
+ * @brief Названия каналов, согласно enum CounterName
+*/
 static const char s_cold_wtr_name[] PROGMEM = "Cold Water";
 static const char s_hot_wtr_name[] PROGMEM = "Hot Water";
 static const char s_electricity_name[] PROGMEM = "Electricity";
@@ -203,10 +189,6 @@ static const char s_gas_name[] PROGMEM = "Gas";
 static const char s_heat_name[] PROGMEM = "Heat";
 static const char s_portable_wtr_name[] PROGMEM = "Potable Water";
 static const char s_other_name[] PROGMEM = "Other";
-
-/**
- * @brief Названия каналов, согласно enum CounterName
-*/
 
 static const char *const CHANNEL_NAMES[] PROGMEM = {s_cold_wtr_name, s_hot_wtr_name,
                                                     s_electricity_name, s_gas_name,
