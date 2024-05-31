@@ -34,25 +34,23 @@
                         <p class="text">Какой счётчик вы хотите подключить</p>
                         <p class="form-error hd"></p>
                         <div class="f-row">
-                            <label for="counter_name">Тип счётчика</label>
+                            <label for="counter_name">Что считает</label>
                             <select class="slct" id="counter_name" name="counter_name" option-value="%counter_name%">
-                              <option selected="" value="0">Холодная вода</option>
-                              <option value="1">Горячая вода</option>
+                              <option selected="" value="0">Холодную воду</option>
+                              <option value="1">Горячую воду</option>
                               <option value="2">Электричество</option>
                               <option value="3">Газ</option>
                               <option value="4">Тепло</option>
-                              <option value="5">Питьевая вода</option>
+                              <option value="5">Питьевую воду</option>
                               <option value="6">Другой</option>
                             </select>
                             <p class="error hd" id="counter_name-error">Некорректное значение</p>
                         </div>
 
-                        <p class="text mt20">Выберите тип входа. Для механических счётчиков воды и газа выберите Намур, для других - Электронный</p>
                         <div class="f-row">
-                            <label for="counter_type">Тип входа</label>
+                            <label for="counter_type">Тип счётчика</label>
                             <select class="slct" id="counter_type" name="counter_type" option-value="%counter_type%">
-                              <option selected="" value="0">Намур</option>
-                              <option value="1">Дискретный</option>
+                              <option selected="" value="0">Механический</option>
                               <option value="2">Электронный</option>
                               <option value="3">Датчик Холла (красный вход!)</option>
                               <option value="255">Выключен</option>
