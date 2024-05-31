@@ -96,8 +96,8 @@ static const char s_f[] PROGMEM = "f";
 static const char s_icon_numeric[] PROGMEM = "mdi:numeric";
 static const char s_cname_name[] PROGMEM = "Resource Type";
 static const char s_cname[] PROGMEM = "cname";
-static const char s_itype_name[] PROGMEM = "Input Type";
-static const char s_itype[] PROGMEM = "itype";
+static const char s_ctype_name[] PROGMEM = "Input Type";
+static const char s_ctype[] PROGMEM = "ctype";
 static const char s_format50[] PROGMEM = "50";   // float format 5.0f
 static const char s_format63[] PROGMEM = "63";   // float format 6.3f
 
@@ -178,8 +178,8 @@ static const char *const ENTITY_CHANNEL_FACTOR[MQTT_PARAM_COUNT] PROGMEM =
 static const char *const ENTITY_CHANNEL_CNAME[MQTT_PARAM_COUNT] PROGMEM = 
     {s_select, s_cname_name, s_cname, "", "", "", s_config, "", s_cname};                     // cnameN Название канала из enum CounterName
 
-static const char *const ENTITY_CHANNEL_ITYPE[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_select, s_itype_name, s_itype, "", "", "", s_config, "", s_itype};                     // itypeN Тип входа attiny
+static const char *const ENTITY_CHANNEL_CTYPE[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_select, s_ctype_name, s_ctype, "", "", "", s_config, "", s_ctype};                     // ctypeN Тип входа attiny
 
 
 /**

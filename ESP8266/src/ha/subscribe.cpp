@@ -175,42 +175,42 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
                 sett.setup_time = 0;
                 LOG_INFO(F("MQTT: CALLBACK: reset Settings.setup_time: ") << sett.setup_time);
             }
-        } else if (param.equals(F("itype0")))
+        } else if (param.equals(F("ctype0")))
         {
-            int itype0 = payload.toInt();
-            if (data.counter_type0 != itype0)
+            int ctype0 = payload.toInt();
+            if (data.counter_type0 != ctype0)
             {
                 LOG_INFO(F("MQTT: CALLBACK: Old data.counter_type0: ") << data.counter_type0);
 
-                if (masterI2C.setCountersType(itype0, data.counter_type1))
+                if (masterI2C.setCountersType(ctype0, data.counter_type1))
                 {
                     updated = true;
 
-                    LOG_INFO(F("MQTT: CALLBACK: New data.counter_type0: ") << itype0);
-                    if (json_data.containsKey("itype0"))
+                    LOG_INFO(F("MQTT: CALLBACK: New data.counter_type0: ") << ctype0);
+                    if (json_data.containsKey("ctype0"))
                     {
-                        json_data[F("itype0")] = itype0;
+                        json_data[F("ctype0")] = ctype0;
                         
                     }
                 }
                 sett.setup_time = 0;
                 LOG_INFO(F("MQTT: CALLBACK: reset Settings.setup_time: ") << sett.setup_time);
             }
-        } else if (param.equals(F("itype1")))
+        } else if (param.equals(F("ctype1")))
         {
-            int itype1 = payload.toInt();
-            if (data.counter_type1 != itype1)
+            int ctype1 = payload.toInt();
+            if (data.counter_type1 != ctype1)
             {
                 LOG_INFO(F("MQTT: CALLBACK: Old data.counter_type1: ") << data.counter_type1);
 
-                if (masterI2C.setCountersType(data.counter_type0, itype1))
+                if (masterI2C.setCountersType(data.counter_type0, ctype1))
                 {
                     updated = true;
 
-                    LOG_INFO(F("MQTT: CALLBACK: New data.counter_type1: ") << itype1);
-                    if (json_data.containsKey("itype1"))
+                    LOG_INFO(F("MQTT: CALLBACK: New data.counter_type1: ") << ctype1);
+                    if (json_data.containsKey("ctype1"))
                     {
-                        json_data[F("itype1")] = itype1;
+                        json_data[F("ctype1")] = ctype1;
                         
                     }
                 }

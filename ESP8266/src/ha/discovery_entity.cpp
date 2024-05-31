@@ -199,7 +199,7 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("qos")] = 1; //qos
     }
 
-    if (strcmp(entity_type, "select") == 0 && strcmp(advanced_conf, "itype") == 0)
+    if (strcmp(entity_type, "select") == 0 && strcmp(advanced_conf, "ctype") == 0)
     {
         // https://www.home-assistant.io/integrations/number.mqtt
         String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");

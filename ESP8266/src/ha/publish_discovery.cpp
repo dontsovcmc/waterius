@@ -207,7 +207,7 @@ String channel_entity_attributes(const int channel, const int channel_name)
     add_entity_attribute(json_attributes, ENTITY_CHANNEL_SERIAL, channel, channel_name);
     add_entity_attribute(json_attributes, ENTITY_CHANNEL_FACTOR, channel, channel_name);
     add_entity_attribute(json_attributes, ENTITY_CHANNEL_CNAME, channel, channel_name);
-    add_entity_attribute(json_attributes, ENTITY_CHANNEL_ITYPE, channel, channel_name);
+    add_entity_attribute(json_attributes, ENTITY_CHANNEL_CTYPE, channel, channel_name);
     
     serializeJson(json_attributes, json_attributes_template);
     return json_attributes_template;
@@ -235,7 +235,7 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client,
                                         const int channel_name)
 {
     // Публикуем настройку типа входа, даже если он отключён
-    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ITYPE, "", channel, channel_name);
+    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_CTYPE, "", channel, channel_name);
     
     if (!channel_is_work)
     {

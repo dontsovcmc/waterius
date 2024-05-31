@@ -30,8 +30,8 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     root[F("adc1")] = data.adc1;
     root[F("serial0")] = sett.serial0;
     root[F("serial1")] = sett.serial1;
-    root[F("itype0")] = data.counter_type0;
-    root[F("itype1")] = data.counter_type1;
+    root[F("ctype0")] = data.counter_type0;
+    root[F("ctype1")] = data.counter_type1;
     root[F("cname0")] = sett.counter0_name;
     root[F("cname1")] = sett.counter1_name;
     root[F("data_type0")] = (uint8_t)data_type_by_name(sett.counter0_name);
