@@ -91,7 +91,7 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
         } else if (param.equals(F("ch0")))
         {
             float ch0 = payload.toFloat(); // Преобразовали во флоат просто для проверки на условие в следующей строке
-            if (ch0 > 0)
+            if (ch0 >= 0)
             {
                 updated = true;
                 LOG_INFO(F("MQTT: CALLBACK: Old Settings.channel0_start: ") << sett.channel0_start);
@@ -113,7 +113,7 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
         } else if (param.equals(F("ch1")))
         {
             float ch1 = payload.toFloat();
-            if (ch1 > 0)
+            if (ch1 >= 0)
             {
                 updated = true;
                 LOG_INFO(F("MQTT: CALLBACK: Old Settings.channel1_start: ") << sett.channel1_start);
