@@ -159,6 +159,16 @@ async def input_1_hall_detect():
     return template_response("input_hall_detect.html", 1)
 
 
+@app.get("/input/0/electro_detect.html")
+async def input_0_electro_detect():
+    return template_response("input_electro_detect.html", 0)
+
+
+@app.get("/input/1/electro_detect.html")
+async def input_1_electro_detect():
+    return template_response("input_electro_detect.html", 1)
+
+
 @app.get("/input/0/settings.html")
 async def input_0_settings():
     return template_response("input_settings.html", 0)
@@ -169,14 +179,24 @@ async def input_1_settings(factor: int | None = None, delta: int | None = None):
     return template_response("input_settings.html", 1)
 
 
-@app.get("/input/0/hall_settings.html")
-async def input_0_hall_settings():
+@app.get("/input/0/input_hall_settings.html")
+async def input_0_input_hall_settings():
     return template_response("input_hall_settings.html", 0)
 
 
-@app.get("/input/1/hall_settings.html")
-async def input_1_hall_settings(factor: int | None = None, delta: int | None = None):
+@app.get("/input/1/input_hall_settings.html")
+async def input_1_input_hall_settings(factor: int | None = None, delta: int | None = None):
     return template_response("input_hall_settings.html", 1)
+
+
+@app.get("/input/0/input_electro_settings.html")
+async def input_0_electro_settings():
+    return template_response("input_electro_settings.html", 0)
+
+
+@app.get("/input/1/input_electro_settings.html")
+async def input_1_electro_settings(factor: int | None = None, delta: int | None = None):
+    return template_response("input_electro_settings.html", 1)
 
 
 @app.get("/ssid.txt")
@@ -223,6 +243,6 @@ async def wifi_settings():
 if __name__ == "__main__":
     log.info(f'api: http://127.0.0.1:9000/api/docs')
     log.info(f'debug api: http://127.0.0.1:9000/debug/docs')
-    uvicorn.run("main:app", host='0.0.0.0', port=10000, reload=True)
+    uvicorn.run("main:app", host='0.0.0.0', port=11000, reload=True)
     #uvicorn.run("main:app", host='192.168.10.43', port=9000, reload=True)
 

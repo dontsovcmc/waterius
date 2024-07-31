@@ -10,6 +10,10 @@
 /*
 Версии прошивки для ESP
 
+1.1.5  - 2024.07.31 - dontsovcmc
+                      1. Добавлен ручной ввод веса импульса для электрических счетчиков
+                      2. Добавлены поля в настройку и json: Организация и Место установки
+                      
 1.1.4  - 2024.06.01 - dontsovcmc
                       1. Исправлена запись параметров из HomeAssistant. 
                       (Напомню, после записи нужно нажать кнопку, чтобы Ватериус принял новые значения.)
@@ -249,6 +253,7 @@
 #define VER_9 9
 #define VER_10 10
 #define VER_11 11
+#define VER_12 12
 #define CURRENT_VERSION VER_11
 
 #define EMAIL_LEN 40
@@ -256,7 +261,9 @@
 #define WATERIUS_KEY_LEN 34
 #define HOST_LEN 64
 
-#define BLYNK_RESERVED 98
+#define COMPANY_LEN 20
+#define PLACE_LEN 20
+#define BLYNK_RESERVED 58
 
 
 #define MQTT_LOGIN_LEN 32
@@ -387,6 +394,8 @@ struct Settings
     char waterius_email[EMAIL_LEN] = {0};
 
     // 
+    char company[COMPANY_LEN] = {0};
+    char place[PLACE_LEN] = {0};
     char reserved_blynk[BLYNK_RESERVED] = {0};
 
     char http_url[HOST_LEN] = {0};
@@ -516,6 +525,7 @@ struct Settings
     uint8_t dhcp_off = (uint8_t) false;
 
     uint8_t reserved8 = 0;
+
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений

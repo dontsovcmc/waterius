@@ -233,6 +233,8 @@ async def save_input_type(form_data: InputModel = Depends()):
         res = input0_settings.apply_settings(data)
         if input0_settings.counter_type == CounterType.HALL.value:
             res["redirect"] = "/input/0/hall_detect.html"
+        elif input0_settings.counter_name == CounterName.ELECTRO.value:
+            res["redirect"] = "/input/0/electro_detect.html"
         elif input0_settings.counter_type == CounterType.NONE.value:
             res["redirect"] = "/index.html"
         else:
@@ -241,6 +243,8 @@ async def save_input_type(form_data: InputModel = Depends()):
         res = input1_settings.apply_settings(data)
         if input1_settings.counter_type == CounterType.HALL.value:
             res["redirect"] = "/input/1/hall_detect.html"
+        elif input1_settings.counter_name == CounterName.ELECTRO.value:
+            res["redirect"] = "/input/1/electro_detect.html"
         elif input1_settings.counter_type == CounterType.NONE.value:
             res["redirect"] = "/index.html"
         else:

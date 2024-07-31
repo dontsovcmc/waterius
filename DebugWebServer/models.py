@@ -45,6 +45,9 @@ class SettingsModel:
 
     wakeup_per_min: int | None = Form(None)
 
+    company: str | None = Form(None)
+    place: str | None = Form(None)
+
     mqtt_auto_discovery: int | None = Form(None)
     mqtt_discovery_topic: str | None = Form(None)
 

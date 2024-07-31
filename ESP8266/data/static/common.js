@@ -60,10 +60,10 @@ function _init(_pages) {
         return;
     }
     
-    if(document.getElementById('hall_model'))
+    if(document.getElementById('counter_model'))
     {
-        document.getElementById('hall_model').addEventListener('change', function() {
-            var v = document.getElementById('hall_model').value;
+        document.getElementById('counter_model').addEventListener('change', function() {
+            var v = document.getElementById('counter_model').value;
             if (v != '') {
                 document.getElementById('factor').value = v;
             }

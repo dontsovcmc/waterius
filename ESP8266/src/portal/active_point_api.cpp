@@ -685,6 +685,14 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
         {
             save_param(p, sett.wifi_phy_mode, errorsObj, true);
         }
+        else if (name == FPSTR(PARAM_COMPANY))
+        {
+            save_param(p, sett.company, COMPANY_LEN, errorsObj, false);
+        }
+        else if (name == FPSTR(PARAM_PLACE))
+        {
+            save_param(p, sett.place, PLACE_LEN, errorsObj, false);
+        }
     }
 
     store_config(sett);

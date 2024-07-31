@@ -88,6 +88,10 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     root[F("ha")] = is_ha(sett);
     root[F("http")] = is_http(sett);
 
+    // Для юрлиц
+    root[F("company")] = sett.company;
+    root[F("place")] = sett.place;
+
     LOG_INFO(F("JSON: Mem usage: ") << json_data.memoryUsage());
     LOG_INFO(F("JSON: Size: ") << measureJson(json_data));
 

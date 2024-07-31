@@ -20,7 +20,7 @@ class CounterName(Enum):
 
 class CounterType(Enum):
     NAMUR = 0
-    DISCRETE = 1
+    DISCRETE = 1   # deprecated
     ELECTRONIC = 2
     HALL = 3
     NONE = 0xFF
@@ -130,7 +130,7 @@ input0_settings = InputSettings(
     input=0,
     counter_name=CounterName.WATER_HOT,
     factor=AS_COLD_CHANNEL,
-    counter_type=CounterType.DISCRETE
+    counter_type=CounterType.NAMUR
 )
 input0_settings_vars = variables_dictionary(input0_settings)
 
@@ -139,7 +139,7 @@ input1_settings = InputSettings(
     input=1,
     counter_name=CounterName.WATER_COLD,
     factor=AUTO_IMPULSE_FACTOR,
-    counter_type=CounterType.DISCRETE
+    counter_type=CounterType.NAMUR
 )
 input1_settings_vars = variables_dictionary(input1_settings)
 
@@ -176,6 +176,9 @@ class Settings:
     mac_address: str | None = "00-1B-63-84-45-Е6"
 
     wakeup_per_min: int | None = 1440
+
+    company: str | None = ''
+    place: str | None = ''
 
     mqtt_auto_discovery: int | None = True
     mqtt_discovery_topic: str | None = "homeassistant"
