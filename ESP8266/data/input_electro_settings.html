@@ -47,18 +47,18 @@
                         <div class="f-row">
                             <label for="factor">Модель счётчика</label>
                             <select class="slct" id="counter_model" name="counter_model" option-value="">
-                                <option selected="" value="">Указать вручную</option>
+                                <option value="">Указать вручную</option>
+                                <option selected="" value="3200">Энергомера CE101 (3200)</option>
                                 <option value="3200">Энергомера ЦЭ6803В 10-100А М7 Р31 (3200)</option>
-                                <option value="3200">Энергомера CE101 (3200)</option>
                               </select>
                             </select>
                         </div>
                         <div class="f-row">
                             <label for="factor">Количество импульсов на литр</label>
-                            <input pattern="^\s*[\d]+([,\.][\d]+)?\s*$" id="factor" name="factor" placeholder="0" value="%factor%">
+                            <input pattern="^\s*[\d]+([,\.][\d]+)?\s*$" id="factor" name="factor" placeholder="0" value="3200">
                             <p class="error hd" id="factor-error">Некорректное значение</p>
                         </div>
-                        <p class="note mt16">(во время настройки израсходовано <span id="delta">0</span> кВт*ч)</p>
+                        <p class="note mt16">(израсходовано <span id="delta">0</span> кВт*ч)</p>
                     </main>
                     <footer class="btns">
                         <button class="btn" type="submit">Сохранить</button>
