@@ -55,16 +55,7 @@ String replace_value(const String &var)
 
 String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ctype)
 {
-    if (ctype == CounterType::HALL) 
-    {
-        switch (input)
-        {
-            case 0: return F("meter-hall-0.png");
-            case 1: return F("meter-hall-1.png");
-        }
-        
-    }
-    else if (ctype == CounterType::ELECTRONIC)
+    if (ctype == CounterType::ELECTRONIC)
     {
         switch (input)
         {
@@ -492,11 +483,6 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     server->on("/input/1/detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/input_detect.html", F("text/html"), false, processor1); });
 
-    server->on("/input/0/input_hall_detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_hall_detect.html", F("text/html"), false, processor0); });
-    server->on("/input/1/input_hall_detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_hall_detect.html", F("text/html"), false, processor1); });
-
     server->on("/input/0/input_electro_detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/input_electro_detect.html", F("text/html"), false, processor0); });
     server->on("/input/1/input_electro_detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -508,11 +494,6 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     server->on("/input/1/settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/input_settings.html", F("text/html"), false, processor1); });
                
-    server->on("/input/0/input_hall_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_hall_settings.html", F("text/html"), false, processor0); });
-    server->on("/input/1/input_hall_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_hall_settings.html", F("text/html"), false, processor1); });
-
     server->on("/input/0/input_electro_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/input_electro_settings.html", F("text/html"), false, processor0); });
     server->on("/input/1/input_electro_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)

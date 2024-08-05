@@ -287,7 +287,7 @@ void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cda
             LOG_ERROR(F("Impulses1 less than start. Reset impulses1_start"));
         }
 
-        if (data.counter_type1 == HALL)
+        if (data.counter_type1 == HALL || sett.counter1_name == CounterName::ELECTRO)
         {
             cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 / sett.factor1;
             cdata.delta1 = (data.impulses1 - sett.impulses1_previous) / sett.factor1;
