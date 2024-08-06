@@ -730,7 +730,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     {   
         if (sett.counter0_name == CounterName::ELECTRO)
         {
-            ret[F("redirect")] = F("/input/0/electro_detect.html");
+            ret[F("redirect")] = F("/input/0/input_electro_detect.html");
         }
         else if (runtime_data.counter_type0 == CounterType::NONE)
         {
@@ -745,7 +745,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     {
         if (sett.counter1_name == CounterName::ELECTRO)
         {
-            ret[F("redirect")] = F("/input/1/electro_detect.html");
+            ret[F("redirect")] = F("/input/1/input_electro_detect.html");
         }
         else if (runtime_data.counter_type1 == CounterType::NONE)
         {
