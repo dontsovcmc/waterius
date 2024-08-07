@@ -267,13 +267,15 @@ void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cda
             LOG_ERROR(F("Impulses0 less than start. Reset impulses0_start"));
         }
 
-        if (data.counter_type0 == HALL || sett.counter0_name == CounterName::ELECTRO)
+        if (sett.counter0_name == CounterName::ELECTRO)
         {
-            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 / sett.factor0;
+            // factor0 кол-во импульсов на 1 кВт * ч
+            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / sett.factor0;
             cdata.delta0 = (data.impulses0 - sett.impulses0_previous) / sett.factor0;
         }
         else 
         {
+            // factor0 кол-во литров на 1 импульс, переводим в кубометры
             cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.factor0;
             cdata.delta0 = (data.impulses0 - sett.impulses0_previous) * sett.factor0;
         }
@@ -287,13 +289,15 @@ void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cda
             LOG_ERROR(F("Impulses1 less than start. Reset impulses1_start"));
         }
 
-        if (data.counter_type1 == HALL || sett.counter1_name == CounterName::ELECTRO)
+        if (sett.counter1_name == CounterName::ELECTRO)
         {
-            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 / sett.factor1;
+            // factor1 кол-во импульсов на 1 кВт * ч
+            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / sett.factor1;
             cdata.delta1 = (data.impulses1 - sett.impulses1_previous) / sett.factor1;
         }
-        else 
+        else
         {
+            // factor1 кол-во литров на 1 импульс, переводим в кубометры
             cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.factor1;
             cdata.delta1 = (data.impulses1 - sett.impulses1_previous) * sett.factor1;
         }
