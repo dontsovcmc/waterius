@@ -1,4 +1,4 @@
-# Ватериус 1.1.0
+# Ватериус 1.1.5
 ## Wi-Fi приставка для импульсных счётчиков воды, газа, тепла
 
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
@@ -13,7 +13,7 @@
 
 ✅ Личный кабинет <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">waterius.ru</a>
 
-- автоматическая <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">сдача показаний счётчиков</a> в 100+ «водоканалов» России и СНГ.
+- автоматическая <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">сдача показаний счётчиков</a> в 151 «водоканал» России и СНГ (на сентябрь 2024 г.).
 - отправка на электронную почту
 - отправка по СМС 
 - телеграм бот
@@ -29,6 +29,9 @@
 
 ✅ Электронные счётчики тепла: Sanext Monu CU, Берил ITELMA СТЭ 31 [подробнее](https://github.com/dontsovcmc/waterius/issues/233)
 
+✅ Счётчики электричества: Энергомера CE101, Энергомера ЦЭ6803В 10-100А М7 Р31 и возможно другие импульсные
+
+
 ### Где купить
 
 [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github)
@@ -38,7 +41,7 @@
 - 3 АА батарейки (~2-4 года работы)
 - передача по Wi-Fi
 - не нужно знать, вес импульса у счётчика воды (Ватериус сам определит 1 или 10л/имп)
-- не нужно знать, какого типа выход: "сухой контакт" или "НАМУР"
+- не нужно знать, какого типа выход счётчика воды: "сухой контакт" или "НАМУР"
 - настраиваемый период отправки
 - ручная настройка веса импульса
 - дискавери для Home Assistant
@@ -92,7 +95,7 @@
 Ветка dev для pull-request
 Ветка master только для публикации прошивок
 
-В версии 1.0.0 (ветка async) требуется помощь:
+Из актуальных задач остались сложные:
 - Реализовать запись лога в файл (LittleFS), чтобы можно было скачать (/logs.html)
 - OTA обновления: предложить код прошивки и пример веб-сервера (можно на базе NodeMCU)
 
