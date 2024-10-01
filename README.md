@@ -149,7 +149,7 @@
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=dontsovcmc/waterius&type=Date)](https://star-history.com/#dontsovcmc/waterius&Date)
+<img src="https://api.star-history.com/svg?repos=dontsovcmc/waterius&type=Date" width="400">
 
 ## Контакты
 
