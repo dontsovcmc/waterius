@@ -147,6 +147,10 @@
 - https://esp8266.ru
 - https://easyelectronics.ru
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=dontsovcmc/waterius&type=Date)](https://star-history.com/#dontsovcmc/waterius&Date)
+
 ## Контакты
 
 Связь: [Facebook](https://www.facebook.com/waterius), [VK](https://vk.com/waterius1), [Instagram](https://www.instagram.com/waterius.ru/)
