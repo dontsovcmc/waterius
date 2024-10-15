@@ -1,0 +1,4 @@
+.pioenvs
+.piolibdeps
+.vscode
+/secrets.ini

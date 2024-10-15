@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Логи</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
+        <script src="/static/strings.js"></script>
+    </head>
+    <body onload="getLogs();">
+        <div class="wrap">
+            <div class="container f1">
+                <header>
+                    <a href="/index.html">
+                        <div class="icon bf">
+                            <img src="/images/icons.png">
+                        </div>
+                        Назад</a>
+                    <div class="icon logo">
+                        <img src="/images/icons.png">
+                    </div>
+                </header>
+                <main>
+                    <h2>Логи</h2>
+                    <p class="text">Здесь отображаются события, которые происходят под капотом Ватериуса, эти данные могут пригодиться при обращении в поддержку</p>
+                    <textarea id="logs" class="mt20" disabled></textarea>
+                    <button type="button" class="btn-serv mt16" onclick="copyInput('logs')">Скопировать</button>
+                </main>
+                <footer class="btns">
+                    <a class="btn" download href="/waterius_logs.txt">Скачать</a>
+                </footer>
+            </div>
+        </div>
+    </body>
+</html>

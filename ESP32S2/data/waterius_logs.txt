@@ -1,0 +1,12 @@
+00:00:210 INFO : Config succesfully loaded00:00:214 INFO : Startup mode: 3
+00:00:218 INFO : Calculating values...00:00:221 INFO : new impulses=0 1
+00:00:224 INFO : new value0=22.11 value1=11.1100:00:229 INFO : delta0=0 delta1=0
+00:00:232 INFO : WIFI: Connecting...00:00:236 INFO : WIFI: Attempt #1 from 2
+00:04:831 INFO : WIFI: Connected.00:04:831 INFO : WIFI: SSID: wifidraftguest Channel: 1 BSSID: 52:FF:20:6E:E6:CE
+00:04:832 INFO : WIFI: Time spent 4602 ms00:04:835 INFO : ------------ System Info ------------
+00:04:840 INFO : Firmware ver: 0.11.500:04:843 INFO : Sketch Size: 578128
+00:04:847 INFO : Free Sketch Space: 44646400:04:851 INFO : Free memory: 39912
+00:04:854 INFO : Settings size: 113600:04:857 INFO : ------------ WiFi Info ------------
+00:04:862 INFO : WIFI: SSID: wifidraftguest00:04:866 INFO : WIFI: BSID: 52:FF:20:6E:E6:EE
+00:04:871 INFO : WIFI: Channel: 100:04:874 INFO : WIFI: Mode: G
+00:04:877 INFO : WIFI: RSSI: -56dBm00:04:880

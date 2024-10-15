@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Ввод данных счётчика: <span id="counter_title"></span></title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
+        <script src="/static/strings.js"></script>
+    </head>
+    <body onload="fill_counter_title(%counter_name%);
+    _init({
+        back: '/input/%input%/setup.html',
+        back_wizard: '/input/%input%/setup.html?wizard=true',
+        next: '/index.html',
+        next_wizard: get_next_wizard_by_input(%input%)
+    }); getImpulses(%input%);">
+        <form onsubmit="formSubmit(event, this, '/api/save');">
+            <div class="wrap">
+                <div class="container f1">
+                    <header>
+                        <a onclick="_goto()">
+                            <div class="icon bf">
+                                <img src="/images/icons.png">
+                            </div>
+                            Назад</a>
+                        <div class="icon logo">
+                            <img src="/images/icons.png">
+                        </div>
+                        <div class="fr">шаг 5/9</div>
+                    </header>
+                    <main>
+                        <h2 id="counter_title-2"></h2>
+                        <p class="text">Счётчик определился Ватериусом, теперь введите серийный номер и показания счётчика</p>
+                        <img src="/images/tableau.png" class="counter mt20">
+                        <p class="form-error hd"></p>
+                        <input id="input" name="input" type="hidden" value="%input%">
+                        <div class="f-row">
+                            <label for="serial">Серийный номер (опционально)</label>
+                            <input id="serial" name="serial" placeholder="10-12345" value="%serial%">
+                            <p class="error hd" id="serial-error">Введите серийный номер</p>
+                        </div>
+                        <div class="f-row">
+                            <label for="channel_start">Показания счётчика</label>
+                            <input pattern="^\s*[\d]+([,\.][\d]+)?\s*$" id="channel_start" name="channel_start" placeholder="356.89" value="%channel_start%">
+                            <p class="error hd" id="channel_start-error">Введите показания счётчика</p>
+                        </div>
+                        <div class="f-row">
+                            <label for="factor">Вес импульса</label>
+                            <select class="slct" id="factor" name="factor" option-value="%factor%">
+                              <option selected="" value="1">1</option>
+                              <option value="10">10</option>
+                              <option value="100">100</option>
+                            </select>
+                            <p>л/имп</p>
+                            <p class="error hd" id="factor-error">Некорректное значение</p>
+                        </div>
+                        <p class="note mt16">(во время настройки вылилось около <span id="delta">1</span>л воды)</p>
+                    </main>
+                    <footer class="btns">
+                        <button class="btn" type="submit">Сохранить</button>
+                    </footer>
+                </div>
+            </div>
+        </form>
+    </body>
+</html>
