@@ -145,6 +145,8 @@ bool MasterI2C::getSlaveData(SlaveData &data)
     uint8_t dummy, crc = init_crc;
     bool good = getByte(data.version, crc);
 
+    LOG_INFO(F("attiny firmware ver: ") << data.version);
+
     if (data.version < 29)
     {
         init_crc = 0; // в версиях <29 инициализация идет нулём
@@ -172,13 +174,27 @@ bool MasterI2C::getSlaveData(SlaveData &data)
 
     if (good)
     {
+        LOG_INFO(F("v") << data.version 
+        << F(" service:") << data.service
+        << F(" reserved4:") << data.reserved4
+        << F(" reserved:") << data.reserved
+        << F(" setups:") << data.setup_started_counter 
+        << F(" resets:") << data.resets 
+        << F(" model:") << data.model 
+        << F(" ctype0:") << data.counter_type0 
+        << F(" ctype1:") << data.counter_type1 
+        << F(" imp0:") << data.impulses0 
+        << F(" imp1:") << data.impulses1 
+        << F(" adc0:") << data.adc0 
+        << F(" adc1:") << data.adc1
+        << F(" crc:") << data.crc);
+
         if (data.crc != crc)
         {
             LOG_ERROR(F("!!! CRC wrong !!!!, go to sleep"));
         }
         else
         {
-            LOG_INFO(F("v") << data.version << F(" setups:") << data.setup_started_counter << F(" resets:") << data.resets << F(" ctype0:") << data.counter_type0 << F(" ctype1:") << data.counter_type1 << F(" imp0:") << data.impulses0 << F(" imp1:") << data.impulses1 << F(" adc0:") << data.adc0 << F(" adc1:") << data.adc1);
             if (data.version >= 30)
                 return true;
 
