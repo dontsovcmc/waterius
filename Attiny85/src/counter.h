@@ -151,7 +151,7 @@ struct CounterB
                         if (on_time >= 20) 
                         {
                             // Уведомляем о импульсе в его конце если была достаточная длительность
-                            result = (on_time == 1);
+                            result = true;
                         }
                         on_time = 0;
                     }
