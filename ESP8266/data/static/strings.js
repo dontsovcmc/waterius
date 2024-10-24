@@ -12,9 +12,10 @@ const CounterName_WATER_COLD = 0;
 const CounterName_WATER_HOT = 1;
 const CounterName_ELECTRO = 2;
 const CounterName_GAS = 3;
-const CounterName_HEAT = 4;
+const CounterName_HEAT_GCAL = 4;
 const CounterName_PORTABLE_WATER = 5;
 const CounterName_OTHER = 6;
+const CounterName_HEAT_KWH = 7;
 
 function fill_title(q, counter_name)
 {
@@ -32,8 +33,11 @@ function fill_title(q, counter_name)
     case CounterName_GAS:
         q.innerHTML = "Газ";
         break;
-    case CounterName_HEAT:
-        q.innerHTML = "Тепло";
+    case CounterName_HEAT_GCAL:
+        q.innerHTML = "Тепло ГКал";
+        break;
+    case CounterName_HEAT_KWH:
+        q.innerHTML = "Тепло КВт";
         break;
     case CounterName_PORTABLE_WATER:
         q.innerHTML = "Питьевая&nbspвода";
@@ -92,7 +96,8 @@ function fill_instruction(counter_name) {
         case CounterName_GAS:
             q.innerHTML = "Приход импульса от&nbspгазового счётчика долго ожидать, нажмите Пропустить и&nbspпродолжите настройку.";
             break;
-        case CounterName_HEAT:
+        case CounterName_HEAT_GCAL:
+        case CounterName_HEAT_KWH:
             q.innerHTML = "Приход импульса от&nbspсчётчика тепла долго ожидать, нажмите Пропустить и&nbspпродолжите настройку.";
             break;
         case CounterName_PORTABLE_WATER:

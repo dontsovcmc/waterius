@@ -297,14 +297,17 @@ DataType data_type_by_name(uint8_t counter_name)
 	case CounterName::GAS:
 		return DataType::GAS_DATA;
 
-	case CounterName::HEAT:
-		return DataType::HEATING;
+	case CounterName::HEAT_GCAL:
+		return DataType::HEATING_GCAL;
 
 	case CounterName::PORTABLE_WATER:
 		return DataType::POTABLE_WATER;
 
 	case CounterName::OTHER:
 		return DataType::OTHER_TYPE;
+
+	case CounterName::HEAT_KWT:
+		return DataType::HEATING_KWT;
 	}
 	return DataType::COLD_WATER;
 }

@@ -166,15 +166,16 @@ String build_entity_discovery(const char *mqtt_topic,
         String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
         entity[F("cmd_t")] = command_topic; // command_topic
 
-        //"options": ["WATER_COLD","WATER_HOT","ELECTRO","GAS","HEAT","PORTABLE_WATER","OTHER"],
+        //"options": ["WATER_COLD","WATER_HOT","ELECTRO","GAS","HEAT_GCAL","PORTABLE_WATER","OTHER"],
         JsonArray options = json_doc.createNestedArray("options");
         options.add("WATER_COLD");
         options.add("WATER_HOT");
         options.add("ELECTRO");
         options.add("GAS");
-        options.add("HEAT");
+        options.add("HEAT_GCAL");
         options.add("PORTABLE_WATER");
         options.add("OTHER");
+        options.add("HEAT_KWT");
 
         //"value_template": "{% set values = { \"0\":\"WATER_COLD\", \"1\":\"WATER_HOT\", \"2\":\"ELECTRO\", \"3\":\"GAS\", \"4\":\"HEAT\", \"5\":\"PORTABLE_WATER\", \"6\": \"OTHER\" } %} {{ values[ value_json.cname0 ] if value_json.cname0 in values.keys() else \"6\" }}",
         //String value_template = String(F("{% set values = { '0':\"WATER_COLD\", '1':\"WATER_HOT\", '2':\"ELECTRO\", '3':\"GAS\", '4':\"HEAT\", '5':\"PORTABLE_WATER\", '6': \"OTHER\" } %} {{ values[ value_json.")) + entity_id + F(" ] if value_json.") + entity_id + F(" in values.keys() else '6' }}");
@@ -183,15 +184,16 @@ String build_entity_discovery(const char *mqtt_topic,
             F("{% elif value_json.") + entity_id + F("==1 %} WATER_HOT ") +
             F("{% elif value_json.") + entity_id + F("==2 %} ELECTRO ") +
             F("{% elif value_json.") + entity_id + F("==3 %} GAS ") +
-            F("{% elif value_json.") + entity_id + F("==4 %} HEAT ") +
+            F("{% elif value_json.") + entity_id + F("==4 %} HEAT_GCAL ") +
             F("{% elif value_json.") + entity_id + F("==5 %} PORTABLE_WATER ") +
             F("{% elif value_json.") + entity_id + F("==6 %} OTHER ") + 
+            F("{% elif value_json.") + entity_id + F("==7 %} HEAT_KWT ") +
             F("{% endif %}");
 
         entity[F("val_tpl")] = value_template;
 
         //"command_template": "{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1,  \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %}  {{ values[value] if value in values.keys() else 6 }}",
-        String cmd_tpl = F("{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1, \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %} {{ values[value] if value in values.keys() else 6 }}");
+        String cmd_tpl = F("{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1, \"ELECTRO\":2, \"GAS\":3, \"HEAT_GCAL\":4, \"PORTABLE_WATER\":5, \"OTHER\":6, \"HEAT_KWT\":7} %} {{ values[value] if value in values.keys() else 7 }}");
         entity[F("cmd_tpl")] = cmd_tpl;
 
         entity[F("optimistic")] = true; // optimistic

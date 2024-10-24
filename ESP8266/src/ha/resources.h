@@ -79,6 +79,7 @@ static const char s_heat[] PROGMEM = "heat";
 static const char s_m3[] PROGMEM = "m³";
 static const char s_kWh[] PROGMEM = "kWh";
 static const char s_gCal[] PROGMEM = "GCal";
+static const char s_kWt[] PROGMEM = "kWt";
 static const char s_imp_name[] PROGMEM = "Impulses";
 static const char s_imp[] PROGMEM = "imp";
 static const char s_icon_pulse[] PROGMEM = "mdi:pulse";
@@ -154,11 +155,17 @@ static const char *const ENTITY_ELECTRO_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM =
     {s_number, s_total_name, s_ch, s_total, s_energy, s_kWh, s_config, "", s_format63};  // chN Для изменения из интерфейса HASSIO / MQTT
 
 // пока нет типа данных https://github.com/home-assistant/core/blob/dev/homeassistant/components/sensor/const.py#L587
-static const char *const ENTITY_HEAT_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
+static const char *const ENTITY_HEAT_GCAL_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_total_name, s_ch, s_total, s_energy, s_gCal, "", "", ""};                 // chN Показания
-static const char *const ENTITY_HEAT_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
+static const char *const ENTITY_HEAT_GCAL_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
     {s_number, s_total_name, s_ch, s_total, s_energy, s_gCal, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
-      
+
+// пока нет типа данных https://github.com/home-assistant/core/blob/dev/homeassistant/components/sensor/const.py#L587
+static const char *const ENTITY_HEAT_KWT_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWt, "", "", ""};                 // chN Показания
+static const char *const ENTITY_HEAT_KWT_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWt, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
+            
 
 // Channel attributes
 static const char *const ENTITY_CHANNEL_IMP[MQTT_PARAM_COUNT] PROGMEM = 
@@ -197,7 +204,7 @@ static const char s_other_name[] PROGMEM = "Other";
 static const char *const CHANNEL_NAMES[] PROGMEM = {s_cold_wtr_name, s_hot_wtr_name,
                                                     s_electricity_name, s_gas_name,
                                                     s_heat_name, s_portable_wtr_name,
-                                                    s_other_name};
+                                                    s_other_name, s_heat_name};
 
 static const char s_classic[] PROGMEM = "Classic";
 static const char s_4c2w[] PROGMEM = "4C2W";

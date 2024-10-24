@@ -262,9 +262,13 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client,
             publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ELECTRO_TOTAL, json_attributes_template, channel, channel_name);
             publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ELECTRO_TOTAL_CFG, "", channel, channel_name);
             break;
-        case CounterName::HEAT:
-            publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_HEAT_TOTAL, json_attributes_template, channel, channel_name);
-            publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_HEAT_TOTAL_CFG, "", channel, channel_name);
+        case CounterName::HEAT_GCAL:
+            publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_HEAT_GCAL_TOTAL, json_attributes_template, channel, channel_name);
+            publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_HEAT_GCAL_TOTAL_CFG, "", channel, channel_name);
+            break;
+        case CounterName::HEAT_KWT:
+            publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_HEAT_KWT_TOTAL, json_attributes_template, channel, channel_name);
+            publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_HEAT_KWT_TOTAL_CFG, "", channel, channel_name);
             break;
     }
 

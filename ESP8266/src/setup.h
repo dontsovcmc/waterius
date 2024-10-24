@@ -10,6 +10,9 @@
 /*
 Версии прошивки для ESP
 
+1.1.6  - 2024.10.25 - dontsovcmc
+                      1. Добавил тип Тепло в КВт. Предыдущее было ГКал
+
 1.1.5  - 2024.07.31 - dontsovcmc
                       1. Добавлен ручной ввод веса импульса для электрических счетчиков
                       2. Добавлены поля в настройку и json: Организация и Место установки
@@ -345,9 +348,10 @@ enum CounterName
     WATER_HOT = 1,
     ELECTRO = 2,
     GAS = 3,
-    HEAT = 4,
+    HEAT_GCAL = 4,
     PORTABLE_WATER = 5,
-    OTHER = 6
+    OTHER = 6,
+    HEAT_KWT = 7
 };
 
 // согласно
@@ -357,13 +361,15 @@ enum DataType
     HOT_WATER = 1,
     ELECTRICITY = 2,
     GAS_DATA = 3,
-    HEATING = 4,
+    HEATING_GCAL = 4,
     ELECTRICITY_DAY = 5,
     ELECTRICITY_NIGHT = 6,
     ELECTRICITY_PEAK = 7,
     ELECTRICITY_HALF_PEAK = 8,
     POTABLE_WATER = 9,
-    OTHER_TYPE = 10
+    OTHER_TYPE = 10,
+    ELECTRICITY_TOTAL = 11,  // not used here
+    HEATING_KWT = 12
 };
 
 struct CalculatedData
