@@ -168,8 +168,8 @@ void loop()
                     LOG_INFO(F("Wakeup period (adjusted), min:") << sett.set_wakeup);
                 }
 
-                store_config(sett);
             }
+            store_config(sett);  // т.к. сохраняем число ошибок подключения
         }
     }
     

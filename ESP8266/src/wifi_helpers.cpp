@@ -131,10 +131,10 @@ bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
 {
     uint32_t start_time = millis();
     LOG_INFO(F("WIFI: Connecting..."));
-    int attempts = WIFI_CONNECT_ATTEMPTS;
+    sett.wifi_connect_attempt = WIFI_CONNECT_ATTEMPTS;
     do
     {
-        LOG_INFO(F("WIFI: Attempt #") << WIFI_CONNECT_ATTEMPTS - attempts + 1 << F(" from ") << WIFI_CONNECT_ATTEMPTS);
+        LOG_INFO(F("WIFI: Attempt #") << WIFI_CONNECT_ATTEMPTS - sett.wifi_connect_attempt + 1 << F(" from ") << WIFI_CONNECT_ATTEMPTS);
         wifi_begin(sett, wifi_mode);
         if (WiFi.isConnected())
         {
@@ -152,8 +152,9 @@ bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
         }
         sett.wifi_channel = 0;
         LOG_ERROR(F("WIFI: Connection failed."));
-    } while (--attempts);
+    } while (--sett.wifi_connect_attempt);
 
+    sett.wifi_connect_errors++;
     LOG_ERROR(F("WIFI: Connection failed.") << millis() - start_time << F(" ms"));
     return false;
 }

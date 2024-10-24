@@ -47,6 +47,8 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     root[F("channel")] = WiFi.channel();
     root[F("wifi_phy_mode")] = wifi_phy_mode_title(WiFi.getPhyMode());
     root[F("wifi_phy_mode_s")] = wifi_phy_mode_title((WiFiPhyMode_t)sett.wifi_phy_mode);
+    root[F("wifi_connect_errors")] = sett.wifi_connect_errors;
+    root[F("wifi_connect_attempt")] = sett.wifi_connect_attempt;
 
     uint8_t *bssid = WiFi.BSSID();
     char router_mac[18] = {0};
@@ -100,4 +102,5 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     // JSON size 0.11: 643
     // JSON size 0.11.4: 722 JSON: Mem usage: 1168
     // JSON size 1.0.1 727 JSON: Mem usage: 1168  //no mqtt
+    // JSON size 1.1.6 
 }
