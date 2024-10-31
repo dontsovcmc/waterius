@@ -232,11 +232,6 @@ bool load_config(Settings &sett)
             LOG_INFO(F("wifi_channel=") << sett.wifi_channel);
             LOG_INFO(F("wifi_phy_mode=") << wifi_phy_mode_title((WiFiPhyMode_t)sett.wifi_phy_mode));
 
-            // Всегда одно и тоже будет
-            LOG_INFO(F("--- Counters ---- "));
-            LOG_INFO(F("channel0 start=") << sett.channel0_start << F(", impulses=") << sett.impulses0_start << F(", factor=") << sett.factor0 << F(", name=") << sett.counter0_name);
-            LOG_INFO(F("channel1 start=") << sett.channel1_start << F(", impulses=") << sett.impulses1_start << F(", factor=") << sett.factor1 << F(", name=") << sett.counter1_name);
-
             LOG_INFO(F("Config succesfully loaded"));
             return true;
         }
@@ -256,8 +251,6 @@ bool load_config(Settings &sett)
 void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cdata)
 {
     LOG_INFO(F("Calculating values..."));
-    LOG_INFO(F("new impulses=") << data.impulses0 << " " << data.impulses1);
-    LOG_INFO(F("factor0=") << sett.factor0 << F(" factor1=") << sett.factor1);
 
     if (sett.factor0 > 0) 
     {
@@ -270,7 +263,7 @@ void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cda
         if (sett.counter0_name == CounterName::ELECTRO)
         {
             // factor0 кол-во импульсов на 1 кВт * ч
-            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / sett.factor0;
+            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1.0 * sett.factor0;
             cdata.delta0 = (data.impulses0 - sett.impulses0_previous) / sett.factor0;
         }
         else 
@@ -279,8 +272,11 @@ void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cda
             cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.factor0;
             cdata.delta0 = (data.impulses0 - sett.impulses0_previous) * sett.factor0;
         }
-        LOG_INFO(F("new value0=") << cdata.channel0 << F(" delta0=") << cdata.delta0);
     }
+
+    LOG_INFO(F("channel0  name=") << sett.counter0_name);
+    LOG_INFO(F("impulses0 start=") << sett.impulses0_start << F(" current=") << data.impulses0 << F(" factor=") << sett.factor0);
+    LOG_INFO(F("value0    start=") << sett.channel0_start << F(" current=") << cdata.channel0 << F(" delta=") << cdata.delta0);
 
     if (sett.factor1 > 0) 
     {
@@ -292,8 +288,8 @@ void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cda
         if (sett.counter1_name == CounterName::ELECTRO)
         {
             // factor1 кол-во импульсов на 1 кВт * ч
-            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / sett.factor1;
-            cdata.delta1 = (data.impulses1 - sett.impulses1_previous) / sett.factor1;
+            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / (sett.factor1 * 1.0);
+            cdata.delta1 = (data.impulses1 - sett.impulses1_previous) / (sett.factor1 * 1.0);
         }
         else
         {
@@ -301,9 +297,11 @@ void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cda
             cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.factor1;
             cdata.delta1 = (data.impulses1 - sett.impulses1_previous) * sett.factor1;
         }
-        LOG_INFO(F("new value1=") << cdata.channel1 << F(" delta1=") << cdata.delta1);
     }
 
+    LOG_INFO(F("channel1  name=") << sett.counter1_name);
+    LOG_INFO(F("impulses1 start=") << sett.impulses1_start << F(" current=") << data.impulses1 << F(" factor=") << sett.factor1);
+    LOG_INFO(F("value1    start=") << sett.channel1_start << F(" current=") << cdata.channel1 << F(" delta=") << cdata.delta1);
 }
 
 /* Обновляем значения в конфиге*/
