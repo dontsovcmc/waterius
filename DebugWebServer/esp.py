@@ -13,9 +13,10 @@ class CounterName(Enum):
     WATER_HOT = 1
     ELECTRO = 2
     GAS = 3
-    HEAT = 4
+    HEAT_GCAL = 4
     PORTABLE_WATER = 5
     OTHER = 6
+    HEAT_KWT = 7
 
 
 class CounterType(Enum):

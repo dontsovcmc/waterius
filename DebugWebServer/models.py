@@ -52,8 +52,11 @@ class SettingsModel:
     mqtt_discovery_topic: str | None = Form(None)
 
     ntp_server: str | None = Form(None)
+    ntp_error_counter: int | None = Form(None)
 
     wifi_phy_mode: int | None = Form(None)
+    wifi_connect_errors: int | None = Form(None)
+    wifi_connect_attempt: int | None = Form(None)
 
     # for save
     input: int | None = Form(None)  # input_setup.html

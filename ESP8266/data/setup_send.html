@@ -39,7 +39,7 @@
                         </div>
                         <div class="f-row mt16 hd email-form">
                             <label for="waterius_email">Почта аккаунта</label>
-                            <input type="email" id="waterius_email" name="waterius_email" placeholder="name@domen.ru" pattern="[^@\s]+@[^@\s]+\.[^@\s]+" value="%waterius_email%" >
+                            <input type="email" id="waterius_email" name="waterius_email" placeholder="name@domen.ru" pattern="[^@\s]+@[^@\s]+\.[^@\s]+" value="%waterius_email%" maxlength="39">
                             <p class="error hd" id="waterius_email-error">Некорректный e-mail</p>
                         </div>
 
@@ -49,7 +49,7 @@
                         </div>
                         <div class="f-row mt16 hd server-form">
                             <label for="http_url">Адрес</label>
-                            <input id="http_url" name="http_url" placeholder="http://iot.site.com:8000/cloud" value="%http_url%">
+                            <input id="http_url" name="http_url" placeholder="http://iot.site.com:8000/cloud" value="%http_url%" maxlength="63">
                             <p class="error hd" id="http_url-error">Некорректный адрес</p>
                         </div>
 
@@ -60,7 +60,7 @@
                         <div class="hd mqtt-form">
                             <div class="f-row mt16">
                                 <label for="mqtt_host">Адрес</label>
-                                <input id="mqtt_host" name="mqtt_host" placeholder="http://broker.domen.ru или 192.168.1.1" value="%mqtt_host%">
+                                <input id="mqtt_host" name="mqtt_host" placeholder="http://broker.domen.ru или 192.168.1.1" value="%mqtt_host%" maxlength="63">
                                 <p class="error hd" id="mqtt_host-error">Некорректный адрес сервера</p>
                             </div>
                             <div class="f-row">
@@ -70,12 +70,12 @@
                             </div>
                             <div class="f-row">
                                 <label for="mqtt_login">Логин</label>
-                                <input id="mqtt_login" name="mqtt_login" placeholder="Логин" value="%mqtt_login%">
+                                <input id="mqtt_login" name="mqtt_login" placeholder="Логин" value="%mqtt_login%" maxlength="31">
                                 <p class="error hd" id="mqtt_login-error">Некорректный логин</p>
                             </div>
                             <div class="f-row">
                                 <label for="mqtt_password">Пароль</label>
-                                <input id="mqtt_password" type="password" name="mqtt_password" class="has-icon" placeholder="Пароль" value="%mqtt_password%">
+                                <input id="mqtt_password" type="password" name="mqtt_password" class="has-icon" placeholder="Пароль" value="%mqtt_password%" maxlength="65">
                                 <div class="icon" onclick="showPW('mqtt_password')">
                                     <img src="/images/icons.png">
                                 </div>
@@ -83,7 +83,7 @@
                             </div>
                             <div class="f-row">
                                 <label for="mqtt_topic">Topic</label>
-                                <input id="mqtt_topic" name="mqtt_topic" value="%mqtt_topic%">
+                                <input id="mqtt_topic" name="mqtt_topic" value="%mqtt_topic%" maxlength="63">
                                 <p class="error hd" id="mqtt_topic-error">Некорректный адрес топика</p>
                             </div>
 
@@ -94,7 +94,7 @@
                             <div class="hd mqtt_auto_discovery-form">
                                 <div class="f-row mt16">
                                     <label for="mqtt_discovery_topic">Топик discovery Home Assistant</label>
-                                    <input id="mqtt_discovery_topic" name="mqtt_discovery_topic" placeholder="homeassistant" value="%mqtt_discovery_topic%">
+                                    <input id="mqtt_discovery_topic" name="mqtt_discovery_topic" placeholder="homeassistant" value="%mqtt_discovery_topic%" maxlength="63">
                                     <p class="error hd" id="mqtt_discovery_topic-error">Некорректный адрес топика</p>
                                 </div>
                             </div>
@@ -112,12 +112,12 @@
                             </div>
                             <div class="f-row">
                                 <label for="place">Место установки</label>
-                                <input id="place" name="place" placeholder="Ленина 10-2-5 Ванна" value="%place%">
+                                <input id="place" name="place" placeholder="Ленина 10-2-5 Ванна" value="%place%" maxlength="19">
                                 <p class="error hd" id="place-error">Некорректное значение</p>
                             </div>
                             <div class="f-row">
                                 <label for="company">Организация установщик</label>
-                                <input id="company" name="company" placeholder="ИНН" value="%company%">
+                                <input id="company" name="company" placeholder="ИНН" value="%company%" maxlength="19">
                                 <p class="error hd" id="company-error">Некорректное значение</p>
                             </div>
                         </div>

@@ -123,6 +123,10 @@ const S_WL_IDLE_STATUS = 10;
 const S_WL_DISCONNECTED = 11;
 const S_WL_NO_SHIELD = 12;
 const S_WL_SCAN_COMPLETED = 13;
+const S_ERROR_LENGTH_ERROR = 14;
+const S_ERROR_VALUE = 15;
+const S_ERROR_ATTINY_ERROR = 16;
+const S_ERROR_EMPTY = 17;
 
 function tr(str_id) {
     var id = Number(str_id);
@@ -141,6 +145,10 @@ function tr(str_id) {
         case S_WL_DISCONNECTED: return "Ошибка подключения: Отключен";
         case S_WL_NO_SHIELD: return "Ошибка подключения: Код 255";
         case S_WL_SCAN_COMPLETED: return "Ошибка подключения: Код 2";
+        case S_ERROR_LENGTH_ERROR: return "Превышена длина поля";
+        case S_ERROR_VALUE: return "Неверное значение";
+        case S_ERROR_ATTINY_ERROR: return "Ошибка связи с attiny";
+        case S_ERROR_EMPTY: return "Значение не может быть пустым";
         default: 
             return "Незвестный id строки: " + toString(id);
     }

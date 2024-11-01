@@ -188,6 +188,8 @@ bool load_config(Settings &sett)
             }
             LOG_INFO(F("email=") << sett.waterius_email);
             LOG_INFO(F("host=") << sett.waterius_host << F(" key=") << sett.waterius_key);
+            LOG_INFO(F("place=") << sett.place);
+            LOG_INFO(F("company=") << sett.company);
 
             LOG_INFO(F("--- HTTP ---- "));
             if (sett.http_on) {
@@ -226,11 +228,14 @@ bool load_config(Settings &sett)
             }
 
             LOG_INFO(F("ntp_server=") << sett.ntp_server);
+            LOG_INFO(F("ntp_error_counter=") << sett.ntp_error_counter);
 
             LOG_INFO(F("--- WIFI ---- "));
             LOG_INFO(F("wifi_ssid=") << sett.wifi_ssid);
             LOG_INFO(F("wifi_channel=") << sett.wifi_channel);
             LOG_INFO(F("wifi_phy_mode=") << wifi_phy_mode_title((WiFiPhyMode_t)sett.wifi_phy_mode));
+            LOG_INFO(F("wifi_connect_errors=") << sett.wifi_connect_errors);
+            LOG_INFO(F("wifi_connect_attempt=") << sett.wifi_connect_attempt);
 
             LOG_INFO(F("Config succesfully loaded"));
             return true;

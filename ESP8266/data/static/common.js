@@ -92,7 +92,7 @@ function formError(error_code){
     const _fe = document.querySelector('.form-error');
     if(!_fe) return;
     if(!error_code) return _fe.classList.add('hd');
-    _fe.innerHTML = tr(error_code);
+    _fe.innerHTML = tr(error_code); 
     _fe.classList.remove('hd');
 }
 

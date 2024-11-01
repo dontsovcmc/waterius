@@ -335,13 +335,13 @@ void save_param(AsyncWebParameter *p, char *dest, size_t size, JsonObject &error
 {
     if (p->value().length() >= size)
     {
-        LOG_ERROR(FPSTR(ERROR_LENGTH_63) << ": " << p->name());
-        errorsObj[p->name()] = FPSTR(ERROR_LENGTH_63);
+        LOG_ERROR(FPSTR(ERROR_LENGTH_ERROR) << ": " << p->name());
+        errorsObj[p->name()] = String(F("14"));  // Превышена длина поля
     }
     else if (required && p->value().length() == 0)
     {
         LOG_ERROR(FPSTR(ERROR_EMPTY) << ": " << p->name());
-        errorsObj[p->name()] = FPSTR(ERROR_EMPTY);
+        errorsObj[p->name()] = String(F("17"));  // Значение не может быть пустым
     }
     else
     {   
@@ -357,7 +357,7 @@ void save_param(AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
     if (p->value().toInt() == 0)
     {
         LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = FPSTR(ERROR_VALUE);
+        errorsObj[p->name()] = String(F("15"));  // Неверное значение
     }
     else
     {
@@ -371,7 +371,7 @@ void save_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const b
     if (!zero_ok && p->value().toInt() == 0)
     {
         LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = FPSTR(ERROR_VALUE);
+        errorsObj[p->name()] = String(F("15"));  // Неверное значение
     }
     else
     {
@@ -385,7 +385,7 @@ void save_bool_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj)
     if (p->value().toInt() > 1)
     {
         LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = FPSTR(ERROR_VALUE);
+        errorsObj[p->name()] = String(F("15"));  // Неверное значение
     }
     else
     {
@@ -422,7 +422,7 @@ void save_ip_param(AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj)
     else
     {
         LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = FPSTR(ERROR_VALUE);
+        errorsObj[p->name()] = String(F("15"));  // Неверное значение
     }
 }
 
@@ -515,7 +515,7 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
                     if (!masterI2C.setCountersType(p->value().toInt(), runtime_data.counter_type1))
                     {
                         LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
-                        errorsObj[p->name()] = FPSTR(ERROR_ATTINY_ERROR);
+                        errorsObj[p->name()] = String(F("16")); // Ошибка связи с attiny
                     }
                     else
                     {
@@ -527,7 +527,7 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
                     if (!masterI2C.setCountersType(runtime_data.counter_type0, p->value().toInt()))
                     {
                         LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
-                        errorsObj[p->name()] = FPSTR(ERROR_ATTINY_ERROR);
+                        errorsObj[p->name()] = String(F("16")); // Ошибка связи с attiny
                     }
                     else
                     {

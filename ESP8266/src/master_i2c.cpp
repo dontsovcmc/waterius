@@ -180,14 +180,16 @@ bool MasterI2C::getSlaveData(SlaveData &data)
         << F(" reserved:") << data.reserved
         << F(" setups:") << data.setup_started_counter 
         << F(" resets:") << data.resets 
-        << F(" model:") << data.model 
-        << F(" ctype0:") << data.counter_type0 
-        << F(" ctype1:") << data.counter_type1 
-        << F(" imp0:") << data.impulses0 
-        << F(" imp1:") << data.impulses1 
-        << F(" adc0:") << data.adc0 
-        << F(" adc1:") << data.adc1
+        << F(" model:") << data.model
         << F(" crc:") << data.crc);
+
+        LOG_INFO(F(" ctype0:") << data.counter_type0 
+        << F(" imp0:") << data.impulses0 
+        << F(" adc0:") << data.adc0);
+
+        LOG_INFO(F(" ctype1:") << data.counter_type1 
+        << F(" imp1:") << data.impulses1 
+        << F(" adc1:") << data.adc1);
 
         if (data.crc != crc)
         {

@@ -223,6 +223,12 @@ String processor_main(const String &var, const uint8_t input)
 
     else if (var == FPSTR(PARAM_WAKEUP_PER_MIN))
         return String(sett.wakeup_per_min);
+    
+    else if (var == FPSTR(PARAM_PLACE))
+        return String(sett.place);
+    
+    else if (var == FPSTR(PARAM_COMPANY))
+        return String(sett.company);
 
     else if (var == FPSTR(PARAM_MQTT_AUTO_DISCOVERY))
         return template_bool(sett.mqtt_auto_discovery);

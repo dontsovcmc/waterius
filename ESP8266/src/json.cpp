@@ -94,7 +94,6 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     root[F("company")] = sett.company;
     root[F("place")] = sett.place;
 
-    LOG_INFO(F("JSON: Mem usage: ") << json_data.memoryUsage());
     LOG_INFO(F("JSON: Size: ") << measureJson(json_data));
 
     // JSON size 0.10.3: 355
@@ -102,5 +101,5 @@ void get_json_data(const Settings &sett, const SlaveData &data, const Calculated
     // JSON size 0.11: 643
     // JSON size 0.11.4: 722 JSON: Mem usage: 1168
     // JSON size 1.0.1 727 JSON: Mem usage: 1168  //no mqtt
-    // JSON size 1.1.6 
+    // JSON size 1.1.6 972 //mqtt, max strings
 }
