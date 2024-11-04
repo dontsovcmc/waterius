@@ -241,8 +241,9 @@ async def wifi_settings():
 
 
 if __name__ == "__main__":
-    log.info(f'api: http://127.0.0.1:9000/api/docs')
-    log.info(f'debug api: http://127.0.0.1:9000/debug/docs')
-    uvicorn.run("main:app", host='0.0.0.0', port=11000, reload=True)
+    port = 11000
+    log.info(f'api: http://127.0.0.1:{port}/api/docs')
+    log.info(f'debug api: http://127.0.0.1:{port}/debug/docs')
+    uvicorn.run("main:app", host='0.0.0.0', port=port, reload=True)
     #uvicorn.run("main:app", host='192.168.10.43', port=9000, reload=True)
 

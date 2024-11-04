@@ -331,7 +331,17 @@ function getStatus(i, next) {
 function getImpulses(i) {
     setTimeout(() => {
         ajax('/api/status/' + i, {}, data => {
-            document.getElementById('delta').textContent = data.impulses * parseInt(document.getElementById('factor').value);
+            const imp1 = data.impulses ? data.impulses : 1;
+            const imp0 = imp1 ? imp1 - 1 : 0;
+            const f = parseInt(document.getElementById('factor').value);
+
+            document.getElementById('impulses').textContent = data.impulses;
+
+            const cb = document.getElementById("factor");
+            cb.options[0].text = `${imp0}&ndash;${imp1} л (вес 1 л/имп)`;
+            cb.options[1].text = `${imp0*10}&ndash;${imp1*10} л (вес 10 л/имп)`;
+            cb.options[2].text = `${imp0*100}&ndash;${imp1*100} л (вес 100 л/имп)`;
+
             formError(data.error);
             getImpulses(i);
         }, false);

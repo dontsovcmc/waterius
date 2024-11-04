@@ -31,31 +31,30 @@
                     </header>
                     <main>
                         <h2 id="counter_title-2"></h2>
-                        <p class="text">Счётчик определился Ватериусом, теперь введите серийный номер и показания счётчика</p>
+                        <p class="text">Счётчик определился Ватериусом, теперь введите показания счётчика</p>
                         <img src="/images/tableau.png" class="counter mt20">
                         <p class="form-error hd"></p>
                         <input id="input" name="input" type="hidden" value="%input%">
-                        <div class="f-row">
-                            <label for="serial">Серийный номер (опционально)</label>
-                            <input id="serial" name="serial" placeholder="10-12345" value="%serial%">
-                            <p class="error hd" id="serial-error">Введите серийный номер</p>
-                        </div>
                         <div class="f-row">
                             <label for="channel_start">Показания счётчика</label>
                             <input pattern="^(\d{1,8}([.,]\d{1,3})?)$" id="channel_start" name="channel_start" placeholder="356.89" value="%channel_start%">
                             <p class="error hd" id="channel_start-error">Введите показания счётчика</p>
                         </div>
                         <div class="f-row">
-                            <label for="factor">Вес импульса</label>
+                            <label for="serial">Серийный номер (опционально)</label>
+                            <input id="serial" name="serial" placeholder="10-12345" value="%serial%">
+                            <p class="error hd" id="serial-error">Введите серийный номер</p>
+                        </div>
+                        <p class="text mt16">Прочитано импульсов: <span id="impulses">1</span>.</p>
+                        <p class="text">Выберите сколько израсходовано воды:</p>
+                        <div class="f-row">
                             <select class="slct" id="factor" name="factor" option-value="%factor%">
                               <option selected="" value="1">1</option>
                               <option value="10">10</option>
                               <option value="100">100</option>
                             </select>
-                            <p>л/имп</p>
                             <p class="error hd" id="factor-error">Некорректное значение</p>
                         </div>
-                        <p class="note mt16">(вылилось около <span id="delta">1</span>л воды)</p>
                     </main>
                     <footer class="btns">
                         <button class="btn" type="submit">Сохранить</button>
