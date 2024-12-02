@@ -8,13 +8,13 @@
         <script src="/static/common.js"></script>
         <script src="/static/strings.js"></script>
     </head>
-    <body onload="fill_instruction(%counter_name%);
+    <body onload="fill_instruction(%counter_name%); 
     fill_counter_title(%counter_name%);
     _init({
         back: '/input/%input%/setup.html',
         back_wizard: '/input/%input%/setup.html?wizard=true',
-        next: '/input/%input%/settings.html?factor=10',
-        next_wizard: '/input/%input%/settings.html?wizard=true&factor=10' 
+        next: '/input/%input%/settings.html',
+        next_wizard: '/input/%input%/settings.html?wizard=true' 
     });
     getStatus(%input%, '/input/%input%/settings.html');">
         <div class="wrap">

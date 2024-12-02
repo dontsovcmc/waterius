@@ -268,8 +268,8 @@ void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cda
         if (sett.counter0_name == CounterName::ELECTRO)
         {
             // factor0 кол-во импульсов на 1 кВт * ч
-            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1.0 * sett.factor0;
-            cdata.delta0 = (data.impulses0 - sett.impulses0_previous) / sett.factor0;
+            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / (sett.factor0 * 1.0);
+            cdata.delta0 = (data.impulses0 - sett.impulses0_previous) / (sett.factor0 * 1.0);
         }
         else 
         {

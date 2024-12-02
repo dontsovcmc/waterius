@@ -139,10 +139,10 @@ function tr(str_id) {
         case S_SETUP: return "Настроить";
         case S_LETSGO: return "Приступить";
         case S_NO_LINK: return "Ошибка связи с МК";
-        case S_WL_CONNECTION_LOST: return "Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.";
+        case S_WL_CONNECTION_LOST: return "Ошибка подключения. Что может помочь:<br>1) Проверьте, что Wi-Fi не Only N, шифрование WPA, WPA2.<br>2) Выключите DHCP на этой странице, заполнив ip роутера и Ватериуса.<br>3) Пропишите MAC адрес Ватериуса в роутере.<br>4) Пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.";
         case S_WL_WRONG_PASSWORD: return "Ошибка подключения: Некорректный пароль";
-        case S_WL_IDLE_STATUS : return "Ошибка подключения: Код 0";
-        case S_WL_DISCONNECTED: return "Ошибка подключения: Отключен";
+        case S_WL_IDLE_STATUS : return "";  // Ошибка подключения: Код 0"; Не является ошибкой
+        case S_WL_DISCONNECTED: return "";  // Ошибка подключения: Отключен"; Не является ошибкой
         case S_WL_NO_SHIELD: return "Ошибка подключения: Код 255";
         case S_WL_SCAN_COMPLETED: return "Ошибка подключения: Код 2";
         case S_ERROR_LENGTH_ERROR: return "Превышена длина поля";
