@@ -1,10 +1,11 @@
 Ватериус поддерживает отправку в
 - сайт <a href="https://waterius.ru" target="_blank">waterius.ru</a>
 - в Home Assistant по MQTT
+- в WirenBoard по MQTT
 - MQTT
 - HTTP
 
-Отправка в MQTT и HTTP происходит при каждом просыпании устройства.
+Отправка в MQTT и HTTP происходит при каждом пробуждении устройства.
 
 # Список параметров
 В таблице собрана информация об отправляемых данных. В столбцах HTTP, MQTT, Blynk указано, отправляются ли данные по соответствующему протоколу. В столбце Blynk указан номер виртуального пина в который записывается поле.
@@ -159,6 +160,14 @@ waterius/12380568/rssi -69
 
 Примечание: значения itype0, itype1 указано выше в разделе itypeX
 Примечание: значения cname0, cname1 указано выше в разделе cnameX
+
+# Настройка отправки в WirenBoard по MQTT 
+
+Выполните настройки MQTT как для отправки в Home Assistant.
+
+Загрузите скрипт ![waterius_wirenboard.js](https://github.com/dontsovcmc/waterius/raw/master/waterius_wirenboard.js)
+ в WirenBoard и измените в нём topic.
+
 
 # Настройка отправки по HTTP (свой сервер)
 
