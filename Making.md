@@ -12,7 +12,7 @@
 | 5 | Резистор SMD 0805 300 Ом | 2 | Для светодиода >250Ом, для земли любой до 500Ом | [chipdip](https://www.chipdip.ru/product0/9000079473) |
 | 6 | Светодиод 3В | 1 | Любой. Беру GNL-3014PGC 8000мКд, очень яркий. | [chipdip](https://www.chipdip.ru/product/gnl-3014pgc) |
 | 7 | Разъем гнездо на плату 2.54мм PBD-8 | 1 | или KLS1-208-2-08-S | [chipdip](https://www.chipdip.ru/product/pbd-8) |
-| 8 | Кнопка тактовая угловая 5.8мм TS-A3PV-130 | 1 | Угловая длиной от 5.8мм. Аналоги: KLS7-TS6606-7.0-180 (TC-0206) (7мм), 1-1825027-3,4,5,6,7,8 | [chipdip](https://www.chipdip.ru/product/kls7-ts6606-7.0-180-tc-0206) |
+| 8 | Кнопка тактовая угловая 5.8мм TS-A3PV-130 | 1 | Угловая длиной от 5.8мм. Аналоги: KLS7-TS6606-7.0-180 (TC-0206) (7мм), 1-1825027-3,4,5,6,7,8 TS-1002N-BR07016, ST-1102VX-7, TC-1102N-C-B-B, TS-1093C-A7B2-D1, UK-B02124-G7-160, KH-6X6X7H-ZJ | [chipdip](https://www.chipdip.ru/product/kls7-ts6606-7.0-180-tc-0206) |
 | 9 | Пин на плату | 1 | Любой для прошивки | [chipdip](https://www.chipdip.ru/product/tyco-826629-2) |
 | 10 | ESP8266-01 | 1 | ESP8266-01 потребляют 0-10мкА зависит от продавца и думаю чипа памяти | [ali (CN888 Store)](https://s.click.aliexpress.com/e/_d89oOKR)( качество, быстрая доставка) [yandex](https://yandex.ru/search/?text=ESP8266-01&lr=213) |
 | 11 | Закрытый батарейный отсек 4xAA | 1 | У ЧипДип KLS5-812-B, качество не очень. | [aliexpress](http://s.click.aliexpress.com/e/43K45ruk)(проверенный) [chipdip](https://www.chipdip.ru/product/fc1-5230) |
