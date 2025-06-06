@@ -666,7 +666,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
         if (name == FPSTR(PARAM_WAKEUP_PER_MIN))
         {
             save_param(p, sett.wakeup_per_min, errorsObj);
-            sett.set_wakeup = sett.wakeup_per_min;
+            sett.set_wakeup = sett.wakeup_per_min * 0.9;
         }
         else if (name == FPSTR(PARAM_NTP_SERVER))
         {

@@ -341,7 +341,7 @@ void update_config(Settings &sett, const SlaveData &data, const CalculatedData &
             }
         }
     }
-    sett.set_wakeup = sett.wakeup_per_min;
+    sett.set_wakeup = sett.wakeup_per_min * 0.9;
     sett.last_send = now;
 }
 
