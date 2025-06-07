@@ -162,12 +162,6 @@ void loop()
                 {
                     LOG_ERROR(F("Wakeup period wasn't set"));
                 }
-                else // Разбуди меня через...
-                {
-                    LOG_INFO(F("Wakeup period, min:") << sett.wakeup_per_min);
-                    LOG_INFO(F("Wakeup period (adjusted), min:") << sett.set_wakeup);
-                }
-
             }
             store_config(sett);  // т.к. сохраняем число ошибок подключения
         }

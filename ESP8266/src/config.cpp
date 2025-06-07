@@ -309,6 +309,34 @@ void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cda
     LOG_INFO(F("value1    start=") << sett.channel1_start << F(" current=") << cdata.channel1 << F(" delta=") << cdata.delta1);
 }
 
+/*
+ * @brief Корректируем период пробуждения только для автоматического режима.
+ *
+ * @param const time_t &now - Полученное по NTP время. Должно быть валидным.
+ *
+ * @returns uint16_t - Кол-во минут ("кривых attiny"), через которое должно проснуться устройство.
+ */
+uint16_t tune_wakeup(const time_t &now, const time_t &base_time, 
+    const uint16_t &wakeup_per_min)
+{   
+    // Сколько периодов прошло с момента настройки
+    uint32_t periods_passed = (now - base_time) / 60 / wakeup_per_min;
+
+    // time_t следующего выхода на связь
+    const time_t next_time = base_time + (periods_passed + 1) * wakeup_per_min * 60;
+
+    // Следущее пробуждение через мин (округляем вверх)
+    uint16_t set_wakeup = (next_time - now + 59) / 60; 
+
+    if (set_wakeup < 1) 
+        set_wakeup = 1; // минимальный интервал
+
+    LOG_INFO(F("Wakeup period, min:") << wakeup_per_min);
+    LOG_INFO(F("Wakeup period (adjusted), min:") << set_wakeup);
+
+    return set_wakeup;
+}
+
 /* Обновляем значения в конфиге*/
 void update_config(Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
@@ -317,32 +345,38 @@ void update_config(Settings &sett, const SlaveData &data, const CalculatedData &
     sett.impulses0_previous = data.impulses0;
     sett.impulses1_previous = data.impulses1;
 
+    // Значение по умолчанию. Уменьшим с учётом опроса входов.
+    if (!sett.set_wakeup) {
+        sett.set_wakeup = sett.wakeup_per_min * 0.9;   
+    }
+
     // Перешлем время на сервер при след. включении
     sett.wake_time = millis();
 
     time_t now = time(nullptr);
 
-    // Перерасчет времени пробуждения
-    if (sett.mode == TRANSMIT_MODE)
+    // Проверяем валидность текущего времени
+    if (!is_valid_time(now)) 
     {
-        // нужно удстовериться что время было устанаовлено в прошлом и сейчас
-        //  т.е. перерасчет можно делать только если оба установлены или оба не установлены
-        //  т.е. time должно быть или 1970 или настоящее в обоих случаях
-        //  иначе коэффициенты будут расчитаны неправильно
-        if ((is_valid_time(now) == is_valid_time(sett.last_send) && (now > sett.last_send)))
-        {
-            time_t t1 = (now - sett.last_send) / 60;
-            if (t1 > 1 && data.version >= 24)
-            {
-                LOG_INFO(F("Minutes diff:") << t1);
-                sett.set_wakeup = sett.wakeup_per_min * sett.set_wakeup / t1;
-                sett.last_send = now;
-                return;
-            }
-        }
+        LOG_ERROR(F("Invalid current time!"));
+        return;
     }
-    sett.set_wakeup = sett.wakeup_per_min * 0.9;
+
+    // Обновляем метку последней активности
     sett.last_send = now;
+
+    // Обновляем базовое время при ручном пробуждении или первом запуске
+    if (!is_valid_time(sett.base_time) || sett.mode == MANUAL_TRANSMIT_MODE) 
+    {
+        sett.base_time = now;
+        LOG_INFO(F("Manual/first wakeup: base_time reset"));
+    }
+
+    // Корректируем период пробуждения только для автоматического режима
+    if (sett.mode == TRANSMIT_MODE)
+    {    
+        sett.set_wakeup = tune_wakeup(now, sett.base_time, sett.wakeup_per_min);
+    }
 }
 
 void factory_reset(Settings &sett)

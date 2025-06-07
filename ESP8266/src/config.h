@@ -16,6 +16,9 @@ extern bool load_config(Settings &sett);
 /* Инициализируем начальные значения конфигурации */
 extern bool init_config(Settings &sett);
 
+/* Корректируем период пробуждения только для автоматического режима */
+uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const uint16_t &wakeup_per_min);
+
 /* Обновляем данные в конфиге*/
 extern void update_config(Settings &sett, const SlaveData &data, const CalculatedData &cdata);
 
