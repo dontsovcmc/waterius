@@ -2,6 +2,7 @@
 #include "Logging.h"
 #include "publish.h"
 #include "publish_data.h"
+#include "config.h"
 #include "utils.h"
 
 #define MQTT_MAX_TRIES 5
@@ -40,6 +41,8 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
                 {
                     LOG_INFO(F("MQTT: CALLBACK: Old Settings.wakeup_per_min: ") << sett.wakeup_per_min);
                     sett.wakeup_per_min = period_min;
+                    reset_period_min_tuned(sett);
+
                     // если есть ключ то время уже получено и json уже сформирован, можно отправлять
                     if (json_data.containsKey("period_min"))   //todo добавить F("")
                     {

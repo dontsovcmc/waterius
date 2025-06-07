@@ -158,7 +158,7 @@ void loop()
 
                 update_config(sett, data, cdata);
 
-                if (!masterI2C.setWakeUpPeriod(sett.set_wakeup))
+                if (!masterI2C.setWakeUpPeriod(sett.period_min_tuned))
                 {
                     LOG_ERROR(F("Wakeup period wasn't set"));
                 }

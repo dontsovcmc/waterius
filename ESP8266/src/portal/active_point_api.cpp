@@ -666,6 +666,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
         if (name == FPSTR(PARAM_WAKEUP_PER_MIN))
         {
             save_param(p, sett.wakeup_per_min, errorsObj);
+            reset_period_min_tuned(sett);
         }
         else if (name == FPSTR(PARAM_NTP_SERVER))
         {

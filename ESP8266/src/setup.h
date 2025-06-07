@@ -492,7 +492,7 @@ struct Settings
     /*
     Установленный период отправки с учетом погрешности
     */
-    uint16_t set_wakeup = DEFAULT_WAKEUP_PERIOD_MIN;
+    uint16_t period_min_tuned = DEFAULT_WAKEUP_PERIOD_MIN;
 
     /*
     Время последней отправки по расписанию

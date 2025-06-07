@@ -43,7 +43,7 @@ bool init_config(Settings &sett)
     LOG_INFO(F("cfg version=") << sett.version);
 
     sett.wakeup_per_min = DEFAULT_WAKEUP_PERIOD_MIN;
-    sett.set_wakeup = DEFAULT_WAKEUP_PERIOD_MIN;
+    sett.period_min_tuned = DEFAULT_WAKEUP_PERIOD_MIN;
     sett.mode = SETUP_MODE;
     sett.mqtt_auto_discovery = (uint8_t)MQTT_AUTO_DISCOVERY;
     
@@ -326,15 +326,20 @@ uint16_t tune_wakeup(const time_t &now, const time_t &base_time,
     const time_t next_time = base_time + (periods_passed + 1) * wakeup_per_min * 60;
 
     // Следущее пробуждение через мин (округляем вверх)
-    uint16_t set_wakeup = (next_time - now + 59) / 60; 
+    uint16_t period_min_tuned = (next_time - now + 59) / 60; 
 
-    if (set_wakeup < 1) 
-        set_wakeup = 1; // минимальный интервал
+    if (period_min_tuned < 1) 
+        period_min_tuned = 1; // минимальный интервал
 
-    LOG_INFO(F("Wakeup period, min:") << wakeup_per_min);
-    LOG_INFO(F("Wakeup period (adjusted), min:") << set_wakeup);
+    LOG_INFO(F("Wakeup period (adjusted), min:") << period_min_tuned);
 
-    return set_wakeup;
+    return period_min_tuned;
+}
+
+/* Сбрасываем скорректированный период после изменения периода пользователем */
+void reset_period_min_tuned(Settings &sett)
+{
+    sett.period_min_tuned = sett.wakeup_per_min * 0.9;   
 }
 
 /* Обновляем значения в конфиге*/
@@ -346,8 +351,8 @@ void update_config(Settings &sett, const SlaveData &data, const CalculatedData &
     sett.impulses1_previous = data.impulses1;
 
     // Значение по умолчанию. Уменьшим с учётом опроса входов.
-    if (!sett.set_wakeup) {
-        sett.set_wakeup = sett.wakeup_per_min * 0.9;   
+    if (!sett.period_min_tuned) {
+        reset_period_min_tuned(sett);
     }
 
     // Перешлем время на сервер при след. включении
@@ -366,16 +371,18 @@ void update_config(Settings &sett, const SlaveData &data, const CalculatedData &
     sett.last_send = now;
 
     // Обновляем базовое время при ручном пробуждении или первом запуске
-    if (!is_valid_time(sett.base_time) || sett.mode == MANUAL_TRANSMIT_MODE) 
+    if (!is_valid_time(sett.base_time) || sett.mode == MANUAL_TRANSMIT_MODE || sett.mode == SETUP_MODE) 
     {
         sett.base_time = now;
         LOG_INFO(F("Manual/first wakeup: base_time reset"));
     }
 
+    LOG_INFO(F("Wakeup period, min:") << sett.wakeup_per_min);
+
     // Корректируем период пробуждения только для автоматического режима
     if (sett.mode == TRANSMIT_MODE)
     {    
-        sett.set_wakeup = tune_wakeup(now, sett.base_time, sett.wakeup_per_min);
+        sett.period_min_tuned = tune_wakeup(now, sett.base_time, sett.wakeup_per_min);
     }
 }
 

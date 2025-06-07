@@ -3,29 +3,23 @@ import os
 Import("env")
 
 
-def post_build(source, target, env):
+def prefix(env):
     v = ''.join(c for c in env.GetProjectOption("firmware_version") if c.isdigit() or c in ['.'])
     board = env.GetProjectOption("board")
-    bin = target[0].get_abspath()
-    dest = os.path.join(os.path.pardir, os.path.pardir, env["PROJECT_DIR"], board + '-' + v + '.bin')
-    print(bin + ' ->\n' + dest)
-    shutil.copy(bin, dest)
-
-    elf = source[0].get_abspath()
-    dest = os.path.join(os.path.pardir, os.path.pardir, env["PROJECT_DIR"], board + '-' + v + '.elf')
-    print(elf + ' ->\n' + dest)
-    shutil.copy(elf, dest)
-
-env.AddPostAction("$BUILD_DIR/firmware.bin", post_build)
+    return board + '-' + v
 
 
-def post_buildfs(source, target, env):
-    v = ''.join(c for c in env.GetProjectOption("firmware_version") if c.isdigit() or c in ['.'])
-    board = env.GetProjectOption("board")
-    print('Move BIN files of filesystem version=' + v)
-    bin = target[0].get_abspath()
-    dest = os.path.join(os.path.pardir, os.path.pardir, env["PROJECT_DIR"], board + '-' + v + '-fs.bin')
-    print(bin + ' ->\n' + dest)
-    shutil.copy(bin, dest)
+def copy_file(source, target, env, postfix=''):
+    file_path = target[0].get_abspath()
+    ext = file_path.split('.')[-1]
+    dest = os.path.join(os.path.pardir, 
+                        os.path.pardir, 
+                        os.path.pardir, 
+                        env["PROJECT_DIR"], f'{prefix(env)}{postfix}.{ext}')
+    print(file_path + ' ->\n' + dest)
+    shutil.copy(file_path, dest)
 
-env.AddPostAction("$BUILD_DIR/littlefs.bin", post_buildfs)
+
+env.AddPostAction("$BUILD_DIR/firmware.bin", lambda source, target, env: copy_file(source, target, env))
+env.AddPostAction("$BUILD_DIR/firmware.elf", lambda source, target, env: copy_file(source, target, env))
+env.AddPostAction("$BUILD_DIR/littlefs.bin", lambda source, target, env: copy_file(source, target, env, '-fs'))
