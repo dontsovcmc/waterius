@@ -55,6 +55,8 @@ static const char s_router_mac[] PROGMEM = "router_mac";
 static const char s_router_mac_name[] PROGMEM = "Router MAC";
 static const char s_mac_name[] PROGMEM = "MAC Address";
 static const char s_mac[] PROGMEM = "mac";
+static const char s_channel_name[] PROGMEM = "MAC Address";
+static const char s_channel[] PROGMEM = "channel";
 static const char s_ip_name[] PROGMEM = "IP";
 static const char s_ip[] PROGMEM = "ip";
 static const char s_icon_ip[] PROGMEM = "mdi:ip-network";
@@ -63,8 +65,14 @@ static const char s_freemem[] PROGMEM = "freemem";
 static const char s_data_size[] PROGMEM = "data_size";
 static const char s_byte[] PROGMEM = "B";
 static const char s_icon_memory[] PROGMEM = "mdi:memory";
-static const char s_wake_name[] PROGMEM = "Sleep Period";
+static const char s_period_min_name[] PROGMEM = "Sleep Period";
 static const char s_period_min[] PROGMEM = "period_min";
+static const char s_period_min_tuned_name[] PROGMEM = "Sleep Period (tuned)";
+static const char s_period_min_tuned[] PROGMEM = "period_min_tuned";
+static const char s_wifi_connect_errors_name[] PROGMEM = "Connect to WiFi errors";
+static const char s_wifi_connect_errors[] PROGMEM = "wifi_connect_errors";
+static const char s_ntp_errors_name[] PROGMEM = "Sync time errors";
+static const char s_ntp_errors[] PROGMEM = "ntp_errors";
 static const char s_duration[] PROGMEM = "duration";
 static const char s_min[] PROGMEM = "min";
 static const char s_config[] PROGMEM = "config";
@@ -117,9 +125,11 @@ static const char *const ENTITY_RESETS[MQTT_PARAM_COUNT] PROGMEM =
     {s_sensor, s_resets_name, s_resets, s_measurement, "", "", s_diagnostic, s_icon_cog_refresh, ""}; // resets
 static const char *const ENTITY_TIMESTAMP[MQTT_PARAM_COUNT] PROGMEM =    
     {s_sensor, s_time_name, s_timestamp, "", s_timestamp, "", s_diagnostic, s_clock, ""};            // Время
-    /*{s_sensor, s_wake_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},*/ // Настройка для автоматического добавления времени пробуждения в Home Assistant
+    /*{s_sensor, s_period_min_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},*/ // Настройка для автоматического добавления времени пробуждения в Home Assistant
 static const char *const ENTITY_PERIOD_MIN[MQTT_PARAM_COUNT] PROGMEM =  
-    {s_number, s_wake_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50};
+    {s_number, s_period_min_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50};
+static const char *const ENTITY_PERIOD_MIN_TUNED[MQTT_PARAM_COUNT] PROGMEM =  
+    {s_number, s_period_min_tuned_name, s_period_min_tuned, "", "", "", s_config, s_icon_bed_clock, s_format50};
     /* Сенсор с атрибутами  Группа №1 */
 static const char *const ENTITY_VOLTAGE[MQTT_PARAM_COUNT] PROGMEM =  
     {s_sensor, s_bvolt_name, s_voltage, s_measurement, s_voltage, s_v, s_diagnostic, "", ""};      // voltage
@@ -132,9 +142,15 @@ static const char *const ENTITY_ROUTER_MAC[MQTT_PARAM_COUNT] PROGMEM =
     {s_sensor, s_router_mac_name, s_router_mac, "", "", "", s_diagnostic, "", ""};                  // Мак роутера
 static const char *const ENTITY_MAC[MQTT_PARAM_COUNT] PROGMEM =    
     {s_sensor, s_mac_name, s_mac, "", "", "", s_diagnostic, "", ""};                                // Мак ESP
+static const char *const ENTITY_WIFI_CHANNEL[MQTT_PARAM_COUNT] PROGMEM =    
+    {s_sensor, s_channel_name, s_channel, "", "", "", s_diagnostic, "", ""};                                // channel
 static const char *const ENTITY_IP[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_ip_name, s_ip, "", "", "", s_diagnostic, s_icon_ip, ""};                           // IP
-    
+static const char *const ENTITY_WIWI_CONNECT_ERRORS[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_wifi_connect_errors_name, s_wifi_connect_errors, "", "", "", s_diagnostic, s_icon_cog_refresh, ""};  // wifi_connect_errors
+static const char *const ENTITY_NTP_ERRORS[MQTT_PARAM_COUNT] PROGMEM = 
+    {s_sensor, s_ntp_errors_name, s_ntp_errors, "", "", "", s_diagnostic, s_icon_cog_refresh, ""};  // ntp_errors
+   
 /**
  * @brief массив с сущностями для одного канала
  *        https://www.home-assistant.io/integrations/sensor/

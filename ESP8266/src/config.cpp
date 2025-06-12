@@ -313,27 +313,52 @@ void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cda
  * @brief Корректируем период пробуждения только для автоматического режима.
  *
  * @param const time_t &now - Полученное по NTP время. Должно быть валидным.
+ * @param const time_t &base_time - Время настройки пользователем
+ * @param const time_t &last_send - Предыдущее время пробуждения
+ * @param const uint16_t &wakeup_per_min - Установленный пользователем период пробуждения
+ * @param const uint16_t &period_min_tuned - Скорректированный период пробуждения
  *
  * @returns uint16_t - Кол-во минут ("кривых attiny"), через которое должно проснуться устройство.
  */
-uint16_t tune_wakeup(const time_t &now, const time_t &base_time, 
-    const uint16_t &wakeup_per_min)
-{   
-    // Сколько периодов прошло с момента настройки
-    uint32_t periods_passed = (now - base_time) / 60 / wakeup_per_min;
+uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const time_t &last_send, 
+    const uint16_t &wakeup_per_min, const uint16_t &period_min_tuned)
+{
+    // 1. Оценка коэффициента 'k' на основе результатов последнего сна
+    // time_t обычно хранит секунды, поэтому difftime вернет разницу в секундах.
+    double actual_slept_min = difftime(now, last_send) / 60.0;
 
-    // time_t следующего выхода на связь
-    const time_t next_time = base_time + (periods_passed + 1) * wakeup_per_min * 60;
+    double k_estimated = 1.0;
+    if (period_min_tuned > 0) {
+        k_estimated = actual_slept_min / period_min_tuned;
+    }
 
-    // Следущее пробуждение через мин (округляем вверх)
-    uint16_t period_min_tuned = (next_time - now + 59) / 60; 
+    // 2. Определение следующей целевой временной отметки
+    double time_since_base_min = difftime(now, base_time) / 60.0;
+    
+    // Целочисленное деление для определения количества прошедших периодов
+    long long target_num = static_cast<long long>(floor(time_since_base_min / wakeup_per_min)) + 1;
+    
+    time_t next_expected = base_time + target_num * wakeup_per_min * 60;
+    double minutes_to_next = difftime(next_expected, now) / 60.0;
 
-    if (period_min_tuned < 1) 
-        period_min_tuned = 1; // минимальный интервал
+    // 3. Защита от "ловушки": если до цели меньше минуты, целимся в следующую точку
+    if (minutes_to_next < 1.0) {
+        target_num++;
+        next_expected = base_time + target_num * wakeup_per_min * 60;
+        minutes_to_next = difftime(next_expected, now) / 60.0;
+    }
 
-    LOG_INFO(F("Wakeup period (adjusted), min:") << period_min_tuned);
+    // 4. Расчет и округление нового периода сна
+    double ideal_period_tuned_float = minutes_to_next;
+    if (k_estimated > 0.1) { // Проверка, что k_estimated не слишком близок к нулю
+        ideal_period_tuned_float = minutes_to_next / k_estimated;
+    }
 
-    return period_min_tuned;
+    uint16_t new_period_min_tuned = static_cast<uint16_t>(round(ideal_period_tuned_float));
+    LOG_INFO(F("Tune: elapsed_min=") << actual_slept_min << ", new_period_min_tuned=" << new_period_min_tuned);
+
+    // Округляем до ближайшего целого и приводим к целевому типу uint16_t
+    return new_period_min_tuned;
 }
 
 /* Сбрасываем скорректированный период после изменения периода пользователем */
@@ -342,7 +367,7 @@ void reset_period_min_tuned(Settings &sett)
     sett.period_min_tuned = sett.wakeup_per_min * 0.9;   
 }
 
-/* Обновляем значения в конфиге*/
+/* Обновляем значения в конфиге */
 void update_config(Settings &sett, const SlaveData &data, const CalculatedData &cdata)
 {
     LOG_INFO(F("Updating config..."));
@@ -355,7 +380,7 @@ void update_config(Settings &sett, const SlaveData &data, const CalculatedData &
         reset_period_min_tuned(sett);
     }
 
-    // Перешлем время на сервер при след. включении
+    // Перешлем время пробуждения на сервер при след. включении
     sett.wake_time = millis();
 
     time_t now = time(nullptr);
@@ -366,9 +391,6 @@ void update_config(Settings &sett, const SlaveData &data, const CalculatedData &
         LOG_ERROR(F("Invalid current time!"));
         return;
     }
-
-    // Обновляем метку последней активности
-    sett.last_send = now;
 
     // Обновляем базовое время при ручном пробуждении или первом запуске
     if (!is_valid_time(sett.base_time) || sett.mode == MANUAL_TRANSMIT_MODE || sett.mode == SETUP_MODE) 
@@ -382,8 +404,11 @@ void update_config(Settings &sett, const SlaveData &data, const CalculatedData &
     // Корректируем период пробуждения только для автоматического режима
     if (sett.mode == TRANSMIT_MODE)
     {    
-        sett.period_min_tuned = tune_wakeup(now, sett.base_time, sett.wakeup_per_min);
+        sett.period_min_tuned = tune_wakeup(now, sett.base_time, sett.last_send, sett.wakeup_per_min, sett.period_min_tuned);
     }
+
+    // Обновляем метку последней активности
+    sett.last_send = now;
 }
 
 void factory_reset(Settings &sett)
