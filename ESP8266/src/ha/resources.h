@@ -55,7 +55,7 @@ static const char s_router_mac[] PROGMEM = "router_mac";
 static const char s_router_mac_name[] PROGMEM = "Router MAC";
 static const char s_mac_name[] PROGMEM = "MAC Address";
 static const char s_mac[] PROGMEM = "mac";
-static const char s_channel_name[] PROGMEM = "MAC Address";
+static const char s_channel_name[] PROGMEM = "Wi-Fi Channel";
 static const char s_channel[] PROGMEM = "channel";
 static const char s_ip_name[] PROGMEM = "IP";
 static const char s_ip[] PROGMEM = "ip";
@@ -128,8 +128,8 @@ static const char *const ENTITY_TIMESTAMP[MQTT_PARAM_COUNT] PROGMEM =
     /*{s_sensor, s_period_min_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},*/ // Настройка для автоматического добавления времени пробуждения в Home Assistant
 static const char *const ENTITY_PERIOD_MIN[MQTT_PARAM_COUNT] PROGMEM =  
     {s_number, s_period_min_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50};
-static const char *const ENTITY_PERIOD_MIN_TUNED[MQTT_PARAM_COUNT] PROGMEM =  
-    {s_number, s_period_min_tuned_name, s_period_min_tuned, "", "", "", s_config, s_icon_bed_clock, s_format50};
+//static const char *const ENTITY_PERIOD_MIN_TUNED[MQTT_PARAM_COUNT] PROGMEM =  
+//    {s_sensor, s_period_min_tuned_name, s_period_min_tuned, "", "", "", s_config, s_icon_bed_clock, s_format50}; // скорректированное значение пробуждения
     /* Сенсор с атрибутами  Группа №1 */
 static const char *const ENTITY_VOLTAGE[MQTT_PARAM_COUNT] PROGMEM =  
     {s_sensor, s_bvolt_name, s_voltage, s_measurement, s_voltage, s_v, s_diagnostic, "", ""};      // voltage

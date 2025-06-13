@@ -365,6 +365,8 @@ uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const time_t &l
 void reset_period_min_tuned(Settings &sett)
 {
     sett.period_min_tuned = sett.wakeup_per_min * 0.9;   
+    LOG_INFO(F("RESET: period_min_tuned=") << sett.period_min_tuned);
+
 }
 
 /* Обновляем значения в конфиге */

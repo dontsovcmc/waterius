@@ -166,7 +166,8 @@ void publish_discovery_general_entities(PubSubClient &mqtt_client,
     publish_discovery_entity_extended(mqtt_client, topic, discovery_topic, data, device_id, device_mac, ENTITY_RESETS);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_TIMESTAMP);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN);
-    publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN_TUNED);
+    //нужно ли это прям диагностическая информация 
+    //publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN_TUNED);
     /* Сенсор с атрибутами  Группа №1 */
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_VOLTAGE);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_VOLTAGE_DIFF);
