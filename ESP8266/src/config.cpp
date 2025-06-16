@@ -341,8 +341,8 @@ uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const time_t &l
     time_t next_expected = base_time + target_num * wakeup_per_min * 60;
     double minutes_to_next = difftime(next_expected, now) / 60.0;
 
-    // 3. Защита от "ловушки": если до цели меньше минуты, целимся в следующую точку
-    if (minutes_to_next < 1.0) {
+    // 3. Защита от "ловушки": если до цели меньше минуты или до пробуждения меньше 5% периода, целимся в следующую точку
+    if (minutes_to_next < 1.0 || minutes_to_next < (wakeup_per_min * 0.05)) {
         target_num++;
         next_expected = base_time + target_num * wakeup_per_min * 60;
         minutes_to_next = difftime(next_expected, now) / 60.0;
