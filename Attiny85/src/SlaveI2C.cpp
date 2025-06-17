@@ -3,11 +3,15 @@
 #include "SlaveI2C.h"
 #include <Arduino.h>
 #include "Storage.h"
+#include "Power.h"
 #include <Wire.h>
 
 extern struct Header info;
 extern void saveConfig();
 extern uint32_t wakeup_period;
+extern void extendWakeUpPeriod();
+extern void measureVoltage(uint16_t vcc_real_mv);
+
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -72,13 +76,19 @@ void SlaveI2C::receiveEvent(int howMany)
     case 'S': // ESP присылает новое значение периода пробуждения
         getWakeUpPeriod();
         break;
+    case 'E': // ESP продлевает время пробуждения
+        extendWakeUp();
+        break;
     case 'C': // ESP присылает новую конфигурацию
         getCounterTypes();
+        break;
+    case 'V': // ESP запрос на измерение напряжения =0 или каллибровку attiny
+        getVoltage();
         break;
     }
 }
 
-void SlaveI2C::getWakeUpPeriod()
+uint16_t SlaveI2C::getUint16()
 {
     uint8_t data[2];
 
@@ -86,9 +96,17 @@ void SlaveI2C::getWakeUpPeriod()
     data[1] = Wire.read();
     uint8_t crc = Wire.read();
 
-    uint16_t newPeriod = (data[0] << 8) | data[1];
+    uint16_t value = (data[0] << 8) | data[1];
 
-    if ((crc == crc_8(data, 2)) && (newPeriod != 0))
+    if (crc == crc_8(data, 2))
+        return value;
+    return 0;
+}
+
+void SlaveI2C::getWakeUpPeriod()
+{
+    uint16_t newPeriod = SlaveI2C::getUint16();
+    if (newPeriod != 0)
     {
         wakeup_period = ONE_MINUTE * newPeriod;
     }
@@ -114,4 +132,20 @@ void SlaveI2C::getCounterTypes()
 bool SlaveI2C::masterGoingToSleep()
 {
     return masterSentSleep;
+}
+
+void SlaveI2C::extendWakeUp()
+{
+    extendWakeUpPeriod();
+}
+
+void SlaveI2C::getVoltage()
+{
+    uint16_t vcc_real_mv = SlaveI2C::getUint16();
+
+    measureVoltage(vcc_real_mv);
+    if (vcc_real_mv != 0)
+    {   // калибровка
+	    saveConfig();
+    }
 }

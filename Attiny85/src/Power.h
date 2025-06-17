@@ -16,17 +16,23 @@ struct ESPPowerPin
 {
     explicit ESPPowerPin(const uint8_t);
 
-    //Пин подачи питания на ESP
+    // Пин подачи питания на ESP
     uint8_t power_pin;
 
-    //Время включения Wi-Fi
+    // Время включения Wi-Fi
     unsigned long wake_up_timestamp;
 
-    //Подать или снять питание с ESP
+    // Подать или снять питание с ESP
     void power(const bool);
 
-    //Прошло ли больше msec времени с момента wake_up_timestamp
+    // Прошло ли больше msec времени с момента wake_up_timestamp
     bool elapsed(const unsigned long msec);
+
+    // Продлить время включения
+    void extend_wake_up();
 };
+
+// Измеряем напряжение питания Attiny85
+uint16_t readVcc(uint16_t vcc_reference);
 
 #endif

@@ -23,6 +23,9 @@ protected:
     static void receiveEvent(int howMany);
     static void getWakeUpPeriod();
     static void getCounterTypes();
+    static void extendWakeUp();
+    static void getVoltage();
+    static uint16_t getUint16();
 
 public:
     void begin(const uint8_t);

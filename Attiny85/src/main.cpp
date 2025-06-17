@@ -17,9 +17,12 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 32  // Передается в ESP и на сервер в данных.
+#define FIRMWARE_VER 33  // Передается в ESP и на сервер в данных.
 
 /*
+33 - 2025.06.16 - dontsovcmc
+	1. Добавлена команда продолжения бордствования ESP
+
 Версии прошивок
 32 - 2023.11.17 - abrant
 	1. Добавлен тип входа "Датчик Холла", он требует питания, которое подается вместо второго канала.
@@ -142,9 +145,24 @@ static ButtonB button(2);  // PB2 кнопка (на линии SCL)
 static ESPPowerPin esp(1); // Питание на ESP
 
 // Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, {0, 0, WATERIUS_2C, {counter0.type, counter1.type}}, {0, 0}, {0, 0}, 0, 0};
+struct Header info = 
+{
+	FIRMWARE_VER, // version
+	0, // service (boot)
+	0, // voltage 
+	{  // Config
+		0, // setup_started_counter
+		0, // resets
+		{ counter0.type, counter1.type }, 
+		DEFAULT_AVR_VCC_REFERENCE_MV // v_reference
+	}, 
+	{0, 0}, // Data
+	{0, 0}, // ADCLevel
+	0, // crc
+	0  // reserved
+};
 
-uint32_t wakeup_period;
+uint32_t wakeup_period;   // период пробуждения ESP, мин
 
 //Кольцевой буфер для хранения показаний на случай замены питания или перезагрузки
 //Кольцовой нужен для того, чтобы превысить лимит записи памяти в 100 000 раз
@@ -223,7 +241,25 @@ void saveConfig()
 	config.add(info.config);	
 }
 
-//Запрос периода при инициализции. Также период может изменится после настройки.
+
+void extendWakeUpPeriod()
+{
+	esp.extend_wake_up();
+}
+
+// Запрос на измерение напряжения или на калибровку (если передано текущее напряжение)
+void measureVoltage(uint16_t vcc_real_mv)
+{
+	info.voltage = readVcc(info.config.v_reference);
+	if (vcc_real_mv > 0) 
+	{	// калибровка
+    	info.config.v_reference = (uint32_t)info.config.v_reference * vcc_real_mv / info.voltage;
+	}
+	
+}
+
+
+// Запрос периода при инициализции. Также период может изменится после настройки.
 // Настройка. Вызывается однократно при запуске.
 void setup()
 {
@@ -251,6 +287,7 @@ void setup()
 		info.config.setup_started_counter = 0;
 		info.config.types.type0 = counter0.type;
 		info.config.types.type1 = counter1.type;
+		info.config.v_reference = DEFAULT_AVR_VCC_REFERENCE_MV;
 	}
 	saveConfig();
 
@@ -339,7 +376,7 @@ void loop()
 	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания
 
-	unsigned long wake_up_limit;
+	unsigned long wake_up_limit;   // период бодрствования ESP, мсек
 	if (button.press == ButtonPressType::LONG)
 	{ 
 		LOG(F("SETUP pressed"));
@@ -361,12 +398,13 @@ void loop()
 			LOG(F("wake up for transmitting"));
 			slaveI2C.begin(TRANSMIT_MODE);
 		}
-		wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
+		wake_up_limit = WAIT_ESP_MSEC;
 	}
 
 	// Нажатие кнопки обработали и удаляем
 	button.press = ButtonPressType::NONE;
 
+	info.voltage = readVcc(info.config.v_reference);
 	esp.power(true);
 	LOG(F("ESP turn on"));
 

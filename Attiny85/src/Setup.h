@@ -3,8 +3,6 @@
 
 #include <Arduino.h>
 
-#define WATERIUS_2C 0 // attiny85 - 2 счетчика импульсов
-
 /*
     Включение логирования
     3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
@@ -42,8 +40,11 @@
 
 /*
     Период отправки данных на сервер, мин.
+    Если перезагрузилось устройство.
+    ESP пришлёт корректировку.
+    1440 - 10% - 1300 мин. 
 */
-#define WAKEUP_PERIOD_DEFAULT 15L * ONE_MINUTE
+#define WAKEUP_PERIOD_DEFAULT 1300L * ONE_MINUTE
 
 
 /*
@@ -66,7 +67,13 @@
     пауза мс перед переходом ESP в сон (чтобы успел отключиться)
 */
 #define DELAY_SENT_SLEEP 20000
-       
+    
+
+/*
+    стандартная константа калибровки вольтметра в attiny
+ */
+#define DEFAULT_AVR_VCC_REFERENCE_MV 1100  
+
 
 struct Data
 {
@@ -90,8 +97,8 @@ struct Config
 {
     uint8_t setup_started_counter;      // Включение режима настройки
     uint8_t resets;                     // Количество перезагрузок
-    uint8_t model;                      // Модификация: 0 - Классический. 2 счетчика, 1 - 4C2W. 4 счетчика
     CounterTypes types;                 // Типы входов счетчиков
+    uint16_t v_reference;               // Калибровочная константа
 };
 
 struct Header
@@ -116,19 +123,14 @@ struct Header
     uint8_t service;
 
     /*
-    ver 24: убрал напряжение
+    Напряжение
     */
-    uint16_t reserved;
-
-    /*
-    Для совместимости с 0.10.0.
-    */
-    uint8_t reserved2;
+    uint16_t voltage;
 
     /*
     Конфигурация
     */
-    Config config;
+    Config config;       // 6 байт
 
     /*
     Текущие данные
