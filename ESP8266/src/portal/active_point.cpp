@@ -546,6 +546,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     server->on("/api/main_status", HTTP_GET, get_api_main_status);                 // Информационные сообщения на главной странице
     server->on("/api/status/0", HTTP_GET, get_api_status_0);                       // Статус 0-го входа (ХВС)  (из setup_cold_welcome.html)
     server->on("/api/status/1", HTTP_GET, get_api_status_1);                       // Статус 1-го входа (ГВС)  (из setup_cold_welcome.html)
+    server->on("/api/calibrate", HTTP_POST, post_api_calibrate);                   // Калибровка вольтметра в attiny
     server->on("/api/turnoff", HTTP_GET, get_api_turnoff);                         // Выйти из режима настройки
     server->on("/api/reset", HTTP_POST, post_api_reset);                           // Сброс к заводским настройкам
 

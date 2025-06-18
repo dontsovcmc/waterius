@@ -68,48 +68,65 @@ bool MasterI2C::sendData(uint8_t *buf, size_t size)
  * @return true прочитано успешно
  * @return false данные не прочитаны
  */
-bool MasterI2C::getByte(uint8_t *value, uint8_t &crc)
+bool MasterI2C::getByte(uint8_t &value, uint8_t &crc)
 {
     if (Wire.requestFrom(I2C_SLAVE_ADDR, 1) != 1)
     {
         LOG_ERROR(F("RequestFrom failed"));
         return false;
     }
-    *value = Wire.read();
-    crc = crc_8(value, 1, crc);
+    value = Wire.read();
+    crc = crc_8(&value, 1, crc);
     return true;
 }
 
-/**
- * @brief Чтение заданного количества байт в буффер по указателю
- * 
- * @param value указатель на буфер приемника
- * @param count количество байт для чтения
- * @param crc контрольная сумма для расчета
- * @return true прочитано успешно
- * @return false данные не прочитаны
- */
-bool MasterI2C::getBytes(uint8_t *value, uint8_t count, uint8_t &crc)
+bool MasterI2C::getUint16(uint16_t &value, uint8_t &crc)
 {
-    for (; count > 0; count--, value++)
+    uint8_t i1, i2;
+    if (getByte(i1, crc) && getByte(i2, crc))
     {
-        if (!getByte(value, crc))
-            return false;
+        value = value << 8;
+        value |= i2;
+        value = value << 8;
+        value |= i1;
+        // вот так не работает из-за преобразования типов:
+        //  value = i1 | (i2 << 8) | (i3 << 16) | (i4 << 24);
+        return true;
     }
-    return true;
+    return false;
+}
+
+bool MasterI2C::getUint32(uint32_t &value, uint8_t &crc)
+{
+
+    uint8_t i1, i2, i3, i4;
+    if (getByte(i1, crc) && getByte(i2, crc) && getByte(i3, crc) && getByte(i4, crc))
+    {
+        value = i4;
+        value = value << 8;
+        value |= i3;
+        value = value << 8;
+        value |= i2;
+        value = value << 8;
+        value |= i1;
+        // вот так не работает из-за преобразования типов:
+        //  value = i1 | (i2 << 8) | (i3 << 16) | (i4 << 24);
+        return true;
+    }
+    return false;
 }
 
 
-bool MasterI2C::getMode(uint8_t *mode)
+bool MasterI2C::getMode(uint8_t &mode)
 {
-    uint8_t crc = init_crc;
-    *mode = TRANSMIT_MODE;
+    uint8_t crc = INIT_ATTINY_CRC;
+    mode = TRANSMIT_MODE;
     if (!sendCmd('M') || !getByte(mode, crc))
     {
         LOG_ERROR(F("Attiny not found."));
         return false;
     }
-    LOG_INFO("mode: " << *mode);
+    LOG_INFO("mode: " << mode);
     return true;
 }
 
@@ -127,39 +144,62 @@ bool MasterI2C::getMode(uint8_t *mode)
 bool MasterI2C::getSlaveData(AttinyData &data)
 {
     sendCmd('B');
-    uint8_t crc = 0xFF;
+    uint8_t crc = INIT_ATTINY_CRC;
 
-    if (!getByte((uint8_t *)&data.version, crc))
+    bool good = getByte(data.version, crc);
+    if (!good)
     {
         LOG_ERROR(F("Data failed"));
         return false;
     }
-     
+
+    if (data.version < 29)
+    {
+        LOG_ERROR(F("ATTINY: unsupported firmware ver.") << data.version);
+        return false;
+    }
+
     if (data.version < 33) 
-    {
-        AttinyData32ver data32;
-        data32.version = data.version;
-        if (!getBytes((uint8_t *)&data32.service, sizeof(AttinyData32ver) - 1, crc)) // -1 т.к. version уже прочитали
-        {
-            LOG_ERROR(F("Data failed"));
-            return false;
-        }
-        data.service = data32.service;
-        data.setup_started_counter = data32.setup_started_counter;
-        data.resets = data32.resets;
-        data.counter_type0 = data32.counter_type0;
-        data.counter_type1 = data32.counter_type1;
-        data.impulses0 = data32.impulses0;
-        data.impulses1 = data32.impulses1;
-        data.adc0 = data32.adc0;
-        data.adc1 = data32.adc1;
-        data.crc = data32.crc;
-    }
+    {   
+        uint8_t reserved8;
+        uint16_t reserved16;
 
-    if (!getBytes((uint8_t *)&data.service, sizeof(AttinyData) - 1, crc))
+        good &= getByte(data.service, crc);
+        good &= getUint16(reserved16, crc);
+        good &= getByte(reserved8, crc);
+        good &= getByte(data.setup_started_counter, crc);
+
+        good &= getByte(data.resets, crc);
+        good &= getByte(reserved8, crc);
+        good &= getByte(data.counter_type0, crc);
+        good &= getByte(data.counter_type1, crc);
+
+        good &= getUint32(data.impulses0, crc);
+        good &= getUint32(data.impulses1, crc);
+
+        good &= getUint16(data.adc0, crc);
+        good &= getUint16(data.adc1, crc);
+
+        good &= getByte(data.crc, crc);
+    }
+    else
     {
-        LOG_ERROR(F("Data failed"));
-        return false;
+        good &= getByte(data.service, crc);
+        good &= getUint16(data.voltage, crc);
+        good &= getByte(data.setup_started_counter, crc);
+
+        good &= getByte(data.resets, crc);
+        good &= getByte(data.counter_type0, crc);
+        good &= getByte(data.counter_type1, crc);
+        good &= getUint16(data.v_reference, crc);
+
+        good &= getUint32(data.impulses0, crc);
+        good &= getUint32(data.impulses1, crc);
+
+        good &= getUint16(data.adc0, crc);
+        good &= getUint16(data.adc1, crc);
+
+        good &= getByte(data.crc, crc);
     }
 
     LOG_INFO(F("v") << data.version  << F(" service:") << data.service
@@ -174,12 +214,6 @@ bool MasterI2C::getSlaveData(AttinyData &data)
     {
         LOG_INFO(F("data.crc:") << data.crc  << F(" crc:") << crc);
         LOG_ERROR(F("!!! CRC wrong !!!!, go to sleep"));
-        return false;
-    }
-
-    if (data.version < 29)
-    {
-        LOG_ERROR(F("ATTINY: unsupported firmware ver.") << data.version);
         return false;
     }
 
@@ -209,7 +243,24 @@ bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
     txBuf[0] = 'C';
     txBuf[1] = type0;
     txBuf[2] = type1;
-    txBuf[3] = crc_8(&txBuf[1], 2, init_crc);
+    txBuf[3] = crc_8(&txBuf[1], 2, INIT_ATTINY_CRC);
+
+    if (!sendData(txBuf, 4))
+    {
+        return false;
+    }
+    return true;
+}
+
+
+bool MasterI2C::setReferenceVoltage(uint16_t voltage)
+{
+    uint8_t txBuf[4];
+
+    txBuf[0] = 'V';
+    txBuf[1] = (uint8_t)(voltage >> 8);
+    txBuf[2] = (uint8_t)(voltage);
+    txBuf[3] = crc_8(&txBuf[1], 2, 0xff);
 
     if (!sendData(txBuf, 4))
     {

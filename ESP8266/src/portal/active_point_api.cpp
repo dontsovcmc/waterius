@@ -439,7 +439,7 @@ bool find_wizard_param(AsyncWebServerRequest *request)
     return false;
 }
 
-uint8_t get_param_uint8(AsyncWebServerRequest *request, const String &name)
+long get_param_int(AsyncWebServerRequest *request, const String &name)
 {
     for (size_t i = 0; i < request->params(); i++)
     {
@@ -707,7 +707,7 @@ void post_api_save(AsyncWebServerRequest *request)
 
     applySettings(request, errorsObj);
 
-    uint8_t input = get_param_uint8(request, FPSTR(PARAM_INPUT));
+    uint8_t input = get_param_int(request, FPSTR(PARAM_INPUT));
     applyInputSettings(request, errorsObj, input);
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -722,7 +722,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     JsonObject ret = json_doc.to<JsonObject>();
     JsonObject errorsObj = ret.createNestedObject("errors");
 
-    uint8_t input = get_param_uint8(request, FPSTR(PARAM_INPUT));
+    uint8_t input = get_param_int(request, FPSTR(PARAM_INPUT));
     //applySettings(request, errorsObj); ? нужно ли тут
     applyInputSettings(request, errorsObj, input);
 
@@ -766,6 +766,29 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     serializeJson(json_doc, *response);
     request->send(response);
+}
+
+void post_api_calibrate(AsyncWebServerRequest *request)
+{
+    LOG_INFO(F("POST ") << request->url());
+    DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
+    JsonObject ret = json_doc.to<JsonObject>();
+
+    uint16_t mvoltage = get_param_int(request, FPSTR(PARAM_VOLTAGE));
+    if (masterI2C.setReferenceVoltage(mvoltage))
+    {
+        if (masterI2C.getSlaveData(runtime_data))
+        {
+            ret[FPSTR(PARAM_VREFERENCE)] = runtime_data.v_reference;
+            ret[FPSTR(PARAM_VOLTAGE)] = runtime_data.voltage;
+            AsyncResponseStream *response = request->beginResponseStream("application/json");
+            serializeJson(json_doc, *response);
+            request->send(response);
+        }
+    }
+
+    request->send(500);
+    return;
 }
 
 void get_api_turnoff(AsyncWebServerRequest *request)

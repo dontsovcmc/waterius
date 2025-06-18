@@ -34,6 +34,7 @@ void get_api_status_0(AsyncWebServerRequest *request);
 void get_api_status_1(AsyncWebServerRequest *request);
 void get_api_status(AsyncWebServerRequest *request, const int index);
 void post_api_save(AsyncWebServerRequest *request);
+void post_api_calibrate(AsyncWebServerRequest *request);
 void get_api_turnoff(AsyncWebServerRequest *request);
 void post_api_reset(AsyncWebServerRequest *request);
 

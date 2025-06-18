@@ -83,7 +83,7 @@ void publish_discovery_entity_extended(PubSubClient &mqtt_client,
                                        const char *const entity[MQTT_PARAM_COUNT])
 {
     String device_name = get_device_name();
-    String device_model = FPSTR(MODEL_NAMES[0]);
+    String device_model(F("Classic"));
     String sw_version = String(F(FIRMWARE_VERSION)) + "." + data.version; // ESP_VERSION.ATTINY_VERSION
     String hw_version = F(HARDWARE_VERSION);                              // в дальнейшем можно модифицировать для гибкого определения версии hw
     String device_manufacturer = F(MANUFACTURER);
