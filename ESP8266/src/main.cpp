@@ -101,7 +101,7 @@ void loop()
             {
                 log_system_info();
 
-                DynamicJsonDocument json_data(JSON_DYNAMIC_MSG_BUFFER);
+                JsonDocument json_data; //(JSON_DYNAMIC_MSG_BUFFER);
 
 #ifndef MQTT_DISABLED
                 // Подключаемся и подписываемся на мктт

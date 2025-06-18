@@ -1,9 +1,6 @@
 #include "active_point_api.h"
-#include "ESPAsyncTCP.h"
-#include "WebHandlerImpl.h"
 #include <IPAddress.h>
 #include <LittleFS.h>
-#include "AsyncJson.h"
 
 #include "setup.h"
 #include "Logging.h"
@@ -41,7 +38,7 @@ void get_api_connect_status(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("GET ") << request->url());
 
-    DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
+    JsonDocument json_doc; //(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
 
     if (start_connect_flag)
@@ -85,13 +82,13 @@ void get_api_networks(AsyncWebServerRequest *request)
     }
     else if (n)
     {
-        DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
+        JsonDocument json_doc; //(JSON_DYNAMIC_MSG_BUFFER);
         JsonArray array = json_doc.to<JsonArray>();
 
         for (int i = 0; i < n; ++i)
         {
             LOG_INFO(WiFi.SSID(i) << " " << WiFi.RSSI(i));
-            JsonObject obj = array.createNestedObject();
+            JsonObject obj = array.add<JsonObject>();
             obj["ssid"] = WiFi.SSID(i);
             obj["level"] = int(round(map(WiFi.RSSI(i), -100, -50, 1, 4)));
             obj["wifi_channel"] = WiFi.channel();
@@ -116,9 +113,9 @@ void post_api_save_connect(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
 
-    DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
+    JsonDocument json_doc; //(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
-    JsonObject errorsObj = ret.createNestedObject(F("errors"));
+    JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
 
     // Если канал WiFi отличен от текущего канала AP ESP, то возможно отключение телефона
     uint8_t channel = sett.wifi_channel;
@@ -198,7 +195,7 @@ void get_api_main_status(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("GET ") << request->url());
 
-    DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
+    JsonDocument json_doc; //(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonArray array = json_doc.to<JsonArray>();
 
     wl_status_t status = WiFi.status();
@@ -206,7 +203,7 @@ void get_api_main_status(AsyncWebServerRequest *request)
     
     if (status == WL_CONNECT_FAILED || status == WL_CONNECTION_LOST || status == WL_WRONG_PASSWORD)
     {
-        JsonObject obj = array.createNestedObject();
+        JsonObject obj = array.add<JsonObject>();
         obj["error"] = F("1");  // S_WIFI_CONNECT "Ошибка подключения к Wi-Fi"
         obj["link_text"] = F("5"); // S_SETUP Настроить
         obj["link"] = F("/wifi_settings.html?status_code=") + String(status);
@@ -217,14 +214,14 @@ void get_api_main_status(AsyncWebServerRequest *request)
         {
             if (status == WL_CONNECTED)
             {
-                JsonObject obj = array.createNestedObject();
+                JsonObject obj = array.add<JsonObject>();
                 obj["error"] = F("2");  // S_SETUP_COUNTERS "Ватериус успешно подключился к Wi-Fi. Теперь настроим счётчики."
                 obj["link_text"] = F("5"); // S_SETUP Настроить
                 obj["link"] = F("/input/1/setup.html");
             }
             else 
             {
-                JsonObject obj = array.createNestedObject();
+                JsonObject obj = array.add<JsonObject>();
                 obj["error"] = F("3");  // S_NEED_SETUP "Ватериус ещё не настроен"
                 obj["link_text"] = F("6"); // S_LETSGO Приступить
                 obj["link"] = F("/captive_portal_start.html");
@@ -232,7 +229,6 @@ void get_api_main_status(AsyncWebServerRequest *request)
         }
     }
 
-    LOG_INFO(F("JSON: Mem usage: ") << json_doc.memoryUsage());
     LOG_INFO(F("JSON: Size: ") << measureJson(json_doc));
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -259,7 +255,7 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
 {
     LOG_INFO(F("GET ") << request->url());
 
-    DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
+    JsonDocument json_doc; //(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
 
     uint16_t factor;
@@ -331,7 +327,7 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
  *      }
  */
 
-void save_param(AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required /*true*/)
+void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required /*true*/)
 {
     if (p->value().length() >= size)
     {
@@ -352,7 +348,7 @@ void save_param(AsyncWebParameter *p, char *dest, size_t size, JsonObject &error
     }
 }
 
-void save_param(AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
+void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
 {
     if (p->value().toInt() == 0)
     {
@@ -366,7 +362,7 @@ void save_param(AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
     }
 }
 
-void save_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok)
+void save_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok)
 {
     if (!zero_ok && p->value().toInt() == 0)
     {
@@ -380,7 +376,7 @@ void save_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const b
     }
 }
 
-void save_bool_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj)
+void save_bool_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj)
 {
     if (p->value().toInt() > 1)
     {
@@ -394,7 +390,7 @@ void save_bool_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj)
     }
 }
 
-void save_param(AsyncWebParameter *p, float &v, JsonObject &errorsObj)
+void save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj)
 {
     /* Позволяем вводить 0.0 у счётчиков.
     if (p->value().toFloat() == 0.0)
@@ -411,7 +407,7 @@ void save_param(AsyncWebParameter *p, float &v, JsonObject &errorsObj)
     }
 }
 
-void save_ip_param(AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj)
+void save_ip_param(const AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj)
 {
     IPAddress ip;
     if (ip.fromString(p->value()))
@@ -430,7 +426,7 @@ bool find_wizard_param(AsyncWebServerRequest *request)
 {
     for (size_t i = 0; i < request->params(); i++)
     {
-        AsyncWebParameter *p = request->getParam(i);
+        const AsyncWebParameter *p = request->getParam(i);
         if (p->name() == FPSTR(PARAM_WIZARD))
         {
             return p->value() == FPSTR(PARAM_TRUE);
@@ -443,7 +439,7 @@ long get_param_int(AsyncWebServerRequest *request, const String &name)
 {
     for (size_t i = 0; i < request->params(); i++)
     {
-        AsyncWebParameter *p = request->getParam(i);
+        const AsyncWebParameter *p = request->getParam(i);
         if (p->name() == name)
         {
             return p->value().toInt();
@@ -460,7 +456,7 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
 
     for (int i = 0; i < params; i++)
     {
-        AsyncWebParameter *p = request->getParam(i);
+        const AsyncWebParameter *p = request->getParam(i);
         const String &name = p->name();
         
         LOG_INFO(F("parameter ") << name << "=" << p->value());
@@ -564,7 +560,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
     // Вначале bool, чтобы дальше проверять только требуемые параметры
     for (int i = 0; i < params; i++)
     {
-        AsyncWebParameter *p = request->getParam(i);
+        const AsyncWebParameter *p = request->getParam(i);
         const String &name = p->name();
 
         LOG_INFO(F("parameter ") << name << "=" << p->value());
@@ -592,7 +588,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
 
     for (int i = 0; i < params; i++)
     {
-        AsyncWebParameter *p = request->getParam(i);
+        const AsyncWebParameter *p = request->getParam(i);
         const String &name = p->name();
 
         if (sett.waterius_on)
@@ -701,9 +697,9 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
 void post_api_save(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
-    DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
+    JsonDocument json_doc; //(JSON_DYNAMIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
-    JsonObject errorsObj = ret.createNestedObject("errors");
+    JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
 
     applySettings(request, errorsObj);
 
@@ -718,9 +714,9 @@ void post_api_save(AsyncWebServerRequest *request)
 void post_api_save_input_type(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
-    DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
+    JsonDocument json_doc; //(JSON_DYNAMIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
-    JsonObject errorsObj = ret.createNestedObject("errors");
+    JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
 
     uint8_t input = get_param_int(request, FPSTR(PARAM_INPUT));
     //applySettings(request, errorsObj); ? нужно ли тут
@@ -771,12 +767,14 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
 void post_api_calibrate(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
-    DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
+    JsonDocument json_doc; //(JSON_DYNAMIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
 
     uint16_t mvoltage = get_param_int(request, FPSTR(PARAM_VOLTAGE));
+    LOG_INFO(F("Calibrate using voltage=") << mvoltage);
     if (masterI2C.setReferenceVoltage(mvoltage))
     {
+        LOG_INFO(F("Calibrate completed"));
         if (masterI2C.getSlaveData(runtime_data))
         {
             ret[FPSTR(PARAM_VREFERENCE)] = runtime_data.v_reference;
@@ -784,11 +782,11 @@ void post_api_calibrate(AsyncWebServerRequest *request)
             AsyncResponseStream *response = request->beginResponseStream("application/json");
             serializeJson(json_doc, *response);
             request->send(response);
+            return;
         }
     }
 
     request->send(500);
-    return;
 }
 
 void get_api_turnoff(AsyncWebServerRequest *request)
@@ -803,7 +801,7 @@ void post_api_reset(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
 
-    DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
+    JsonDocument json_doc; //(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
 
     ret[F("redirect")] = F("/");

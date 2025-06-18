@@ -98,7 +98,6 @@ bool MasterI2C::getUint16(uint16_t &value, uint8_t &crc)
 
 bool MasterI2C::getUint32(uint32_t &value, uint8_t &crc)
 {
-
     uint8_t i1, i2, i3, i4;
     if (getByte(i1, crc) && getByte(i2, crc) && getByte(i3, crc) && getByte(i4, crc))
     {
@@ -119,6 +118,8 @@ bool MasterI2C::getUint32(uint32_t &value, uint8_t &crc)
 
 bool MasterI2C::getMode(uint8_t &mode)
 {
+    //sync
+
     uint8_t crc = INIT_ATTINY_CRC;
     mode = TRANSMIT_MODE;
     if (!sendCmd('M') || !getByte(mode, crc))
@@ -142,9 +143,16 @@ bool MasterI2C::getMode(uint8_t &mode)
  * @return false произошла ошибка
  */
 bool MasterI2C::getSlaveData(AttinyData &data)
-{
-    sendCmd('B');
+{ 
+    //sync
+
     uint8_t crc = INIT_ATTINY_CRC;
+
+    if (!sendCmd('B'))
+    {
+        LOG_ERROR(F("Send CMD failed"));
+        return false;
+    }
 
     bool good = getByte(data.version, crc);
     if (!good)
@@ -221,7 +229,9 @@ bool MasterI2C::getSlaveData(AttinyData &data)
 }
 
 bool MasterI2C::setWakeUpPeriod(uint16_t period)
-{
+{   
+    //sync
+
     uint8_t txBuf[4];
 
     txBuf[0] = 'S';
@@ -237,7 +247,8 @@ bool MasterI2C::setWakeUpPeriod(uint16_t period)
 }
 
 bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
-{
+{   
+    //sync
     uint8_t txBuf[4];
 
     txBuf[0] = 'C';
@@ -254,13 +265,14 @@ bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
 
 
 bool MasterI2C::setReferenceVoltage(uint16_t voltage)
-{
+{   
+    //sync
     uint8_t txBuf[4];
 
     txBuf[0] = 'V';
     txBuf[1] = (uint8_t)(voltage >> 8);
     txBuf[2] = (uint8_t)(voltage);
-    txBuf[3] = crc_8(&txBuf[1], 2, 0xff);
+    txBuf[3] = crc_8(&txBuf[1], 2, INIT_ATTINY_CRC);
 
     if (!sendData(txBuf, 4))
     {

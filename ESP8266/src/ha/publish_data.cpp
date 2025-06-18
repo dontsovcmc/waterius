@@ -9,7 +9,7 @@
  * @param topic имя топика
  * @param json_data данные в JSON
  */
-void publish_data_to_single_topic(PubSubClient &mqtt_client, String &topic, DynamicJsonDocument &json_data)
+void publish_data_to_single_topic(PubSubClient &mqtt_client, String &topic, JsonDocument &json_data)
 {
     String payload = "";
     serializeJson(json_data, payload);
@@ -24,7 +24,7 @@ void publish_data_to_single_topic(PubSubClient &mqtt_client, String &topic, Dyna
  * @param topic имя топика
  * @param json_data данные в JSON
  */
-void publish_data_to_multiple_topics(PubSubClient &mqtt_client, String &topic, DynamicJsonDocument &json_data)
+void publish_data_to_multiple_topics(PubSubClient &mqtt_client, String &topic, JsonDocument &json_data)
 {
     JsonObject root = json_data.as<JsonObject>();
     for (JsonPair p : root)
@@ -43,7 +43,7 @@ void publish_data_to_multiple_topics(PubSubClient &mqtt_client, String &topic, D
  * @param json_data данные в JSON
  * @param auto_discovery настроена ли интеграция с HomeAssistant
  */
-void publish_data(PubSubClient &mqtt_client, String &topic, DynamicJsonDocument &json_data, bool auto_discovery)
+void publish_data(PubSubClient &mqtt_client, String &topic, JsonDocument &json_data, bool auto_discovery)
 {
     unsigned long start = millis();
 

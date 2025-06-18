@@ -21,7 +21,7 @@
 
 #define HTTP_SEND_ATTEMPTS 3
 
-bool send_waterius(const Settings &sett, DynamicJsonDocument &jsonData)
+bool send_waterius(const Settings &sett, JsonDocument &jsonData)
 {
     if (!is_waterius_site(sett))
     {

@@ -24,6 +24,6 @@
     @param voltage мониторинг питания.
     @param json_data json документ в который будут записаны данные.
 */
-extern void get_json_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data);
+extern void get_json_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data);
 
 #endif

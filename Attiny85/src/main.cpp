@@ -251,11 +251,10 @@ void extendWakeUpPeriod()
 void measureVoltage(uint16_t vcc_real_mv)
 {
 	info.voltage = readVcc(info.config.v_reference);
-	if (vcc_real_mv > 0) 
+	if (vcc_real_mv > 0 && info.voltage > 0) 
 	{	// калибровка
     	info.config.v_reference = (uint32_t)info.config.v_reference * vcc_real_mv / info.voltage;
 	}
-	
 }
 
 

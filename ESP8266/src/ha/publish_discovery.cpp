@@ -204,7 +204,7 @@ void add_entity_attribute(JsonObject &json_attributes,
 String channel_entity_attributes(const int channel, const int channel_name)
 {
     String json_attributes_template;
-    DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
+    JsonDocument json_doc; //(JSON_DYNAMIC_MSG_BUFFER);
     JsonObject json_attributes = json_doc.to<JsonObject>();
 
     add_entity_attribute(json_attributes, ENTITY_CHANNEL_IMP, channel, channel_name);
