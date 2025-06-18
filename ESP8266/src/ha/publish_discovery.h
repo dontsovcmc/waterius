@@ -21,7 +21,7 @@ class Settings;
 extern void publish_discovery(PubSubClient &mqtt_client, 
                               const String &topic, 
                               const String &discovery_topic, 
-                              const SlaveData &data,
+                              const AttinyData &data,
                               const Settings &sett);
 
 #endif

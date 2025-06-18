@@ -77,13 +77,13 @@ void publish_discovery_entity(PubSubClient &mqtt_client,
 void publish_discovery_entity_extended(PubSubClient &mqtt_client, 
                                        const String &topic, 
                                        const String &discovery_topic,
-                                       const SlaveData &data, 
+                                       const AttinyData &data, 
                                        const String &device_id, 
                                        const String &device_mac,
                                        const char *const entity[MQTT_PARAM_COUNT])
 {
     String device_name = get_device_name();
-    String device_model = FPSTR(MODEL_NAMES[data.model]);
+    String device_model = FPSTR(MODEL_NAMES[0]);
     String sw_version = String(F(FIRMWARE_VERSION)) + "." + data.version; // ESP_VERSION.ATTINY_VERSION
     String hw_version = F(HARDWARE_VERSION);                              // в дальнейшем можно модифицировать для гибкого определения версии hw
     String device_manufacturer = F(MANUFACTURER);
@@ -159,7 +159,7 @@ void publish_discovery_entity_channel(PubSubClient &mqtt_client,
 void publish_discovery_general_entities(PubSubClient &mqtt_client, 
                                         const String &topic, 
                                         const String &discovery_topic, 
-                                        const SlaveData &data, 
+                                        const AttinyData &data, 
                                         const String &device_id, 
                                         const String &device_mac)
 {
@@ -295,7 +295,7 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client,
 void publish_discovery(PubSubClient &mqtt_client, 
                        const String &topic, 
                        const String &discovery_topic, 
-                       const SlaveData &data, 
+                       const AttinyData &data, 
                        const Settings &sett)
 {
     LOG_INFO(F("MQTT: Publishing discovery topic"));

@@ -11,7 +11,7 @@
 #include "wifi_helpers.h"
 
 
-void get_json_data(const Settings &sett, const SlaveData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
+void get_json_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, DynamicJsonDocument &json_data)
 {
     Voltage *voltage = get_voltage();
     JsonObject root = json_data.to<JsonObject>();

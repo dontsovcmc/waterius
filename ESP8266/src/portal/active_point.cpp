@@ -28,8 +28,8 @@ const String localIPURL = "http://192.168.4.1";
 
 FSInfo fs_info;
 
-extern SlaveData data;
-extern SlaveData runtime_data;
+extern AttinyData data;
+extern AttinyData runtime_data;
 extern MasterI2C masterI2C;
 extern Settings sett;
 extern CalculatedData cdata;

@@ -18,8 +18,8 @@ extern bool start_connect_flag;
 extern wl_status_t wifi_connect_status;
 extern bool factory_reset_flag;
 
-SlaveData runtime_data;
-extern SlaveData data;
+AttinyData runtime_data;
+extern AttinyData data;
 extern MasterI2C masterI2C;
 extern Settings sett;
 extern CalculatedData cdata;

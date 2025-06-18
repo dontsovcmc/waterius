@@ -11,7 +11,7 @@
 #define ACTIVE_POINT_h_
 
 class Settings;
-class SlaveData;
+class AttinyData;
 class CalculatedData;
 
 void start_active_point(Settings &sett, CalculatedData &cdata);

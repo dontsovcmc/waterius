@@ -19,7 +19,7 @@ extern MasterI2C masterI2C;
  * @param sett настройки
  * @param json_data данные в JSON
  */
-bool update_settings(String &topic, String &payload, Settings &sett, const SlaveData &data, DynamicJsonDocument &json_data)
+bool update_settings(String &topic, String &payload, Settings &sett, const AttinyData &data, DynamicJsonDocument &json_data)
 {
     bool updated = false;
     if (topic.endsWith(F("/set"))) // пришла команда на изменение
@@ -235,7 +235,7 @@ bool update_settings(String &topic, String &payload, Settings &sett, const Slave
  * @param raw_payload  данные из топика
  * @param length длина сообщения
  */
-void mqtt_callback(Settings &sett, const SlaveData &data, DynamicJsonDocument &json_data, PubSubClient &mqtt_client, String &mqtt_topic, char *raw_topic, byte *raw_payload, unsigned int length)
+void mqtt_callback(Settings &sett, const AttinyData &data, DynamicJsonDocument &json_data, PubSubClient &mqtt_client, String &mqtt_topic, char *raw_topic, byte *raw_payload, unsigned int length)
 {
     String topic = raw_topic;
     String payload;

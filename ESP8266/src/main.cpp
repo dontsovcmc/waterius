@@ -19,7 +19,7 @@
 #include "config.h"
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
-SlaveData data;       // Данные от Attiny85
+AttinyData data;       // Данные от Attiny85
 Settings sett;        // Настройки соединения и предыдущие показания из EEPROM
 CalculatedData cdata; // вычисляемые данные
 ADC_MODE(ADC_VCC);
@@ -58,7 +58,7 @@ void loop()
     bool config_loaded = false;
 
     // спрашиваем у Attiny85 повод пробуждения и данные true) 
-    if (masterI2C.getMode(mode) && masterI2C.getSlaveData(data))
+    if (masterI2C.getMode(&mode) && masterI2C.getSlaveData(data))
     {
         // Загружаем конфигурацию из EEPROM
         config_loaded = load_config(sett);

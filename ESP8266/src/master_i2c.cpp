@@ -68,62 +68,48 @@ bool MasterI2C::sendData(uint8_t *buf, size_t size)
  * @return true прочитано успешно
  * @return false данные не прочитаны
  */
-bool MasterI2C::getByte(uint8_t &value, uint8_t &crc)
+bool MasterI2C::getByte(uint8_t *value, uint8_t &crc)
 {
     if (Wire.requestFrom(I2C_SLAVE_ADDR, 1) != 1)
     {
         LOG_ERROR(F("RequestFrom failed"));
         return false;
     }
-    value = Wire.read();
-    crc = crc_8(&value, 1, crc);
+    *value = Wire.read();
+    crc = crc_8(value, 1, crc);
     return true;
 }
 
-bool MasterI2C::getUint16(uint16_t &value, uint8_t &crc)
+/**
+ * @brief Чтение заданного количества байт в буффер по указателю
+ * 
+ * @param value указатель на буфер приемника
+ * @param count количество байт для чтения
+ * @param crc контрольная сумма для расчета
+ * @return true прочитано успешно
+ * @return false данные не прочитаны
+ */
+bool MasterI2C::getBytes(uint8_t *value, uint8_t count, uint8_t &crc)
 {
-
-    uint8_t i1, i2;
-    if (getByte(i1, crc) && getByte(i2, crc))
+    for (; count > 0; count--, value++)
     {
-        value = i2;
-        value = value << 8;
-        value |= i1;
-        return true;
+        if (!getByte(value, crc))
+            return false;
     }
-    return false;
+    return true;
 }
 
-bool MasterI2C::getUint(uint32_t &value, uint8_t &crc)
-{
 
-    uint8_t i1, i2, i3, i4;
-    if (getByte(i1, crc) && getByte(i2, crc) && getByte(i3, crc) && getByte(i4, crc))
-    {
-        value = i4;
-        value = value << 8;
-        value |= i3;
-        value = value << 8;
-        value |= i2;
-        value = value << 8;
-        value |= i1;
-        // вот так не работает из-за преобразования типов:
-        //  value = i1 | (i2 << 8) | (i3 << 16) | (i4 << 24);
-        return true;
-    }
-    return false;
-}
-
-bool MasterI2C::getMode(uint8_t &mode)
+bool MasterI2C::getMode(uint8_t *mode)
 {
     uint8_t crc = init_crc;
-    mode = TRANSMIT_MODE;
+    *mode = TRANSMIT_MODE;
     if (!sendCmd('M') || !getByte(mode, crc))
     {
         LOG_ERROR(F("Attiny not found."));
         return false;
     }
-    LOG_INFO("mode: " << mode);
+    LOG_INFO("mode: " << *mode);
     return true;
 }
 
@@ -138,73 +124,66 @@ bool MasterI2C::getMode(uint8_t &mode)
  * @return true прочитанно успешно.
  * @return false произошла ошибка
  */
-bool MasterI2C::getSlaveData(SlaveData &data)
+bool MasterI2C::getSlaveData(AttinyData &data)
 {
     sendCmd('B');
+    uint8_t crc = 0xFF;
 
-    uint8_t dummy, crc = init_crc;
-    bool good = getByte(data.version, crc);
+    if (!getByte((uint8_t *)&data.version, crc))
+    {
+        LOG_ERROR(F("Data failed"));
+        return false;
+    }
+     
+    if (data.version < 33) 
+    {
+        AttinyData32ver data32;
+        data32.version = data.version;
+        if (!getBytes((uint8_t *)&data32.service, sizeof(AttinyData32ver) - 1, crc)) // -1 т.к. version уже прочитали
+        {
+            LOG_ERROR(F("Data failed"));
+            return false;
+        }
+        data.service = data32.service;
+        data.setup_started_counter = data32.setup_started_counter;
+        data.resets = data32.resets;
+        data.counter_type0 = data32.counter_type0;
+        data.counter_type1 = data32.counter_type1;
+        data.impulses0 = data32.impulses0;
+        data.impulses1 = data32.impulses1;
+        data.adc0 = data32.adc0;
+        data.adc1 = data32.adc1;
+        data.crc = data32.crc;
+    }
 
-    LOG_INFO(F("attiny firmware ver: ") << data.version);
+    if (!getBytes((uint8_t *)&data.service, sizeof(AttinyData) - 1, crc))
+    {
+        LOG_ERROR(F("Data failed"));
+        return false;
+    }
+
+    LOG_INFO(F("v") << data.version  << F(" service:") << data.service
+        << F(" setups:") << data.setup_started_counter 
+        << F(" resets:") << data.resets  
+        << F(" voltage:") << data.voltage  << F(" v_ref:") << data.v_reference);
+
+    LOG_INFO(F(" ctype0:") << data.counter_type0  << F(" imp0:") << data.impulses0 << F(" adc0:") << data.adc0);
+    LOG_INFO(F(" ctype1:") << data.counter_type1  << F(" imp1:") << data.impulses1 << F(" adc1:") << data.adc1);
+
+    if (crc)  // должна быть равна 0 
+    {
+        LOG_INFO(F("data.crc:") << data.crc  << F(" crc:") << crc);
+        LOG_ERROR(F("!!! CRC wrong !!!!, go to sleep"));
+        return false;
+    }
 
     if (data.version < 29)
     {
-        init_crc = 0; // в версиях <29 инициализация идет нулём
-        crc = 0;
-        crc = crc_8(&data.version, 1, crc);
+        LOG_ERROR(F("ATTINY: unsupported firmware ver.") << data.version);
+        return false;
     }
 
-    good &= getByte(data.service, crc);
-    good &= getUint16(data.reserved4, crc);
-    good &= getByte(data.reserved, crc);
-    good &= getByte(data.setup_started_counter, crc);
-
-    good &= getByte(data.resets, crc);
-    good &= getByte(data.model, crc);
-    good &= getByte(data.counter_type0, crc);
-    good &= getByte(data.counter_type1, crc);
-
-    good &= getUint(data.impulses0, crc);
-    good &= getUint(data.impulses1, crc);
-
-    good &= getUint16(data.adc0, crc);
-    good &= getUint16(data.adc1, crc);
-
-    good &= getByte(data.crc, dummy);
-
-    if (good)
-    {
-        LOG_INFO(F("v") << data.version 
-        << F(" service:") << data.service
-        << F(" reserved4:") << data.reserved4
-        << F(" reserved:") << data.reserved
-        << F(" setups:") << data.setup_started_counter 
-        << F(" resets:") << data.resets 
-        << F(" model:") << data.model
-        << F(" crc:") << data.crc);
-
-        LOG_INFO(F(" ctype0:") << data.counter_type0 
-        << F(" imp0:") << data.impulses0 
-        << F(" adc0:") << data.adc0);
-
-        LOG_INFO(F(" ctype1:") << data.counter_type1 
-        << F(" imp1:") << data.impulses1 
-        << F(" adc1:") << data.adc1);
-
-        if (data.crc != crc)
-        {
-            LOG_ERROR(F("!!! CRC wrong !!!!, go to sleep"));
-        }
-        else
-        {
-            if (data.version >= 30)
-                return true;
-
-            LOG_ERROR(F("ATTINY: unsupported firmware ver.") << data.version);
-        }
-    }
-    LOG_ERROR(F("Data failed"));
-    return false;
+    return true;
 }
 
 bool MasterI2C::setWakeUpPeriod(uint16_t period)

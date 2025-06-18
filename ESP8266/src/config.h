@@ -23,10 +23,10 @@ uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const uint16_t 
 extern void reset_period_min_tuned(Settings &sett);
 
 /* Обновляем данные в конфиге*/
-extern void update_config(Settings &sett, const SlaveData &data, const CalculatedData &cdata);
+extern void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata);
 
 /* Рассчитываем текущие показания */
-extern void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cdata);
+extern void calculate_values(Settings &sett, const AttinyData &data, CalculatedData &cdata);
 
 /* Очищаем память и инициализируем настройки по умолчанию */
 extern void factory_reset(Settings &sett);
