@@ -2,8 +2,6 @@
 #define _STORAGE_h
 
 #include <Arduino.h>
-#include <EEPROM.h>
-
 #include "Setup.h"
 
 uint8_t crc_8(unsigned char *input_str, size_t num_bytes);

@@ -17,7 +17,8 @@ struct AttinyData
 {
     // Header
     uint8_t version;    // Версия ПО Attiny
-    uint8_t service;    // Причина загрузки Attiny
+    uint8_t model;      //:4 бита Модель Ватериуса
+    uint8_t service;    //:4 бита Причина загрузки Attiny
     uint16_t voltage; // Напряжение питания, мВ
     
     // Config
@@ -44,24 +45,44 @@ uint8_t crc_8(const unsigned char *input_str, size_t num_bytes, uint8_t crc = 0)
 
 #define INIT_ATTINY_CRC 0xFF
 
+// Класс для синхронизации запросов к i2c, которые могут быть из разных потоков в AsyncWebServer
+// В ESP отсутствуют мьютексы, поэтому будем считать, что это проще сдела
+class BusyGuard {
+    volatile bool& busy;
+public:
+    BusyGuard(volatile bool& flag) : busy(flag) {
+        while (busy) yield(); // Ждём, пока флаг не сброшен
+        busy = true;
+    }
+    ~BusyGuard() {
+        busy = false;
+    }
+    BusyGuard(const BusyGuard&) = delete;
+    BusyGuard& operator=(const BusyGuard&) = delete;
+};
+
 class MasterI2C
 {
+    volatile bool i2c_busy;
 protected:
     bool sendData(uint8_t *buf, size_t size);
 
     bool getByte(uint8_t &value, uint8_t &crc);
     bool getUint16(uint16_t &value, uint8_t &crc);
     bool getUint32(uint32_t &value, uint8_t &crc);
+    bool sendCmd(uint8_t cmd);
 
 public:
+    MasterI2C();
     void begin();
     void end();
-    bool sendCmd(uint8_t cmd);
     bool getMode(uint8_t &mode);
     bool getSlaveData(AttinyData &data);
     bool setWakeUpPeriod(uint16_t per);
     bool setCountersType(const uint8_t type0, const uint8_t type1);
     bool setReferenceVoltage(uint16_t voltage);
+    bool setTransmitMode();
+    bool setSleep();
 };
 
 #endif

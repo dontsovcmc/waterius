@@ -142,10 +142,5 @@ void SlaveI2C::extendWakeUp()
 void SlaveI2C::getVoltage()
 {
     uint16_t vcc_real_mv = SlaveI2C::getUint16();
-
     measureVoltage(vcc_real_mv);
-    if (vcc_real_mv != 0)
-    {   // калибровка
-	    saveConfig();
-    }
 }

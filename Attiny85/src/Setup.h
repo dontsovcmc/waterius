@@ -109,6 +109,11 @@ struct Header
     */
     uint8_t version;
 
+    /* 
+        Модификация Ватериуса 
+    */
+    uint8_t model:   4;
+
     /*
     Причина перезагрузки (регистр MCUSR datasheet 8.5.1):
          0001 - PORF: Power-on Reset Flag. Напряжение питания было низкое или 0.
@@ -120,7 +125,7 @@ struct Header
     9  - 1001 - WDRF + PORF
     10 - 1010 - WDRF + EXTRF
     */
-    uint8_t service;
+    uint8_t service: 4;
 
     /*
     Напряжение

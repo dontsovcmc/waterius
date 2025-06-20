@@ -17,11 +17,10 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 33  // Передается в ESP и на сервер в данных.
-
 /*
 33 - 2025.06.16 - dontsovcmc
 	1. Добавлена команда продолжения бордствования ESP
+	2. ИЗМЕНЕНА СТРУКТУРА ОТВЕТА. Совместимость с ESP от 1.2.0
 
 Версии прошивок
 32 - 2023.11.17 - abrant
@@ -148,6 +147,7 @@ static ESPPowerPin esp(1); // Питание на ESP
 struct Header info = 
 {
 	FIRMWARE_VER, // version
+	WATERIUS_MODEL, // model
 	0, // service (boot)
 	0, // voltage 
 	{  // Config
@@ -252,8 +252,13 @@ void measureVoltage(uint16_t vcc_real_mv)
 {
 	info.voltage = readVcc(info.config.v_reference);
 	if (vcc_real_mv > 0 && info.voltage > 0) 
-	{	// калибровка
+	{	
+		// чтобы усреднить помехи
+		info.voltage = info.voltage + readVcc(info.config.v_reference) / 2;
+		info.voltage = info.voltage + readVcc(info.config.v_reference) / 2;
+		// калибровка
     	info.config.v_reference = (uint32_t)info.config.v_reference * vcc_real_mv / info.voltage;
+		saveConfig();
 	}
 }
 
@@ -403,8 +408,9 @@ void loop()
 	// Нажатие кнопки обработали и удаляем
 	button.press = ButtonPressType::NONE;
 
-	info.voltage = readVcc(info.config.v_reference);
 	esp.power(true);
+
+	info.voltage = readVcc(info.config.v_reference); // Пока ESP загружается прочитаем Vcc
 	LOG(F("ESP turn on"));
 
 	uint8_t delay_loop_count = 0;		

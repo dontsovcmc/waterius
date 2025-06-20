@@ -26,6 +26,9 @@ uint8_t crc_8(unsigned char *b, size_t num_bytes, uint8_t crc)
     return crc;
 }
 
+MasterI2C::MasterI2C(): i2c_busy(false)
+{}
+
 void MasterI2C::begin()
 {
     Wire.begin(SDA_PIN, SCL_PIN);
@@ -118,7 +121,7 @@ bool MasterI2C::getUint32(uint32_t &value, uint8_t &crc)
 
 bool MasterI2C::getMode(uint8_t &mode)
 {
-    //sync
+    BusyGuard guard(i2c_busy);
 
     uint8_t crc = INIT_ATTINY_CRC;
     mode = TRANSMIT_MODE;
@@ -144,7 +147,7 @@ bool MasterI2C::getMode(uint8_t &mode)
  */
 bool MasterI2C::getSlaveData(AttinyData &data)
 { 
-    //sync
+    BusyGuard guard(i2c_busy);
 
     uint8_t crc = INIT_ATTINY_CRC;
 
@@ -191,8 +194,11 @@ bool MasterI2C::getSlaveData(AttinyData &data)
         good &= getByte(data.crc, crc);
     }
     else
-    {
+    {  // version 33 - ..
         good &= getByte(data.service, crc);
+        data.model = data.service >> 4;       // 4 первых бита
+        data.service = data.service & 0x0F;   // 4 вторых бита
+
         good &= getUint16(data.voltage, crc);
         good &= getByte(data.setup_started_counter, crc);
 
@@ -230,14 +236,14 @@ bool MasterI2C::getSlaveData(AttinyData &data)
 
 bool MasterI2C::setWakeUpPeriod(uint16_t period)
 {   
-    //sync
+    BusyGuard guard(i2c_busy);
 
     uint8_t txBuf[4];
 
     txBuf[0] = 'S';
     txBuf[1] = (uint8_t)(period >> 8);
     txBuf[2] = (uint8_t)(period);
-    txBuf[3] = crc_8(&txBuf[1], 2, 0xff);
+    txBuf[3] = crc_8(&txBuf[1], 2, INIT_ATTINY_CRC);
 
     if (!sendData(txBuf, 4))
     {
@@ -266,7 +272,8 @@ bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
 
 bool MasterI2C::setReferenceVoltage(uint16_t voltage)
 {   
-    //sync
+    BusyGuard guard(i2c_busy);
+    
     uint8_t txBuf[4];
 
     txBuf[0] = 'V';
@@ -279,4 +286,16 @@ bool MasterI2C::setReferenceVoltage(uint16_t voltage)
         return false;
     }
     return true;
+}
+
+bool MasterI2C::setTransmitMode()
+{
+    BusyGuard guard(i2c_busy);
+    return sendCmd('T');
+}
+    
+bool MasterI2C::setSleep()
+{
+    BusyGuard guard(i2c_busy);
+    return sendCmd('Z');
 }

@@ -1,5 +1,6 @@
 #include <avr/wdt.h>
 #include "Storage.h"
+#include <EEPROM.h>
 
 // https://gist.github.com/brimston3/83cdeda8f7d2cf55717b83f0d32f9b5e
 // https://www.onlinegdb.com/online_c++_compiler
