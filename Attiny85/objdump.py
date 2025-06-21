@@ -3,21 +3,23 @@ import os
 Import("env", "projenv")
 
 
-def prefix(env):
+def getCppDefine(name: str) -> str:
     cpp_defines = env.get("CPPDEFINES", [])
-    FIRMWARE_VER = 0
-    WATERIUS_MODEL = 0
     for define in cpp_defines:
         if isinstance(define, tuple):
-            if define[0] == "FIRMWARE_VER":
-                FIRMWARE_VER = define[1]
-            if define[0] == "WATERIUS_MODEL":
-                WATERIUS_MODEL = define[1]
+            if define[0] == name:
+                return define[1]
+    return None
+
+
+def prefix(env):
+    FIRMWARE_VER = getCppDefine("FIRMWARE_VER")
+    WATERIUS_MODEL = getCppDefine("WATERIUS_MODEL")
             
     board = env.GetProjectOption("board")
-    if WATERIUS_MODEL == 0:
-    	return f"{board}-{FIRMWARE_VER}"
-    return f"{board}-{FIRMWARE_VER}-{WATERIUS_MODEL}"
+    if WATERIUS_MODEL and WATERIUS_MODEL > 0:
+        return f"{board}-{FIRMWARE_VER}-{WATERIUS_MODEL}"
+    return f"{board}-{FIRMWARE_VER}"
 
 
 def copy_file(source, target, env, postfix=''):
