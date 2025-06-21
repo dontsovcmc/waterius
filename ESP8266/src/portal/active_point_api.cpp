@@ -774,7 +774,7 @@ void post_api_calibrate(AsyncWebServerRequest *request)
     LOG_INFO(F("Calibrate using voltage=") << mvoltage);
     if (masterI2C.setReferenceVoltage(mvoltage))
     {
-        delay(20); //читает-измеряет-сохраняет
+        delay(30); //читает-измеряет 3 раза-сохраняет
         LOG_INFO(F("Calibrate completed"));
         if (masterI2C.getSlaveData(runtime_data))
         {

@@ -254,8 +254,8 @@ void measureVoltage(uint16_t vcc_real_mv)
 	if (vcc_real_mv > 0 && info.voltage > 0) 
 	{	
 		// чтобы усреднить помехи
-		info.voltage = info.voltage + readVcc(info.config.v_reference) / 2;
-		info.voltage = info.voltage + readVcc(info.config.v_reference) / 2;
+		info.voltage = (info.voltage + readVcc(info.config.v_reference)) / 2;
+		info.voltage = (info.voltage + readVcc(info.config.v_reference)) / 2;
 		// калибровка
     	info.config.v_reference = (uint32_t)info.config.v_reference * vcc_real_mv / info.voltage;
 		saveConfig();
