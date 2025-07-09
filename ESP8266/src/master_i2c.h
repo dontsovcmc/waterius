@@ -17,7 +17,7 @@ struct AttinyData
 {
     // Header
     uint8_t version;    // Версия ПО Attiny
-    uint8_t model;      //:4 бита Модель Ватериуса
+    uint8_t model;      //:4 бита Модель Ватериуса  # WateriusModel
     uint8_t service;    //:4 бита Причина загрузки Attiny
     uint16_t voltage; // Напряжение питания, мВ
     

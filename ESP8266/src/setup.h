@@ -339,9 +339,13 @@
 #define TRANSMIT_MODE 2
 #define MANUAL_TRANSMIT_MODE 3
 
-// model
-#define WATERIUS_CLASSIC 0
-#define WATERIUS_4C2W 1
+
+enum WateriusModel 
+{
+    MODEL_CLASSIC = 0,  // Классический Ватериус
+    MODEL_MINI = 1      // Ватериус-мини
+};
+
 
 enum CounterType
 {
