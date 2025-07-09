@@ -42,7 +42,11 @@ struct ButtonB
             return true;
         }
 
+#if WATERIUS_MODEL == MODEL_CLASSIC 
         if (bit_is_set(PINB, _pin) == LOW)
+#else
+        if (bit_is_set(PINB, _pin) == HIGH)
+#endif
         {
             // Кнопка нажата
             if (on_time == 0)

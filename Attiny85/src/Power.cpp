@@ -18,13 +18,21 @@ void ESPPowerPin::power(const bool on)
     {
         pinMode(power_pin, OUTPUT);
 
+#if WATERIUS_MODEL == MODEL_CLASSIC
         digitalWrite(power_pin, HIGH);
+#else
+        digitalWrite(power_pin, LOW);
+#endif
         wake_up_timestamp = millis();
     }
     else
     {
-        digitalWrite(power_pin, LOW);
 
+#if WATERIUS_MODEL == MODEL_CLASSIC
+        digitalWrite(power_pin, LOW);
+#else
+        digitalWrite(power_pin, HIGH);
+#endif
         pinMode(power_pin, INPUT); // снижаем потребление
         wake_up_timestamp = 0;
     }
