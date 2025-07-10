@@ -28,11 +28,6 @@ struct ButtonB
         PORTB &= ~_BV(_pin); // Disable pull-up
     }
 
-    inline bool digBit()
-    {
-        return bit_is_set(PINB, _pin);
-    }
-
     // Проверка нажатия кнопки
     bool pressed(CounterEvent event)
     {
@@ -44,7 +39,8 @@ struct ButtonB
 
 #if WATERIUS_MODEL == MODEL_CLASSIC 
         if (bit_is_set(PINB, _pin) == LOW)
-#else
+#endif
+#if WATERIUS_MODEL == MODEL_MINI 
         if (bit_is_set(PINB, _pin) == HIGH)
 #endif
         {
