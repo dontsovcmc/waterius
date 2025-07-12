@@ -5,6 +5,10 @@
 #include <avr/wdt.h>
 #include "counter.h"
 
+#if defined(LOG_ON)
+extern TinyDebugSerial mySerial;
+#endif
+
 enum class ButtonPressType
 {
     NONE,
@@ -50,6 +54,7 @@ struct ButtonB
                 // Начало нажатия
                 on_time = 1;
                 off_time = 0;
+                LOG(F("PRESS_START"));
             }
             else
             {
@@ -67,6 +72,7 @@ struct ButtonB
             // Отпущена
             if (on_time > 0)
             {
+                LOG(F("PRESS_OFF"));
                 // Идет обработка нажатия
                 if (off_time < 200)
                 {
@@ -81,10 +87,12 @@ struct ButtonB
         {
             if (on_time > LONG_PRESS_MSEC / 25)
             {
+                LOG(F("PRESS: LONG"));
                 press = ButtonPressType::LONG;
             }
             else if (on_time > 10)
             {
+                LOG(F("PRESS: SHORT"));
                 press = ButtonPressType::SHORT;
             }
             on_time = off_time = 0;
