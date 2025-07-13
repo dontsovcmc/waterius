@@ -90,6 +90,20 @@ String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ct
     }
 }
 
+String valid_counter_type(const uint8_t ctype)
+{
+    switch (ctype)
+    {
+        case NAMUR: 
+        case DISCRETE: 
+        case ELECTRONIC: 
+        case HALL:
+        case NONE:
+            return String(ctype);
+    }
+    return String(CounterType::NAMUR);
+}
+
 String processor0(const String &var)
 {
     return processor_main(var, 0);
@@ -187,27 +201,27 @@ String processor_main(const String &var, const uint8_t input)
     {
         switch (input)
         {
-            case 0: return String(runtime_data.counter_type0);
-            case 1: return String(runtime_data.counter_type1);
+            case 0: return valid_counter_type(runtime_data.counter_type0);
+            case 1: return valid_counter_type(runtime_data.counter_type1);
         }
     }
 
     else if (var == FPSTR(PARAM_COUNTER0_TYPE))
     {
-        return String(runtime_data.counter_type0);
+        return valid_counter_type(runtime_data.counter_type0);
     }
 
     else if (var == FPSTR(PARAM_COUNTER1_TYPE))
     {
-        return String(runtime_data.counter_type1);
+        return valid_counter_type(runtime_data.counter_type1);
     }
 
     else if (var == FPSTR(PARAM_FACTOR))
     {
         switch (input)
         {
-            case 0: return sett.factor0 == AS_COLD_CHANNEL ? F("10") : String(sett.factor0);
-            case 1: return sett.factor1 == AUTO_IMPULSE_FACTOR ? F("10") : String(sett.factor1);
+            case 0: return String(sett.factor0); //sett.factor0 == AS_COLD_CHANNEL ? F("10") : String(sett.factor0);
+            case 1: return String(sett.factor1); //sett.factor1 == AUTO_IMPULSE_FACTOR ? F("10") : String(sett.factor1);
         }
     }
 

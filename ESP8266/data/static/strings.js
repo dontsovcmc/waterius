@@ -127,6 +127,8 @@ const S_ERROR_LENGTH_ERROR = 14;
 const S_ERROR_VALUE = 15;
 const S_ERROR_ATTINY_ERROR = 16;
 const S_ERROR_EMPTY = 17;
+const S_PLEASE_RECONNECT_WIFI = 18;
+
 
 function tr(str_id) {
     var id = Number(str_id);
@@ -149,6 +151,7 @@ function tr(str_id) {
         case S_ERROR_VALUE: return "Неверное значение";
         case S_ERROR_ATTINY_ERROR: return "Ошибка связи с attiny";
         case S_ERROR_EMPTY: return "Значение не может быть пустым";
+        case S_PLEASE_RECONNECT_WIFI: return "Wi-Fi соединение разорвано. Подключитесь ещё раз к Ватериусу.";
         default: 
             return "Незвестный id строки: " + toString(id);
     }

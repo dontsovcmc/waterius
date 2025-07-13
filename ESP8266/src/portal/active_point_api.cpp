@@ -26,10 +26,21 @@ extern CalculatedData cdata;
 
 #define IMPULS_LIMIT_1 3 // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
 
-uint8_t get_auto_factor(const uint32_t runtime_impulses, const uint32_t impulses)
+uint16_t get_auto_factor(const uint32_t runtime_impulses, 
+                         const uint32_t impulses,
+                         const uint16_t factor,
+                         const uint16_t factor_cold)
 {
-    return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
+    switch (factor) 
+    {
+        case AUTO_IMPULSE_FACTOR:
+            return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
+        case AS_COLD_CHANNEL:
+            return factor_cold;
+    }
+    return factor;
 }
+
 
 /**
  * @brief Запрос состояния подключения к роутеру.
@@ -262,42 +273,20 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
     DynamicJsonDocument json_doc(JSON_SMALL_STATIC_MSG_BUFFER);
     JsonObject ret = json_doc.to<JsonObject>();
 
-    uint16_t factor;
     if (masterI2C.getSlaveData(runtime_data))
     {
-        if (index == 0)
+        const uint16_t factor_cold = get_auto_factor(runtime_data.impulses1, data.impulses1, sett.factor1, sett.factor1);
+
+        if (index == INPUT0_RED)
         {
-            if (sett.factor0 == AS_COLD_CHANNEL)
-            {
-                if (sett.factor1 == AUTO_IMPULSE_FACTOR)
-                {
-                    factor = get_auto_factor(runtime_data.impulses0, data.impulses0);
-                }
-                else
-                {
-                    factor = sett.factor1;
-                }
-            }
-            else
-            {
-                factor = sett.factor0;
-            }
             ret[F("state")] = int(runtime_data.impulses0 > data.impulses0);
-            ret[F("factor")] = factor;
+            ret[F("factor")] = get_auto_factor(runtime_data.impulses0, data.impulses0, sett.factor0, factor_cold);
             ret[F("impulses")] = runtime_data.impulses0 - data.impulses0;
         }
-        else if (index == 1)
+        else if (index == INPUT1_BLUE)
         {
-            if (sett.factor1 == AUTO_IMPULSE_FACTOR)
-            {
-                factor = get_auto_factor(runtime_data.impulses1, data.impulses1);
-            }
-            else // повторная настройка
-            {
-                factor = sett.factor1;
-            }
             ret[F("state")] = int(runtime_data.impulses1 > data.impulses1);
-            ret[F("factor")] = factor;
+            ret[F("factor")] = factor_cold;
             ret[F("impulses")] = runtime_data.impulses1 - data.impulses1;
         }
         // root[F("elapsed")] = (uint32_t)(SETUP_TIME_SEC - millis() / 1000.0);
@@ -468,13 +457,13 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
         {
             switch (input) 
             {
-                case 0: 
+                case INPUT0_RED: 
                     save_param(p, sett.channel0_start, errorsObj);
                     sett.impulses0_start = runtime_data.impulses0;
                     sett.impulses0_previous = sett.impulses0_start;
                     LOG_INFO("impulses0_start=" << sett.impulses0_start);
                     break;
-                case 1:
+                case INPUT1_BLUE:
                     save_param(p, sett.channel1_start, errorsObj);
                     sett.impulses1_start = runtime_data.impulses1;
                     sett.impulses1_previous = sett.impulses1_start;
@@ -486,10 +475,10 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
         {
             switch (input)
             {
-                case 0: 
+                case INPUT0_RED: 
                     save_param(p, sett.serial0, SERIAL_LEN, errorsObj, false);
                     break;
-                case 1: 
+                case INPUT1_BLUE: 
                     save_param(p, sett.serial1, SERIAL_LEN, errorsObj, false);
                     break;
             }
@@ -498,10 +487,10 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
         {   
             switch(input) 
             {
-                case 0: 
+                case INPUT0_RED: 
                     save_param(p, sett.counter0_name, errorsObj, true);
                     break;
-                case 1:
+                case INPUT1_BLUE:
                     save_param(p, sett.counter1_name, errorsObj, true);
                     break;
             }
@@ -511,7 +500,7 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
         {   
             switch (input) 
             {
-                case 0:
+                case INPUT0_RED:
                     if (!masterI2C.setCountersType(p->value().toInt(), runtime_data.counter_type1))
                     {
                         LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
@@ -523,7 +512,7 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
                         LOG_INFO(FPSTR(PARAM_SAVED0) << p->name() << F("=") << p->value());
                     }
                     break;
-                case 1:
+                case INPUT1_BLUE:
                     if (!masterI2C.setCountersType(runtime_data.counter_type0, p->value().toInt()))
                     {
                         LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
@@ -540,13 +529,17 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
         }
         else if (name == FPSTR(PARAM_FACTOR))
         {
+            const uint16_t factor_cold = get_auto_factor(runtime_data.impulses1, data.impulses1, sett.factor1, sett.factor1);
+            
             switch (input) 
             {
-                case 0: 
-                    save_param(p, sett.factor0, errorsObj);
+                case INPUT0_RED: 
+                    sett.factor0 = get_auto_factor(runtime_data.impulses0, data.impulses0, sett.factor0, factor_cold);
+                    LOG_INFO(FPSTR(PARAM_FACTOR) << p->name() << F("->") << sett.factor0);
                     break;
-                case 1:
-                    save_param(p, sett.factor1, errorsObj);
+                case INPUT1_BLUE:
+                    sett.factor1 = factor_cold;
+                    LOG_INFO(FPSTR(PARAM_FACTOR) << p->name() << F("->") << sett.factor1);
                     break;
             }
         }
@@ -726,7 +719,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     //applySettings(request, errorsObj); ? нужно ли тут
     applyInputSettings(request, errorsObj, input);
 
-    if (input == 0)
+    if (input == INPUT0_RED)
     {   
         if (sett.counter0_name == CounterName::ELECTRO)
         {
@@ -736,12 +729,16 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
         {
             ret[F("redirect")] = F("/index.html");
         }
-        else 
+        else if (sett.factor0 == AS_COLD_CHANNEL) // Первая настройка
         {
             ret[F("redirect")] = F("/input/0/detect.html");
         }
+        else 
+        {
+            ret[F("redirect")] = F("/input/0/settings.html");
+        }
     } 
-    else if (input == 1)
+    else if (input == INPUT1_BLUE)
     {
         if (sett.counter1_name == CounterName::ELECTRO)
         {
@@ -751,9 +748,13 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
         {
             ret[F("redirect")] = F("/index.html");
         }
-        else 
+        else if (sett.factor1 == AUTO_IMPULSE_FACTOR) // Первая настройка
         {
             ret[F("redirect")] = F("/input/1/detect.html");
+        }
+        else 
+        {
+            ret[F("redirect")] = F("/input/1/settings.html");
         }
     }
 
