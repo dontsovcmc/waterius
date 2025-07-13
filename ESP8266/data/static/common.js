@@ -263,14 +263,32 @@ function ajax(action, data, callback, pl = true, _try = 0) {
         .catch(err => {
             //console.log(err);
             _try++;
+            let errorMsg = null;
+
+            if (err && err.message) {
+                // Проверка на таймаут и сетевые ошибки
+                if (
+                    err.message.includes('timed out') ||
+                    err.message.includes('Timeout') ||
+                    err.message.includes('NetworkError') ||
+                    err.message.includes('Failed to fetch')
+                ) {
+                    errorMsg = tr(S_PLEASE_RECONNECT_WIFI);
+                } else {
+                    errorMsg = err.message;
+                }
+            } else if (err && err.statusText) {
+                errorMsg = err.statusText;
+            }
+
             if(_try == 3) {
                 // вывод ошибки
                 if(pl) preloader(false);
 
-                // TODO
-                // выводить ошибку в тело сраницы
-                alert(err.statusText);
-                console.log(err.statusText);
+                if (errorMsg) {
+                    alert(errorMsg);
+                } 
+                console.log(err);
                 return;
             }
             // повторный запрос в случае ошибки ответа через 1 сек
@@ -322,7 +340,7 @@ function getStatus(i, next) {
     setTimeout(() => {
         ajax('/api/status/' + i, {}, data => {
             if(data.state == 1)
-                return window.location = (queryParams.wizard ? next + '?wizard=true' + '&' : next + '?') + 'factor' + '=' + data.factor + '&delta' + '=' + data.impulses * data.factor;
+                return window.location = (queryParams.wizard ? next + '?wizard=true': next);
             formError(data.error);
             getStatus(i, next);
         }, false);
@@ -331,7 +349,7 @@ function getStatus(i, next) {
 function getImpulses(i) {
     setTimeout(() => {
         ajax('/api/status/' + i, {}, data => {
-            document.getElementById('delta').textContent = data.impulses * parseInt(document.getElementById('factor').value);
+            document.getElementById('impulses').textContent = data.impulses;
             formError(data.error);
             getImpulses(i);
         }, false);
@@ -340,9 +358,7 @@ function getImpulses(i) {
 function getImpulsesHall(i) {
     setTimeout(() => {
         ajax('/api/status/' + i, {}, data => {
-            value = data.impulses / parseInt(document.getElementById('factor').value);
-            value = parseFloat(value.toPrecision(3));
-            document.getElementById('delta').textContent = value;
+            document.getElementById('impulses').textContent = data.impulses;
             formError(data.error);
             getImpulsesHall(i);
         }, false);

@@ -347,6 +347,16 @@ enum WateriusModel
 };
 
 
+/*
+   Вход attiny
+ */
+enum InputColor
+{
+    INPUT0_RED = 0,  // 0 - Красный вход, ГВС
+    INPUT1_BLUE = 1  // 1 - Синий вход, ХВС
+};
+
+
 enum CounterType
 {
     NAMUR = 0,
@@ -355,6 +365,7 @@ enum CounterType
     HALL = 3, 
     NONE = 0xFF   // 255
 };
+
 
 enum CounterName
 {
@@ -367,6 +378,7 @@ enum CounterName
     OTHER = 6,
     HEAT_KWT = 7
 };
+
 
 // согласно
 enum DataType

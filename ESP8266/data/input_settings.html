@@ -46,16 +46,17 @@
                             <p class="error hd" id="channel_start-error">Введите показания счётчика</p>
                         </div>
                         <div class="f-row">
-                            <label for="factor">Вес импульса</label>
+                            <label for="factor">Вес импульса (литров в 1 импульсе)</label>
                             <select class="slct" id="factor" name="factor" option-value="%factor%">
-                              <option selected="" value="1">1</option>
+                              <option value="1">1</option>
                               <option value="10">10</option>
                               <option value="100">100</option>
+                              <option selected="" value="3">Авто</option>
+                              <option value="7">Авто (как у холодной воды)</option>
                             </select>
-                            <p>л/имп</p>
                             <p class="error hd" id="factor-error">Некорректное значение</p>
                         </div>
-                        <p class="note mt16">(вылилось около <span id="delta">1</span>л воды)</p>
+                        <p class="note mt16">(прочитано <span id="impulses">1</span> имп.)</p>
                     </main>
                     <footer class="btns">
                         <button class="btn" type="submit">Сохранить</button>
