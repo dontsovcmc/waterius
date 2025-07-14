@@ -45,7 +45,7 @@ struct ButtonB
         if (bit_is_set(PINB, _pin) == LOW)
 #endif
 #if WATERIUS_MODEL == MODEL_MINI 
-        if (bit_is_set(PINB, _pin) == HIGH)
+        if (bit_is_set(PINB, _pin))
 #endif
         {
             // Кнопка нажата
