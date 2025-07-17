@@ -26,7 +26,7 @@
 
 // TinyDebugSerial на PB3 только в attiny85, 1MHz
 #include "TinyDebugSerial.h"
-#define LOG_BEGIN(x) mySerial.begin(x)
+#define LOG_BEGIN(x) DDRB |= _BV(3); mySerial.begin(x)
 #define LOG(x)                \
     mySerial.print(millis()); \
     mySerial.print(F(" : ")); \
