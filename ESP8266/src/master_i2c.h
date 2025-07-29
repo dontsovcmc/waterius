@@ -2,13 +2,19 @@
 #define _MASTERI2C_h
 
 #include <Arduino.h>
+#include "setup.h"
 
 /*
 Номера пинов линии i2c.
 */
+#if WATERIUS_MODEL == WATERIUS_MODEL_CLASSIC
 #define SDA_PIN 0
 #define SCL_PIN 2
-
+#endif
+#if WATERIUS_MODEL == WATERIUS_MODEL_MINI
+#define SDA_PIN 4
+#define SCL_PIN 5
+#endif
 /*
 Данные принимаемые от Attiny
 */

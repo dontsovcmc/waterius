@@ -339,13 +339,8 @@
 #define TRANSMIT_MODE 2
 #define MANUAL_TRANSMIT_MODE 3
 
-
-enum WateriusModel 
-{
-    MODEL_CLASSIC = 0,  // Классический Ватериус
-    MODEL_MINI = 1      // Ватериус-мини
-};
-
+#define WATERIUS_MODEL_CLASSIC 0  // Классический Ватериус
+#define WATERIUS_MODEL_MINI 1     // Ватериус-мини
 
 /*
    Вход attiny
