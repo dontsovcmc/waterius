@@ -332,6 +332,12 @@ uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const time_t &l
         k_estimated = actual_slept_min / period_min_tuned;
     }
 
+    // Если было отключение интернета, то k_estimated будет больше 2.0
+    k_estimated = k_estimated - (uint16_t)k_estimated;
+    if (k_estimated < 0.7) {  // корректируем не больше чем на 30% пробуждение
+        k_estimated += 1;
+    }
+
     // 2. Определение следующей целевой временной отметки
     double time_since_base_min = difftime(now, base_time) / 60.0;
     
@@ -341,8 +347,8 @@ uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const time_t &l
     time_t next_expected = base_time + target_num * wakeup_per_min * 60;
     double minutes_to_next = difftime(next_expected, now) / 60.0;
 
-    // 3. Защита от "ловушки": если до цели меньше минуты или до пробуждения меньше 5% периода, целимся в следующую точку
-    if (minutes_to_next < 1.0 || minutes_to_next < (wakeup_per_min * 0.05)) {
+    // 3. Защита от "ловушки": если до цели меньше минуты или до пробуждения меньше 30% периода, целимся в следующую точку
+    if (minutes_to_next < 1.0 || minutes_to_next < (wakeup_per_min * 0.3)) {
         target_num++;
         next_expected = base_time + target_num * wakeup_per_min * 60;
         minutes_to_next = difftime(next_expected, now) / 60.0;
