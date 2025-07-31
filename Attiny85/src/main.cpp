@@ -351,6 +351,8 @@ void loop()
 	counter0.set_type((CounterType)info.config.types.type0);
 	counter1.set_type((CounterType)info.config.types.type1);
 
+	button.reset();
+
 	wdt_count = 0;
 	while ((wdt_count < wakeup_period) && !button.pressed(event))
 	{
@@ -366,6 +368,7 @@ void loop()
 			WDTCR |= _BV(WDIE);
 			sleep_mode();
 		}
+		LOG_BEGIN(9600);
 	}
 
 	storage.add(info.data);
@@ -406,7 +409,7 @@ void loop()
 	}
 
 	// Нажатие кнопки обработали и удаляем
-	button.press = ButtonPressType::NONE;
+	button.reset();
 
 	esp.power(true);
 

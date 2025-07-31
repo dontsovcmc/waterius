@@ -32,6 +32,11 @@ struct ButtonB
         PORTB &= ~_BV(_pin); // Disable pull-up
     }
 
+    void reset()
+    {
+        press = ButtonPressType::NONE;
+    }
+
     // Проверка нажатия кнопки
     bool pressed(CounterEvent event)
     {
