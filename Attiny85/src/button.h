@@ -32,9 +32,17 @@ struct ButtonB
         PORTB &= ~_BV(_pin); // Disable pull-up
     }
 
-    void reset()
+    void init()
     {
         press = ButtonPressType::NONE;
+    }
+
+    void pull_down()
+    {
+        DDRB |= _BV(_pin);     // Output
+        PORTB &= ~_BV(_pin);   // Записать LOW
+        DDRB &= ~_BV(_pin);    // Input
+        PORTB &= ~_BV(_pin);   // Убедиться что pull-up выключен
     }
 
     // Проверка нажатия кнопки

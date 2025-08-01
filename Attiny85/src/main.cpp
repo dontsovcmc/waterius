@@ -351,7 +351,8 @@ void loop()
 	counter0.set_type((CounterType)info.config.types.type0);
 	counter1.set_type((CounterType)info.config.types.type1);
 
-	button.reset();
+	// Нажатие кнопки очищаем
+	button.init();
 
 	wdt_count = 0;
 	while ((wdt_count < wakeup_period) && !button.pressed(event))
@@ -408,9 +409,6 @@ void loop()
 		wake_up_limit = WAIT_ESP_MSEC;
 	}
 
-	// Нажатие кнопки обработали и удаляем
-	button.reset();
-
 	esp.power(true);
 
 	info.voltage = readVcc(info.config.v_reference); // Пока ESP загружается прочитаем Vcc
@@ -438,4 +436,6 @@ void loop()
 	}
 
 	esp.power(false);
+
+	button.pull_down();
 }
