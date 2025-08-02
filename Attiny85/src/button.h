@@ -35,14 +35,14 @@ struct ButtonB
     void init()
     {
         press = ButtonPressType::NONE;
+        DDRB &= ~_BV(_pin);    // Input
+        PORTB &= ~_BV(_pin);   // Убедиться что pull-up выключен
     }
 
     void pull_down()
     {
         DDRB |= _BV(_pin);     // Output
-        PORTB &= ~_BV(_pin);   // Записать LOW
-        DDRB &= ~_BV(_pin);    // Input
-        PORTB &= ~_BV(_pin);   // Убедиться что pull-up выключен
+        PORTB &= ~_BV(_pin);   // Записать LOW;
     }
 
     // Проверка нажатия кнопки

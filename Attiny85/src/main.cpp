@@ -419,12 +419,13 @@ void loop()
 	{
 		counting_1ms(delay_loop_count);
 	}
+
+	slaveI2C.end(); // выключаем i2c slave.
+
 	uint8_t sleep_delay_ms = 20;
 	while (sleep_delay_ms--) {
 		counting_1ms(delay_loop_count);
 	}
-
-	slaveI2C.end(); // выключаем i2c slave.
 
 	if (!slaveI2C.masterGoingToSleep())
 	{
@@ -438,4 +439,9 @@ void loop()
 	esp.power(false);
 
 	button.pull_down();
+
+	sleep_delay_ms = 40;
+	while (sleep_delay_ms--) {
+		counting_1ms(delay_loop_count);
+	}
 }
