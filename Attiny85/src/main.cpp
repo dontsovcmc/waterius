@@ -422,7 +422,7 @@ void loop()
 
 	slaveI2C.end(); // выключаем i2c slave.
 
-	uint8_t sleep_delay_ms = 20;
+	uint16_t sleep_delay_ms = 20;
 	while (sleep_delay_ms--) {
 		counting_1ms(delay_loop_count);
 	}
@@ -438,10 +438,13 @@ void loop()
 
 	esp.power(false);
 
+#if WATERIUS_MODEL == MODEL_MINI 
 	button.pull_down();
-
-	sleep_delay_ms = 40;
+ 
+	sleep_delay_ms = 300;  // ждём разряда конденсатора 100мкф через кнопку и резистор 3.3кОм + 30 ом (пин-gnd)
 	while (sleep_delay_ms--) {
 		counting_1ms(delay_loop_count);
 	}
+#endif
+
 }

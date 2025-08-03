@@ -28,8 +28,7 @@ struct ButtonB
     explicit ButtonB(uint8_t pin)
         : _pin(pin), on_time(0), off_time(0), press(ButtonPressType::NONE)
     {
-        DDRB &= ~_BV(pin);   // Input
-        PORTB &= ~_BV(_pin); // Disable pull-up
+        init();
     }
 
     void init()

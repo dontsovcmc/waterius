@@ -9,17 +9,24 @@ def getCppDefine(name: str) -> str:
         if isinstance(define, tuple):
             if define[0] == name:
                 return define[1]
+        elif isinstance(define, str):
+            if define == name:
+                return True
     return None
 
 
 def prefix(env):
     FIRMWARE_VER = getCppDefine("FIRMWARE_VER")
     WATERIUS_MODEL = getCppDefine("WATERIUS_MODEL")
+    LOG_ON = getCppDefine("LOG_ON")
             
     board = env.GetProjectOption("board")
+    out = f"{board}-{FIRMWARE_VER}"
     if WATERIUS_MODEL and WATERIUS_MODEL > 0:
-        return f"{board}-{FIRMWARE_VER}-{WATERIUS_MODEL}"
-    return f"{board}-{FIRMWARE_VER}"
+        out = f"{out}-{WATERIUS_MODEL}"
+    if LOG_ON:
+        out = f"{out}-log"
+    return out
 
 
 def copy_file(source, target, env, postfix=''):
