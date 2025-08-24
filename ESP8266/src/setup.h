@@ -10,6 +10,8 @@
 /*
 Версии прошивки для ESP
 
+1.1.14  - 2025.08.24 - dontsovcmc
+                      1. Версия для Умныйсчетчик.
 1.1.13  - 2025.07.31 - dontsovcmc
                       1. Алгоритм пробуждения учитывает возможный не выход на связь.
 
@@ -264,7 +266,7 @@
 */
 
 
-#define BRAND_NAME "waterius"
+#define BRAND_NAME "uch24"
 
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 

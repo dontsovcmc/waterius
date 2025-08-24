@@ -80,7 +80,7 @@ bool init_config(Settings &sett)
     network_mask.fromString(DEFAULT_MASK);
     sett.mask = network_mask;
 
-    // Можно задать константы при компиляции, чтобы Ватериус сразу заработал
+    // Можно задать константы при компиляции, чтобы УмныйМодуль сразу заработал
 
 #ifdef WATERIUS_HOST
 #pragma message(VAR_NAME_VALUE(WATERIUS_HOST))

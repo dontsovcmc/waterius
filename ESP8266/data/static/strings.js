@@ -133,15 +133,15 @@ const S_PLEASE_RECONNECT_WIFI = 18;
 function tr(str_id) {
     var id = Number(str_id);
     switch (id) {
-        case S_ANOTHER_CHANNEL: return "Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново.";
+        case S_ANOTHER_CHANNEL: return "Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с УмнымМодулем, подключитесь заново.";
         case S_WIFI_CONNECT: return "Ошибка подключения к Wi-Fi";
-        case S_SETUP_COUNTERS: return "Ватериус успешно подключился к Wi-Fi. Теперь настроим счётчики.";
-        case S_NEED_SETUP: return "Ватериус ещё не настроен";
+        case S_SETUP_COUNTERS: return "УмныйМодуль успешно подключился к Wi-Fi. Теперь настроим счётчики.";
+        case S_NEED_SETUP: return "УмныйМодуль ещё не настроен";
         case S_CONNECTING: return "выполняется подключение...";
         case S_SETUP: return "Настроить";
         case S_LETSGO: return "Приступить";
         case S_NO_LINK: return "Ошибка связи с МК";
-        case S_WL_CONNECTION_LOST: return "Ошибка подключения. Что может помочь:<br>1) Проверьте, что Wi-Fi не Only N, шифрование WPA, WPA2.<br>2) Выключите DHCP на этой странице, заполнив ip роутера и Ватериуса.<br>3) Пропишите MAC адрес Ватериуса в роутере.<br>4) Пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.";
+        case S_WL_CONNECTION_LOST: return "Ошибка подключения. Что может помочь:<br>1) Проверьте, что Wi-Fi не Only N, шифрование WPA, WPA2.<br>2) Выключите DHCP на этой странице, заполнив ip роутера и УмногоМодуля.<br>3) Пропишите MAC адрес УмногоМодуля в роутере.<br>4) Пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.";
         case S_WL_WRONG_PASSWORD: return "Ошибка подключения: Некорректный пароль";
         case S_WL_IDLE_STATUS : return "";  // Ошибка подключения: Код 0"; Не является ошибкой
         case S_WL_DISCONNECTED: return "";  // Ошибка подключения: Отключен"; Не является ошибкой
@@ -151,7 +151,7 @@ function tr(str_id) {
         case S_ERROR_VALUE: return "Неверное значение";
         case S_ERROR_ATTINY_ERROR: return "Ошибка связи с attiny";
         case S_ERROR_EMPTY: return "Значение не может быть пустым";
-        case S_PLEASE_RECONNECT_WIFI: return "Wi-Fi соединение разорвано. Подключитесь ещё раз к Ватериусу.";
+        case S_PLEASE_RECONNECT_WIFI: return "Wi-Fi соединение разорвано. Подключитесь ещё раз к УмномуМодулю.";
         default: 
             return "Незвестный id строки: " + toString(id);
     }

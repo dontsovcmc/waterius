@@ -373,7 +373,7 @@ function finish(btn){
 }
 function finishTimer(btn, sec){
     sec--;
-    if(!sec) return window.location = '//waterius.ru/account';
+    if(!sec) return window.location = '//умныйсчетчик24.рф';
     btn.innerText = sec;
     setTimeout(() => finishTimer(btn, sec), 1000);
 }
