@@ -139,7 +139,7 @@ void publish_discovery_entity_channel(PubSubClient &mqtt_client,
                                             device_id.c_str(), device_mac.c_str(),
                                             true, nullptr, nullptr,
                                             nullptr, nullptr, nullptr,
-                                            topic.c_str(), json_attributes_template.c_str(),
+                                            topic.c_str(), json_attributes_template.length() > 0 ? json_attributes_template.c_str() : nullptr,
                                             advanced_conf.c_str());
 
     String entity_discovery_topic = String(discovery_topic) + "/" + entity_type + "/" + uniqueId_prefix + "/" + entity_id + "/config";
