@@ -44,6 +44,11 @@ struct ButtonB
         PORTB &= ~_BV(_pin);   // Записать LOW;
     }
 
+    bool pressing(CounterEvent event) 
+    {
+        return on_time > 10;
+    }
+
     // Проверка нажатия кнопки
     bool pressed(CounterEvent event)
     {

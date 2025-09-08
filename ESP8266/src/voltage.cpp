@@ -1,15 +1,13 @@
 #include "voltage.h"
 #include "Logging.h"
+#include "master_i2c.h"
 
-void Voltage::begin()
-{
-    _voltage = (uint32_t)ESP.getVcc() * 1000 / 1024;  // system_get_vdd33
-    _min_voltage = _voltage;
-    _max_voltage = _voltage;
-    _num_probes = 0;
-    _probes[_num_probes % MAX_PROBES] = _voltage;
-    _num_probes++;
-}
+extern MasterI2C masterI2C;
+extern AttinyData runtime_data;
+
+Voltage::Voltage(): 
+    _voltage(0), _min_voltage(10000), _max_voltage(0), _num_probes(0)
+{}
 
 /**
  * @brief Измеряет напряжение на системной шине в миливвольтах
@@ -17,17 +15,22 @@ void Voltage::begin()
  */
 void Voltage::update()
 {
-    _voltage = (uint32_t)ESP.getVcc() * 1000 / 1024;
-    _min_voltage = _min(_voltage, _min_voltage);
-    _max_voltage = _max(_voltage, _max_voltage);
-    _probes[_num_probes % MAX_PROBES] = _voltage;
-#ifdef DEBUG_VOLTAGE
-    LOG_INFO(F("VOLTAGE: Probe #: ") << _num_probes);
-    LOG_INFO(F("VOLTAGE: Value (mV):") << _voltage);
-    LOG_INFO(F("VOLTAGE: Min (mV):") << _min_voltage);
-    LOG_INFO(F("VOLTAGE: Max (mV):") << _max_voltage);
-#endif
-    _num_probes++;
+    masterI2C.updateVoltage();
+
+    if (masterI2C.getSlaveData(runtime_data))
+    {
+        _voltage = runtime_data.voltage;
+        _min_voltage = _min(_voltage, _min_voltage);
+        _max_voltage = _max(_voltage, _max_voltage);
+        _probes[_num_probes % MAX_PROBES] = _voltage;
+    #ifdef DEBUG_VOLTAGE
+        LOG_INFO(F("VOLTAGE: Probe #: ") << _num_probes);
+        LOG_INFO(F("VOLTAGE: Value (mV):") << _voltage);
+        LOG_INFO(F("VOLTAGE: Min (mV):") << _min_voltage);
+        LOG_INFO(F("VOLTAGE: Max (mV):") << _max_voltage);
+    #endif
+        _num_probes++;
+    }
 }
 /**
  * @brief Разница между измеренными напряжениями  в миливольтах

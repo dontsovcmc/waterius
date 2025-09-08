@@ -18,6 +18,10 @@ TinyDebugSerial mySerial;
 #endif
 
 /*
+
+40 - 2025.09.02 - dontsovcmc
+	1. Включаем ESP сразу, но включаем i2c только после того, как отпустили кнопку
+
 33 - 2025.06.16 - dontsovcmc
 	1. Добавлена команда продолжения бордствования ESP
 	2. ИЗМЕНЕНА СТРУКТУРА ОТВЕТА. Совместимость с ESP от 1.2.0
@@ -355,7 +359,7 @@ void loop()
 	button.init();
 
 	wdt_count = 0;
-	while ((wdt_count < wakeup_period) && !button.pressed(event))
+	while ((wdt_count < wakeup_period) && !button.pressing(event))
 	{
 		noInterrupts();
 		CounterEvent ev = event;
@@ -380,11 +384,30 @@ void loop()
 	LOG(info.data.value0);
 	LOG(info.data.value1);
 
+	// Читаем Vcc без нагрузки ESP
+	info.voltage = readVcc(info.config.v_reference); // Пока ESP загружается прочитаем Vcc
+	
+	LOG(F("Voltage:"));
+	LOG(info.voltage);
+
+	esp.power(true);
+
+	LOG(F("ESP turn on"));
+
+	unsigned long wake_up_limit = WAIT_ESP_MSEC;   // период бодрствования ESP, мсек
+
+	uint8_t delay_loop_count = 0;
+	while (!button.pressed(event) && !esp.elapsed(wake_up_limit))
+	{
+		counting_1ms(delay_loop_count);
+	}
+
+	LOG(F("Button released"));
+
 	// Если пользователь нажал кнопку SETUP, ждем когда отпустит
 	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания
 
-	unsigned long wake_up_limit;   // период бодрствования ESP, мсек
 	if (button.press == ButtonPressType::LONG)
 	{ 
 		LOG(F("SETUP pressed"));
@@ -408,13 +431,7 @@ void loop()
 		}
 		wake_up_limit = WAIT_ESP_MSEC;
 	}
-
-	esp.power(true);
-
-	info.voltage = readVcc(info.config.v_reference); // Пока ESP загружается прочитаем Vcc
-	LOG(F("ESP turn on"));
-
-	uint8_t delay_loop_count = 0;		
+	
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit))
 	{
 		counting_1ms(delay_loop_count);

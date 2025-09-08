@@ -19,7 +19,7 @@ private:
     uint16_t _probes[MAX_PROBES];
 
 public:
-    Voltage() = default;
+    Voltage();
     ~Voltage() = default;
     void begin();
     void update();

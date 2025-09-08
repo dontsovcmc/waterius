@@ -272,6 +272,10 @@ bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
 
 bool MasterI2C::setReferenceVoltage(uint16_t voltage)
 {   
+    /**
+     * Калибровать напряжение внутреннего регулярна текущим.
+     * Если voltage = 0, то attiny читает напряжение.
+     */
     BusyGuard guard(i2c_busy);
     
     uint8_t txBuf[4];
@@ -286,6 +290,11 @@ bool MasterI2C::setReferenceVoltage(uint16_t voltage)
         return false;
     }
     return true;
+}
+
+bool MasterI2C::updateVoltage()
+{
+    return setReferenceVoltage(0);
 }
 
 bool MasterI2C::setTransmitMode()

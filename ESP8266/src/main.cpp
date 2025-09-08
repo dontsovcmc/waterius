@@ -9,7 +9,6 @@
 #include "senders/sender_http.h"
 #include "senders/sender_mqtt.h"
 #include "portal/active_point.h"
-#include "voltage.h"
 #include "utils.h"
 #include "porting.h"
 #include "json.h"
@@ -36,8 +35,6 @@ void setup()
 
     static_assert((sizeof(Settings) == 960), "sizeof Settings != 960");
 
-    masterI2C.begin(); // Включаем i2c master
-
     HeapSelectIram ephemeral;
     LOG_INFO(F("IRAM free: ") << ESP.getFreeHeap() << F(" bytes"));
     {
@@ -46,14 +43,38 @@ void setup()
     }
     LOG_INFO(F("ChipId: ") << String(getChipId(), HEX));
     LOG_INFO(F("FlashChipId: ") << String(ESP.getFlashChipId(), HEX));
+}
 
-    get_voltage()->begin();
-    voltage_ticker.attach_ms(300, []()
-                             { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
+#define BOOT_MSEC 400
+#define LOG_PRESS_MSEC 3000
+#define BUTTON_TIMEOUT 16000
+#define TX_PIN 1
+
+void wait_button_released()
+{
+    LOG_INFO(F("Wait button released by user"));
+    pinMode(12, OUTPUT);
+    pinMode(13, OUTPUT);
+    uint8_t mode = TRANSMIT_MODE; // TRANSMIT_MODE;
+    
+    while (!masterI2C.getMode(mode) && millis() < BUTTON_TIMEOUT)
+    {
+        if (millis() > LOG_PRESS_MSEC - BOOT_MSEC) {
+            digitalWrite(12, (int(millis() / 1000) % 2) > 0);
+            digitalWrite(13, (int(millis() / 1000) % 2) > 0);
+            delay(10);
+        }
+    }
+    digitalWrite(12, LOW);
+    digitalWrite(13, LOW);
 }
 
 void loop()
 {
+    masterI2C.begin(); // Включаем i2c master
+    
+    wait_button_released();
+
     uint8_t mode = TRANSMIT_MODE; // TRANSMIT_MODE;
     bool config_loaded = false;
 
@@ -94,6 +115,10 @@ void loop()
 
             return; // сюда не должно дойти никогда
         }
+        
+        // через каждые 500 мс будет измеряться напряжение
+        // тут, т.к. i2c уже работает. в режиме настройки не требуется.
+        voltage_ticker.attach_ms(500, []() { get_voltage()->update(); });
 
         if (config_loaded)
         {

@@ -87,6 +87,7 @@ public:
     bool setWakeUpPeriod(uint16_t per);
     bool setCountersType(const uint8_t type0, const uint8_t type1);
     bool setReferenceVoltage(uint16_t voltage);
+    bool updateVoltage();
     bool setTransmitMode();
     bool setSleep();
 };
