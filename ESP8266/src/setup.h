@@ -266,7 +266,7 @@
 */
 
 
-#define BRAND_NAME "uch24"
+#define BRAND_NAME "Module-NT25"
 
 #define WATERIUS_DEFAULT_DOMAIN "https://cloud.waterius.ru"
 

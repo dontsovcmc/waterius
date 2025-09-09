@@ -15,8 +15,7 @@
  */
 String get_device_name()
 {
-	String deviceName = String(BRAND_NAME) + "-" + getChipId();
-	return deviceName;
+	return String(BRAND_NAME);
 }
 
 /**
