@@ -235,7 +235,6 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("qos")] = 1; //qos
     }
 
-    LOG_INFO(F("MQTT: DISCOVERY SENSOR: JSON Mem usage: ") << json_doc.memoryUsage());
     LOG_INFO(F("MQTT: DISCOVERY SENSOR: JSON size: ") << measureJson(json_doc));
 
     String payload;

@@ -11,6 +11,22 @@
 
 #define INIT_ATTINY_CRC 0xFF
 
+// Класс для синхронизации запросов к i2c, которые могут быть из разных потоков в AsyncWebServer
+// В ESP отсутствуют мьютексы, поэтому будем считать, что это проще сдела
+class BusyGuard {
+    volatile bool& busy;
+public:
+    BusyGuard(volatile bool& flag) : busy(flag) {
+        while (busy) yield(); // Ждём, пока флаг не сброшен
+        busy = true;
+    }
+    ~BusyGuard() {
+        busy = false;
+    }
+    BusyGuard(const BusyGuard&) = delete;
+    BusyGuard& operator=(const BusyGuard&) = delete;
+};
+
 /*
 Данные принимаемые от Attiny
 */
@@ -45,6 +61,7 @@ uint8_t crc_8(const unsigned char *input_str, size_t num_bytes, uint8_t crc = 0)
 class MasterI2C
 {
     uint8_t init_crc = 0xFF;
+    volatile bool i2c_busy;
 
 protected:
     bool getUint(uint32_t &value, uint8_t &crc);
@@ -56,13 +73,18 @@ protected:
     bool getBytes(uint8_t *value, uint8_t count, uint8_t &crc);
 
 public:
+    MasterI2C();
     void begin();
     void end();
     bool sendCmd(uint8_t cmd);
     bool getMode(uint8_t &mode);
     bool getAttinyData(AttinyData &data);
     bool setWakeUpPeriod(uint16_t per);
+    bool updateVoltage();
+    bool setReferenceVoltage(uint16_t voltage);
     bool setCountersType(const uint8_t type0, const uint8_t type1);
+    bool setTransmitMode();
+    bool setSleep();
 };
 
 #endif

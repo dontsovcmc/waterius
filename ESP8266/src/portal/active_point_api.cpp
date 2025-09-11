@@ -240,7 +240,6 @@ void get_api_main_status(AsyncWebServerRequest *request)
         }
     }
 
-    LOG_INFO(F("JSON: Mem usage: ") << json_doc.memoryUsage());
     LOG_INFO(F("JSON: Size: ") << measureJson(json_doc));
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");

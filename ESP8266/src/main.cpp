@@ -84,7 +84,7 @@ void loop()
             wifi_shutdown();
 
             LOG_INFO(F("Set mode MANUAL_TRANSMIT to attiny"));
-            masterI2C.sendCmd('T'); // Режим "Передача"
+            masterI2C.setTransmitMode(); // Режим "Передача"
 
             LOG_INFO(F("Restart ESP"));
             LOG_END();
@@ -178,8 +178,8 @@ void loop()
 
     uint8_t vendor_id = ESP.getFlashChipVendorId();
 
-    masterI2C.sendCmd('Z'); // через 20мс attiny отключит EN
-    
+    masterI2C.setSleep(); // через 20мс attiny отключит EN
+
     // { 0xC4, "Giantec Semiconductor, Inc." }, https://github.com/elitak/freeipmi/blob/master/libfreeipmi/spec/ipmi-jedec-manufacturer-identification-code-spec.c
     if (vendor_id != 0xC4) 
     {
