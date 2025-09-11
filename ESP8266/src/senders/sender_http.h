@@ -19,7 +19,7 @@
 
 #define HTTP_SEND_ATTEMPTS 3
 
-bool send_http(const Settings &sett, DynamicJsonDocument &jsonData)
+bool send_http(const Settings &sett, JsonDocument &jsonData)
 {
     if (!(sett.http_on && sett.http_url[0]))
     {

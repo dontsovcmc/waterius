@@ -50,7 +50,7 @@ String build_entity_discovery(const char *mqtt_topic,
                               const char *json_attributes_template,
                               const char *advanced_conf)
 {
-    DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
+    JsonDocument json_doc;
     JsonObject entity = json_doc.to<JsonObject>();
     
     entity[F("name")] = entity_name; // name
@@ -89,9 +89,9 @@ String build_entity_discovery(const char *mqtt_topic,
     if (MQTT_FORCE_UPDATE)
         entity[F("force_update")] = true; // force_update
 
-    StaticJsonDocument<JSON_SMALL_STATIC_MSG_BUFFER> json_device_doc;
+    JsonDocument json_device_doc;
     JsonObject device = json_device_doc.to<JsonObject>();
-    JsonArray identifiers = device.createNestedArray(F("identifiers")); // identifiers //ids
+    JsonArray identifiers = device[F("identifiers")].to<JsonArray>();
 
     identifiers[0] = device_id;
     identifiers[1] = device_mac;
@@ -167,7 +167,8 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("cmd_t")] = command_topic; // command_topic
 
         //"options": ["WATER_COLD","WATER_HOT","ELECTRO","GAS","HEAT_GCAL","PORTABLE_WATER","OTHER"],
-        JsonArray options = json_doc.createNestedArray("options");
+        JsonArray options = json_doc[F("options")].to<JsonArray>();
+
         options.add("WATER_COLD");
         options.add("WATER_HOT");
         options.add("ELECTRO");
@@ -207,7 +208,7 @@ String build_entity_discovery(const char *mqtt_topic,
         String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
         entity[F("cmd_t")] = command_topic; // command_topic
 
-        JsonArray options = json_doc.createNestedArray("options");
+        JsonArray options = json_doc[F("options")].to<JsonArray>();
 
         options.add("MECHANIC");
         options.add("ELECTRONIC");
@@ -257,7 +258,7 @@ String get_attributes_template(const char *const attrs[][MQTT_PARAM_COUNT], int 
 {
     String json_attributes_template = "";
 
-    DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
+    JsonDocument json_doc;
     JsonObject json_attributes = json_doc.to<JsonObject>();
     String attribute_name;
     String attribute_id;

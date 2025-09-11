@@ -10,15 +10,18 @@
 #ifndef ACTIVE_POINT_API_h_
 #define ACTIVE_POINT_API_h_
 
-#include "ESPAsyncWebServer.h"
 #include <ArduinoJson.h>
+#include <ESPAsyncTCP.h>
+#include <ArduinoJson.h>
+#include <ESPAsyncWebServer.h>
 
-void save_param(AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required = true);
-void save_param(AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj);
-void save_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok = false);
-void save_bool_param(AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj);
-void save_param(AsyncWebParameter *p, float &v, JsonObject &errorsObj);
-void save_ip_param(AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj);
+
+void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required = true);
+void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj);
+void save_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok = false);
+void save_bool_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj);
+void save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj);
+void save_ip_param(const AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj);
 
 bool find_wizard_param(AsyncWebServerRequest *request);
 void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, const uint8_t input);

@@ -9,10 +9,12 @@
 #define SDA_PIN 0
 #define SCL_PIN 2
 
+#define INIT_ATTINY_CRC 0xFF
+
 /*
 Данные принимаемые от Attiny
 */
-struct SlaveData
+struct AttinyData
 {
     // Header
     uint8_t version;    // Версия ПО Attiny
@@ -58,7 +60,7 @@ public:
     void end();
     bool sendCmd(uint8_t cmd);
     bool getMode(uint8_t &mode);
-    bool getSlaveData(SlaveData &data);
+    bool getAttinyData(AttinyData &data);
     bool setWakeUpPeriod(uint16_t per);
     bool setCountersType(const uint8_t type0, const uint8_t type1);
 };

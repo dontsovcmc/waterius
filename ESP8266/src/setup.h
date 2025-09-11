@@ -63,7 +63,7 @@
 1.1.0  - 2024.01.24 - dontsovcmc
                       1. Рефакторинг веб интерфейса
                       2. Удалён blynk
-                      3. Ошибка если прошивка attiny будет ниже или равна 29 (getSlaveData)
+                      3. Ошибка если прошивка attiny будет ниже или равна 29 (getAttinyData)
                       4. Добавил картинки на каждый тип счетчика и вход
                       5. Перенес строки в string.js TODO избавится от русских слов в CPP файлах
                       6. Удалил поле good. Всегда было 1.
@@ -313,7 +313,6 @@
 #define HARDWARE_VERSION "1.0.0"
 #define MANUFACTURER "Waterius"
 
-#define JSON_DYNAMIC_MSG_BUFFER 2048
 #define JSON_SMALL_STATIC_MSG_BUFFER 256
 
 #define ROUTER_MAC_LENGTH 8

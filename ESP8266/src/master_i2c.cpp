@@ -138,7 +138,7 @@ bool MasterI2C::getMode(uint8_t &mode)
  * @return true прочитанно успешно.
  * @return false произошла ошибка
  */
-bool MasterI2C::getSlaveData(SlaveData &data)
+bool MasterI2C::getAttinyData(AttinyData &data)
 {
     sendCmd('B');
 

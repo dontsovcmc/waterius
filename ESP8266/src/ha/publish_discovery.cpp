@@ -77,7 +77,7 @@ void publish_discovery_entity(PubSubClient &mqtt_client,
 void publish_discovery_entity_extended(PubSubClient &mqtt_client, 
                                        const String &topic, 
                                        const String &discovery_topic,
-                                       const SlaveData &data, 
+                                       const AttinyData &data, 
                                        const String &device_id, 
                                        const String &device_mac,
                                        const char *const entity[MQTT_PARAM_COUNT])
@@ -159,7 +159,7 @@ void publish_discovery_entity_channel(PubSubClient &mqtt_client,
 void publish_discovery_general_entities(PubSubClient &mqtt_client, 
                                         const String &topic, 
                                         const String &discovery_topic, 
-                                        const SlaveData &data, 
+                                        const AttinyData &data, 
                                         const String &device_id, 
                                         const String &device_mac)
 {
@@ -204,7 +204,7 @@ void add_entity_attribute(JsonObject &json_attributes,
 String channel_entity_attributes(const int channel, const int channel_name)
 {
     String json_attributes_template;
-    DynamicJsonDocument json_doc(JSON_DYNAMIC_MSG_BUFFER);
+    JsonDocument json_doc;
     JsonObject json_attributes = json_doc.to<JsonObject>();
 
     add_entity_attribute(json_attributes, ENTITY_CHANNEL_IMP, channel, channel_name);
@@ -295,7 +295,7 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client,
 void publish_discovery(PubSubClient &mqtt_client, 
                        const String &topic, 
                        const String &discovery_topic, 
-                       const SlaveData &data, 
+                       const AttinyData &data, 
                        const Settings &sett)
 {
     LOG_INFO(F("MQTT: Publishing discovery topic"));

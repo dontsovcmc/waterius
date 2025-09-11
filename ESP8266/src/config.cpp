@@ -253,7 +253,7 @@ bool load_config(Settings &sett)
 Берем начальные показания и кол-во импульсов,
 вычисляем текущие показания по новому кол-ву импульсов
 */
-void calculate_values(Settings &sett, const SlaveData &data, CalculatedData &cdata)
+void calculate_values(Settings &sett, const AttinyData &data, CalculatedData &cdata)
 {
     LOG_INFO(F("Calculating values..."));
 
@@ -376,7 +376,7 @@ void reset_period_min_tuned(Settings &sett)
 }
 
 /* Обновляем значения в конфиге */
-void update_config(Settings &sett, const SlaveData &data, const CalculatedData &cdata)
+void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata)
 {
     LOG_INFO(F("Updating config..."));
     // Сохраним текущие значения в памяти.
