@@ -1,4 +1,4 @@
-# Ватериус 1.1.12
+# Ватериус 1.1.16
 ## Wi-Fi приставка для импульсных счётчиков воды, газа, тепла
 
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
@@ -13,7 +13,8 @@
 
 ✅ Личный кабинет <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">waterius.ru</a>
 
-- автоматическая <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">сдача показаний счётчиков</a> в 151 «водоканал» России и СНГ (на сентябрь 2024 г.).
+- автоматическая <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github" target="_blank">сдача показаний счётчиков</a> в 157 «водоканал» России и СНГ (на сентябрь 2025 г.).
+- официальный партнер <a href="https://mos.ru" target="_blank">mos.ru</a>
 - отправка на электронную почту
 - отправка по СМС 
 - телеграм бот
@@ -46,6 +47,8 @@
 - ручная настройка веса импульса
 - дискавери для Home Assistant
 - возможно указать свои: веб сервер, MQTT брокер, сервер Blynk, NTP сервер
+- поддержка SprutHub
+- поддержка WirenBoard
 
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github">waterius.ru</a>

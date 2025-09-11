@@ -10,6 +10,11 @@
 /*
 Версии прошивки для ESP
 
+1.1.16  - 2025.09.11 - dontsovcmc
+                      1. Исправили json_attributes_template для HomeAssistant, спасибо Drafteed
+                      2. Обновили версию espressif8266@4.2.1
+                      3. Обновили версии ArduinoJson@7.3.1, PubSubClient@2.8.0, ESP32Async/ESPAsyncWebServer@3.6.0, ESP32Async/ESPAsyncTCP@2.0.0
+
 1.1.13  - 2025.07.31 - dontsovcmc
                       1. Алгоритм пробуждения учитывает возможный не выход на связь.
 
