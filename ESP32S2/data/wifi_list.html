@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Выберите сеть</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
+        <script src="/static/strings.js"></script>
+    </head>
+    <body onload="getWifiList({
+        back: '/index.html',
+        back_wizard: '/captive_portal_start.html',
+        next: '/wifi_password.html',
+        next_wizard: '/wifi_password.html?wizard=true'
+    });">
+        <div class="wrap">
+            <div class="container">
+                <header>
+                    <a onclick="_goto()">
+                        <div class="icon bf">
+                            <img src="/images/icons.png">
+                        </div>
+                        Назад</a>
+                    <div class="icon logo">
+                        <img src="/images/icons.png">
+                    </div>
+                    <div class="fr">шаг 1/6</div>
+                </header>
+                <main>
+                    <h2>Выберите сеть</h2>
+                    <p class="text">Выберите сеть WiFi через которую Ватериус будет отправлять показания счётчиков</p>
+                    <div class="wifi-list">
+                        <div class="lds-ellipsis"><div></div><div></div><div></div><div></div></div>
+                    </div>                    
+                    <button type="button" class="btn-serv mt20 hd" id="show-all">Показать все сети</button>
+                    <div class="clr "></div>
+                    <a type="button" class="btn-serv mt20 hd" id="wifi-name" onclick="_goto(true)">Ввести название вручную</a>
+                </main>
+            </div>
+        </div>
+    </body>
+</html>

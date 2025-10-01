@@ -1,0 +1,8 @@
+.pio
+.pioenvs
+.piolibdeps
+.vscode
+/managed_components
+/arduino_tinyusb
+/build
+/secrets.ini

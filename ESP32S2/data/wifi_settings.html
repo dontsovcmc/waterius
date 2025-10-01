@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Подключение к WiFi</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
+        <script src="/static/strings.js"></script>
+    </head>
+    <body onload="fill_tr_id(%wifi_connect_status%, 'wifi_connect_status');
+    _init({
+        back: '/index.html',
+        back_wizard: '/wifi_list.html?wizard=true',
+        next: '/index.html',
+        next_wizard: '/input/1/setup.html?wizard=true'
+    })">
+        <form onsubmit="formSubmit(event, this, '/api/save_connect');">
+            <div class="wrap">
+                <div class="container f1">
+                    <header>
+                        <a onclick="_goto()">
+                            <div class="icon bf">
+                                <img src="/images/icons.png">
+                            </div>
+                            Назад</a>
+                        <div class="icon logo">
+                            <img src="/images/icons.png">
+                        </div>
+                        <div class="fr">шаг 2/6</div>
+                    </header>
+                    <main>
+                        <h2>Сетевые настройки</h2>
+                        <p class="wifi-error" id="wifi_connect_status"></p>
+                        <p class="form-error"></p>
+                        <div class="f-row">
+                            <label for="ssid">Название сети</label>
+                            <input id="ssid" name="ssid" placeholder="Название" value="%ssid%" required>
+                            <p class="error hd" id="ssid-error">Введите название сети</p>
+                        </div>
+                        <div class="f-row">
+                            <label for="password">Пароль</label>
+                            <input id="password" type="password" name="password" class="has-icon" placeholder="Пароль" value="%password%" autocomplete="on" required>
+                            <div class="icon" onclick="showPW('password')">
+                                <img src="/images/icons.png">
+                            </div>
+                            <p class="error hd" id="password-error">Введите пароль</p>
+                        </div>
+                        <div class="toggle">
+                            <input type="checkbox" name="dhcp_off" id="dhcp_off" onclick="checkboxToggle(this)" data-form=".dhcp-form" %dhcp_off%>
+                            <label for="dhcp_off">Использовать статический ip</label>
+                        </div>
+                        <div class="hd dhcp-form">
+                            <div class="f-row">
+                                <label for="gateway">Адрес шлюза</label>
+                                <input id="gateway" name="gateway" placeholder="000.000.0.0" value="%gateway%">
+                                <p class="error hd" id="gateway-error">Некорректный ip адрес</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="ip">Статический адрес</label>
+                                <input id="ip" name="ip" placeholder="192.168.0.140" value="%ip%">
+                                <p class="error hd" id="ip-error">Некорректный ip адрес</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="mask">Маска подсети</label>
+                                <input id="mask" name="mask" placeholder="255.255.255.0" value="%mask%">
+                                <p class="error hd" id="mask-error">Некорректная маска подсети</p>
+                            </div>
+                        </div>
+
+                        <div class="f-row">
+                            <label for="wifi_phy_mode">Режим Wi-Fi</label>
+                            <select class="slct" id="wifi_phy_mode" name="wifi_phy_mode" option-value="%wifi_phy_mode%">
+                              <option selected="" value="0">Авто</option>
+                              <option selected="" value="1">B</option>
+                              <option value="2">G</option>
+                              <option value="3">N</option>
+                            </select>
+                            <p class="error hd" id="wifi_phy_mode-error">Некорректное значение</p>
+                        </div>
+
+                        <div class="f-row">
+                            <label for="mac_address">MAC адрес Ватериуса</label>
+                            <input id="mac_address" name="mac_address" value="%mac_address%" readonly class="disabled has-icon">
+                            <div class="icon copy" onclick="copyInput('mac_address')">
+                                <img src="/images/icons.png">
+                            </div>
+                        </div>
+
+                        <div class="f-row">
+                            <label for="ntp_server">NTP сервер</label>
+                            <input id="ntp_server" name="ntp_server" placeholder="ru.pool.ntp.org" value="%ntp_server%">
+                            <p class="error hd" id="ntp_server-error">Некорректный адрес</p>
+                        </div>
+                    </main>
+                    <footer class="btns">
+                        <button class="btn" type="submit">Сохранить</button>
+                    </footer>
+                </div>
+            </div>
+        </form>
+    </body>
+</html>
