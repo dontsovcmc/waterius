@@ -52,9 +52,9 @@
     Период отправки данных на сервер, мин.
     Если перезагрузилось устройство.
     ESP пришлёт корректировку.
-    1440 - 10% - 1300 мин. 
+    15 мин.
 */
-#define WAKEUP_PERIOD_DEFAULT 1300L * ONE_MINUTE
+#define WAKEUP_PERIOD_DEFAULT 15L * ONE_MINUTE
 
 
 /*
