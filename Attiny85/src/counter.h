@@ -128,7 +128,7 @@ struct CounterB
         return analogRead(_apin);
     }
 
-    bool electronic(CounterEvent event = CounterEvent::NONE)
+    bool electronic(CounterEvent event)
     {
         state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
         if (state == CounterState::CLOSE)
@@ -151,7 +151,7 @@ struct CounterB
         return false;
     }
 
-    bool hall(CounterEvent event = CounterEvent::NONE)
+    bool hall(CounterEvent event)
     {
         PORTB |= _BV(_power);               // Включить питание
         delayMicroseconds(30);              // Задержка на включение датчика
@@ -214,7 +214,7 @@ struct CounterB
         return false;
     }
 
-    bool discrete(CounterEvent event = CounterEvent::NONE)
+    bool discrete(CounterEvent event)
     {   
         /*
         Вызывается раз в 250мс
@@ -222,13 +222,16 @@ struct CounterB
         Если 11, то начало импульса.
         Если было начало импульса и теперь 11000, то детектируем конец импульса и возвращаем true.
         */
+        if (event == CounterEvent::FRONT) 
+            return false;
+
         PORTB |= _BV(_pin);                 // Включить pull-up
         delayMicroseconds(30);
         if (type == CounterType::NAMUR)
         {
             uint16_t a = aRead();
             state = value2state(a);
-            if (state <= CounterState::NAMUR_CLOSE)
+            if (state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE)
             {
                 adc = a;
             }
@@ -236,24 +239,23 @@ struct CounterB
         else
         {
             state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
-            if ((state == CounterState::CLOSE) && (on_time == 0))
+            if ((state == CounterState::CLOSE) && !on_pulse)
             {
                 adc = aRead();
             }
         }
         PORTB &= ~_BV(_pin);                // Отключить pull-up
         
-
         levels = levels << 1;
         levels |= ((state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE) & 1);
 
         if (on_pulse) {
-            if ((levels & 0x07) == 0x00) {  // 0x0001 1000
+            if ((levels & 0x07) == 0x00) {  // 0x00011000
                 on_pulse = false;
                 return true;
             }
         } else {
-            if ((levels & 0x03) == 0x03) {  // 0x0000 0011
+            if ((levels & 0x03) == 0x03) {  // 0x00000011
                 on_pulse = true;
             }
         }
