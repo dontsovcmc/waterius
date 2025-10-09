@@ -48,7 +48,9 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
     WiFi.disconnect(true);  // Delete SDK wifi config
     LOG_INFO(F("WIFI: disconnect"));
 
+    yield();
     delay(200); // подождем чтобы проинициализировалась сеть
+    yield();
 
     wifi_set_mode(wifi_mode); // Disable AP mode
     if (sett.wifi_phy_mode)
@@ -77,8 +79,9 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
     {
         LOG_ERROR(F("WIFI: set hostname failed"));
     }
-
+    yield();
     delay(100); // подождем чтобы проинициализировалась сеть
+    yield();
 
     if (sett.wifi_channel)
     {
@@ -90,7 +93,8 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
         LOG_INFO(F("WIFI: begin"));
         WiFi.begin(sett.wifi_ssid, sett.wifi_password);
     }
-
+    
+    yield();
     int8_t ret = WiFi.waitForConnectResult(ESP_CONNECT_TIMEOUT); //        ждем результата подключения
     if (ret == -1) 
     {

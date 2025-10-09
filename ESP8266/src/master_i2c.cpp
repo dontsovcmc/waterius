@@ -170,12 +170,18 @@ bool MasterI2C::getSlaveData(AttinyData &data)
         return false;
     }
 
-    if (data.version < 33) 
-    {   
-        uint8_t reserved8;
-        uint16_t reserved16;
+    uint8_t reserved8;
+    uint16_t adc;
+    uint16_t reserved16;
 
-        good &= getByte(data.service, crc);
+    good &= getByte(data.service, crc);
+    LOG_ERROR(F("service: ") << data.service);
+
+    data.model = data.service & 0x0F;       // 
+    data.service = data.service >> 4;       //
+
+    if (data.model == WATERIUS_MODEL_CLASSIC) 
+    {   
         good &= getUint16(reserved16, crc);
         good &= getByte(reserved8, crc);
         good &= getByte(data.setup_started_counter, crc);
@@ -188,17 +194,15 @@ bool MasterI2C::getSlaveData(AttinyData &data)
         good &= getUint32(data.impulses0, crc);
         good &= getUint32(data.impulses1, crc);
 
-        good &= getUint16(data.adc0, crc);
-        good &= getUint16(data.adc1, crc);
+        good &= getUint16(adc, crc);
+        data.adc0 = adc < 0xFF ? adc : 0xFF;
+        good &= getUint16(adc, crc);
+        data.adc1= adc < 0xFF ? adc : 0xFF;
 
         good &= getByte(data.crc, crc);
     }
-    else
-    {  // version 33 - ..
-        good &= getByte(data.service, crc);
-        data.model = data.service >> 4;       // 4 первых бита
-        data.service = data.service & 0x0F;   // 4 вторых бита
-
+    else // if (data.model == WATERIUS_MODEL_MINI)
+    { 
         good &= getUint16(data.voltage, crc);
         good &= getByte(data.setup_started_counter, crc);
 
@@ -210,27 +214,33 @@ bool MasterI2C::getSlaveData(AttinyData &data)
         good &= getUint32(data.impulses0, crc);
         good &= getUint32(data.impulses1, crc);
 
-        good &= getUint16(data.adc0, crc);
-        good &= getUint16(data.adc1, crc);
+        good &= getByte(data.adc0, crc);
+        good &= getByte(data.adc1, crc);
 
+        good &= getByte(data.on_pulse0, crc);
+        data.on_pulse1 = (data.on_pulse0 & 0x01) ? 1 : 0;
+        data.on_pulse0 = (data.on_pulse0 & 0x02) ? 1 : 0;
+
+        good &= getByte(data.reserved, crc);
         good &= getByte(data.crc, crc);
     }
 
-    LOG_INFO(F("v") << data.version  << F(" service:") << data.service
+    LOG_INFO(F("v") << data.version  << F(" model:") << data.model << F(" service:") << data.service
         << F(" setups:") << data.setup_started_counter 
         << F(" resets:") << data.resets  
         << F(" voltage:") << data.voltage  << F(" v_ref:") << data.v_reference);
 
-    LOG_INFO(F(" ctype0:") << data.counter_type0  << F(" imp0:") << data.impulses0 << F(" adc0:") << data.adc0);
-    LOG_INFO(F(" ctype1:") << data.counter_type1  << F(" imp1:") << data.impulses1 << F(" adc1:") << data.adc1);
+    LOG_INFO(F(" ctype0:") << data.counter_type0  << F(" imp0:") << data.impulses0 << F(" adc0:") << data.adc0 << F(" i:") << data.on_pulse0);
+    LOG_INFO(F(" ctype1:") << data.counter_type1  << F(" imp1:") << data.impulses1 << F(" adc1:") << data.adc1 << F(" i:") << data.on_pulse1);
 
     if (crc)  // должна быть равна 0 
     {
         LOG_INFO(F("data.crc:") << data.crc  << F(" crc:") << crc);
-        LOG_ERROR(F("!!! CRC wrong !!!!, go to sleep"));
+        LOG_ERROR(F("!!! CRC wrong !!!!"));
+        data.valid = false;
         return false;
     }
-
+    data.valid = true;
     return true;
 }
 

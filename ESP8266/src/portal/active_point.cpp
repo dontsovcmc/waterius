@@ -569,8 +569,8 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     LOG_INFO(F("HTTP server started"));
 
     // Начинаем сканирование Wi-Fi сетей
-    LOG_INFO(F("Start scan Wi-Fi networks"));
-    WiFi.scanNetworks(true);
+    //LOG_INFO(F("Start scan Wi-Fi networks"));
+    //WiFi.scanNetworks(true);
 
     uint16_t start = millis();
     while (!exit_portal_flag && ((millis() - start) / 1000) < SETUP_TIME_SEC)

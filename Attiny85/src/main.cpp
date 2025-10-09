@@ -171,9 +171,12 @@ struct Header info =
 	}, 
 	{0, 0}, // Data
 	{0, 0}, // ADCLevel
+	0, 0,   // on_pulse
+	0, 0, 
 	0, // crc
 	0  // reserved
 };
+
 
 uint32_t wakeup_period;   // период пробуждения ESP, мин
 
@@ -210,11 +213,11 @@ ISR(PCINT0_vect)
 // Проверяем входы на замыкание.
 // Замыкание засчитывается только при повторной проверке.
 inline void counting(CounterEvent ev)
-{
+{	
 	if (counter0.is_impuls(ev))
 	{
 		info.data.value0++; 				//нужен т.к. при пробуждении запрашиваем данные
-		info.adc.adc0 = counter0.adc;
+		info.adc.adc0 = counter0.adc < 0xFF ? counter0.adc : 0xFF;
 #ifdef LOG_ON
 		LOG(F("Input0:"));
 		LOG(info.data.value0);
@@ -227,17 +230,19 @@ inline void counting(CounterEvent ev)
 			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
 		}
 	}
+	info.on_pulse0 = counter0.on_time > 0;
 #ifndef LOG_ON
 	if (counter1.is_impuls(ev))
 	{
 		info.data.value1++;
-		info.adc.adc1 = counter1.adc;
+		info.adc.adc1 = counter1.adc < 0xFF ? counter1.adc : 0xFF;
 		if (storage_write_limit == 0)
 		{
 			storage.add(info.data);
 			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
 		}
 	}
+	info.on_pulse1 = counter1.on_time > 0;
 #endif
 
 #ifdef COUNTER_DEBUG

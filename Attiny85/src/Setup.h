@@ -99,8 +99,8 @@ struct CounterTypes
 
 struct ADCLevel
 {
-    uint16_t adc0;
-    uint16_t adc1;
+    uint8_t adc0;
+    uint8_t adc1;
 };
 
 struct Config
@@ -122,7 +122,7 @@ struct Header
     /* 
         Модификация Ватериуса 
     */
-    uint8_t model:   4;
+    uint8_t model:   4;  // будет младшим разрядом
 
     /*
     Причина перезагрузки (регистр MCUSR datasheet 8.5.1):
@@ -135,7 +135,7 @@ struct Header
     9  - 1001 - WDRF + PORF
     10 - 1010 - WDRF + EXTRF
     */
-    uint8_t service: 4;
+    uint8_t service: 4;  // будет старшим разрядом
 
     /*
     Напряжение
@@ -150,14 +150,19 @@ struct Header
     /*
     Текущие данные
     */
-    Data data;           // 8 байт
-    ADCLevel adc;        // 4 байта
+    Data data;             // 8 байт
+    ADCLevel adc;          // 4 байта
+    uint8_t on_pulse0: 1;  // 0й бит
+    uint8_t on_pulse1: 1;  // 1й бит
+    uint8_t reserved:  6;  //
+    uint8_t reserved1;
 
     // HEADER_DATA_SIZE
 
     uint8_t crc;
-    uint8_t reserved3;
+    uint8_t reserved2;
 }; // 24 байт
+
 
 #define HEADER_DATA_SIZE 22
 

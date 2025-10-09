@@ -38,13 +38,16 @@ struct AttinyData
     uint32_t impulses0;    // Импульсов, канал 0
     uint32_t impulses1;    //           канал 1
     //
-    uint16_t adc0;         // Уровень,   канал 0
-    uint16_t adc1;         //           канал 1
+    uint8_t adc0;         // Уровень,   канал 0
+    uint8_t adc1;         //           канал 1
 
+    uint8_t on_pulse0;     // 1 bit &0x80 
+    uint8_t on_pulse1;     // 1 bit &0x40
+    uint8_t reserved;      
     // HEADER_DATA_SIZE
 
     uint8_t crc = 0; // Всегда в конце структуры данных
-    uint8_t reserved2 = 0;
+    bool valid = false;
 };  // 24 bytes
 
 uint8_t crc_8(const unsigned char *input_str, size_t num_bytes, uint8_t crc = 0);

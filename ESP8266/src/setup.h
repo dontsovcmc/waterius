@@ -334,6 +334,7 @@
 #define LED_PIN 1
 #endif
 
+
 // attiny85
 #define SETUP_MODE 1
 #define TRANSMIT_MODE 2
@@ -341,6 +342,13 @@
 
 #define WATERIUS_MODEL_CLASSIC 0  // Классический Ватериус
 #define WATERIUS_MODEL_MINI 1     // Ватериус-мини
+
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_MINI
+    #define CH0_LED_PIN 12
+    #define CH1_LED_PIN 13
+    #define LIMIT_NAMUR_CLOSED 100
+#endif
 
 /*
    Вход attiny

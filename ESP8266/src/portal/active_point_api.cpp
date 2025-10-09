@@ -292,6 +292,11 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
         ret[F("error")] = F("7"); // S_NO_LINK Ошибка связи с МК
     }
 
+#if WATERIUS_MODEL == WATERIUS_MODEL_MINI
+    digitalWrite(CH0_LED_PIN, (runtime_data.on_pulse0));
+    digitalWrite(CH1_LED_PIN, (runtime_data.on_pulse1));
+#endif
+
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     serializeJson(json_doc, *response);
     request->send(response);

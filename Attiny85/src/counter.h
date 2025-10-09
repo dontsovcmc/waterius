@@ -66,6 +66,7 @@ enum class CounterEvent
     TIME,
 };
 
+
 struct CounterB
 {
     uint8_t         _pin;       // дискретный вход
@@ -75,7 +76,7 @@ struct CounterB
     uint8_t         on_time;    // время в замкнутом состоянии
     uint8_t         off_time;   // время в разомкнутом состоянии
     uint8_t         levels;     // уровни входа
-    uint8_t         on_pulse;   // 
+    bool            on_pulse;   // 
     bool            active;     // идет потребление через счетчик
 
     uint16_t        adc;        // уровень замкнутого входа
@@ -130,23 +131,27 @@ struct CounterB
 
     bool electronic(CounterEvent event)
     {
+        if (on_time)
+            on_time -= 1;
+
         state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
         if (state == CounterState::CLOSE)
         {
             // Замкнут
-            if (on_time == 0)
+            if (!on_pulse)
             {
                 // Начало импульса
-                on_time = 1;
+                on_time = 10;
                 off_time = 0;
                 adc = aRead();
+                on_pulse = true;
                 return true;
             }
         }
         else
         {
             // Разомкнут
-            on_time = 0;
+            on_pulse = false;
         }
         return false;
     }
@@ -249,16 +254,23 @@ struct CounterB
         levels = levels << 1;
         levels |= ((state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE) & 1);
 
+        if (on_time)
+            on_time -= 1;
+
         if (on_pulse) {
+            if (!on_time)
+                on_time = 1;  // держим пока on_pulse
             if ((levels & 0x07) == 0x00) {  // 0x00011000
                 on_pulse = false;
                 return true;
             }
         } else {
             if ((levels & 0x03) == 0x03) {  // 0x00000011
-                on_pulse = true;
+                on_pulse = true;                
+                on_time = 10;  // 2.5 cек включение светодиода
             }
         }
+
         return false;
     }
 
