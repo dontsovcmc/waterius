@@ -47,6 +47,13 @@ void setup()
     LOG_INFO(F("ChipId: ") << String(getChipId(), HEX));
     LOG_INFO(F("FlashChipId: ") << String(ESP.getFlashChipId(), HEX));
 
+#if WATERIUS_MODEL == WATERIUS_MODEL_MINI
+    pinMode(CH0_LED_PIN, OUTPUT);
+    pinMode(CH1_LED_PIN, OUTPUT);
+    digitalWrite(CH0_LED_PIN, LOW);
+    digitalWrite(CH1_LED_PIN, LOW);
+#endif
+
     get_voltage()->begin();
     voltage_ticker.attach_ms(300, []()
                              { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение

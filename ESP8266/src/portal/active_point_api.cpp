@@ -293,8 +293,8 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
     }
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_MINI
-    digitalWrite(CH0_LED_PIN, (runtime_data.on_pulse0));
-    digitalWrite(CH1_LED_PIN, (runtime_data.on_pulse1));
+    digitalWrite(CH0_LED_PIN, runtime_data.on_pulse0);
+    digitalWrite(CH1_LED_PIN, runtime_data.on_pulse1);
 #endif
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
