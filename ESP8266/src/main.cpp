@@ -30,6 +30,15 @@ Ticker voltage_ticker;
 */
 void setup()
 {
+#if WATERIUS_MODEL == WATERIUS_MODEL_MINI
+            pinMode(CH0_LED_PIN, OUTPUT);
+            pinMode(CH1_LED_PIN, OUTPUT);
+            pinMode(BUTTON_STATE_PIN, INPUT);
+
+            digitalWrite(CH0_LED_PIN, LOW);
+            digitalWrite(CH1_LED_PIN, LOW);
+#endif
+
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Waterius\n========\n"));
     LOG_INFO(F("Build: ") << __DATE__ << F(" ") << __TIME__);
@@ -46,13 +55,6 @@ void setup()
     }
     LOG_INFO(F("ChipId: ") << String(getChipId(), HEX));
     LOG_INFO(F("FlashChipId: ") << String(ESP.getFlashChipId(), HEX));
-
-#if WATERIUS_MODEL == WATERIUS_MODEL_MINI
-    pinMode(CH0_LED_PIN, OUTPUT);
-    pinMode(CH1_LED_PIN, OUTPUT);
-    digitalWrite(CH0_LED_PIN, LOW);
-    digitalWrite(CH1_LED_PIN, LOW);
-#endif
 
     get_voltage()->begin();
     voltage_ticker.attach_ms(300, []()
@@ -71,6 +73,33 @@ void loop()
         config_loaded = load_config(sett);
         sett.mode = mode;
         LOG_INFO(F("Startup mode: ") << mode);
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_MINI
+        if (mode == MANUAL_TRANSMIT_MODE)
+        {
+            pinMode(BUTTON_STATE_PIN, INPUT_PULLUP);
+
+            unsigned long t = 0, st = millis();
+            while (digitalRead(BUTTON_STATE_PIN) == LOW) {
+                yield();
+                t = millis() - st;
+                if (t > 3000) {
+                    digitalWrite(CH0_LED_PIN, (t / 300) % 2);
+                    digitalWrite(CH1_LED_PIN, (t / 300) % 2);
+                }
+            }
+            
+            if (t > 3000)
+            {
+                mode = SETUP_MODE;
+                LOG_INFO(F("Startup mode: ") << mode);
+            }
+
+            digitalWrite(CH0_LED_PIN, LOW);
+            digitalWrite(CH1_LED_PIN, LOW);
+            pinMode(BUTTON_STATE_PIN, INPUT);
+        }
+#endif
 
         // Вычисляем текущие показания
         calculate_values(sett, data, cdata);
@@ -180,17 +209,23 @@ void loop()
         blink_led(3, 1000, 500);
     }
 
+
     LOG_INFO(F("Going to sleep"));
     LOG_END();
 
     uint8_t vendor_id = ESP.getFlashChipVendorId();
 
     masterI2C.setSleep(); // через 20мс attiny отключит EN
-    
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_MINI
+    ESP.deepSleepInstant(1000000, RF_DEFAULT);    
+#endif
+
     // { 0xC4, "Giantec Semiconductor, Inc." }, https://github.com/elitak/freeipmi/blob/master/libfreeipmi/spec/ipmi-jedec-manufacturer-identification-code-spec.c
     if (vendor_id != 0xC4) 
     {
-        ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. (выключили Instant не ждет 92мс)
+        // Спим до следущего включения EN. (выключили Instant не ждет 92мс)
+        ESP.deepSleepInstant(0, RF_DEFAULT); 
     } 
     
     while(true) yield();

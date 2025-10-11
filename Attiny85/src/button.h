@@ -38,79 +38,16 @@ struct ButtonB
         PORTB &= ~_BV(_pin);   // Убедиться что pull-up выключен
     }
 
-    void pull_down()
-    {
-        DDRB |= _BV(_pin);     // Output
-        PORTB &= ~_BV(_pin);   // Записать LOW;
-    }
-
     // Проверка нажатия кнопки
     bool pressed(CounterEvent event)
     {
-        // Пока не обработано прошлое нажатие - кнопку не проверяем
-        if (press != ButtonPressType::NONE)
+        if (bit_is_set(PINB, _pin) == LOW)
         {
+            press = ButtonPressType::SHORT;
             return true;
         }
-
-#if WATERIUS_MODEL == MODEL_CLASSIC 
-        if (bit_is_set(PINB, _pin) == LOW)
-#endif
-#if WATERIUS_MODEL == MODEL_MINI 
-        if (bit_is_set(PINB, _pin))
-#endif
-        {
-            // Кнопка нажата
-            if (on_time == 0)
-            {
-                // Начало нажатия
-                on_time = 1;
-                off_time = 0;
-                LOG(F("PRESS_START"));
-            }
-            else
-            {
-                // Продолжение
-                if (on_time < 200)
-                {
-                    // Увеличиваем счетчик времени в замкнутом состоянии
-                    on_time += event == CounterEvent::TIME ? 10 : 1;
-                }
-                off_time = 0;
-            }
-        }
-        else
-        {
-            // Отпущена
-            if (on_time > 0)
-            {
-                LOG(F("PRESS_OFF"));
-                // Идет обработка нажатия
-                if (off_time < 200)
-                {
-                    // Увеличиваем счетчик времени в разомкнутом состоянии
-                    off_time += event == CounterEvent::TIME ? 10 : 1;
-                }
-            }
-        }
-
-        // Определяем тип нажатия
-        if ((on_time > 0) && (off_time > 20))
-        {
-            if (on_time > LONG_PRESS_MSEC / 25)
-            {
-                LOG(F("PRESS: LONG"));
-                press = ButtonPressType::LONG;
-            }
-            else if (on_time > 10)
-            {
-                LOG(F("PRESS: SHORT"));
-                press = ButtonPressType::SHORT;
-            }
-            on_time = off_time = 0;
-        }
-
-        return press != ButtonPressType::NONE;
+        
+        return false;
     }
 
 };

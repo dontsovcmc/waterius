@@ -151,7 +151,7 @@ TinyDebugSerial mySerial;
 static CounterB counter0(4, 2, 3); 	// Вход 1, Blynk: V0, горячая вода PB4 ADC2
 static CounterB counter1(3, 3); 	// Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
 
-static ButtonB button(2);  // PB2 кнопка (на линии SCL)
+static ButtonB button(1);  // PB2 кнопка (на линии SCL)
 						   // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
 						   // Короткое: ESP передает показания
 static ESPPowerPin esp(1); // Питание на ESP
@@ -407,32 +407,19 @@ void loop()
 	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания
 
-	unsigned long wake_up_limit;   // период бодрствования ESP, мсек
-	if (button.press == ButtonPressType::LONG)
-	{ 
-		LOG(F("SETUP pressed"));
-		slaveI2C.begin(SETUP_MODE);
-		wake_up_limit = SETUP_TIME_MSEC; // 10 мин при настройке
+	esp.power(true);
 
-		info.config.setup_started_counter++;
-		saveConfig();
+	unsigned long wake_up_limit = SETUP_TIME_MSEC;   // период бодрствования ESP, мсек
+	if (button.press == ButtonPressType::SHORT)
+	{
+		LOG(F("Manual transmit wake up"));
+		slaveI2C.begin(MANUAL_TRANSMIT_MODE);
 	}
 	else
 	{
-		if (button.press == ButtonPressType::SHORT)
-		{
-			LOG(F("Manual transmit wake up"));
-			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
-		}
-		else
-		{
-			LOG(F("wake up for transmitting"));
-			slaveI2C.begin(TRANSMIT_MODE);
-		}
-		wake_up_limit = WAIT_ESP_MSEC;
+		LOG(F("wake up for transmitting"));
+		slaveI2C.begin(TRANSMIT_MODE);
 	}
-
-	esp.power(true);
 
 	info.voltage = readVcc(info.config.v_reference); // Пока ESP загружается прочитаем Vcc
 	LOG(F("ESP turn on"));
@@ -460,14 +447,4 @@ void loop()
 	}
 
 	esp.power(false);
-
-#if WATERIUS_MODEL == MODEL_MINI 
-	button.pull_down();
- 
-	sleep_delay_ms = 300;  // ждём разряда конденсатора 100мкф через кнопку и резистор 3.3кОм + 30 ом (пин-gnd)
-	while (sleep_delay_ms--) {
-		counting_1ms(delay_loop_count);
-	}
-#endif
-
 }
