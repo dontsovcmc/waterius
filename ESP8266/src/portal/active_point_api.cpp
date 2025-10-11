@@ -525,18 +525,36 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
         }
         else if (name == FPSTR(PARAM_FACTOR))
         {
-            const uint16_t factor_cold = get_auto_factor(runtime_data.impulses1, data.impulses1, sett.factor1, sett.factor1);
+            uint16_t value = p->value().toInt();
             
-            switch (input) 
+            // Авто или Как у холодной воды
+            if (value == AUTO_IMPULSE_FACTOR || value == AS_COLD_CHANNEL)
+            {   
+                const uint16_t factor_cold = get_auto_factor(runtime_data.impulses1, data.impulses1, sett.factor1, sett.factor1);
+                
+                switch (input) 
+                {
+                    case INPUT0_RED: 
+                        sett.factor0 = get_auto_factor(runtime_data.impulses0, data.impulses0, sett.factor0, factor_cold);
+                        LOG_INFO(FPSTR(PARAM_FACTOR) << p->name() << F("->") << sett.factor0);
+                        break;
+                    case INPUT1_BLUE:
+                        sett.factor1 = factor_cold;
+                        LOG_INFO(FPSTR(PARAM_FACTOR) << p->name() << F("->") << sett.factor1);
+                        break;
+                }
+            }
+            else
             {
-                case INPUT0_RED: 
-                    sett.factor0 = get_auto_factor(runtime_data.impulses0, data.impulses0, sett.factor0, factor_cold);
-                    LOG_INFO(FPSTR(PARAM_FACTOR) << p->name() << F("->") << sett.factor0);
-                    break;
-                case INPUT1_BLUE:
-                    sett.factor1 = factor_cold;
-                    LOG_INFO(FPSTR(PARAM_FACTOR) << p->name() << F("->") << sett.factor1);
-                    break;
+                switch (input) 
+                {
+                    case INPUT0_RED: 
+                        save_param(p, sett.factor0, errorsObj);
+                        break;
+                    case INPUT1_BLUE:
+                        save_param(p, sett.factor1, errorsObj);
+                        break;
+                }
             }
         }
     }
