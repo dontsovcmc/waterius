@@ -10,6 +10,9 @@
  * см. подробнее
  * https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery
  * https://developers.home-assistant.io/docs/core/entity/sensor/
+ * Названия полей
+ * Supported abbreviations in MQTT discovery messages
+ * https://www.home-assistant.io/integrations/mqtt/
  *
  * @param mqtt_topic корневой топик для публикации показаний как правил waterius-XXXXXX
  * @param entity_type тип сенсора sensor, number и т.д.
@@ -59,7 +62,8 @@ String build_entity_discovery(const char *mqtt_topic,
     String unique_id = uniqueId_prefix + "-" + entity_id;
     entity[F("uniq_id")] = unique_id.c_str(); // unique_id
 
-    entity[F("obj_id")] = unique_id.c_str(); // object_id
+    //entity[F("obj_id")] = unique_id.c_str(); // object_id. deprecated since 2026.04
+    entity[F("def_ent_id")] = unique_id.c_str(); // default_entity_id
 
     entity[F("stat_t")] = mqtt_topic; // state_topic
 
