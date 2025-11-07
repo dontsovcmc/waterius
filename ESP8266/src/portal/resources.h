@@ -43,6 +43,7 @@ static const char PARAM_COUNTER0_TYPE[] PROGMEM = "counter0_type";
 static const char PARAM_COUNTER1_TYPE[] PROGMEM = "counter1_type";
 static const char PARAM_COUNTER_IMG[] PROGMEM = "counter_img";
 static const char PARAM_FACTOR[] PROGMEM = "factor";
+static const char PARAM_ASTERICS[] PROGMEM = "********";
 
 
 static const char PARAM_WIZARD[] PROGMEM = "wizard";

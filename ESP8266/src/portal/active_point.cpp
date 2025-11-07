@@ -144,7 +144,8 @@ String processor_main(const String &var, const uint8_t input)
     else if (var == FPSTR(PARAM_MQTT_LOGIN))
         return replace_value(sett.mqtt_login);
     else if (var == FPSTR(PARAM_MQTT_PASSWORD))
-        return replace_value(sett.mqtt_password);
+        return sett.mqtt_password[0] ? FPSTR(PARAM_ASTERICS) : String();
+        
     else if (var == FPSTR(PARAM_MQTT_TOPIC))
         return replace_value(sett.mqtt_topic);
 
@@ -255,7 +256,7 @@ String processor_main(const String &var, const uint8_t input)
     else if (var == FPSTR(PARAM_SSID))
         return replace_value(sett.wifi_ssid);
     else if (var == FPSTR(PARAM_PASSWORD))
-        return replace_value(sett.wifi_password);
+        return sett.wifi_password[0] ? FPSTR(PARAM_ASTERICS) : String();
 
     else if (var == FPSTR(PARAM_WIFI_PHY_MODE))
         return String(sett.wifi_phy_mode);

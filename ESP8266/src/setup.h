@@ -10,6 +10,9 @@
 /*
 Версии прошивки для ESP
 
+1.1.19  - 2025.11.07 - dontsovcmc
+                      1. Пароль от Wi-Fi и MQTT в интерфейс передаётся *******.
+
 1.1.18  - 2025.11.04 - dontsovcmc
                       1. #351 HomeAssistant: убрал object_id, заменил на default_entity_id 
 

@@ -297,6 +297,18 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
     request->send(response);
 };
 
+inline bool is_all_asterisks(const String& s) {
+    if (s.length() == 0) 
+        return false;
+    for (unsigned int i = 0; i < s.length(); ++i) {
+        char c = s[i];
+        if (c != '*' && c != ' ' && c != '\t') 
+            return false;  // только *, пробел, таб
+    }
+    return true;
+}
+
+
 /**
  * @brief Запрос сохранения настроек
  *
@@ -327,6 +339,10 @@ void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject 
     {
         LOG_ERROR(FPSTR(ERROR_EMPTY) << ": " << p->name());
         errorsObj[p->name()] = String(F("17"));  // Значение не может быть пустым
+    }
+    else if (is_all_asterisks(p->value()))
+    {
+        LOG_INFO(F("NOT ") << FPSTR(PARAM_SAVED) << p->name() << F(" **** value"));
     }
     else
     {   
