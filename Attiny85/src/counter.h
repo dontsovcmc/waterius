@@ -9,12 +9,18 @@
 // значения компаратора с pull-up
 //    : замкнут (0 ом) - намур-замкнут (1к5) - намур-разомкнут (5к5) - обрыв линии
 // 0  : ?                ?                     ?                       ?
-// если на входе 3к3
+// 
+// если на входе 3к3 + 300ом на GND
+// 0   - 104
+// 1к5 - 130
+// 2к2 - 154
+// 3к0 - 171
+// 4к5 - 195
 // 3к3:  100-108 - 140-142  - 230 - 1000
-//
+// 
 
 #define LIMIT_CLOSED 115       // < 115 - замыкание
-#define LIMIT_NAMUR_CLOSED 170 // < 170 - намур замкнут
+#define LIMIT_NAMUR_CLOSED 150 // < 150 - намур замкнут
 #define LIMIT_NAMUR_OPEN 800   // < 800 - намур разомкнут
                                // > - обрыв
 
@@ -50,6 +56,8 @@ struct CounterB
 
     uint8_t         on_time;    // время в замкнутом состоянии
     uint8_t         off_time;   // время в разомкнутом состоянии
+    uint8_t         levels;     // уровни входа
+    uint8_t         on_pulse;   // 
     bool            active;     // идет потребление через счетчик
 
     uint16_t        adc;        // уровень замкнутого входа
@@ -189,7 +197,7 @@ struct CounterB
     }
 
     bool discrete(CounterEvent event = CounterEvent::NONE)
-    {
+    {   
         PORTB |= _BV(_pin);                 // Включить pull-up
         delayMicroseconds(30);
         if (type == CounterType::NAMUR)
@@ -210,45 +218,22 @@ struct CounterB
             }
         }
         PORTB &= ~_BV(_pin);                // Отключить pull-up
+        
 
-        if (state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE)
-        {
-            // Замкнут
-            off_time = 0;
-            if (on_time == 0)
-            {
-                // Начало импульса
-                on_time = 1;
+        levels = levels << 1;
+        levels |= ((state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE) & 1);
+
+        if (on_pulse) {
+            if ((levels & 0x07) == 0x00) {  // 0x0001 1000
+                on_pulse = false;
                 return true;
             }
-            else
-            {
-                // Продолжение
-                if (on_time < 200)
-                {
-                    // Увеличиваем счетчик времени в замкнутом состоянии
-                    on_time += event == CounterEvent::TIME ? 10 : 1;
-                } 
+        } else {
+            if ((levels & 0x03) == 0x03) {  // 0x0000 0011
+                on_pulse = true;
             }
         }
-        else
-        {
-            // Разомкнут
-            if (on_time > 0)
-            {
-                // Идет обработка импульса
-                if (off_time < 20)
-                {
-                    // Увеличиваем счетчик времени в разомкнутом состоянии
-                    off_time += event == CounterEvent::TIME ? 10 : 1;
-                }
-                else
-                {
-                    // Ждем 750мс после конца импульса и завершаем его
-                    on_time = 0;
-                }
-            }
-        }
+
         return false;
     }
 

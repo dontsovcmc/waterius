@@ -17,10 +17,15 @@
 TinyDebugSerial mySerial;
 #endif
 
-#define FIRMWARE_VER 32  // Передается в ESP и на сервер в данных.
 
 /*
 Версии прошивок
+
+33 - 2025.09.29 - dontsov
+    1. 250мс замыкание + 750мс размыкание = импульс
+	2. ADC замыкания теперь 150 ~2кОм. Был 170 ~3.5кОм 
+	LOG_ON=6820 bytes
+
 32 - 2023.11.17 - abrant
 	1. Добавлен тип входа "Датчик Холла", он требует питания, которое подается вместо второго канала.
 	2. Реализовано переключение типов входа.
@@ -184,6 +189,12 @@ inline void counting(CounterEvent ev)
 	{
 		info.data.value0++; 				//нужен т.к. при пробуждении запрашиваем данные
 		info.adc.adc0 = counter0.adc;
+#ifdef LOG_ON
+		LOG(F("Input0:"));
+		LOG(info.data.value0);
+		LOG(F("ADC0:"));
+		LOG(info.adc.adc0);
+#endif
 		if (storage_write_limit == 0)
 		{
 			storage.add(info.data);
@@ -260,7 +271,6 @@ void setup()
 	}
 
 	wakeup_period = WAKEUP_PERIOD_DEFAULT;
-
 	LOG_BEGIN(9600);
 	LOG(F("==== START ===="));
 	LOG(F("MCUSR"));
@@ -325,6 +335,8 @@ void loop()
 			WDTCR |= _BV(WDIE);
 			sleep_mode();
 		}
+
+		LOG_BEGIN(9600);
 	}
 
 	storage.add(info.data);
