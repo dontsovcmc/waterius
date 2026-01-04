@@ -3,6 +3,7 @@
 #include "utils.h"
 #include <LittleFS.h>
 #include <ESP8266WiFiScan.h>
+#include <ESP8266mDNS.h>
 
 #define WIFI_SET_MODE_ATTEMPTS 2
 
@@ -148,6 +149,89 @@ bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
                 << F(" mode: ") << wifi_phy_mode_title(WiFi.getPhyMode()));
 
             LOG_INFO(F("WIFI: Time spent ") << millis() - start_time << F(" ms"));
+
+            if (sett.mdns_on)
+            {
+                LOG_INFO(F("WIFI: MDNS: Enabled"));
+                
+                if (MDNS.begin(get_device_name()))
+                {
+                    LOG_INFO(F("WIFI: MDNS: Started"));
+                    
+                    // Небольшая задержка для инициализации MDNS
+                    delay(100);
+                    
+                    // Поиск mDNS сервиса _waterius._tcp.local.
+                    LOG_INFO(F("WIFI: MDNS: Searching for _waterius._tcp.local..."));
+                    
+                    // Обновляем MDNS для обработки запросов
+                    MDNS.update();
+                    
+                    // Выполняем поиск сервиса с таймаутом
+                    int n = 0;
+                    uint32_t search_start = millis();
+                    const uint32_t SEARCH_TIMEOUT = 3000; // 3 секунды на поиск
+                    
+                    while ((millis() - search_start) < SEARCH_TIMEOUT && n == 0)
+                    {
+                        n = MDNS.queryService("waterius", "tcp");
+                        if (n == 0)
+                        {
+                            MDNS.update();
+                            delay(100);
+                            yield();
+                        }
+                    }
+                    
+                    if (n > 0)
+                    {
+                        LOG_INFO(F("WIFI: MDNS: Found ") << n << F(" service(s)"));
+                        
+                        for (int i = 0; i < n; i++)
+                        {
+                            IPAddress ip = MDNS.IP(i);
+                            int port = MDNS.port(i);
+                            String hostname = MDNS.hostname(i);
+                            
+                            LOG_INFO(F("WIFI: MDNS: Service #") << (i + 1) 
+                                << F(" - Hostname: ") << hostname
+                                << F(", IP: ") << ip.toString()
+                                << F(", Port: ") << port);
+                        }
+                        
+                        // Используем первый найденный сервис
+                        IPAddress mdns_ip = MDNS.IP(0);
+                        int mdns_port = MDNS.port(0);
+                        String mdns_hostname = MDNS.hostname(0);
+                        
+                        LOG_INFO(F("WIFI: MDNS: Using service: ") << mdns_hostname 
+                            << F(" at ") << mdns_ip.toString() << F(":") << mdns_port);
+                        
+                        if (!sett.mqtt_on)
+                        {
+                            sett.http_on = true;
+                        }
+                        String http_url_str = String(F("http://")) + mdns_hostname + F(":") + String(mdns_port) + F("/api/waterius");
+                        strncpy0(sett.http_url, http_url_str.c_str(), HOST_LEN);
+                        LOG_INFO(F("WIFI: MDNS: Using service: ") << sett.http_url);
+                        // Здесь можно сохранить найденный IP и порт в настройки или использовать для подключения
+                        // Например: sett.mdns_server_ip = mdns_ip;
+                        // sett.mdns_port = mdns_port;
+                    }
+                    else
+                    {
+                        LOG_INFO(F("WIFI: MDNS: No _waterius._tcp.local services found (timeout)"));
+                    }
+                }
+                else
+                {
+                    LOG_ERROR(F("WIFI: MDNS: Failed to start"));
+                }
+            }
+            else
+            {
+                LOG_INFO(F("WIFI: MDNS: Disabled"));
+            }
             return true;
         }
         sett.wifi_channel = 0;

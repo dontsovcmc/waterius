@@ -9,6 +9,7 @@
 #include "senders/sender_http.h"
 #include "senders/sender_mqtt.h"
 #include "portal/active_point.h"
+#include "remote_config.h"
 #include "voltage.h"
 #include "utils.h"
 #include "porting.h"
@@ -153,6 +154,24 @@ void loop()
                     LOG_INFO(F("MQTT: SKIP"));
                 }
 #endif
+                
+                // В режиме ручного пробуждения (кнопкой) получаем конфигурацию с сервера
+                if (mode == MANUAL_TRANSMIT_MODE)
+                {
+                    LOG_INFO(F("Manual mode: Fetching configuration from server..."));
+                    
+                    // Пытаемся получить конфигурацию с основного сервера waterius
+                    if (is_waterius_site(sett))
+                    {
+                        fetch_and_apply_remote_config(sett.waterius_host, sett.waterius_key, sett, data, masterI2C);
+                    }
+                    // Если основной сервер не настроен, пробуем HTTP сервер
+                    else if (sett.http_on && sett.http_url[0])
+                    {
+                        fetch_and_apply_remote_config(sett.http_url, sett.waterius_key, sett, data, masterI2C);
+                    }
+                }
+                
                 // Все уже отправили,  wifi не нужен - выключаем
                 wifi_shutdown();
 

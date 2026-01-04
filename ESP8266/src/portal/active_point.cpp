@@ -17,7 +17,7 @@
 #include "active_point_api.h"
 #include "active_point.h"
 
-#define SETUP_TIME_SEC 600UL // На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
+// SETUP_TIME_SEC и MANUAL_TRANSMIT_TIME_SEC определены в setup.h
 
 bool exit_portal_flag = false;
 bool start_connect_flag = false;

@@ -9,7 +9,15 @@
 
 /*
 Версии прошивки для ESP
-
+1.1.XX  - 2025.12.21 - Anat0l
+                      1. Поддерка получения автоматической настройки сервера HA на котором присутствует интеграция для работы с устройствами waterius (mDNS/Zeroconf)
+                      2. Добавлена поддержка получения/изменения настроек от сервера HTTP/HTTPS. В текущей реализации сервера отсутствует. 
+                         Реализована в интеграции с HomeAssistant неполностью, только базовые настройки.
+                      3. Исправлено добавление счетчиков тепла в MQTT
+                         https://github.com/dontsovcmc/waterius/issues/356
+                         Не совсем понятно, но может быть ... 
+                         https://github.com/dontsovcmc/waterius/issues/358
+                         
 1.1.19  - 2025.11.07 - dontsovcmc
                       1. Пароль от Wi-Fi и MQTT в интерфейс передаётся *******.
 
@@ -362,6 +370,9 @@
 #define TRANSMIT_MODE 2
 #define MANUAL_TRANSMIT_MODE 3
 
+// Время работы устройства в различных режимах
+#define SETUP_TIME_SEC 600UL // На какое время Attiny включает ESP в режиме настройки (файл Attiny85\src\Setup.h)
+
 // model
 #define WATERIUS_CLASSIC 0
 #define WATERIUS_4C2W 1
@@ -398,6 +409,9 @@ enum CounterName
     HEAT_KWT = 7
 };
 
+// Максимальное значение CounterName (последний элемент enum)
+constexpr uint8_t COUNTER_NAME_MAX = CounterName::HEAT_KWT;
+
 
 // согласно
 enum DataType
@@ -416,6 +430,8 @@ enum DataType
     ELECTRICITY_TOTAL = 11,  // not used here
     HEATING_KWT = 12
 };
+
+
 
 struct CalculatedData
 {
@@ -587,8 +603,9 @@ struct Settings
     uint8_t reserved4 = 0;
     /* Включение DHCP или статических настроек */
     uint8_t dhcp_off = (uint8_t) false;
-
-    uint8_t reserved8 = 0;
+    
+    /* Поиск и использование MDNS серверов в локальной сети при первом подключении к сети */
+    uint8_t mdns_on = (uint8_t) true;
 
     time_t base_time = 0; // Size of time_t: 8
     /*
