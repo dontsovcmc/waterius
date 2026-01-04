@@ -3,6 +3,9 @@
  * @brief Получение конфигурации устройства с удаленного сервера
  * @version 1.0
  * @date 2026-01-01
+ *
+ * @copyright Copyright (c) 2023
+ *
  */
 #ifndef REMOTE_CONFIG_H_
 #define REMOTE_CONFIG_H_
