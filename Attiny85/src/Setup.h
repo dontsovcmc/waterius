@@ -6,6 +6,21 @@
 #define WATERIUS_2C 0 // attiny85 - 2 счетчика импульсов
 
 /*
+    Классический Ватериус
+ */
+#define MODEL_CLASSIC 0
+
+/*
+    Ватериус 2
+*/
+#define MODEL_2       2
+
+/*
+    стандартная константа калибровки вольтметра в attiny
+ */
+#define DEFAULT_AVR_VCC_REFERENCE_MV 1100
+
+/*
     Включение логирования
     3 pin TX -> RX (TTL-USB 3.3 или 5в), 9600 8N1
     При логировании не работает счетчик2 на 3-м пине (Вход 2).
@@ -113,12 +128,14 @@ struct Header
     9  - 1001 - WDRF + PORF
     10 - 1010 - WDRF + EXTRF
     */
-    uint8_t service;
+    uint8_t service: 6;      // биты 0-5: причина перезагрузки
+    uint8_t on_pulse0: 1;    // бит 6: импульс на входе 0
+    uint8_t on_pulse1: 1;    // бит 7: импульс на входе 1
 
     /*
-    ver 24: убрал напряжение
+    Напряжение питания Attiny85 в мВ
     */
-    uint16_t reserved;
+    uint16_t voltage;
 
     /*
     Для совместимости с 0.10.0.

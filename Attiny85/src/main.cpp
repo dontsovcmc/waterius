@@ -141,13 +141,33 @@ TinyDebugSerial mySerial;
 static CounterB counter0(4, 2, 3); 	// Вход 1, Blynk: V0, горячая вода PB4 ADC2
 static CounterB counter1(3, 3); 	// Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
 
-static ButtonB button(2);  // PB2 кнопка (на линии SCL)
-						   // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
-						   // Короткое: ESP передает показания
 static ESPPowerPin esp(1); // Питание на ESP
 
-// Данные
-struct Header info = {FIRMWARE_VER, 0, 0, 0, {0, 0, WATERIUS_2C, {counter0.type, counter1.type}}, {0, 0}, {0, 0}, 0, 0};
+#if WATERIUS_MODEL == MODEL_CLASSIC
+static ButtonB button(2);  // PB2 кнопка (на линии SCL)
+                           // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
+                           // Короткое: ESP передает показания
+#endif
+#if WATERIUS_MODEL == MODEL_2
+static ButtonB2 button(1);  // PB1 кнопка (на линии wakeup)
+                           // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
+                           // Короткое: ESP передает показания
+#endif
+
+// Данные - designated initializers для битовых полей
+struct Header info = {
+    .version = FIRMWARE_VER,
+    .service = 0,
+    .on_pulse0 = 0,
+    .on_pulse1 = 0,
+    .voltage = 0,
+    .reserved2 = 0,
+    .config = {0, 0, WATERIUS_2C, {counter0.type, counter1.type}},
+    .data = {0, 0},
+    .adc = {0, 0},
+    .crc = 0,
+    .reserved3 = 0
+};
 
 uint32_t wakeup_period;
 
@@ -201,6 +221,7 @@ inline void counting(CounterEvent ev)
 			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
 		}
 	}
+	info.on_pulse0 = counter0.on_time > 0;
 #ifndef LOG_ON
 	if (counter1.is_impuls(ev))
 	{
@@ -212,6 +233,7 @@ inline void counting(CounterEvent ev)
 			storage_write_limit = 60*4;		// пишем в память не чаще раза в минуту
 		}
 	}
+	info.on_pulse1 = counter1.on_time > 0;
 #endif
 
 #ifdef COUNTER_DEBUG
@@ -231,7 +253,12 @@ void saveConfig()
 {
 	// записываем 2 раза чтобы полностью переписать хранилище
 	config.add(info.config);
-	config.add(info.config);	
+	config.add(info.config);
+}
+
+void extendWakeUpPeriod()
+{
+	esp.extend_wake_up();
 }
 
 //Запрос периода при инициализции. Также период может изменится после настройки.
@@ -377,7 +404,9 @@ void loop()
 	}
 
 	// Нажатие кнопки обработали и удаляем
-	button.press = ButtonPressType::NONE;
+	button.reset();
+
+	info.voltage = readVcc(); // Прочитаем Vcc до включения ESP
 
 	esp.power(true);
 	LOG(F("ESP turn on"));

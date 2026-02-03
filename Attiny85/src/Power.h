@@ -27,6 +27,12 @@ struct ESPPowerPin
 
     //Прошло ли больше msec времени с момента wake_up_timestamp
     bool elapsed(const unsigned long msec);
+
+    // Продлить время включения
+    void extend_wake_up();
 };
+
+// Измеряем напряжение питания Attiny85
+uint16_t readVcc();
 
 #endif

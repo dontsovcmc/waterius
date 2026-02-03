@@ -34,9 +34,9 @@ struct AttinyData
 {
     // Header
     uint8_t version;    // Версия ПО Attiny
-    uint8_t service;    // Причина загрузки Attiny
-    uint16_t reserved4; // Напряжение питания в мВ (после включения wi-fi под нагрузкой )
-    uint8_t reserved;
+    uint8_t service;    // Причина загрузки Attiny (биты 0-5), биты 6-7 = on_pulse флаги
+    uint16_t voltage;   // Напряжение питания в мВ
+    uint8_t reserved;   // Для совместимости
     uint8_t setup_started_counter;
     uint8_t resets;
     uint8_t model;         // WATERIUS_CLASSIC или  WATERIUS_4C2W
@@ -80,11 +80,10 @@ public:
     bool getMode(uint8_t &mode);
     bool getAttinyData(AttinyData &data);
     bool setWakeUpPeriod(uint16_t per);
-    bool updateVoltage();
-    bool setReferenceVoltage(uint16_t voltage);
     bool setCountersType(const uint8_t type0, const uint8_t type1);
     bool setTransmitMode();
     bool setSleep();
+    bool extendWakeUp();
 };
 
 #endif

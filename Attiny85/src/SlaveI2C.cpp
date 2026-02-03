@@ -8,6 +8,7 @@
 extern struct Header info;
 extern void saveConfig();
 extern uint32_t wakeup_period;
+extern void extendWakeUpPeriod();
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -72,6 +73,9 @@ void SlaveI2C::receiveEvent(int howMany)
     case 'S': // ESP присылает новое значение периода пробуждения
         getWakeUpPeriod();
         break;
+    case 'E': // ESP продлевает время бодрствования
+        extendWakeUp();
+        break;
     case 'C': // ESP присылает новую конфигурацию
         getCounterTypes();
         break;
@@ -114,4 +118,9 @@ void SlaveI2C::getCounterTypes()
 bool SlaveI2C::masterGoingToSleep()
 {
     return masterSentSleep;
+}
+
+void SlaveI2C::extendWakeUp()
+{
+    extendWakeUpPeriod();
 }

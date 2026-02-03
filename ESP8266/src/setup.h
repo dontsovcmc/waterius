@@ -591,11 +591,17 @@ struct Settings
     uint8_t reserved8 = 0;
 
     time_t base_time = 0; // Size of time_t: 8
+
+    /*
+    Поправочный коэффициент для voltage Attiny в процентах (100 = без коррекции)
+    */
+    uint16_t voltage_calibration = 100;
+
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved9[76] = {0};
+    uint8_t reserved9[74] = {0};
 
 }; // 960 байт
 
