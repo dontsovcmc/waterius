@@ -378,13 +378,12 @@ void loop()
 	// иначе ESP запустится в режиме программирования (кнопка на i2c и 2 пине ESP)
 	// Если кнопка не нажата или нажата коротко - передаем показания
 
-	unsigned long wake_up_limit;
+	unsigned long wake_up_limit = SETUP_TIME_MSEC;  // 10 мин при настройке
+
 	if (button.press == ButtonPressType::LONG)
 	{ 
 		LOG(F("SETUP pressed"));
 		slaveI2C.begin(SETUP_MODE);
-		wake_up_limit = SETUP_TIME_MSEC; // 10 мин при настройке
-
 		info.config.setup_started_counter++;
 		saveConfig();
 	}
@@ -397,10 +396,10 @@ void loop()
 		}
 		else
 		{
+			wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
 			LOG(F("wake up for transmitting"));
 			slaveI2C.begin(TRANSMIT_MODE);
 		}
-		wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
 	}
 
 	// Нажатие кнопки обработали и удаляем

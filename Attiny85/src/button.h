@@ -36,11 +36,6 @@ struct ButtonB
         press = ButtonPressType::NONE;
     }
 
-    inline bool digBit()
-    {
-        return bit_is_set(PINB, _pin);
-    }
-
     // Проверка нажатия кнопки
     bool pressed(CounterEvent event)
     {

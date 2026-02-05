@@ -17,6 +17,7 @@
 #include "sync_time.h"
 #include "wifi_helpers.h"
 #include "config.h"
+#include "wleds.h"
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 AttinyData data;       // Данные от Attiny85
@@ -30,6 +31,8 @@ Ticker voltage_ticker;
 */
 void setup()
 {
+    setup_leds();
+
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Waterius\n========\n"));
     LOG_INFO(F("Build: ") << __DATE__ << F(" ") << __TIME__);
@@ -57,9 +60,16 @@ void loop()
     uint8_t mode = TRANSMIT_MODE; // TRANSMIT_MODE;
     bool config_loaded = false;
 
-    // спрашиваем у Attiny85 повод пробуждения и данные true) 
+    // спрашиваем у Attiny85 повод пробуждения и данные true)
     if (masterI2C.getMode(mode) && masterI2C.getAttinyData(data))
     {
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+        if (mode == MANUAL_TRANSMIT_MODE)
+        {
+            mode = wait_button_release();
+        }
+#endif
         // Загружаем конфигурацию из EEPROM
         config_loaded = load_config(sett);
         sett.mode = mode;
@@ -130,6 +140,7 @@ void loop()
                 if (send_waterius(sett, json_data))
                 {
                     LOG_INFO(F("HTTP: Send OK"));
+                    blynk_error(ErrorBlynks::ERROR_OK);
                 }
 #endif
 
@@ -137,6 +148,7 @@ void loop()
                 if (send_http(sett, json_data))
                 {
                     LOG_INFO(F("HTTP: Send OK"));
+                    blynk_error(ErrorBlynks::ERROR_OK);
                 }
 #endif
 
@@ -146,6 +158,7 @@ void loop()
                     if (send_mqtt(sett, data, cdata, json_data))
                     {
                         LOG_INFO(F("MQTT: Send OK"));
+                        blynk_error(ErrorBlynks::ERROR_OK);
                     }
                 }
                 else
@@ -169,8 +182,7 @@ void loop()
     
     if (!config_loaded)
     {
-        delay(500);
-        blink_led(3, 1000, 500);
+        blynk_error(ErrorBlynks::ERROR_CONFIG);
     }
 
     LOG_INFO(F("Going to sleep"));
@@ -180,11 +192,19 @@ void loop()
 
     masterI2C.setSleep(); // через 20мс attiny отключит EN
 
+    release_leds();
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
     // { 0xC4, "Giantec Semiconductor, Inc." }, https://github.com/elitak/freeipmi/blob/master/libfreeipmi/spec/ipmi-jedec-manufacturer-identification-code-spec.c
-    if (vendor_id != 0xC4) 
+    if (vendor_id != 0xC4)
     {
-        ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. (выключили Instant не ждет 92мс)
+        // Спим до следущего включения EN. (выключили Instant не ждет 92мс)
+        ESP.deepSleepInstant(0, RF_DEFAULT);
     } 
-    
+#endif
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+    ESP.deepSleepInstant(1000000, RF_DEFAULT);
+#endif
+
     while(true) yield();
 }

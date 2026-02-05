@@ -353,18 +353,31 @@
 #define DEFAULT_MASK "255.255.255.0"
 #define DEFAULT_NTP_SERVER "ru.pool.ntp.org"
 
-#ifndef LED_PIN
-#define LED_PIN 1
-#endif
+
+// model
+#define WATERIUS_MODEL_1 0
+#define WATERIUS_MODEL_2 2
+
 
 // attiny85
 #define SETUP_MODE 1
 #define TRANSMIT_MODE 2
 #define MANUAL_TRANSMIT_MODE 3
 
-// model
-#define WATERIUS_CLASSIC 0
-#define WATERIUS_4C2W 1
+// waterius-2
+#define CH0_LED_PIN 12
+#define CH1_LED_PIN 13
+#define BUTTON_STATE_PIN 14
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
+#define GREEN_LED_PIN 1
+#define ERROR_RED_LED_PIN 1
+#endif
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+#define GREEN_LED_PIN 19
+#define ERROR_RED_LED_PIN CH0_LED_PIN 
+#endif
+
 
 /*
    Вход attiny
