@@ -404,10 +404,10 @@ void loop()
 
 	// Нажатие кнопки обработали и удаляем
 	button.reset();
-
-	info.voltage = readVcc(); // Прочитаем Vcc до включения ESP
+	info.voltage = readVcc(); // Прочитаем Vcc после включения ESP
 
 	esp.power(true);
+
 	LOG(F("ESP turn on"));
 
 	uint8_t delay_loop_count = 0;		

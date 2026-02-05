@@ -9,7 +9,6 @@
  */
 #ifndef SENDERHTTP_h_
 #define SENDERHTTP_h_
-#ifndef HTTPS_DISABLED
 #include <ESP8266WiFi.h>
 #include "setup.h"
 #include "master_i2c.h"
@@ -59,5 +58,4 @@ bool send_http(const Settings &sett, JsonDocument &jsonData)
     return result;
 }
 
-#endif
 #endif

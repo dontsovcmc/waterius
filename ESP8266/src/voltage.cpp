@@ -1,14 +1,15 @@
 #include "voltage.h"
 #include "Logging.h"
+#include "master_i2c.h"
+
+extern MasterI2C masterI2C;
+extern AttinyData runtime_data;
 
 void Voltage::begin()
 {
-    _voltage = (uint32_t)ESP.getVcc() * 1000 / 1024;  // system_get_vdd33
     _min_voltage = _voltage;
     _max_voltage = _voltage;
     _num_probes = 0;
-    _probes[_num_probes % MAX_PROBES] = _voltage;
-    _num_probes++;
 }
 
 /**
@@ -17,7 +18,21 @@ void Voltage::begin()
  */
 void Voltage::update()
 {
-    _voltage = (uint32_t)ESP.getVcc() * 1000 / 1024;
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
+    _voltage = (uint32_t)ESP.getVcc() * 1000 / 1024;  // system_get_vdd33
+#endif
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+    masterI2C.updateVoltage();
+    delay(5);
+    if (!masterI2C.getAttinyData(runtime_data)) {
+        return;
+    }
+
+    _voltage = runtime_data.voltage;
+#endif
+    if (_min_voltage == 0) {
+        _min_voltage = _voltage;
+    }
     _min_voltage = _min(_voltage, _min_voltage);
     _max_voltage = _max(_voltage, _max_voltage);
     _probes[_num_probes % MAX_PROBES] = _voltage;
@@ -122,10 +137,4 @@ uint16_t Voltage::average()
     LOG_INFO(F("VOLTAGE: Average (mV):") << avrg);
 #endif
     return avrg;
-}
-
-Voltage *get_voltage()
-{
-    static Voltage voltage;
-    return &voltage;
 }

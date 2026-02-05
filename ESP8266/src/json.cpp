@@ -10,10 +10,10 @@
 #include "sync_time.h"
 #include "wifi_helpers.h"
 
+extern Voltage voltage;
 
 void get_json_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data)
 {
-    Voltage *voltage = get_voltage();
     JsonObject root = json_data.to<JsonObject>();
     // Сведения по каналам
     root[F("delta0")] = cdata.delta0;
@@ -38,10 +38,10 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("data_type1")] = (uint8_t)data_type_by_name(sett.counter1_name);
 
     // Battery & Voltage
-    root[F("voltage")] = voltage->average() / 1000.0;
-    root[F("voltage_low")] = voltage->low_voltage();
-    root[F("voltage_diff")] = (float)voltage->diff() / 1000.0;
-    root[F("battery")] = voltage->get_battery_level();
+    root[F("voltage")] = voltage.average() / 1000.0;
+    root[F("voltage_low")] = voltage.low_voltage();
+    root[F("voltage_diff")] = (float)voltage.diff() / 1000.0;
+    root[F("battery")] = voltage.get_battery_level();
 
     // Wifi и сеть
     root[F("channel")] = WiFi.channel();

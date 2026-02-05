@@ -263,6 +263,12 @@ bool MasterI2C::extendWakeUp()
     return sendCmd('E');
 }
 
+bool MasterI2C::updateVoltage()
+{
+    BusyGuard guard(i2c_busy);
+    return sendCmd('V');
+}
+
 bool MasterI2C::setTransmitMode()
 {
     BusyGuard guard(i2c_busy);

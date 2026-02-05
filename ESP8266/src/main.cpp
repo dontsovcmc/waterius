@@ -13,7 +13,6 @@
 #include "utils.h"
 #include "porting.h"
 #include "json.h"
-#include "Ticker.h"
 #include "sync_time.h"
 #include "wifi_helpers.h"
 #include "config.h"
@@ -24,7 +23,7 @@ AttinyData data;       // Данные от Attiny85
 Settings sett;        // Настройки соединения и предыдущие показания из EEPROM
 CalculatedData cdata; // вычисляемые данные
 ADC_MODE(ADC_VCC);
-Ticker voltage_ticker;
+Voltage voltage;
 
 /*
 Выполняется однократно при включении
@@ -50,9 +49,7 @@ void setup()
     LOG_INFO(F("ChipId: ") << String(getChipId(), HEX));
     LOG_INFO(F("FlashChipId: ") << String(ESP.getFlashChipId(), HEX));
 
-    get_voltage()->begin();
-    voltage_ticker.attach_ms(300, []()
-                             { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
+    voltage.begin();
 }
 
 void loop()
@@ -63,7 +60,7 @@ void loop()
     // спрашиваем у Attiny85 повод пробуждения и данные true)
     if (masterI2C.getMode(mode) && masterI2C.getAttinyData(data))
     {
-
+        voltage.update();
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
         if (mode == MANUAL_TRANSMIT_MODE)
         {
@@ -109,17 +106,17 @@ void loop()
         {
             if (wifi_connect(sett))
             {
+                voltage.update();
                 log_system_info();
 
                 JsonDocument json_data;
 
-#ifndef MQTT_DISABLED
                 // Подключаемся и подписываемся на мктт
                 if (is_mqtt(sett))
                 {
                     connect_and_subscribe_mqtt(sett, data, cdata, json_data);
                 }
-#endif
+                
                 // устанавливать время только при использовани хттпс или мктт
                 if (is_mqtt(sett) || is_https(sett.waterius_host) || is_https(sett.http_url))
                 {
@@ -128,7 +125,6 @@ void loop()
                     }
                 }
 
-                voltage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 
                 // Формироуем JSON
@@ -144,15 +140,12 @@ void loop()
                 }
 #endif
 
-#ifndef HTTPS_DISABLED
                 if (send_http(sett, json_data))
                 {
                     LOG_INFO(F("HTTP: Send OK"));
                     blynk_error(ErrorBlynks::ERROR_OK);
                 }
-#endif
 
-#ifndef MQTT_DISABLED
                 if (is_mqtt(sett))
                 {
                     if (send_mqtt(sett, data, cdata, json_data))
@@ -165,7 +158,7 @@ void loop()
                 {
                     LOG_INFO(F("MQTT: SKIP"));
                 }
-#endif
+
                 // Все уже отправили,  wifi не нужен - выключаем
                 wifi_shutdown();
 

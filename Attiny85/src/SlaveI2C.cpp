@@ -3,6 +3,7 @@
 #include "SlaveI2C.h"
 #include <Arduino.h>
 #include "Storage.h"
+#include "Power.h"
 #include <Wire.h>
 
 extern struct Header info;
@@ -78,6 +79,9 @@ void SlaveI2C::receiveEvent(int howMany)
         break;
     case 'C': // ESP присылает новую конфигурацию
         getCounterTypes();
+        break;
+    case 'V': // обновить напряжение
+        info.voltage = readVcc();
         break;
     }
 }

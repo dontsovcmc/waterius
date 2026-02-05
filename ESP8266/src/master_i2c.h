@@ -93,6 +93,7 @@ public:
     bool setTransmitMode();
     bool setSleep();
     bool extendWakeUp();
+    bool updateVoltage();
 };
 
 #endif

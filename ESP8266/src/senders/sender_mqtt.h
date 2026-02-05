@@ -10,8 +10,6 @@
 #ifndef SENDERMQTT_H_
 #define SENDERMQTT_H_
 
-#ifndef MQTT_DISABLED
-
 #ifdef MQTT_SOCKET_TIMEOUT
 #undef MQTT_SOCKET_TIMEOUT
 #endif
@@ -121,5 +119,4 @@ bool send_mqtt(Settings &sett, const AttinyData &data, const CalculatedData &cda
     return true;
 }
 
-#endif
 #endif
