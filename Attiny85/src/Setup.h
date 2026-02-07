@@ -3,17 +3,15 @@
 
 #include <Arduino.h>
 
-#define WATERIUS_2C 0 // attiny85 - 2 счетчика импульсов
-
 /*
     Классический Ватериус
  */
-#define MODEL_CLASSIC 0
+#define WATERIUS_MODEL_1 0
 
 /*
     Ватериус 2
 */
-#define MODEL_2       2
+#define WATERIUS_MODEL_2 2
 
 /*
     стандартная константа калибровки вольтметра в attiny

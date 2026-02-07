@@ -13,7 +13,7 @@ enum class ButtonPressType
 };
 
 
-#if WATERIUS_MODEL == MODEL_CLASSIC
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
 
 struct ButtonB
 {
@@ -98,7 +98,7 @@ struct ButtonB
 };
 #endif
 
-#if WATERIUS_MODEL == MODEL_2
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
 
 struct ButtonB2
 {

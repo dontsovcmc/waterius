@@ -6,7 +6,7 @@
 #include <avr/power.h>
 #include "Power.h"
 
-#if WATERIUS_MODEL == MODEL_CLASSIC 
+#if WATERIUS_MODEL == WATERIUS_MODEL_1 
     // Значения компаратора с pull-up резистором ~30кОм.
     // На входе последовательно 3к3 + 300ом на GND.
     // 0   - 104 - замыкание
@@ -20,7 +20,7 @@
     #define LIMIT_NAMUR_OPEN 800   // < 800 - намур разомкнут
                                    // > - обрыв
 #endif
-#if WATERIUS_MODEL == MODEL_2 
+#if WATERIUS_MODEL == WATERIUS_MODEL_2 
     // Значения компаратора с pull-up резистором ~30кОм.
     // : замкнут (0 ом) - намур-замкнут (1к5) - намур-разомкнут (5к5) - обрыв линии
     // на входе 1кОм, подтяжка значит 33кОм

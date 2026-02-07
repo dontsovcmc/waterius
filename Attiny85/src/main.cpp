@@ -143,12 +143,12 @@ static CounterB counter1(3, 3); 	// Вход 2, Blynk: V1, холодная во
 
 static ESPPowerPin esp(1); // Питание на ESP
 
-#if WATERIUS_MODEL == MODEL_CLASSIC
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
 static ButtonB button(2);  // PB2 кнопка (на линии SCL)
                            // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
                            // Короткое: ESP передает показания
 #endif
-#if WATERIUS_MODEL == MODEL_2
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
 static ButtonB2 button(1);  // PB1 кнопка (на линии wakeup)
                            // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
                            // Короткое: ESP передает показания
@@ -162,7 +162,7 @@ struct Header info = {
     .on_pulse1 = 0,
     .voltage = 0,
     .reserved2 = 0,
-    .config = {0, 0, WATERIUS_2C, {counter0.type, counter1.type}},
+    .config = {0, 0, WATERIUS_MODEL_1, {counter0.type, counter1.type}},
     .data = {0, 0},
     .adc = {0, 0},
     .crc = 0,

@@ -18,7 +18,7 @@ void ESPPowerPin::power(const bool on)
     {
         pinMode(power_pin, OUTPUT);
 
-#if WATERIUS_MODEL == MODEL_CLASSIC
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
         digitalWrite(power_pin, HIGH);
 #else
         digitalWrite(power_pin, LOW);
@@ -28,7 +28,7 @@ void ESPPowerPin::power(const bool on)
     else
     {
 
-#if WATERIUS_MODEL == MODEL_CLASSIC
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
         digitalWrite(power_pin, LOW);
 #else
         digitalWrite(power_pin, HIGH);
