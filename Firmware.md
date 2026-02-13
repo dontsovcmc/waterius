@@ -93,10 +93,12 @@ upload_flags =
 ### Прошивка attiny85 с помощью Avrdude & Usbasp
 1. Скачивем Avrdude: http://download.savannah.gnu.org/releases/avrdude/avrdude-6.2-mingw32.zip
 
-Для пользователей windows 11 установка выглядит так: Открываем командную строку или powershell и вводим команду:
+Для пользователей windows 11 установка выглядит так: 
+Открываем командную строку или powershell и вводим команду:
 winget install  AVRDudes.AVRDUDE
 
 нажимаем enter
+
 2. Распаковываем архив, заходим в папку. Открываем консоль: shift+правкая кнопка мыши - Открыть окно команд
 3. Скачивем прошивку attiny85:
 `curl https://raw.githubusercontent.com/dontsovcmc/waterius_firmware/master/0.5/attiny85.hex --output ./attiny85.hex`
