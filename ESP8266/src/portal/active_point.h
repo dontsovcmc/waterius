@@ -14,8 +14,6 @@ class Settings;
 class AttinyData;
 class CalculatedData;
 
-// SETUP_TIME_SEC определена в setup.h
-
 void start_active_point(Settings &sett, CalculatedData &cdata);
 
 String processor_main(const String &var, const uint8_t input = 0xFF);

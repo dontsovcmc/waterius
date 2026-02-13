@@ -17,7 +17,7 @@
 #include "active_point_api.h"
 #include "active_point.h"
 
-// SETUP_TIME_SEC и MANUAL_TRANSMIT_TIME_SEC определены в setup.h
+#define SETUP_TIME_SEC 600UL // На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
 
 bool exit_portal_flag = false;
 bool start_connect_flag = false;
@@ -238,9 +238,6 @@ String processor_main(const String &var, const uint8_t input)
 
     else if (var == FPSTR(PARAM_WAKEUP_PER_MIN))
         return String(sett.wakeup_per_min);
-    
-    else if (var == FPSTR(PARAM_WAKE_ON_CONSUMPTION_ONLY))
-        return template_bool(sett.wake_on_consumption_only);
     
     else if (var == FPSTR(PARAM_PLACE))
         return String(sett.place);

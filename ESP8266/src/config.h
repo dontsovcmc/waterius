@@ -17,8 +17,7 @@ extern bool load_config(Settings &sett);
 extern bool init_config(Settings &sett);
 
 /* Корректируем период пробуждения только для автоматического режима */
-uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const time_t &last_send,
-    const uint16_t &wakeup_per_min, const uint16_t &period_min_tuned);
+uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const uint16_t &wakeup_per_min);
 
 /* Сбрасываем скорректированный период после изменения периода пользователем */
 extern void reset_period_min_tuned(Settings &sett);

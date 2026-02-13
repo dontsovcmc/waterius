@@ -18,7 +18,6 @@ static const char PARAM_GATEWAY[] PROGMEM = "gateway";
 static const char PARAM_MASK[] PROGMEM = "mask";
 static const char PARAM_MAC_ADDRESS[] PROGMEM = "mac_address";
 static const char PARAM_WAKEUP_PER_MIN[] PROGMEM = "wakeup_per_min";
-static const char PARAM_WAKE_ON_CONSUMPTION_ONLY[] PROGMEM = "wake_on_consumption_only";
 static const char PARAM_COMPANY[] PROGMEM = "company";
 static const char PARAM_PLACE[] PROGMEM = "place";
 static const char PARAM_MQTT_AUTO_DISCOVERY[] PROGMEM = "mqtt_auto_discovery";

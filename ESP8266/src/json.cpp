@@ -81,15 +81,6 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("setup_started")] = data.setup_started_counter;
     root[F("ntp_errors")] = sett.ntp_error_counter;
 
-    // Дополнительные настройки
-    root[F("config_restart_pending")] = sett.config_restart_pending;
-    root[F("dhcp_off")] = sett.dhcp_off;
-    root[F("mdns_on")] = sett.mdns_on;
-    root[F("base_time")] = (unsigned long)sett.base_time;
-    root[F("last_ntp_sync")] = (unsigned long)sett.last_ntp_sync;
-    root[F("wake_on_consumption_only")] = sett.wake_on_consumption_only;
-    root[F("wakeups_without_send")] = sett.wakeups_without_send;
-
     // waterius
     root[F("key")] = sett.waterius_key;
     root[F("email")] = sett.waterius_email;

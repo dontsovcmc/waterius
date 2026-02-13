@@ -4,8 +4,3 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 /secrets.ini
-
-# Local development files
-/test_server/
-/filter_libs.py
-/PR_DESCRIPTION.md

@@ -691,10 +691,6 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
             save_param(p, sett.wakeup_per_min, errorsObj);
             reset_period_min_tuned(sett);
         }
-        else if (name == FPSTR(PARAM_WAKE_ON_CONSUMPTION_ONLY))
-        {
-            save_bool_param(p, sett.wake_on_consumption_only, errorsObj);
-        }
         else if (name == FPSTR(PARAM_NTP_SERVER))
         {
             save_param(p, sett.ntp_server, HOST_LEN, errorsObj);

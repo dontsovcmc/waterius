@@ -179,8 +179,6 @@ bool load_config(Settings &sett)
             sett.ntp_server[HOST_LEN - 1] = 0;
 
             LOG_INFO(F("wakeup min=") << sett.wakeup_per_min);
-            LOG_INFO(F("wake_on_consumption_only=") << sett.wake_on_consumption_only);
-            LOG_INFO(F("wakeups_without_send=") << sett.wakeups_without_send);
 
             LOG_INFO(F("--- Waterius.ru ---- "));
             if (sett.waterius_on) {
@@ -231,7 +229,6 @@ bool load_config(Settings &sett)
 
             LOG_INFO(F("ntp_server=") << sett.ntp_server);
             LOG_INFO(F("ntp_error_counter=") << sett.ntp_error_counter);
-            LOG_INFO(F("last_ntp_sync=") << sett.last_ntp_sync);
 
             LOG_INFO(F("--- WIFI ---- "));
             LOG_INFO(F("wifi_ssid=") << sett.wifi_ssid);
