@@ -63,7 +63,9 @@ String build_entity_discovery(const char *mqtt_topic,
     entity[F("uniq_id")] = unique_id.c_str(); // unique_id
 
     //entity[F("obj_id")] = unique_id.c_str(); // object_id. deprecated since 2026.04
-    entity[F("def_ent_id")] = unique_id.c_str(); // default_entity_id
+    // def_ent_id формат: entity_type.unique_id → "sensor.waterius-ABC123-voltage"
+    String default_entity_id = String(entity_type) + "." + unique_id;
+    entity[F("def_ent_id")] = default_entity_id.c_str(); // default_entity_id
 
     entity[F("stat_t")] = mqtt_topic; // state_topic
 
