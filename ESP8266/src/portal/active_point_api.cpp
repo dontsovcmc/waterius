@@ -584,7 +584,8 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
 
     LOG_INFO(F("Apply ") << params << " parameters");
 
-    // Вначале bool, чтобы дальше проверять только требуемые параметры
+    // Вначале настройки передачи по протоколам, 
+    // чтобы дальше проверять только требуемые параметры
     for (int i = 0; i < params; i++)
     {
         const AsyncWebParameter *p = request->getParam(i);
@@ -659,6 +660,10 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
             else if (name == FPSTR(PARAM_MQTT_TOPIC))
             {
                 save_param(p, sett.mqtt_topic, MQTT_TOPIC_LEN, errorsObj, false);
+            }
+            else if (name == FPSTR(PARAM_MQTT_RETAIN))
+            {
+                save_bool_param(p, sett.mqtt_retain, errorsObj);
             }
 
             if (sett.mqtt_auto_discovery)

@@ -1,4 +1,4 @@
-# Ватериус 1.1.16
+# Ватериус 1.1.20
 ## Wi-Fi приставка для импульсных счётчиков воды, газа, тепла
 
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
@@ -45,7 +45,7 @@
 - не нужно знать, какого типа выход счётчика воды: "сухой контакт" или "НАМУР"
 - настраиваемый период отправки
 - ручная настройка веса импульса
-- дискавери для Home Assistant
+- дискавери для Home Assistant (есть и интеграция в HAOS)
 - возможно указать свои: веб сервер, MQTT брокер, сервер Blynk, NTP сервер
 - поддержка SprutHub
 - поддержка WirenBoard
@@ -53,7 +53,7 @@
 #### Данные с Ватериуса можно увидеть:
 * на сайте <a href="https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github">waterius.ru</a>
 * в Приложении <a href="https://yandex.ru/alice/smart-home">Умный дом с Алисой от Яндекса</a>
-* в HomeAssistant [инструкция с пояснениями](Home_Assistant_setup.md), [конфигурация](https://github.com/dontsovcmc/waterius/blob/master/homeassistant.configuration.yaml), [обсуждение](https://github.com/dontsovcmc/waterius/issues/86)
+* в HomeAssistant [инструкция с пояснениями](Home_Assistant_setup.md), [конфигурация](https://github.com/dontsovcmc/waterius/blob/master/homeassistant.configuration.yaml), [обсуждение](https://github.com/dontsovcmc/waterius/issues/86) или [интеграция](https://github.com/Anat0l/waterius-ha)
 * в Domoticz [инструкция](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
 * в SprutHub [инструкция](https://wiki.spruthub.ru/%D0%A1%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5_%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D0%BB%D0%B5%D1%80%D0%B0_MQTT)
 * на вашем [HTTP/HTTPS сервере](https://github.com/dontsovcmc/waterius/blob/master/Export.md#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B8-%D0%BF%D0%BE-http-%D1%81%D0%B2%D0%BE%D0%B9-%D1%81%D0%B5%D1%80%D0%B2%D0%B5%D1%80)
@@ -144,6 +144,7 @@
 - [abrant-ru](https://github.com/abrant-ru) за поддержку счётчиков с выходом "открытый коллектор" (короткими импульсами)
 - Даниилу Макарову за дизайн веб интерфейса
 - [videlinagbm](https://github.com/videlinagbm) за верстку веб интерфейса и js код
+- [Anat0l](https://github.com/Anat0l/waterius-ha) за написание интеграции в HA
 
 Форумам: 
 - https://electronix.ru

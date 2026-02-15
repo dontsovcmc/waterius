@@ -89,6 +89,7 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("mqtt")] = is_mqtt(sett);
     root[F("ha")] = is_ha(sett);
     root[F("http")] = is_http(sett);
+    root[F("mqtt_retain")] = (bool)sett.mqtt_retain;
 
     // Для юрлиц
     root[F("company")] = sett.company;
