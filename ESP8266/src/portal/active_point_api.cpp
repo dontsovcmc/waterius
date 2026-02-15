@@ -9,14 +9,15 @@
 #include "config.h"
 #include "wifi_helpers.h"
 #include "resources.h"
+#include "ha/resources.h"
 
 extern bool exit_portal_flag;
 extern bool start_connect_flag;
 extern wl_status_t wifi_connect_status;
 extern bool factory_reset_flag;
 
-AttinyData runtime_data;
 extern AttinyData data;
+extern AttinyData runtime_data;
 extern MasterI2C masterI2C;
 extern Settings sett;
 extern CalculatedData cdata;
@@ -453,6 +454,121 @@ uint8_t get_param_uint8(AsyncWebServerRequest *request, const String &name)
     return 0xFF;
 }
 
+void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, const uint8_t input)
+{
+    const String &name = p->name();
+        
+    LOG_INFO(F("parameter ") << name << "=" << p->value());
+    if (name == FPSTR(PARAM_CHANNEL_START) || name == FPSTR(s_ch)) // portal || ha
+    {
+        switch (input) 
+        {
+            case INPUT0_RED: 
+                save_param(p, sett.channel0_start, errorsObj);
+                sett.impulses0_start = runtime_data.impulses0;
+                sett.impulses0_previous = sett.impulses0_start;
+                LOG_INFO("impulses0_start=" << sett.impulses0_start);
+                break;
+            case INPUT1_BLUE:
+                save_param(p, sett.channel1_start, errorsObj);
+                sett.impulses1_start = runtime_data.impulses1;
+                sett.impulses1_previous = sett.impulses1_start;
+                LOG_INFO("impulses1_start=" << sett.impulses1_start);
+                break;
+        }
+    }
+    else if (name == FPSTR(PARAM_SERIAL))
+    {
+        switch (input)
+        {
+            case INPUT0_RED: 
+                save_param(p, sett.serial0, SERIAL_LEN, errorsObj, false);
+                break;
+            case INPUT1_BLUE: 
+                save_param(p, sett.serial1, SERIAL_LEN, errorsObj, false);
+                break;
+        }
+    }
+    else if (name == FPSTR(PARAM_COUNTER_NAME) || name == FPSTR(s_cname)) // portal || ha
+    {   
+        switch(input) 
+        {
+            case INPUT0_RED: 
+                save_param(p, sett.counter0_name, errorsObj, true);
+                break;
+            case INPUT1_BLUE:
+                save_param(p, sett.counter1_name, errorsObj, true);
+                break;
+        }
+        
+    }
+    else if (name == FPSTR(PARAM_COUNTER_TYPE) || name == FPSTR(s_ctype))  // portal || ha
+    {   
+        switch (input) 
+        {
+            case INPUT0_RED:
+                if (!masterI2C.setCountersType(p->value().toInt(), runtime_data.counter_type1))
+                {
+                    LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
+                    errorsObj[p->name()] = String(F("16")); // Ошибка связи с attiny
+                }
+                else
+                {
+                    runtime_data.counter_type0 = p->value().toInt();
+                    LOG_INFO(FPSTR(PARAM_SAVED0) << p->name() << F("=") << p->value());
+                }
+                break;
+            case INPUT1_BLUE:
+                if (!masterI2C.setCountersType(runtime_data.counter_type0, p->value().toInt()))
+                {
+                    LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
+                    errorsObj[p->name()] = String(F("16")); // Ошибка связи с attiny
+                }
+                else
+                {
+                    runtime_data.counter_type1 = p->value().toInt();
+                    LOG_INFO(FPSTR(PARAM_SAVED1) << p->name() << F("=") << p->value());
+                }
+                break;
+        }
+        
+    }
+    else if (name == FPSTR(PARAM_FACTOR) || name == FPSTR(s_f)) // portal || ha
+    {
+        uint16_t value = p->value().toInt();
+        
+        // Авто или Как у холодной воды
+        if (value == AUTO_IMPULSE_FACTOR || value == AS_COLD_CHANNEL)
+        {   
+            const uint16_t factor_cold = get_auto_factor(runtime_data.impulses1, data.impulses1, sett.factor1, sett.factor1);
+            
+            switch (input) 
+            {
+                case INPUT0_RED: 
+                    sett.factor0 = get_auto_factor(runtime_data.impulses0, data.impulses0, sett.factor0, factor_cold);
+                    LOG_INFO(FPSTR(PARAM_FACTOR) << p->name() << F("->") << sett.factor0);
+                    break;
+                case INPUT1_BLUE:
+                    sett.factor1 = factor_cold;
+                    LOG_INFO(FPSTR(PARAM_FACTOR) << p->name() << F("->") << sett.factor1);
+                    break;
+            }
+        }
+        else
+        {
+            switch (input) 
+            {
+                case INPUT0_RED: 
+                    save_param(p, sett.factor0, errorsObj);
+                    break;
+                case INPUT1_BLUE:
+                    save_param(p, sett.factor1, errorsObj);
+                    break;
+            }
+        }
+    }
+}
+
 void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, const uint8_t input)
 {
     const int params = request->params();
@@ -462,120 +578,140 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
     for (int i = 0; i < params; i++)
     {
         const AsyncWebParameter *p = request->getParam(i);
-        const String &name = p->name();
-        
-        LOG_INFO(F("parameter ") << name << "=" << p->value());
-        if (name == FPSTR(PARAM_CHANNEL_START))
-        {
-            switch (input) 
-            {
-                case INPUT0_RED: 
-                    save_param(p, sett.channel0_start, errorsObj);
-                    sett.impulses0_start = runtime_data.impulses0;
-                    sett.impulses0_previous = sett.impulses0_start;
-                    LOG_INFO("impulses0_start=" << sett.impulses0_start);
-                    break;
-                case INPUT1_BLUE:
-                    save_param(p, sett.channel1_start, errorsObj);
-                    sett.impulses1_start = runtime_data.impulses1;
-                    sett.impulses1_previous = sett.impulses1_start;
-                    LOG_INFO("impulses1_start=" << sett.impulses1_start);
-                    break;
-            }
-        }
-        else if (name == FPSTR(PARAM_SERIAL))
-        {
-            switch (input)
-            {
-                case INPUT0_RED: 
-                    save_param(p, sett.serial0, SERIAL_LEN, errorsObj, false);
-                    break;
-                case INPUT1_BLUE: 
-                    save_param(p, sett.serial1, SERIAL_LEN, errorsObj, false);
-                    break;
-            }
-        }
-        else if (name == FPSTR(PARAM_COUNTER_NAME))
-        {   
-            switch(input) 
-            {
-                case INPUT0_RED: 
-                    save_param(p, sett.counter0_name, errorsObj, true);
-                    break;
-                case INPUT1_BLUE:
-                    save_param(p, sett.counter1_name, errorsObj, true);
-                    break;
-            }
-            
-        }
-        else if (name == FPSTR(PARAM_COUNTER_TYPE))
-        {   
-            switch (input) 
-            {
-                case INPUT0_RED:
-                    if (!masterI2C.setCountersType(p->value().toInt(), runtime_data.counter_type1))
-                    {
-                        LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
-                        errorsObj[p->name()] = String(F("16")); // Ошибка связи с attiny
-                    }
-                    else
-                    {
-                        runtime_data.counter_type0 = p->value().toInt();
-                        LOG_INFO(FPSTR(PARAM_SAVED0) << p->name() << F("=") << p->value());
-                    }
-                    break;
-                case INPUT1_BLUE:
-                    if (!masterI2C.setCountersType(runtime_data.counter_type0, p->value().toInt()))
-                    {
-                        LOG_ERROR(FPSTR(ERROR_ATTINY_ERROR) << ": " << p->name());
-                        errorsObj[p->name()] = String(F("16")); // Ошибка связи с attiny
-                    }
-                    else
-                    {
-                        runtime_data.counter_type1 = p->value().toInt();
-                        LOG_INFO(FPSTR(PARAM_SAVED1) << p->name() << F("=") << p->value());
-                    }
-                    break;
-            }
-            
-        }
-        else if (name == FPSTR(PARAM_FACTOR))
-        {
-            uint16_t value = p->value().toInt();
-            
-            // Авто или Как у холодной воды
-            if (value == AUTO_IMPULSE_FACTOR || value == AS_COLD_CHANNEL)
-            {   
-                const uint16_t factor_cold = get_auto_factor(runtime_data.impulses1, data.impulses1, sett.factor1, sett.factor1);
-                
-                switch (input) 
-                {
-                    case INPUT0_RED: 
-                        sett.factor0 = get_auto_factor(runtime_data.impulses0, data.impulses0, sett.factor0, factor_cold);
-                        LOG_INFO(FPSTR(PARAM_FACTOR) << p->name() << F("->") << sett.factor0);
-                        break;
-                    case INPUT1_BLUE:
-                        sett.factor1 = factor_cold;
-                        LOG_INFO(FPSTR(PARAM_FACTOR) << p->name() << F("->") << sett.factor1);
-                        break;
-                }
-            }
-            else
-            {
-                switch (input) 
-                {
-                    case INPUT0_RED: 
-                        save_param(p, sett.factor0, errorsObj);
-                        break;
-                    case INPUT1_BLUE:
-                        save_param(p, sett.factor1, errorsObj);
-                        break;
-                }
-            }
-        }
+        applyInputParameter(p, errorsObj, input);
     }
 
     store_config(sett);
+}
+
+void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
+{
+    const String &name = p->name();
+
+    LOG_INFO(F("parameter ") << name << "=" << p->value());
+    if (name == FPSTR(PARAM_WATERIUS_ON))
+    {
+        save_bool_param(p, sett.waterius_on, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_HTTP_ON))
+    {
+        save_bool_param(p, sett.http_on, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_MQTT_ON))
+    {
+        save_bool_param(p, sett.mqtt_on, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_DHCP_OFF))
+    {
+        save_bool_param(p, sett.dhcp_off, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_MQTT_AUTO_DISCOVERY))
+    {
+        save_bool_param(p, sett.mqtt_auto_discovery, errorsObj);
+    }
+}
+
+void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
+{
+    const String &name = p->name();
+    if (sett.waterius_on)
+    {
+        if (name == FPSTR(PARAM_WATERIUS_HOST))
+        {
+            save_param(p, sett.waterius_host, HOST_LEN, errorsObj);
+        }
+        else if (name == FPSTR(PARAM_WATERIUS_EMAIL))
+        {
+            save_param(p, sett.waterius_email, EMAIL_LEN, errorsObj);
+        }
+    }
+    
+    if (sett.http_on)
+    {
+        if (name == FPSTR(PARAM_HTTP_URL))
+        {
+            save_param(p, sett.http_url, HOST_LEN, errorsObj);
+        }
+    }
+    
+    if (sett.mqtt_on)
+    {
+        if (name == FPSTR(PARAM_MQTT_HOST))
+        {
+            save_param(p, sett.mqtt_host, HOST_LEN, errorsObj);
+        }
+        else if (name == FPSTR(PARAM_MQTT_PORT))
+        {
+            save_param(p, sett.mqtt_port, errorsObj);
+        }
+        else if (name == FPSTR(PARAM_MQTT_LOGIN))
+        {
+            save_param(p, sett.mqtt_login, MQTT_LOGIN_LEN, errorsObj, false);
+        }
+        else if (name == FPSTR(PARAM_MQTT_PASSWORD))
+        {
+            save_param(p, sett.mqtt_password, MQTT_PASSWORD_LEN, errorsObj, false);
+        }
+        else if (name == FPSTR(PARAM_MQTT_TOPIC))
+        {
+            save_param(p, sett.mqtt_topic, MQTT_TOPIC_LEN, errorsObj, false);
+        }
+
+        if (sett.mqtt_auto_discovery)
+        {
+            if (name == FPSTR(PARAM_MQTT_DISCOVERY_TOPIC))
+            {
+                save_param(p, sett.mqtt_discovery_topic, MQTT_TOPIC_LEN, errorsObj, false);
+            }
+        }
+    }
+    
+    if (sett.dhcp_off)
+    {
+        if (name == FPSTR(PARAM_IP))
+        {
+            save_ip_param(p, sett.ip, errorsObj);
+        }
+        else if (name == FPSTR(PARAM_GATEWAY))
+        {
+            save_ip_param(p, sett.gateway, errorsObj);
+        }
+        else if (name == FPSTR(PARAM_MASK))
+        {
+            save_ip_param(p, sett.mask, errorsObj);
+        }
+    }
+    
+    if (name == FPSTR(s_period_min))
+    {
+        save_param(p, sett.wakeup_per_min, errorsObj);
+        reset_period_min_tuned(sett);
+    }
+    else if (name == FPSTR(PARAM_NTP_SERVER))
+    {
+        save_param(p, sett.ntp_server, HOST_LEN, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_SSID))
+    {
+        save_param(p, sett.wifi_ssid, WIFI_SSID_LEN, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_PASSWORD))
+    {
+        save_param(p, sett.wifi_password, WIFI_PWD_LEN, errorsObj, false);
+    }
+
+    else if (name == FPSTR(PARAM_WIFI_PHY_MODE))
+    {
+        save_param(p, sett.wifi_phy_mode, errorsObj, true);
+    }
+    else if (name == FPSTR(PARAM_COMPANY))
+    {
+        save_param(p, sett.company, COMPANY_LEN, errorsObj, false);
+    }
+    else if (name == FPSTR(PARAM_PLACE))
+    {
+        save_param(p, sett.place, PLACE_LEN, errorsObj, false);
+    }
 }
 
 void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
@@ -588,134 +724,13 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
     for (int i = 0; i < params; i++)
     {
         const AsyncWebParameter *p = request->getParam(i);
-        const String &name = p->name();
-
-        LOG_INFO(F("parameter ") << name << "=" << p->value());
-        if (name == FPSTR(PARAM_WATERIUS_ON))
-        {
-            save_bool_param(p, sett.waterius_on, errorsObj);
-        }
-        else if (name == FPSTR(PARAM_HTTP_ON))
-        {
-            save_bool_param(p, sett.http_on, errorsObj);
-        }
-        else if (name == FPSTR(PARAM_MQTT_ON))
-        {
-            save_bool_param(p, sett.mqtt_on, errorsObj);
-        }
-        else if (name == FPSTR(PARAM_DHCP_OFF))
-        {
-            save_bool_param(p, sett.dhcp_off, errorsObj);
-        }
-        else if (name == FPSTR(PARAM_MQTT_AUTO_DISCOVERY))
-        {
-            save_bool_param(p, sett.mqtt_auto_discovery, errorsObj);
-        }
+        applyCheckBoxParameter(p, errorsObj);
     }
 
     for (int i = 0; i < params; i++)
     {
         const AsyncWebParameter *p = request->getParam(i);
-        const String &name = p->name();
-
-        if (sett.waterius_on)
-        {
-            if (name == FPSTR(PARAM_WATERIUS_HOST))
-            {
-                save_param(p, sett.waterius_host, HOST_LEN, errorsObj);
-            }
-            else if (name == FPSTR(PARAM_WATERIUS_EMAIL))
-            {
-                save_param(p, sett.waterius_email, EMAIL_LEN, errorsObj);
-            }
-        }
-        
-        if (sett.http_on)
-        {
-            if (name == FPSTR(PARAM_HTTP_URL))
-            {
-                save_param(p, sett.http_url, HOST_LEN, errorsObj);
-            }
-        }
-        
-        if (sett.mqtt_on)
-        {
-            if (name == FPSTR(PARAM_MQTT_HOST))
-            {
-                save_param(p, sett.mqtt_host, HOST_LEN, errorsObj);
-            }
-            else if (name == FPSTR(PARAM_MQTT_PORT))
-            {
-                save_param(p, sett.mqtt_port, errorsObj);
-            }
-            else if (name == FPSTR(PARAM_MQTT_LOGIN))
-            {
-                save_param(p, sett.mqtt_login, MQTT_LOGIN_LEN, errorsObj, false);
-            }
-            else if (name == FPSTR(PARAM_MQTT_PASSWORD))
-            {
-                save_param(p, sett.mqtt_password, MQTT_PASSWORD_LEN, errorsObj, false);
-            }
-            else if (name == FPSTR(PARAM_MQTT_TOPIC))
-            {
-                save_param(p, sett.mqtt_topic, MQTT_TOPIC_LEN, errorsObj, false);
-            }
-
-            if (sett.mqtt_auto_discovery)
-            {
-                if (name == FPSTR(PARAM_MQTT_DISCOVERY_TOPIC))
-                {
-                    save_param(p, sett.mqtt_discovery_topic, MQTT_TOPIC_LEN, errorsObj, false);
-                }
-            }
-        }
-        
-        if (sett.dhcp_off)
-        {
-            if (name == FPSTR(PARAM_IP))
-            {
-                save_ip_param(p, sett.ip, errorsObj);
-            }
-            else if (name == FPSTR(PARAM_GATEWAY))
-            {
-                save_ip_param(p, sett.gateway, errorsObj);
-            }
-            else if (name == FPSTR(PARAM_MASK))
-            {
-                save_ip_param(p, sett.mask, errorsObj);
-            }
-        }
-        
-        if (name == FPSTR(PARAM_WAKEUP_PER_MIN))
-        {
-            save_param(p, sett.wakeup_per_min, errorsObj);
-            reset_period_min_tuned(sett);
-        }
-        else if (name == FPSTR(PARAM_NTP_SERVER))
-        {
-            save_param(p, sett.ntp_server, HOST_LEN, errorsObj);
-        }
-        else if (name == FPSTR(PARAM_SSID))
-        {
-            save_param(p, sett.wifi_ssid, WIFI_SSID_LEN, errorsObj);
-        }
-        else if (name == FPSTR(PARAM_PASSWORD))
-        {
-            save_param(p, sett.wifi_password, WIFI_PWD_LEN, errorsObj, false);
-        }
-
-        else if (name == FPSTR(PARAM_WIFI_PHY_MODE))
-        {
-            save_param(p, sett.wifi_phy_mode, errorsObj, true);
-        }
-        else if (name == FPSTR(PARAM_COMPANY))
-        {
-            save_param(p, sett.company, COMPANY_LEN, errorsObj, false);
-        }
-        else if (name == FPSTR(PARAM_PLACE))
-        {
-            save_param(p, sett.place, PLACE_LEN, errorsObj, false);
-        }
+        applyNonCheckBoxParameter(p, errorsObj);
     }
 
     store_config(sett);

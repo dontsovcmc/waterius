@@ -1,8 +1,6 @@
+
 #include "json.h"
-#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
-#include "setup.h"
-#include "master_i2c.h"
 #include "Logging.h"
 #include "utils.h"
 #include "porting.h"

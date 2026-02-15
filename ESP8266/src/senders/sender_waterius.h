@@ -11,10 +11,8 @@
 #define SENDERWATERIUS_h_
 #ifndef WATERIUS_RU_DISABLED
 #include <ESP8266WiFi.h>
-#include "setup.h"
-#include "master_i2c.h"
-#include "Logging.h"
 #include "json.h"
+#include "Logging.h"
 #include "https_helpers.h"
 #include "utils.h"
 
