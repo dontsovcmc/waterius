@@ -24,6 +24,7 @@ static const char PARAM_COMPANY[] PROGMEM = "company";
 static const char PARAM_PLACE[] PROGMEM = "place";
 static const char PARAM_MQTT_AUTO_DISCOVERY[] PROGMEM = "mqtt_auto_discovery";
 static const char PARAM_MQTT_DISCOVERY_TOPIC[] PROGMEM = "mqtt_discovery_topic";
+static const char PARAM_MQTT_RETAIN[] PROGMEM = "mqtt_retain";
 static const char PARAM_NTP_SERVER[] PROGMEM = "ntp_server";
 static const char PARAM_SSID[] PROGMEM = "ssid";
 static const char PARAM_PASSWORD[] PROGMEM = "password";

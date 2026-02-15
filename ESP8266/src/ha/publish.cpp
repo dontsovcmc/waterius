@@ -1,7 +1,10 @@
 #include "publish.h"
 #include "Logging.h"
+#include "setup.h"
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+
+extern Settings sett;
 
 /**
  * @brief Публикация топика в MQTT в различных режимах
@@ -48,7 +51,7 @@ void publish_chunked(PubSubClient &mqtt_client,
     unsigned int len = payload.length();
     const uint8_t *buf = (const uint8_t *)payload.c_str();
 
-    if (mqtt_client.beginPublish(topic.c_str(), len, true))
+    if (mqtt_client.beginPublish(topic.c_str(), len, (bool)sett.mqtt_retain))
     {
         while (len > 0)
         {
@@ -100,7 +103,7 @@ void publish_big(PubSubClient &mqtt_client,
     LOG_DEBUG(F("MQTT: Payload: ") << payload);
 
     unsigned int len = payload.length();
-    if (mqtt_client.beginPublish(topic.c_str(), len, true))
+    if (mqtt_client.beginPublish(topic.c_str(), len, (bool)sett.mqtt_retain))
     {
         if (mqtt_client.print(payload.c_str()) == len)
         {
@@ -134,7 +137,7 @@ void publish_simple(PubSubClient &mqtt_client, const String &topic, const String
 
     if (mqtt_client.connected())
     {
-        if (mqtt_client.publish(topic.c_str(), payload.c_str(), true))
+        if (mqtt_client.publish(topic.c_str(), payload.c_str(), (bool)sett.mqtt_retain))
         {
             LOG_INFO(F("MQTT: Published succesfully"));
         }
