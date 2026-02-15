@@ -5,7 +5,7 @@
 #include <ArduinoJson.h>
 #include "master_i2c.h"
 
-void send_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data);
+void send_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data, JsonDocument &json_settings);
 bool settings_received(const JsonDocument &json_settings_received);
 
 #ifndef MQTT_DISABLED

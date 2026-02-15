@@ -122,12 +122,12 @@ void loop()
                 voltage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
                 
-                send_data(sett, data, cdata, json_data);
+                send_data(sett, data, cdata, json_data, json_settings_received);
 
                 if (settings_received(json_settings_received))
                 {
                     apply_settings(json_settings_received);
-                    send_data(sett, data, cdata, json_data);
+                    send_data(sett, data, cdata, json_data, json_settings_received);
                 }
                 
                 // Все уже отправили,  wifi не нужен - выключаем

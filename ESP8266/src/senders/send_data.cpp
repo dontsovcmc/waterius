@@ -5,7 +5,7 @@
 #include "senders/sender_http.h"
 #include "senders/sender_mqtt.h"
 
-void send_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data)
+void send_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data, JsonDocument &json_settings)
 {
     // Формироуем JSON
     get_json_data(sett, data, cdata, json_data);
@@ -13,14 +13,14 @@ void send_data(const Settings &sett, const AttinyData &data, const CalculatedDat
     LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 
 #ifndef WATERIUS_RU_DISABLED
-    if (send_waterius(sett, json_data))
+    if (send_waterius(sett, json_data, json_settings))
     {
         LOG_INFO(F("HTTP: Send OK"));
     }
 #endif
 
 #ifndef HTTPS_DISABLED
-    if (send_http(sett, json_data))
+    if (send_http(sett, json_data, json_settings))
     {
         LOG_INFO(F("HTTP: Send OK"));
     }

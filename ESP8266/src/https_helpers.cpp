@@ -1,9 +1,10 @@
 #include <ESP8266WiFi.h>
 #include "ESP8266HTTPClient.h"
+#include <ArduinoJson.h>
 #include "Logging.h"
 #include "utils.h"
 
-bool post_data(const String &url, const char *key, const char *email, const String &payload)
+bool post_data(const String &url, const char *key, const char *email, const String &payload, JsonDocument &json_settings)
 {
     void *pClient = nullptr;
     HTTPClient httpClient;
@@ -50,6 +51,21 @@ bool post_data(const String &url, const char *key, const char *email, const Stri
         result = response_code == 200;
         String response_body = httpClient.getString();
         LOG_INFO(F("HTTP: Response body: ") << response_body);
+
+        if (result && response_body.length() > 2)
+        {
+            JsonDocument temp;
+            DeserializationError error = deserializeJson(temp, response_body);
+            if (!error && temp.is<JsonObject>())
+            {
+                for (JsonPairConst kv : temp.as<JsonObjectConst>())
+                {
+                    json_settings[kv.key()] = kv.value();
+                }
+                LOG_INFO(F("HTTP: Settings received from server"));
+            }
+        }
+
         httpClient.end();
         (*(WiFiClient *)pClient).stop();
     }
