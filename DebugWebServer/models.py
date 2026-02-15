@@ -49,6 +49,7 @@ class SettingsModel:
     place: str | None = Form(None)
 
     mqtt_auto_discovery: int | None = Form(None)
+    mqtt_retain: int | None = Form(None)
     mqtt_discovery_topic: str | None = Form(None)
 
     ntp_server: str | None = Form(None)
