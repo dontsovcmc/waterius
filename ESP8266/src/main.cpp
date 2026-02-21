@@ -5,14 +5,12 @@
 #include "Logging.h"
 #include "config.h"
 #include "master_i2c.h"
-#include "senders/sender_waterius.h"
-#include "senders/sender_http.h"
-#include "senders/sender_mqtt.h"
+#include "senders/send_data.h"
+#include "ha/apply_settings.h"
 #include "portal/active_point.h"
 #include "voltage.h"
 #include "utils.h"
 #include "porting.h"
-#include "json.h"
 #include "sync_time.h"
 #include "wifi_helpers.h"
 #include "config.h"
@@ -20,6 +18,7 @@
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 AttinyData data;       // Данные от Attiny85
+AttinyData runtime_data; // Данные от Attiny85 для веб интерфейса
 Settings sett;        // Настройки соединения и предыдущие показания из EEPROM
 CalculatedData cdata; // вычисляемые данные
 ADC_MODE(ADC_VCC);
@@ -60,6 +59,8 @@ void loop()
     // спрашиваем у Attiny85 повод пробуждения и данные true)
     if (masterI2C.getMode(mode) && masterI2C.getAttinyData(data))
     {
+        runtime_data = data;
+
         voltage.update();
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
         if (mode == MANUAL_TRANSMIT_MODE)
@@ -82,9 +83,6 @@ void loop()
             // Запускаем точку доступа с вебсервером
 
             start_active_point(sett, cdata);
-
-            sett.setup_time = millis();
-            sett.setup_finished_counter++;
 
             store_config(sett);
 
@@ -110,13 +108,16 @@ void loop()
                 log_system_info();
 
                 JsonDocument json_data;
+                JsonDocument json_settings_received;
 
                 // Подключаемся и подписываемся на мктт
+#ifndef MQTT_DISABLED
                 if (is_mqtt(sett))
                 {
-                    connect_and_subscribe_mqtt(sett, data, cdata, json_data);
+                    connect_and_subscribe_mqtt(sett, json_settings_received);
                 }
-                
+#endif
+
                 // устанавливать время только при использовани хттпс или мктт
                 if (is_mqtt(sett) || is_https(sett.waterius_host) || is_https(sett.http_url))
                 {
@@ -125,38 +126,12 @@ void loop()
                     }
                 }
 
-                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
+                send_data(sett, data, cdata, json_data, json_settings_received);
 
-                // Формироуем JSON
-                get_json_data(sett, data, cdata, json_data);
-
-                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-
-#ifndef WATERIUS_RU_DISABLED
-                if (send_waterius(sett, json_data))
+                if (settings_received(json_settings_received))
                 {
-                    LOG_INFO(F("HTTP: Send OK"));
-                    blynk_error(ErrorBlynks::ERROR_OK);
-                }
-#endif
-
-                if (send_http(sett, json_data))
-                {
-                    LOG_INFO(F("HTTP: Send OK"));
-                    blynk_error(ErrorBlynks::ERROR_OK);
-                }
-
-                if (is_mqtt(sett))
-                {
-                    if (send_mqtt(sett, data, cdata, json_data))
-                    {
-                        LOG_INFO(F("MQTT: Send OK"));
-                        blynk_error(ErrorBlynks::ERROR_OK);
-                    }
-                }
-                else
-                {
-                    LOG_INFO(F("MQTT: SKIP"));
+                    apply_settings(json_settings_received);
+                    send_data(sett, data, cdata, json_data, json_settings_received);
                 }
 
                 // Все уже отправили,  wifi не нужен - выключаем
@@ -172,7 +147,7 @@ void loop()
             store_config(sett);  // т.к. сохраняем число ошибок подключения
         }
     }
-    
+
     if (!config_loaded)
     {
         blynk_error(ErrorBlynks::ERROR_CONFIG);
@@ -193,7 +168,7 @@ void loop()
     {
         // Спим до следущего включения EN. (выключили Instant не ждет 92мс)
         ESP.deepSleepInstant(0, RF_DEFAULT);
-    } 
+    }
 #endif
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
     ESP.deepSleepInstant(1000000, RF_DEFAULT);

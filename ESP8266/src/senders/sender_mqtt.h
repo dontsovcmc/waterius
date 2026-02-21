@@ -10,6 +10,8 @@
 #ifndef SENDERMQTT_H_
 #define SENDERMQTT_H_
 
+#ifndef MQTT_DISABLED
+
 #ifdef MQTT_SOCKET_TIMEOUT
 #undef MQTT_SOCKET_TIMEOUT
 #endif
@@ -32,10 +34,13 @@
 #include "ha/subscribe.h"
 #include "utils.h"
 
+extern AttinyData data;
+extern CalculatedData cdata;
+
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
 
-bool connect_and_subscribe_mqtt(Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data)
+bool connect_and_subscribe_mqtt(Settings &sett, JsonDocument &json_settings_received)
 {
     String mqtt_topic = sett.mqtt_topic;
     remove_trailing_slash(mqtt_topic);
@@ -53,7 +58,7 @@ bool connect_and_subscribe_mqtt(Settings &sett, const AttinyData &data, const Ca
         // парамтеры в лямбду передаются "by reference"
 
         mqtt_client.setCallback([&](char *raw_topic, byte *raw_payload, unsigned int length)
-                                { mqtt_callback(sett, data, json_data, mqtt_client, mqtt_topic, raw_topic, raw_payload, length); });
+                                { mqtt_callback(sett, json_settings_received, mqtt_client, mqtt_topic, raw_topic, raw_payload, length); });
     }
 
     if (mqtt_connect(sett, mqtt_client))
@@ -83,7 +88,7 @@ bool connect_and_subscribe_mqtt(Settings &sett, const AttinyData &data, const Ca
  *
  * @returns true если успешно отправлены данные и false если не отправлено
  */
-bool send_mqtt(Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data)
+bool send_mqtt(const Settings &sett, JsonDocument &json_data)
 {
     unsigned long start_time = millis();
     String mqtt_topic = sett.mqtt_topic;
@@ -119,4 +124,5 @@ bool send_mqtt(Settings &sett, const AttinyData &data, const CalculatedData &cda
     return true;
 }
 
+#endif
 #endif

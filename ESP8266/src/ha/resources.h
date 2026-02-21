@@ -15,7 +15,7 @@
 #include "setup.h"
 
 #define MQTT_PARAM_COUNT 9
-#define NONE -1
+#define HA_NONE -1
 
 // строки хранятся во флэш
 // https://arduino-esp8266.readthedocs.io/en/latest/PROGMEM.html#how-do-i-declare-arrays-of-strings-in-progmem-and-retrieve-an-element-from-it

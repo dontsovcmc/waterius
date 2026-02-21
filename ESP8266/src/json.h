@@ -7,11 +7,11 @@
  * @copyright Copyright (c) 2023
  *
  */
-#ifndef JSON_h_
-#define JSON_h_
+#ifndef WATERIUS_JSON_h_
+#define WATERIUS_JSON_h_
 
-#include <ArduinoJson.h>
 #include "setup.h"
+#include <ArduinoJson.h>
 #include "voltage.h"
 #include "master_i2c.h"
 

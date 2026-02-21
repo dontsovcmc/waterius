@@ -12,7 +12,6 @@
 
 #include <ArduinoJson.h>
 #include <ESPAsyncTCP.h>
-#include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 
 
@@ -24,7 +23,10 @@ void save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj);
 void save_ip_param(const AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj);
 
 bool find_wizard_param(AsyncWebServerRequest *request);
+void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, const uint8_t input);
 void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, const uint8_t input);
+void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj);
+void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj);
 void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj);
 
 void post_api_save_connect(AsyncWebServerRequest *request);
