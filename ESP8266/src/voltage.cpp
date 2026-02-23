@@ -5,10 +5,10 @@
 extern MasterI2C masterI2C;
 extern AttinyData runtime_data;
 
-void Voltage::begin()
+Voltage::Voltage()
 {
-    _min_voltage = _voltage;
-    _max_voltage = _voltage;
+    _min_voltage = 0xFFFF;
+    _max_voltage = 0;
     _num_probes = 0;
 }
 
