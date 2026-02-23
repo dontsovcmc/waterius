@@ -594,6 +594,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
 
         if (start_connect_flag)
         {
+            WiFi.scanDelete();  // free scan resources before connecting to reduce WiFi SDK heap pressure
             wifi_connect(sett, WIFI_AP_STA);
             wifi_connect_status = WiFi.status();
             start_connect_flag = false;

@@ -226,6 +226,7 @@ bool MasterI2C::getAttinyData(AttinyData &data)
 
 bool MasterI2C::setWakeUpPeriod(uint16_t period)
 {
+    BusyGuard guard(i2c_busy);
     uint8_t txBuf[4];
 
     txBuf[0] = 'S';

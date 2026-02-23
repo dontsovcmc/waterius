@@ -25,8 +25,16 @@ class BusyGuard {
     volatile bool& busy;
 public:
     BusyGuard(volatile bool& flag) : busy(flag) {
-        while (busy) yield(); // Ждём, пока флаг не сброшен
-        busy = true;
+        while (true) {
+            noInterrupts();
+            if (!busy) {
+                busy = true;
+                interrupts();
+                break;
+            }
+            interrupts();
+            yield();
+        }
     }
     ~BusyGuard() {
         busy = false;
