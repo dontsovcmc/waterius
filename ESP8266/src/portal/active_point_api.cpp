@@ -267,30 +267,22 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
 {
     LOG_INFO(F("GET ") << request->url());
 
-    JsonDocument json_doc; // (JSON_SMALL_STATIC_MSG_BUFFER);
+    JsonDocument json_doc;
     JsonObject ret = json_doc.to<JsonObject>();
 
-    if (masterI2C.getAttinyData(runtime_data))
-    {
-        const uint16_t factor_cold = get_auto_factor(runtime_data.impulses1, data.impulses1, sett.factor1, sett.factor1);
+    const uint16_t factor_cold = get_auto_factor(runtime_data.impulses1, data.impulses1, sett.factor1, sett.factor1);
 
-        if (index == INPUT0_RED)
-        {
-            ret[F("state")] = int(runtime_data.impulses0 > data.impulses0);
-            ret[F("factor")] = get_auto_factor(runtime_data.impulses0, data.impulses0, sett.factor0, factor_cold);
-            ret[F("impulses")] = runtime_data.impulses0 - data.impulses0;
-        }
-        else if (index == INPUT1_BLUE)
-        {
-            ret[F("state")] = int(runtime_data.impulses1 > data.impulses1);
-            ret[F("factor")] = factor_cold;
-            ret[F("impulses")] = runtime_data.impulses1 - data.impulses1;
-        }
-        // root[F("elapsed")] = (uint32_t)(SETUP_TIME_SEC - millis() / 1000.0);
-    }
-    else
+    if (index == INPUT0_RED)
     {
-        ret[F("error")] = F("7"); // S_NO_LINK Ошибка связи с МК
+        ret[F("state")] = int(runtime_data.impulses0 > data.impulses0);
+        ret[F("factor")] = get_auto_factor(runtime_data.impulses0, data.impulses0, sett.factor0, factor_cold);
+        ret[F("impulses")] = runtime_data.impulses0 - data.impulses0;
+    }
+    else if (index == INPUT1_BLUE)
+    {
+        ret[F("state")] = int(runtime_data.impulses1 > data.impulses1);
+        ret[F("factor")] = factor_cold;
+        ret[F("impulses")] = runtime_data.impulses1 - data.impulses1;
     }
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
@@ -299,8 +291,15 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
 #endif
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeJson(json_doc, *response);
-    request->send(response);
+    if (response)
+    {
+        serializeJson(json_doc, *response);
+        request->send(response);
+    }
+    else
+    {
+        request->send(503);
+    }
 };
 
 inline bool is_all_asterisks(const String& s) {
