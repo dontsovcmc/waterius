@@ -22,6 +22,20 @@ extern MasterI2C masterI2C;
 extern Settings sett;
 extern CalculatedData cdata;
 
+inline void send_json_response(AsyncWebServerRequest *request, JsonDocument &json_doc)
+{
+    AsyncResponseStream *response = request->beginResponseStream("application/json");
+    if (response)
+    {
+        serializeJson(json_doc, *response);
+        request->send(response);
+    }
+    else
+    {
+        request->send(503);
+    }
+}
+
 #define IMPULS_LIMIT_1 3 // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
 
 uint16_t get_auto_factor(const uint32_t runtime_impulses,
@@ -72,9 +86,7 @@ void get_api_connect_status(AsyncWebServerRequest *request)
         }
     }
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeJson(json_doc, *response);
-    request->send(response);
+    send_json_response(request, json_doc);
 };
 
 /**
@@ -110,9 +122,7 @@ void get_api_networks(AsyncWebServerRequest *request)
 
         WiFi.scanDelete();
 
-        AsyncResponseStream *response = request->beginResponseStream("application/json");
-        serializeJson(json_doc, *response);
-        request->send(response);
+        send_json_response(request, json_doc);
     }
 };
 
@@ -171,9 +181,7 @@ void post_api_save_connect(AsyncWebServerRequest *request)
         }
     }
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeJson(json_doc, *response);
-    request->send(response);
+    send_json_response(request, json_doc);
 }
 
 /**
@@ -243,9 +251,7 @@ void get_api_main_status(AsyncWebServerRequest *request)
 
     LOG_INFO(F("JSON: Size: ") << measureJson(json_doc));
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeJson(json_doc, *response);
-    request->send(response);
+    send_json_response(request, json_doc);
 }
 
 void get_api_status_0(AsyncWebServerRequest *request)
@@ -290,16 +296,7 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
     digitalWrite(CH1_LED_PIN, runtime_data.on_pulse1);
 #endif
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    if (response)
-    {
-        serializeJson(json_doc, *response);
-        request->send(response);
-    }
-    else
-    {
-        request->send(503);
-    }
+    send_json_response(request, json_doc);
 };
 
 inline bool is_all_asterisks(const String& s) {
@@ -752,9 +749,7 @@ void post_api_save(AsyncWebServerRequest *request)
     uint8_t input = get_param_uint8(request, FPSTR(PARAM_INPUT));
     applyInputSettings(request, errorsObj, input);
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeJson(json_doc, *response);
-    request->send(response);
+    send_json_response(request, json_doc);
 }
 
 void post_api_save_input_type(AsyncWebServerRequest *request)
@@ -813,9 +808,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
         ret[F("redirect")] = ret[F("redirect")] + F("?wizard=true");
     }
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeJson(json_doc, *response);
-    request->send(response);
+    send_json_response(request, json_doc);
 }
 
 void get_api_turnoff(AsyncWebServerRequest *request)
@@ -835,10 +828,7 @@ void post_api_reset(AsyncWebServerRequest *request)
 
     ret[F("redirect")] = F("/");
 
-    AsyncResponseStream *response = request->beginResponseStream("application/json");
-    serializeJson(json_doc, *response);
-
     factory_reset_flag = true;
 
-    request->send(response);
+    send_json_response(request, json_doc);
 }
