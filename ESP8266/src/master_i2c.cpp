@@ -241,8 +241,8 @@ bool MasterI2C::setWakeUpPeriod(uint16_t period)
 }
 
 bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
-{    
-    //sync
+{
+    BusyGuard guard(i2c_busy);
     uint8_t txBuf[4];
 
     txBuf[0] = 'C';
