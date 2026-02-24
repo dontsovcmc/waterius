@@ -57,6 +57,7 @@ bool init_config(Settings &sett)
     sett.http_on = (uint8_t)false;
     sett.mqtt_on = (uint8_t)false;
     sett.dhcp_off = (uint8_t)false;
+    sett.mqtt_retain = (uint8_t)true;
 
     //можно оптимизировать и загружать из PROGMEM, но ради 2х полей смысла не вижу
     //static const char WATERIUS_DEFAULT_DOMAIN[] PROGMEM =  "https://cloud.waterius.ru"
@@ -208,6 +209,7 @@ bool load_config(Settings &sett)
             LOG_INFO(F("host=") << sett.mqtt_host << F(" port=") << sett.mqtt_port);
             LOG_INFO(F("login=") << sett.mqtt_login << F(" pass=") << sett.mqtt_password);
             LOG_INFO(F("auto discovery=") << sett.mqtt_auto_discovery);
+            LOG_INFO(F("retain=") << sett.mqtt_retain);
             LOG_INFO(F("discovery topic=") << sett.mqtt_discovery_topic);
 
             LOG_INFO(F("--- Network ---- "));

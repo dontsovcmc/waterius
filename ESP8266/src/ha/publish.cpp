@@ -103,6 +103,7 @@ void publish_big(PubSubClient &mqtt_client,
     LOG_DEBUG(F("MQTT: Payload: ") << payload);
 
     unsigned int len = payload.length();
+    LOG_INFO(F("MQTT: Retain: ") << sett.mqtt_retain);
     if (mqtt_client.beginPublish(topic.c_str(), len, (bool)sett.mqtt_retain))
     {
         if (mqtt_client.print(payload.c_str()) == len)

@@ -48,8 +48,8 @@ class SettingsModel:
     company: str | None = Form(None)
     place: str | None = Form(None)
 
-    mqtt_auto_discovery: int | None = Form(None)
-    mqtt_retain: int | None = Form(None)
+    mqtt_auto_discovery: bool | None = Form(None)
+    mqtt_retain: bool | None = Form(None)
     mqtt_discovery_topic: str | None = Form(None)
 
     ntp_server: str | None = Form(None)
