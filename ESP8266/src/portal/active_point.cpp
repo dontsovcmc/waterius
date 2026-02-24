@@ -14,6 +14,7 @@
 #include "config.h"
 #include "wifi_helpers.h"
 #include "resources.h"
+#include "ha/resources.h"
 #include "active_point_api.h"
 #include "active_point.h"
 
@@ -119,6 +120,10 @@ String processor(const String &var)
     return processor_main(var);
 }
 
+/**
+ *  Функция возвращающая текстовое значение параметра по его имени. 
+ *  Используется для отрисовки статических html страниц portal по ключевым словам %keyword% 
+ */
 String processor_main(const String &var, const uint8_t input)
 {   
     if (var == FPSTR(PARAM_VERSION))
@@ -236,7 +241,7 @@ String processor_main(const String &var, const uint8_t input)
     else if (var == FPSTR(PARAM_MAC_ADDRESS))
         return WiFi.macAddress();
 
-    else if (var == FPSTR(PARAM_WAKEUP_PER_MIN))
+    else if (var == FPSTR(s_period_min))
         return String(sett.wakeup_per_min);
     
     else if (var == FPSTR(PARAM_PLACE))
@@ -351,9 +356,6 @@ void on_root(AsyncWebServerRequest *request)
 
 void start_active_point(Settings &sett, CalculatedData &cdata)
 {   
-    //Т.к. интерфейс берёт данные из runtime_data, то туда нужно загрузить их
-    runtime_data = data;
-
     if (!LittleFS.begin())
     {
         LOG_INFO(F("FS: Mounting LittleFS error"));
@@ -603,4 +605,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     dns->stop();
     delete server;
     delete dns;
+
+    sett.setup_time = millis();
+    sett.setup_finished_counter++;
 };

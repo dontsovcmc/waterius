@@ -19,7 +19,7 @@
 
 #define HTTP_SEND_ATTEMPTS 3
 
-bool send_http(const Settings &sett, JsonDocument &jsonData)
+bool send_http(const Settings &sett, JsonDocument &jsonData, JsonDocument &json_settings)
 {
     if (!(sett.http_on && sett.http_url[0]))
     {
@@ -41,7 +41,7 @@ bool send_http(const Settings &sett, JsonDocument &jsonData)
     do
     {
         LOG_INFO(F("HTTP: Attempt #") << HTTP_SEND_ATTEMPTS - attempts + 1 << F(" from ") << HTTP_SEND_ATTEMPTS);
-        result = post_data(url, sett.waterius_key, sett.waterius_email, payload);
+        result = post_data(url, sett.waterius_key, sett.waterius_email, payload, json_settings);
 
     } while (!result && --attempts);
 

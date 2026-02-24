@@ -295,7 +295,7 @@ String get_attributes_template(const char *const attrs[][MQTT_PARAM_COUNT], int 
  */
 void update_channel_names(int channel, int channel_name, String &entity_id, String &entity_name)
 {
-    if (channel != NONE && channel_name != NONE)
+    if (channel != HA_NONE && channel_name != HA_NONE)
     {
         entity_id += channel;
         entity_name = String(FPSTR(CHANNEL_NAMES[channel_name])) + " " + entity_name;
