@@ -1,0 +1,13 @@
+{
+  "version": "2.0.25",
+  "firmware": {
+    "url": "https://cloud.waterius.ru/ota/nodemcuv2-2.0.25.bin",
+    "size": 615432,
+    "md5": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "filesystem": {
+    "url": "https://cloud.waterius.ru/ota/nodemcuv2-2.0.25-fs.bin",
+    "size": 1048576,
+    "md5": "098f6bcd4621d373cade4e832627b4f6"
+  }
+}
