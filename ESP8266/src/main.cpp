@@ -15,6 +15,7 @@
 #include "wifi_helpers.h"
 #include "config.h"
 #include "wleds.h"
+#include "ota_update.h"
 
 MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
 AttinyData data;       // Данные от Attiny85
@@ -126,11 +127,25 @@ void loop()
 
                 send_data(sett, data, cdata, json_data, json_settings_received);
 
+                if (sett.reserved9[0] != 0)
+                {
+                    sett.reserved9[0] = 0;
+                    store_config(sett);
+                }
+
                 if (settings_received(json_settings_received))
                 {
                     apply_settings(json_settings_received);
                     send_data(sett, data, cdata, json_data, json_settings_received);
                 }
+
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+                if (json_settings_received[F("update_ota")].is<const char*>())
+                {
+                    perform_ota_update(json_settings_received[F("update_ota")].as<const char*>(), masterI2C, sett, voltage);
+                }
+#endif
 
                 // Все уже отправили,  wifi не нужен - выключаем
                 wifi_shutdown();

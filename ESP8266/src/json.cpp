@@ -90,6 +90,12 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("company")] = sett.company;
     root[F("place")] = sett.place;
 
+    // OTA error
+    if (sett.reserved9[0] != 0)
+    {
+        root[F("ota_error")] = (int)sett.reserved9[0];
+    }
+
     LOG_INFO(F("JSON: Size: ") << measureJson(json_data));
 
     // JSON size 1.1.16 929 //no mqtt

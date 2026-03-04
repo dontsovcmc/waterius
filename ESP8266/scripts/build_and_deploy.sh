@@ -4,7 +4,12 @@ set -euo pipefail
 # Скрипт сборки прошивки, генерации manifest.json и копирования в папку ota/
 #
 # Использование:
-#   ./build_and_deploy.sh
+#   ./build_and_deploy.sh <версия>     — собрать OTA с указанной версией
+#   ./build_and_deploy.sh              — собрать OTA с версией из platformio.ini
+#
+# Примеры:
+#   ./build_and_deploy.sh 2.0.25
+#   ./build_and_deploy.sh 2.0.25-ota-test
 
 ENVIRONMENT="waterius_2"
 BOARD="nodemcuv2"
@@ -21,12 +26,36 @@ OTA_DIR="${PROJECT_DIR}/ota"
 
 cd "$PROJECT_DIR"
 
-# Извлекаем версию из platformio.ini
-VERSION=$(grep '^firmware_version' platformio.ini | sed 's/[^0-9.]//g')
-if [ -z "$VERSION" ]; then
+# Извлекаем текущую версию из platformio.ini
+CURRENT_VERSION=$(grep '^firmware_version' platformio.ini | sed 's/.*= *//; s/[\"\\]//g')
+if [ -z "$CURRENT_VERSION" ]; then
     echo "Ошибка: не удалось определить firmware_version из platformio.ini"
     exit 1
 fi
+
+# Если передана версия — временно подменяем в platformio.ini
+OTA_VERSION="${1:-$CURRENT_VERSION}"
+RESTORE_VERSION=false
+
+if [ "$OTA_VERSION" != "$CURRENT_VERSION" ]; then
+    echo "=== Подмена версии: ${CURRENT_VERSION} -> ${OTA_VERSION} ==="
+    cp platformio.ini platformio.ini.bak
+    sed -i '' "s/^firmware_version = .*/firmware_version = \"\\\\\"${OTA_VERSION}\\\\\"\"/" platformio.ini
+    RESTORE_VERSION=true
+fi
+
+restore_version() {
+    if [ "$RESTORE_VERSION" = true ] && [ -f platformio.ini.bak ]; then
+        cp platformio.ini.bak platformio.ini
+        rm platformio.ini.bak
+        echo "=== Версия восстановлена: ${CURRENT_VERSION} ==="
+    fi
+}
+trap restore_version EXIT
+
+# Версия для имён файлов (только цифры и точки)
+VERSION_CLEAN=$(echo "$OTA_VERSION" | sed 's/[^0-9.]//g')
+VERSION="$VERSION_CLEAN"
 
 FW_FILE="${BOARD}-${VERSION}.bin"
 FS_FILE="${BOARD}-${VERSION}-fs.bin"
@@ -75,7 +104,7 @@ cp "$FS_FILE" "$OTA_DIR/"
 # Генерация manifest.json в ota/
 cat > "${OTA_DIR}/manifest.json" << EOF
 {
-  "version": "${VERSION}",
+  "version": "${OTA_VERSION}",
   "firmware": {
     "url": "${OTA_BASE_URL}/${FW_FILE}",
     "size": ${FW_SIZE},

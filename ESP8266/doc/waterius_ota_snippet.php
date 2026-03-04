@@ -12,10 +12,11 @@
  * Настройки (менять здесь):
  */
 $OTA_ENABLED = true;  // true = отдавать update_ota, false = обычный ответ
+$OTA_TARGET_VERSION = '2.0.24'; // OTA только для этой версии ESP (пустая строка = для всех)
 $OTA_MANIFEST_URL = 'https://us.pstd.ru/us-files/waterius/manifest.json'; // debug
 // $OTA_MANIFEST_URL = 'https://cloud.waterius.ru/ota/manifest.json';    // release
 
-add_action('init', function() use ($OTA_ENABLED, $OTA_MANIFEST_URL) {
+add_action('init', function() use ($OTA_ENABLED, $OTA_TARGET_VERSION, $OTA_MANIFEST_URL) {
     // URL: https://us.pstd.ru/cloud-waterius-ru
     if ($_SERVER['REQUEST_URI'] !== '/cloud-waterius-ru') {
         return;
@@ -34,7 +35,10 @@ add_action('init', function() use ($OTA_ENABLED, $OTA_MANIFEST_URL) {
     $response = [];
 
     if ($OTA_ENABLED) {
-        $response['update_ota'] = $OTA_MANIFEST_URL;
+        $version_esp = isset($data['version_esp']) ? $data['version_esp'] : '';
+        if ($OTA_TARGET_VERSION === '' || $version_esp === $OTA_TARGET_VERSION) {
+            $response['update_ota'] = $OTA_MANIFEST_URL;
+        }
     }
 
     header('Content-Type: application/json');
