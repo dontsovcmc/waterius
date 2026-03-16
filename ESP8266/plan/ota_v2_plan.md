@@ -10,6 +10,9 @@
 | 4 | Перенумеровать коды ошибок (5 вместо 8) | ota_update.h |
 | 5 | Обновить скрипт сборки (без manifest.json) | scripts/build_and_deploy.sh |
 | 6 | Обновить doc/ota.md | doc/ota.md |
+| 7 | Извлечь parse_ota_params() в ota_parse.h, native-тесты | ota_parse.h, ota_update.cpp, test_url_validation.cpp |
+| 8 | Обновить PHP-сниппет под OTA v2 | doc/waterius_ota_snippet.php |
+| 9 | Тестирование на устройстве | — |
 
 ### Ключевые изменения
 
@@ -21,13 +24,52 @@
 
 **HTTPS:** оставлен (WiFiClientSecure + setInsecure). Памяти хватает, защита от пассивного перехвата.
 
-**PHP-сниппет:** оставлен для тестирования, в документации добавлен Python Flask пример.
+**PHP-сниппет:** обновлён под v2 — отдаёт секцию `ota` вместо `update_ota`.
 
-## Осталось
+**Native-тесты:** 11 тестов (googletest) для parse_ota_params() — парсинг JSON, валидация полей, коды ошибок.
 
-| # | Задача |
-|---|--------|
-| 7 | Тестирование на устройстве |
+---
+
+## Результаты тестирования на устройстве
+
+**Дата:** 2026-03-16
+**Устройство:** Waterius-2 (ESP-12F, 4MB flash), ChipId: 682bdb
+**Питание:** USB (4732 mV)
+**WiFi:** ZLINKS, 802.11n, канал 7, RSSI -49 dBm
+**Сервер:** WordPress + Code Snippets на us.pstd.ru
+
+### Тест: полный OTA (firmware + filesystem), 2.0.24 → 2.0.25
+
+| Этап | Время | Результат |
+|------|-------|-----------|
+| WiFi подключение | ~3.8с | OK |
+| NTP синхронизация | ~0.05с | OK |
+| HTTP POST → сервер вернул `ota` | ~1.1с | OK, JSON с firmware + filesystem |
+| Проверка батареи | — | Пропущена (USB: 4732 mV > 4600) |
+| Парсинг OTA JSON | мгновенно | OK, url/md5/size распознаны |
+| Скачивание filesystem (1024 KB) | ~47с (~22 KB/с) | OK |
+| Скачивание firmware (633 KB) | ~34с (~19 KB/с) | OK |
+| Перезагрузка (eboot copy) | ~3.8с | OK |
+| **Полный цикл OTA** | **~88с** | **OK** |
+
+### Проверено
+
+- Сервер вернул `{"ota": {"firmware": {...}, "filesystem": {...}}}` — ESP распарсил корректно
+- USB-питание определено (4732 mV > 4600 mV) — проверка батареи пропущена
+- Filesystem обновлён, затем firmware — порядок правильный
+- После рестарта: `Firmware ver: 2.0.25` — версия обновилась
+- EEPROM/Settings сохранились (WiFi, ключи, показания — всё на месте)
+- Второй запрос к серверу → `{}` (version_esp=2.0.25 ≠ target 2.0.24) — OTA не зациклился
+- Устройство нормально ушло в сон после OTA
+
+### Native-тесты (googletest)
+
+```
+platformio test --environment native
+11 tests from 2 test suites — all PASSED
+```
+
+Тесты: FirmwareAndFilesystem, FirmwareOnly, FilesystemOnly, EmptyObject, FirmwareMissingUrl, FirmwareMissingMd5, FilesystemMissingUrl, FilesystemMissingMd5, SizeDefaultsToZero, FirmwareNotObject, OtaErrorCodes.Values.
 
 ---
 

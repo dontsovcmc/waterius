@@ -43,72 +43,40 @@ bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &s
     }
 
     // Парсим OTA-данные из JSON-ответа сервера
-    bool has_firmware = ota["firmware"].is<JsonObject>();
-    bool has_filesystem = ota["filesystem"].is<JsonObject>();
-
-    if (!has_firmware && !has_filesystem)
+    OtaParams p = parse_ota_params(ota);
+    if (p.error != OTA_ERR_NONE)
     {
-        LOG_ERROR(F("OTA: no firmware or filesystem in ota object"));
-        sett.reserved9[0] = OTA_ERR_PARSE;
+        LOG_ERROR(F("OTA: parse error ") << p.error);
+        sett.reserved9[0] = p.error;
         store_config(sett);
         return false;
     }
 
-    const char *fw_url = nullptr;
-    const char *fw_md5 = nullptr;
-    const char *fs_url = nullptr;
-    const char *fs_md5 = nullptr;
-
-    if (has_firmware)
+    if (p.has_firmware)
     {
-        JsonObject fw = ota["firmware"];
-        fw_url = fw["url"].as<const char *>();
-        fw_md5 = fw["md5"].as<const char *>();
-        size_t fw_size = fw["size"] | (size_t)0;
-
-        if (!fw_url || !fw_md5)
-        {
-            LOG_ERROR(F("OTA: firmware missing url or md5"));
-            sett.reserved9[0] = OTA_ERR_PARSE;
-            store_config(sett);
-            return false;
-        }
-        LOG_INFO(F("OTA: firmware url=") << fw_url << F(" md5=") << fw_md5 << F(" size=") << fw_size);
+        LOG_INFO(F("OTA: firmware url=") << p.fw_url << F(" md5=") << p.fw_md5 << F(" size=") << p.fw_size);
     }
-
-    if (has_filesystem)
+    if (p.has_filesystem)
     {
-        JsonObject fs = ota["filesystem"];
-        fs_url = fs["url"].as<const char *>();
-        fs_md5 = fs["md5"].as<const char *>();
-        size_t fs_size = fs["size"] | (size_t)0;
-
-        if (!fs_url || !fs_md5)
-        {
-            LOG_ERROR(F("OTA: filesystem missing url or md5"));
-            sett.reserved9[0] = OTA_ERR_PARSE;
-            store_config(sett);
-            return false;
-        }
-        LOG_INFO(F("OTA: filesystem url=") << fs_url << F(" md5=") << fs_md5 << F(" size=") << fs_size);
+        LOG_INFO(F("OTA: filesystem url=") << p.fs_url << F(" md5=") << p.fs_md5 << F(" size=") << p.fs_size);
     }
 
     // Продлеваем время бодрствования
     masterI2C.extendWakeUp();
 
     // Обновление filesystem (сначала FS, потом firmware)
-    if (has_filesystem)
+    if (p.has_filesystem)
     {
         masterI2C.extendWakeUp();
         LOG_INFO(F("OTA: downloading filesystem..."));
 
         ESPhttpUpdate.rebootOnUpdate(false);
-        ESPhttpUpdate.setMD5sum(fs_md5);
+        ESPhttpUpdate.setMD5sum(p.fs_md5);
 
         WiFiClientSecure fs_client;
         fs_client.setInsecure();
 
-        t_httpUpdate_return ret = ESPhttpUpdate.updateFS(fs_client, fs_url);
+        t_httpUpdate_return ret = ESPhttpUpdate.updateFS(fs_client, p.fs_url);
         if (ret != HTTP_UPDATE_OK)
         {
             LOG_ERROR(F("OTA: filesystem update failed: ") << ESPhttpUpdate.getLastErrorString());
@@ -120,18 +88,18 @@ bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &s
     }
 
     // Обновление firmware
-    if (has_firmware)
+    if (p.has_firmware)
     {
         masterI2C.extendWakeUp();
         LOG_INFO(F("OTA: downloading firmware..."));
 
         ESPhttpUpdate.rebootOnUpdate(false);
-        ESPhttpUpdate.setMD5sum(fw_md5);
+        ESPhttpUpdate.setMD5sum(p.fw_md5);
 
         WiFiClientSecure fw_client;
         fw_client.setInsecure();
 
-        t_httpUpdate_return ret = ESPhttpUpdate.update(fw_client, fw_url);
+        t_httpUpdate_return ret = ESPhttpUpdate.update(fw_client, p.fw_url);
         if (ret != HTTP_UPDATE_OK)
         {
             LOG_ERROR(F("OTA: firmware update failed: ") << ESPhttpUpdate.getLastErrorString());
