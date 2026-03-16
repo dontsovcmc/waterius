@@ -36,3 +36,4 @@ ImpCounterServer/run.sh
 Debug
 Release
 .pio
+.DS_Store
