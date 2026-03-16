@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Скрипт сборки прошивки, генерации manifest.json и копирования в папку ota/
+# Скрипт сборки прошивки и копирования в папку ota/
 #
 # Использование:
 #   ./build_and_deploy.sh <версия>     — собрать OTA с указанной версией
@@ -101,28 +101,28 @@ mkdir -p "$OTA_DIR"
 cp "$FW_FILE" "$OTA_DIR/"
 cp "$FS_FILE" "$OTA_DIR/"
 
-# Генерация manifest.json в ota/
-cat > "${OTA_DIR}/manifest.json" << EOF
-{
-  "version": "${OTA_VERSION}",
-  "firmware": {
-    "url": "${OTA_BASE_URL}/${FW_FILE}",
-    "size": ${FW_SIZE},
-    "md5": "${FW_MD5}"
-  },
-  "filesystem": {
-    "url": "${OTA_BASE_URL}/${FS_FILE}",
-    "size": ${FS_SIZE},
-    "md5": "${FS_MD5}"
-  }
-}
-EOF
-
 echo ""
 echo "--- Результат в ota/ ---"
 ls -lh "$OTA_DIR/"
+
 echo ""
-cat "${OTA_DIR}/manifest.json"
+echo "--- Секция ota для конфигурации сервера ---"
+cat << EOF
+{
+  "ota": {
+    "firmware": {
+      "url": "${OTA_BASE_URL}/${FW_FILE}",
+      "size": ${FW_SIZE},
+      "md5": "${FW_MD5}"
+    },
+    "filesystem": {
+      "url": "${OTA_BASE_URL}/${FS_FILE}",
+      "size": ${FS_SIZE},
+      "md5": "${FS_MD5}"
+    }
+  }
+}
+EOF
 
 echo ""
 echo "=== Готово ==="

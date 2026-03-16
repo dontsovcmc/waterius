@@ -141,9 +141,9 @@ void loop()
 
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
-                if (json_settings_received[F("update_ota")].is<const char*>())
+                if (json_settings_received[F("ota")].is<JsonObject>())
                 {
-                    perform_ota_update(json_settings_received[F("update_ota")].as<const char*>(), masterI2C, sett, voltage);
+                    perform_ota_update(json_settings_received[F("ota")].as<JsonObject>(), masterI2C, sett, voltage);
                 }
 #endif
 
