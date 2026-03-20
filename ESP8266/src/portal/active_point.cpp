@@ -49,6 +49,8 @@ String template_bool(const uint8_t value)
  */
 String replace_value(const String &var)
 {
+    if (var.indexOf('%') < 0)
+        return var;
     String out(var);
     out.replace(F("%"), F("%%"));
     return out;

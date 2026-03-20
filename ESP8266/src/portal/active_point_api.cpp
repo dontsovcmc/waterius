@@ -22,6 +22,8 @@ extern MasterI2C masterI2C;
 extern Settings sett;
 extern CalculatedData cdata;
 
+static JsonDocument g_json_doc;
+
 inline void send_json_response(AsyncWebServerRequest *request, JsonDocument &json_doc)
 {
     AsyncResponseStream *response = request->beginResponseStream("application/json");
@@ -64,8 +66,8 @@ void get_api_connect_status(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("GET ") << request->url());
 
-    JsonDocument json_doc; //(JSON_SMALL_STATIC_MSG_BUFFER);
-    JsonObject ret = json_doc.to<JsonObject>();
+    g_json_doc.clear();
+    JsonObject ret = g_json_doc.to<JsonObject>();
 
     if (start_connect_flag)
     {
@@ -86,7 +88,7 @@ void get_api_connect_status(AsyncWebServerRequest *request)
         }
     }
 
-    send_json_response(request, json_doc);
+    send_json_response(request, g_json_doc);
 };
 
 /**
@@ -106,8 +108,8 @@ void get_api_networks(AsyncWebServerRequest *request)
     }
     else if (n)
     {
-        JsonDocument json_doc;
-        JsonArray array = json_doc.to<JsonArray>();
+        g_json_doc.clear();
+        JsonArray array = g_json_doc.to<JsonArray>();
 
         for (int i = 0; i < n; ++i)
         {
@@ -122,7 +124,7 @@ void get_api_networks(AsyncWebServerRequest *request)
 
         WiFi.scanDelete();
 
-        send_json_response(request, json_doc);
+        send_json_response(request, g_json_doc);
     }
 };
 
@@ -135,8 +137,8 @@ void post_api_save_connect(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
 
-    JsonDocument json_doc; // (JSON_SMALL_STATIC_MSG_BUFFER);
-    JsonObject ret = json_doc.to<JsonObject>();
+    g_json_doc.clear();
+    JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
 
     // Если канал WiFi отличен от текущего канала AP ESP, то возможно отключение телефона
@@ -150,30 +152,19 @@ void post_api_save_connect(AsyncWebServerRequest *request)
     {
         ret.remove(F("errors"));
 
-        String params;
+        bool channel_changed = (channel != sett.wifi_channel);
 
-        if (channel != sett.wifi_channel)
+        if (channel_changed && wizard)
         {
-            if (wizard)
-            {
-                params += F("wizard=true&error=0");  // ERROR_ANOTHER_CHANNEL "Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново."
-            }
-            else
-            {
-                params += F("error=0"); // ERROR_ANOTHER_CHANNEL
-            }
+            ret[F("redirect")] = F("/api/start_connect?wizard=true&error=0");
         }
-        else
+        else if (channel_changed)
         {
-            if (wizard)
-            {
-                params += F("wizard=true");
-            }
+            ret[F("redirect")] = F("/api/start_connect?error=0");
         }
-
-        if (params.length())
+        else if (wizard)
         {
-            ret[F("redirect")] = F("/api/start_connect?") + params;
+            ret[F("redirect")] = F("/api/start_connect?wizard=true");
         }
         else
         {
@@ -181,7 +172,7 @@ void post_api_save_connect(AsyncWebServerRequest *request)
         }
     }
 
-    send_json_response(request, json_doc);
+    send_json_response(request, g_json_doc);
 }
 
 /**
@@ -215,8 +206,8 @@ void get_api_main_status(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("GET ") << request->url());
 
-    JsonDocument json_doc; // (JSON_SMALL_STATIC_MSG_BUFFER);
-    JsonArray array = json_doc.to<JsonArray>();
+    g_json_doc.clear();
+    JsonArray array = g_json_doc.to<JsonArray>();
 
     wl_status_t status = WiFi.status();
     LOG_INFO(F("WIFI: status=") << status);
@@ -226,7 +217,9 @@ void get_api_main_status(AsyncWebServerRequest *request)
         JsonObject obj = array.add<JsonObject>();
         obj["error"] = F("1");  // S_WIFI_CONNECT "Ошибка подключения к Wi-Fi"
         obj["link_text"] = F("5"); // S_SETUP Настроить
-        obj["link"] = F("/wifi_settings.html?status_code=") + String(status);
+        char link_buf[48];
+        snprintf(link_buf, sizeof(link_buf), "/wifi_settings.html?status_code=%d", status);
+        obj["link"] = link_buf;
     }
     else
     {
@@ -249,9 +242,9 @@ void get_api_main_status(AsyncWebServerRequest *request)
         }
     }
 
-    LOG_INFO(F("JSON: Size: ") << measureJson(json_doc));
+    LOG_INFO(F("JSON: Size: ") << measureJson(g_json_doc));
 
-    send_json_response(request, json_doc);
+    send_json_response(request, g_json_doc);
 }
 
 void get_api_status_0(AsyncWebServerRequest *request)
@@ -273,8 +266,8 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
 {
     LOG_INFO(F("GET ") << request->url());
 
-    JsonDocument json_doc; // (JSON_SMALL_STATIC_MSG_BUFFER);
-    JsonObject ret = json_doc.to<JsonObject>();
+    g_json_doc.clear();
+    JsonObject ret = g_json_doc.to<JsonObject>();
 
     if (masterI2C.getAttinyData(runtime_data))
     {
@@ -304,7 +297,7 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
     digitalWrite(CH1_LED_PIN, runtime_data.on_pulse1);
 #endif
 
-    send_json_response(request, json_doc);
+    send_json_response(request, g_json_doc);
 };
 
 inline bool is_all_asterisks(const String& s) {
@@ -318,6 +311,31 @@ inline bool is_all_asterisks(const String& s) {
     return true;
 }
 
+
+/**
+ * @brief Копирует src в dest с обрезкой начальных и конечных пробелов, без аллокаций на heap.
+ */
+static void strncpy_trimmed(char *dest, const char *src, size_t size)
+{
+    if (size == 0) return;
+
+    // Пропускаем начальные пробелы
+    while (*src && isspace((unsigned char)*src))
+        src++;
+
+    // Находим конец строки
+    size_t len = strlen(src);
+
+    // Обрезаем конечные пробелы
+    while (len > 0 && isspace((unsigned char)src[len - 1]))
+        len--;
+
+    if (len >= size)
+        len = size - 1;
+
+    memcpy(dest, src, len);
+    dest[len] = 0;
+}
 
 /**
  * @brief Запрос сохранения настроек
@@ -356,10 +374,8 @@ void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject 
     }
     else
     {
-        String value(p->value());
-        value.trim();  //чтобы пользователи случайно не ввели пробел
-        strncpy0(dest, value.c_str(), size);
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << value);
+        strncpy_trimmed(dest, p->value().c_str(), size);
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << dest);
     }
 }
 
@@ -415,9 +431,17 @@ void save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj)
     }
     else */
     {
-        String value = p->value();
-        value.replace(',', '.');
-        v = value.toFloat();  // только 2 знака после точки
+        const String &value = p->value();
+        if (value.indexOf(',') >= 0)
+        {
+            String copy(value);
+            copy.replace(',', '.');
+            v = copy.toFloat();
+        }
+        else
+        {
+            v = value.toFloat();
+        }
         LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
     }
 }
@@ -748,8 +772,8 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
 void post_api_save(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
-    JsonDocument json_doc;
-    JsonObject ret = json_doc.to<JsonObject>();
+    g_json_doc.clear();
+    JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
 
     applySettings(request, errorsObj);
@@ -757,14 +781,14 @@ void post_api_save(AsyncWebServerRequest *request)
     uint8_t input = get_param_uint8(request, FPSTR(PARAM_INPUT));
     applyInputSettings(request, errorsObj, input);
 
-    send_json_response(request, json_doc);
+    send_json_response(request, g_json_doc);
 }
 
 void post_api_save_input_type(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
-    JsonDocument json_doc;
-    JsonObject ret = json_doc.to<JsonObject>();
+    g_json_doc.clear();
+    JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
 
     uint8_t input = get_param_uint8(request, FPSTR(PARAM_INPUT));
@@ -813,10 +837,12 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     bool wizard = find_wizard_param(request);
     if (wizard)
     {
-        ret[F("redirect")] = ret[F("redirect")] + F("?wizard=true");
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%s?wizard=true", ret[F("redirect")].as<const char*>());
+        ret[F("redirect")] = buf;
     }
 
-    send_json_response(request, json_doc);
+    send_json_response(request, g_json_doc);
 }
 
 void get_api_turnoff(AsyncWebServerRequest *request)
@@ -831,12 +857,12 @@ void post_api_reset(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("POST ") << request->url());
 
-    JsonDocument json_doc; // (JSON_SMALL_STATIC_MSG_BUFFER);
-    JsonObject ret = json_doc.to<JsonObject>();
+    g_json_doc.clear();
+    JsonObject ret = g_json_doc.to<JsonObject>();
 
     ret[F("redirect")] = F("/");
 
     factory_reset_flag = true;
 
-    send_json_response(request, json_doc);
+    send_json_response(request, g_json_doc);
 }
