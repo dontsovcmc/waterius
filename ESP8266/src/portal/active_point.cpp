@@ -19,7 +19,6 @@
 #include "active_point.h"
 
 #define SETUP_TIME_SEC 600UL // На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
-#define I2C_POLL_INTERVAL_MS 2000UL
 
 bool exit_portal_flag = false;
 bool start_connect_flag = false;
@@ -572,25 +571,10 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     WiFi.scanNetworks(true);
 
     uint16_t start = millis();
-    uint32_t last_i2c_poll = 0;
     while (!exit_portal_flag && ((millis() - start) / 1000) < SETUP_TIME_SEC)
     {
         dns->processNextRequest();
         yield();
-
-        // читаем раз в 2 секунды данные из attiny в основном потоке 
-        // (а не в хэндлере, где может быть переполнение стека)
-        if (millis() - last_i2c_poll >= I2C_POLL_INTERVAL_MS)
-        {
-            last_i2c_poll = millis();
-            AttinyData temp;
-            if (masterI2C.getAttinyData(temp))
-            {
-                noInterrupts();
-                runtime_data = temp;
-                interrupts();
-            }
-        }
 
         if (start_connect_flag)
         {
