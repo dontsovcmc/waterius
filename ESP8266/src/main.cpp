@@ -1,7 +1,7 @@
 #include <user_interface.h>
 #include <umm_malloc/umm_heap_select.h>
 #include <ESP8266WiFi.h>
-#include <ArduinoJson.h>
+#include "json.h"
 #include "Logging.h"
 #include "config.h"
 #include "master_i2c.h"
@@ -17,13 +17,14 @@
 #include "wleds.h"
 #include "ota_update.h"
 
-MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
-AttinyData data;       // Данные от Attiny85
-AttinyData runtime_data; // Данные от Attiny85 для веб интерфейса
-Settings sett;        // Настройки соединения и предыдущие показания из EEPROM
-CalculatedData cdata; // вычисляемые данные
+MasterI2C masterI2C;     // Для общения с Attiny85 по i2c
+AttinyData data;         // Данные от Attiny85 при включении
+AttinyData runtime_data; // Копия данных от Attiny85. Обновляются в webportal на странице детектирования и ввода значений счётчиков.
+Settings sett;           // Настройки соединения и предыдущие показания из EEPROM
+CalculatedData cdata;    // вычисляемые данные
 ADC_MODE(ADC_VCC);
 Voltage voltage;
+
 
 /*
 Выполняется однократно при включении
@@ -80,7 +81,6 @@ void loop()
             LOG_INFO(F("Entering in setup mode..."));
             // Режим настройки - запускаем точку доступа на 192.168.4.1
             // Запускаем точку доступа с вебсервером
-
             start_active_point(sett, cdata);
 
             store_config(sett);
@@ -125,6 +125,8 @@ void loop()
                     }
                 }
 
+                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
+
                 send_data(sett, data, cdata, json_data, json_settings_received);
 
                 if (sett.reserved9[0] != 0)
@@ -138,7 +140,6 @@ void loop()
                     apply_settings(json_settings_received);
                     send_data(sett, data, cdata, json_data, json_settings_received);
                 }
-
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
                 if (json_settings_received[F("ota")].is<JsonObject>())

@@ -120,6 +120,10 @@ String processor(const String &var)
     return processor_main(var);
 }
 
+/**
+ *  Функция возвращающая текстовое значение параметра по его имени. 
+ *  Используется для отрисовки статических html страниц portal по ключевым словам %keyword% 
+ */
 String processor_main(const String &var, const uint8_t input)
 {   
     if (var == FPSTR(PARAM_VERSION))
@@ -248,6 +252,8 @@ String processor_main(const String &var, const uint8_t input)
 
     else if (var == FPSTR(PARAM_MQTT_AUTO_DISCOVERY))
         return template_bool(sett.mqtt_auto_discovery);
+    else if (var == FPSTR(PARAM_MQTT_RETAIN))
+        return template_bool(sett.mqtt_retain);
     else if (var == FPSTR(PARAM_MQTT_DISCOVERY_TOPIC))
         return replace_value(sett.mqtt_discovery_topic);
 

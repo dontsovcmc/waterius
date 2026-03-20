@@ -182,6 +182,7 @@ class Settings:
     place: str | None = ''
 
     mqtt_auto_discovery: int | None = True
+    mqtt_retain: bool | None = True
     mqtt_discovery_topic: str | None = "homeassistant"
 
     ntp_server: str | None = "ru.pool.ntp.org"

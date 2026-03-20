@@ -68,6 +68,7 @@ void mqtt_callback(Settings &sett, JsonDocument &json_settings_received, PubSubC
 
     ha_fill_json_settings_data(topic, payload, json_settings_received);
 
+
     LOG_INFO(F("MQTT: Remove retain message: ") << topic);
     publish(mqtt_client, topic, zero_payload, PUBLISH_MODE_SIMPLE);
 }

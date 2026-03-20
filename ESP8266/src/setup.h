@@ -10,6 +10,10 @@
 /*
 Версии прошивки для ESP
 
+1.1.20  - 2026.02.15 - dontsovcmc, Anat0l
+                      1. добавлен default_entity_id для HomeAssistant
+                      2. retain в MQTT можно отключить
+
 1.1.19  - 2025.11.07 - dontsovcmc
                       1. Пароль от Wi-Fi и MQTT в интерфейс передаётся *******.
 
@@ -601,7 +605,8 @@ struct Settings
     /* Включение DHCP или статических настроек */
     uint8_t dhcp_off = (uint8_t) false;
 
-    uint8_t reserved8 = 0;
+    /* Retain сообщения MQTT */
+    uint8_t mqtt_retain = (uint8_t)true;
 
     time_t base_time = 0; // Size of time_t: 8
 

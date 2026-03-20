@@ -56,7 +56,7 @@ bool connect_and_subscribe_mqtt(Settings &sett, JsonDocument &json_settings_rece
         // так как нужно будет изменять настройки устройства в функцие
         // то используем лямбду чтобы передать туда настройки
         // парамтеры в лямбду передаются "by reference"
-
+        
         mqtt_client.setCallback([&](char *raw_topic, byte *raw_payload, unsigned int length)
                                 { mqtt_callback(sett, json_settings_received, mqtt_client, mqtt_topic, raw_topic, raw_payload, length); });
     }

@@ -3,6 +3,8 @@
 
 #include <pgmspace.h>
 
+// Здесь расположены параметры, которые указаны в html страницах веб портала и парсятся бэкендом 
+// 
 static const char PARAM_VERSION[] PROGMEM = "version";
 static const char PARAM_VERSION_ESP[] PROGMEM = "version_esp";
 static const char PARAM_WATERIUS_HOST[] PROGMEM = "waterius_host";
@@ -18,11 +20,11 @@ static const char PARAM_GATEWAY[] PROGMEM = "gateway";
 static const char PARAM_MASK[] PROGMEM = "mask";
 static const char PARAM_MAC_ADDRESS[] PROGMEM = "mac_address";
 //static const char PARAM_WAKEUP_PER_MIN[] PROGMEM = "wakeup_per_min"; // use s_period_min from ha/resources.h
-static const char PARAM_MQTT_RETAIN[] PROGMEM = "mqtt_retain";
 static const char PARAM_COMPANY[] PROGMEM = "company";
 static const char PARAM_PLACE[] PROGMEM = "place";
 static const char PARAM_MQTT_AUTO_DISCOVERY[] PROGMEM = "mqtt_auto_discovery";
 static const char PARAM_MQTT_DISCOVERY_TOPIC[] PROGMEM = "mqtt_discovery_topic";
+static const char PARAM_MQTT_RETAIN[] PROGMEM = "mqtt_retain";
 static const char PARAM_NTP_SERVER[] PROGMEM = "ntp_server";
 static const char PARAM_SSID[] PROGMEM = "ssid";
 static const char PARAM_PASSWORD[] PROGMEM = "password";

@@ -9,6 +9,7 @@ void send_data(const Settings &sett, const AttinyData &data, const CalculatedDat
     // Формироуем JSON
     get_json_data(sett, data, cdata, json_data);
 
+
     LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 
 #ifndef WATERIUS_RU_DISABLED
