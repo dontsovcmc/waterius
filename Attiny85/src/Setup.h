@@ -13,10 +13,6 @@
 */
 #define WATERIUS_MODEL_2 2
 
-/*
-    стандартная константа калибровки вольтметра в attiny
- */
-#define DEFAULT_AVR_VCC_REFERENCE_MV 1100
 
 /*
     Включение логирования
@@ -103,7 +99,7 @@ struct Config
 {
     uint8_t setup_started_counter;      // Включение режима настройки
     uint8_t resets;                     // Количество перезагрузок
-    uint8_t model;                      // Модификация: 0 - Классический. 2 счетчика, 1 - 4C2W. 4 счетчика
+    uint8_t model;                      // Модификация: 0 - Обычный Ватериус, 2 - Ватериус2
     CounterTypes types;                 // Типы входов счетчиков
 };
 

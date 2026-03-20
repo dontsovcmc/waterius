@@ -49,6 +49,10 @@ void ESPPowerPin::extend_wake_up()
     wake_up_timestamp = millis();
 }
 
+/*
+    стандартная константа калибровки вольтметра в attiny
+*/
+#define DEFAULT_AVR_VCC_REFERENCE_MV 1100
 
 // Измеряем напряжение питания Attiny85.
 // Калибровка делается в ESP с помощью поправочного коэффициента
