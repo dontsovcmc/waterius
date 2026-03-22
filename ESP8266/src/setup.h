@@ -10,6 +10,13 @@
 /*
 Версии прошивки для ESP
 
+2.0.32  - 2026.03.22 - dontsovcmc, Shagrat2
+                      1. Настройка параметров с сервера (и по mqtt)
+                      2. (Waterius-2) обновление прошивки 
+                      3. Оптимизация памяти
+
+2.0.0   - прошивки для платы Waterius-2
+
 1.1.20  - 2026.02.15 - dontsovcmc, Anat0l
                       1. добавлен default_entity_id для HomeAssistant
                       2. retain в MQTT можно отключить
@@ -382,6 +389,17 @@
 #define ERROR_RED_LED_PIN CH0_LED_PIN 
 #endif
 
+/*
+    Статус обновления прошивки
+ */
+enum OtaError
+{
+    OTA_ERR_NONE = 0,
+    OTA_ERR_PARSE = 1,
+    OTA_ERR_FS_UPDATE = 2,
+    OTA_ERR_FW_UPDATE = 3,
+    OTA_ERR_LOW_BATTERY = 4
+};
 
 /*
    Вход attiny
@@ -601,7 +619,9 @@ struct Settings
     /* Включение передачи по mqtt */
     uint8_t mqtt_on = (uint8_t) false;
     
-    uint8_t reserved4 = 0;
+    /* Код ошибки обновления прошивки */
+    uint8_t ota_error = OTA_ERR_NONE;
+
     /* Включение DHCP или статических настроек */
     uint8_t dhcp_off = (uint8_t) false;
 

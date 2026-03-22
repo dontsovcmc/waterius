@@ -36,7 +36,7 @@ bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &s
         if (avg_mv < OTA_MIN_VOLTAGE_MV)
         {
             LOG_ERROR(F("OTA: voltage too low (") << avg_mv << F(" < ") << OTA_MIN_VOLTAGE_MV << F(" mV), aborting"));
-            sett.reserved9[0] = OTA_ERR_LOW_BATTERY;
+            sett.ota_error = OTA_ERR_LOW_BATTERY;
             store_config(sett);
             return false;
         }
@@ -47,7 +47,7 @@ bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &s
     if (p.error != OTA_ERR_NONE)
     {
         LOG_ERROR(F("OTA: parse error ") << p.error);
-        sett.reserved9[0] = p.error;
+        sett.ota_error = p.error;
         store_config(sett);
         return false;
     }
@@ -80,7 +80,7 @@ bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &s
         if (ret != HTTP_UPDATE_OK)
         {
             LOG_ERROR(F("OTA: filesystem update failed: ") << ESPhttpUpdate.getLastErrorString());
-            sett.reserved9[0] = OTA_ERR_FS_UPDATE;
+            sett.ota_error = OTA_ERR_FS_UPDATE;
             store_config(sett);
             return false;
         }
@@ -103,7 +103,7 @@ bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &s
         if (ret != HTTP_UPDATE_OK)
         {
             LOG_ERROR(F("OTA: firmware update failed: ") << ESPhttpUpdate.getLastErrorString());
-            sett.reserved9[0] = OTA_ERR_FW_UPDATE;
+            sett.ota_error = OTA_ERR_FW_UPDATE;
             store_config(sett);
             return false;
         }

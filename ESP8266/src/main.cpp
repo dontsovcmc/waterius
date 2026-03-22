@@ -129,9 +129,9 @@ void loop()
 
                 send_data(sett, data, cdata, json_data, json_settings_received);
 
-                if (sett.reserved9[0] != 0)
+                if (sett.ota_error != OTA_ERR_NONE)
                 {
-                    sett.reserved9[0] = 0;
+                    sett.ota_error = OTA_ERR_NONE;
                     store_config(sett);
                 }
 

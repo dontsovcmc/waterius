@@ -2,12 +2,7 @@
 #define OTA_PARSE_H
 
 #include <ArduinoJson.h>
-
-#define OTA_ERR_NONE 0
-#define OTA_ERR_PARSE 1
-#define OTA_ERR_FS_UPDATE 2
-#define OTA_ERR_FW_UPDATE 3
-#define OTA_ERR_LOW_BATTERY 4
+#include "setup.h"
 
 struct OtaParams
 {
