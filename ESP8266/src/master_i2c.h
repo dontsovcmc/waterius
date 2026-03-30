@@ -99,6 +99,7 @@ public:
     bool setWakeUpPeriod(uint16_t per);
     bool setCountersType(const uint8_t type0, const uint8_t type1);
     bool setTransmitMode();
+    bool setSetupMode();
     bool setSleep();
     bool extendWakeUp();
     bool updateVoltage();

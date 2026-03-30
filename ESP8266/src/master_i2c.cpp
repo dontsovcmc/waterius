@@ -275,7 +275,13 @@ bool MasterI2C::setTransmitMode()
     BusyGuard guard(i2c_busy);
     return sendCmd('T');
 }
-    
+
+bool MasterI2C::setSetupMode()
+{
+    BusyGuard guard(i2c_busy);
+    return sendCmd('P');
+}
+
 bool MasterI2C::setSleep()
 {
     BusyGuard guard(i2c_busy);

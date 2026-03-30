@@ -67,6 +67,10 @@ void loop()
         {
             mode = wait_button_release();
         }
+        if (mode == SETUP_MODE) // Если режим "Настройка"
+        {
+            masterI2C.setSetupMode(); 
+        }
 #endif
         // Загружаем конфигурацию из EEPROM
         config_loaded = load_config(sett);

@@ -71,6 +71,10 @@ void SlaveI2C::receiveEvent(int howMany)
               // MANUAL потому что при TRANSMIT_MODE ESP корректирует время
         setup_mode = MANUAL_TRANSMIT_MODE;
         break;
+    case 'P': // Ватериус-2: если юзер долго держит кнопку, то это режим настройки.
+              // Передаем в attiny для случая нештатной перезагрузки ESP
+        setup_mode = SETUP_MODE;
+        break;
     case 'S': // ESP присылает новое значение периода пробуждения
         getWakeUpPeriod();
         break;
