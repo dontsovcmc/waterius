@@ -93,10 +93,7 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("place")] = sett.place;
 
     // OTA error
-    if (sett.ota_error != OTA_ERR_NONE)
-    {
-        root[F("ota_error")] = (int)sett.ota_error;
-    }
+    root[F("ota_error")] = (int)sett.ota_error;
 
     LOG_INFO(F("JSON: Size: ") << measureJson(json_data));
 

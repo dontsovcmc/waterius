@@ -8,7 +8,7 @@
 Отправка в MQTT и HTTP происходит при каждом пробуждении устройства.
 
 # Список параметров
-В таблице собрана информация об отправляемых данных. В столбцах HTTP, MQTT, Blynk указано, отправляются ли данные по соответствующему протоколу. В столбце Blynk указан номер виртуального пина в который записывается поле.
+В таблице собрана информация об отправляемых данных. В столбцах HTTP, MQTT указано, отправляются ли данные по соответствующему протоколу.
 
 Вход 0 - Синий
 Вход 1 - Красный
@@ -19,7 +19,6 @@
 | adc1 | - | uint | Аналоговый уровень входа 1 | + | + | - |
 | boot | - | uint | Причина загрузки attiny85 | + | + | - |
 | battery | - | int | % заряда батарейки (фейковый) | + | + | - |
-| blynk | - | bool | сервер blynk заполнен | + | + | - |
 | ch0 | м3 | float | Показания воды, вход 0 | + | + | - |
 | ch1 | м3 | float | Показания воды, вход 1 | + | + | - |
 | ch0_start | м3 | float | Начальные показания воды, вход 0 | + | + | - |
@@ -27,6 +26,8 @@
 | channel | - | int | Канал wi-fi роутера | + | + | - |
 | cname0 | - | uint | Тип счётчика, вход 0 | + | + | - |
 | cname1 | - | uint | Тип счётчика, вход 1 | + | + | - |
+| ctype0 | - | uint | Тип входа attiny, вход 0 | + | + | - |
+| ctype1 | - | uint | Тип входа attiny, вход 1 | + | + | - |
 | data_type0 | - | uint | Тип данных, вход 0 | + | + | - |
 | data_type1 | - | uint | Тип данных, вход 1 | + | + | - |
 | dhcp | - | bool | DHCP включен | + | + | - |
@@ -36,19 +37,22 @@
 | esp_id | - | int | Серийный номер ESP | + | + | - |
 | f0 | - | uint | Вес импульса, вход 0 | + | + | - |
 | f1 | - | uint | Вес импульса, вход 1 | + | + | - |
+| flash_id | - | int | ID флеш-чипа ESP | + | + | - |
 | freemem | - | int | свободная память в ESP, байт | + | + | - |
-| good | - | uint | Получены данные от attiny85. Всегда 1. | + | + | - |
 | imp0 | шт | uint | Количество импульсов | + | + | V0 | 
 | imp1 | шт | uint | Количество импульсов | + | + | V1 | 
-| itype0 | - | uint | Тип чтения, вход 0 | + | + | - | 
-| itype1 | - | uint | Тип чтения, вход 1 | + | + | - | 
 | ip | - | str | ip адрес локальный ESP (Х.Х.Х.Х) | + | + | - |
 | ha | - | bool | флаг HA дискавери включен | + | + | - |
+| http | - | bool | HTTP отправка включена | + | + | - |
 | key | - | str | Уникальный токен | + | - | - |
 | mac | - | str | MAC адрес ESP (ХХ:ХХ:ХХ:ХХ:ХХ:ХХ) | + | + | - |
 | mode | - | int | Режим пробуждения 2-авто, 3-по кнопке | + | + | - |
 | mqtt | - | bool | брокер mqtt заполнен | + | + | - |
+| mqtt_retain | - | bool | MQTT retain включен | + | + | - |
+| ntp_errors | шт | uint | Ошибки синхронизации времени NTP | + | + | - |
+| ota_error | - | int | Код ошибки OTA обновления (0-4) | + | + | - |
 | period_min | минуты | uint | Период пробуждения | + | + | - |
+| period_min_tuned | минуты | float | Скорректированный период пробуждения | + | + | - |
 | resets | шт | uint | Количество перезагрузок | + | + | V5 |
 | router_mac | - | str | MAC адрес производителя роутера (ХХ:ХХ:ХХ:00:00:00) | + | + | - |
 | rssi | dBm | int | Уровень Wi-Fi сигнала | + | + | V8 |
@@ -66,6 +70,8 @@
 | waketime | мсек | int | Время работы ESP при предыдущем включении | + | + | - |
 | wifi_phy_mode | - | str | Текущий режим Wi-Fi | + | + | - |
 | wifi_phy_mode_s | - | str | Режим Wi-Fi из настроек | + | + | - |
+| wifi_connect_attempt | шт | uint | Попытки подключения к WiFi | + | + | - |
+| wifi_connect_errors | шт | uint | Ошибки подключения к WiFi | + | + | - |
 | company | - | str(20) | ИНН организации-установщика | + | + | 1.1.5 |
 | place | - | str(20) | Место установки | + | + | 1.1.5 |
 
@@ -92,7 +98,7 @@
 | 9 | Питьевая вода |
 | 10 | Другой |
 
-#### itypeX
+#### ctypeX
 | Тип чтения | Описание | Описание |
 | --- | --- | --- |
 | 0 | Намур | Для механических счетчиков |
@@ -119,7 +125,7 @@
 С версии 0.11.0: По умолчанию данные прилетят в виде JSON (при включенном параметре discovery) в топик. (Например: "waterius/12380568/")
 
 ```
-{"delta0":0,"delta1":0,"ch0":338.304,"ch1":535.966,"imp0":79,"imp1":109,"f0":10,"f1":10,"adc0":113,"adc1":114,"serial0":"","serial1":"","itype0":0,"itype1":0,"cname0":1,"cname1":0,"data_type0":1,"data_type1":0,"voltage":3.128,"voltage_low":true,"voltage_diff":0.21,"battery":0,"channel":12,"router_mac":"AA:AA:AA:00:00:00","rssi":-70,"mac":"E8AAAA:AA:AA:AA:AA","ip":"172.16.64.50","dhcp":true,"version":31,"version_esp":"0.11.9","esp_id":8686250,"freemem":37504,"timestamp":"2023-10-22T17:01:10+0000","waketime":10829,"period_min":1440,"setuptime":91781,"good":1,"boot":1,"resets":1,"mode":3,"setup_finished":4,"setup_started":5,"key":"AA","email":"AA@ya.ru","mqtt":true,"blynk":true,"ha":false}
+{"delta0":0,"delta1":0,"ch0":338.304,"ch1":535.966,"imp0":79,"imp1":109,"f0":10,"f1":10,"adc0":113,"adc1":114,"serial0":"","serial1":"","ctype0":0,"ctype1":0,"cname0":1,"cname1":0,"data_type0":1,"data_type1":0,"voltage":3.128,"voltage_low":true,"voltage_diff":0.21,"battery":0,"channel":12,"router_mac":"AA:AA:AA:00:00:00","rssi":-70,"mac":"E8AAAA:AA:AA:AA:AA","ip":"172.16.64.50","dhcp":true,"version":31,"version_esp":"0.11.9","esp_id":8686250,"flash_id":1458400,"freemem":37504,"timestamp":"2023-10-22T17:01:10+0000","waketime":10829,"period_min":1440,"period_min_tuned":1440,"setuptime":91781,"boot":1,"resets":1,"mode":3,"setup_finished":4,"setup_started":5,"ntp_errors":0,"wifi_connect_errors":0,"wifi_connect_attempt":1,"ota_error":0,"key":"AA","email":"AA@ya.ru","mqtt":true,"http":false,"ha":false,"mqtt_retain":true}
 ```
 Если параметр discovery выключен или версия прошивки <0.11.0, то данные отправятся в виде отдельных топиков:
 ```
@@ -155,10 +161,10 @@ waterius/12380568/rssi -69
 | ch1        | <топик из настроек>/ch1/set        | дробное число | waterius/124121251/ch1/set        | 151.53        | >=0.11.9  |
 | cname0     | <топик из настроек>/cname0/set     | целое число   | waterius/124121251/cname0/set     | 0             | >=1.0.2   |
 | cname1     | <топик из настроек>/cname1/set     | целое число   | waterius/124121251/cname1/set     | 0             | >=1.0.2   |
-| itype0     | <топик из настроек>/itype0/set     | целое число   | waterius/124121251/itype0/set     | 0             | >=1.0.2   |
-| itype1     | <топик из настроек>/itype1/set     | целое число   | waterius/124121251/itype1/set     | 0             | >=1.0.2   |
+| ctype0     | <топик из настроек>/ctype0/set     | целое число   | waterius/124121251/ctype0/set     | 0             | >=1.0.2   |
+| ctype1     | <топик из настроек>/ctype1/set     | целое число   | waterius/124121251/ctype1/set     | 0             | >=1.0.2   |
 
-Примечание: значения itype0, itype1 указано выше в разделе itypeX
+Примечание: значения ctype0, ctype1 указано выше в разделе ctypeX
 Примечание: значения cname0, cname1 указано выше в разделе cnameX
 
 # Настройка отправки в WirenBoard по MQTT 

@@ -148,8 +148,13 @@ static const char *const ENTITY_IP[MQTT_PARAM_COUNT] PROGMEM =
     {s_sensor, s_ip_name, s_ip, "", "", "", s_diagnostic, s_icon_ip, ""};                           // IP
 static const char *const ENTITY_WIWI_CONNECT_ERRORS[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_wifi_connect_errors_name, s_wifi_connect_errors, "", "", "", s_diagnostic, s_icon_cog_refresh, ""};  // wifi_connect_errors
-static const char *const ENTITY_NTP_ERRORS[MQTT_PARAM_COUNT] PROGMEM = 
+static const char *const ENTITY_NTP_ERRORS[MQTT_PARAM_COUNT] PROGMEM =
     {s_sensor, s_ntp_errors_name, s_ntp_errors, "", "", "", s_diagnostic, s_icon_cog_refresh, ""};  // ntp_errors
+
+static const char s_ota_error_name[] PROGMEM = "OTA Error";
+static const char s_ota_error[] PROGMEM = "ota_error";
+static const char *const ENTITY_OTA_ERROR[MQTT_PARAM_COUNT] PROGMEM =
+    {s_sensor, s_ota_error_name, s_ota_error, "", "", "", s_diagnostic, s_icon_cog_refresh, ""};    // ota_error
    
 /**
  * @brief массив с сущностями для одного канала

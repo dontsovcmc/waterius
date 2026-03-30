@@ -180,6 +180,7 @@ void publish_discovery_general_entities(PubSubClient &mqtt_client,
 
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_WIWI_CONNECT_ERRORS);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_NTP_ERRORS);
+    publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_OTA_ERROR);
 }
 
 /**
