@@ -312,8 +312,8 @@
 #define HOST_LEN 64
 
 #define COMPANY_LEN 20
-#define PLACE_LEN 20
-#define BLYNK_RESERVED 58
+#define PLACE_LEN 40
+#define BLYNK_RESERVED 38
 
 
 #define MQTT_LOGIN_LEN 32
@@ -633,8 +633,9 @@ struct Settings
     /*
     Поправочный коэффициент для voltage Attiny в процентах (100 = без коррекции)
     */
-    uint16_t voltage_calibration = 100;
+    uint8_t voltage_calibration = 100;
 
+    uint8_t reserved8 = 0;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений

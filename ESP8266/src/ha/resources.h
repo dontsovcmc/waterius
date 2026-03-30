@@ -155,6 +155,11 @@ static const char s_ota_error_name[] PROGMEM = "OTA Error";
 static const char s_ota_error[] PROGMEM = "ota_error";
 static const char *const ENTITY_OTA_ERROR[MQTT_PARAM_COUNT] PROGMEM =
     {s_sensor, s_ota_error_name, s_ota_error, "", "", "", s_diagnostic, s_icon_cog_refresh, ""};    // ota_error
+
+static const char s_model_name[] PROGMEM = "Model";
+static const char s_model[] PROGMEM = "model";
+static const char *const ENTITY_MODEL[MQTT_PARAM_COUNT] PROGMEM =
+    {s_sensor, s_model_name, s_model, "", "", "", s_diagnostic, "", ""};                            // model
    
 /**
  * @brief массив с сущностями для одного канала

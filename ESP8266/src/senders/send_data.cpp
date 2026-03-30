@@ -4,6 +4,7 @@
 #include "senders/sender_http.h"
 #include "senders/sender_mqtt.h"
 
+
 void send_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data, JsonDocument &json_settings)
 {
     // Формироуем JSON

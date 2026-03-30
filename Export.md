@@ -47,6 +47,7 @@
 | key | - | str | Уникальный токен | + | - | - |
 | mac | - | str | MAC адрес ESP (ХХ:ХХ:ХХ:ХХ:ХХ:ХХ) | + | + | - |
 | mode | - | int | Режим пробуждения 2-авто, 3-по кнопке | + | + | - |
+| model | - | uint | Модель устройства (0-Classic, 2-Waterius 2) | + | + | - |
 | mqtt | - | bool | брокер mqtt заполнен | + | + | - |
 | mqtt_retain | - | bool | MQTT retain включен | + | + | - |
 | ntp_errors | шт | uint | Ошибки синхронизации времени NTP | + | + | - |
@@ -125,7 +126,7 @@
 С версии 0.11.0: По умолчанию данные прилетят в виде JSON (при включенном параметре discovery) в топик. (Например: "waterius/12380568/")
 
 ```
-{"delta0":0,"delta1":0,"ch0":338.304,"ch1":535.966,"imp0":79,"imp1":109,"f0":10,"f1":10,"adc0":113,"adc1":114,"serial0":"","serial1":"","ctype0":0,"ctype1":0,"cname0":1,"cname1":0,"data_type0":1,"data_type1":0,"voltage":3.128,"voltage_low":true,"voltage_diff":0.21,"battery":0,"channel":12,"router_mac":"AA:AA:AA:00:00:00","rssi":-70,"mac":"E8AAAA:AA:AA:AA:AA","ip":"172.16.64.50","dhcp":true,"version":31,"version_esp":"0.11.9","esp_id":8686250,"flash_id":1458400,"freemem":37504,"timestamp":"2023-10-22T17:01:10+0000","waketime":10829,"period_min":1440,"period_min_tuned":1440,"setuptime":91781,"boot":1,"resets":1,"mode":3,"setup_finished":4,"setup_started":5,"ntp_errors":0,"wifi_connect_errors":0,"wifi_connect_attempt":1,"ota_error":0,"key":"AA","email":"AA@ya.ru","mqtt":true,"http":false,"ha":false,"mqtt_retain":true}
+{"delta0":0,"delta1":0,"ch0":338.304,"ch1":535.966,"imp0":79,"imp1":109,"f0":10,"f1":10,"adc0":113,"adc1":114,"serial0":"","serial1":"","ctype0":0,"ctype1":0,"cname0":1,"cname1":0,"data_type0":1,"data_type1":0,"voltage":3.128,"voltage_low":true,"voltage_diff":0.21,"battery":0,"channel":12,"router_mac":"AA:AA:AA:00:00:00","rssi":-70,"mac":"AA:AA:AA:AA:AA:AA","ip":"172.16.64.50","dhcp":true,"version":31,"version_esp":"0.11.9","model":0,"esp_id":8686250,"flash_id":1458400,"freemem":37504,"timestamp":"2023-10-22T17:01:10+0000","waketime":10829,"period_min":1440,"period_min_tuned":1440,"setuptime":91781,"boot":1,"resets":1,"mode":3,"setup_finished":4,"setup_started":5,"ntp_errors":0,"wifi_connect_errors":0,"wifi_connect_attempt":1,"ota_error":0,"key":"AA","email":"AA@ya.ru","mqtt":true,"http":false,"ha":false,"mqtt_retain":true}
 ```
 Если параметр discovery выключен или версия прошивки <0.11.0, то данные отправятся в виде отдельных топиков:
 ```

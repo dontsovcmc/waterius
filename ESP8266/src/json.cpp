@@ -61,6 +61,7 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     // Общие сведения о приборе
     root[F("version")] = data.version;
     root[F("version_esp")] = FIRMWARE_VERSION;
+    root[F("model")] = data.model;
     root[F("esp_id")] = getChipId();
     root[F("flash_id")] = ESP.getFlashChipId();
 
@@ -78,6 +79,7 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("setup_finished")] = sett.setup_finished_counter;
     root[F("setup_started")] = data.setup_started_counter;
     root[F("ntp_errors")] = sett.ntp_error_counter;
+    root[F("mqtt_retain")] = (bool)sett.mqtt_retain;
 
     // waterius
     root[F("key")] = sett.waterius_key;
@@ -87,7 +89,7 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("mqtt")] = is_mqtt(sett);
     root[F("ha")] = is_ha(sett);
     root[F("http")] = is_http(sett);
-    root[F("mqtt_retain")] = (bool)sett.mqtt_retain;
+
     // Для юрлиц
     root[F("company")] = sett.company;
     root[F("place")] = sett.place;
