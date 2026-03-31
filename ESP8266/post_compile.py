@@ -14,11 +14,12 @@ def getCppDefine(name: str) -> str:
 
 def prefix(env):
     v = ''.join(c for c in env.GetProjectOption("firmware_version") if c.isdigit() or c in ['.'])
-    board = env.GetProjectOption("board")
+    env_name = env["PIOENV"]
+    # board = env.GetProjectOption("board")
     
     if getCppDefine("WIFI_SSID"):
-        return f"{board}-{v}-test"
-    return f"{board}-{v}"
+        return f"{env_name}-{v}-test"
+    return f"{env_name}-{v}"
 
 
 def copy_file(source, target, env, postfix=''):
