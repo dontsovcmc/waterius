@@ -67,6 +67,7 @@
 | version_esp | - | str | Версия прошивки esp | + | + | - |
 | voltage | В | float | Напряжение питания attiny85 | + | + | - |
 | voltage_diff | мВ | int | Просадка напряжения за время подключения Wi-Fi | + | + | - |
+| voltage_calibration | % | uint8 | Калибровка напряжения, только Waterius 2 (по умолчанию 100) | + | + | - |
 | voltage_low | 0 или 1 | int | voltage_diff выше 50мВ  | + | + | - |
 | waketime | мсек | int | Время работы ESP при предыдущем включении | + | + | - |
 | wifi_phy_mode | - | str | Текущий режим Wi-Fi | + | + | - |
@@ -164,6 +165,7 @@ waterius/12380568/rssi -69
 | cname1     | <топик из настроек>/cname1/set     | целое число   | waterius/124121251/cname1/set     | 0             | >=1.0.2   |
 | ctype0     | <топик из настроек>/ctype0/set     | целое число   | waterius/124121251/ctype0/set     | 0             | >=1.0.2   |
 | ctype1     | <топик из настроек>/ctype1/set     | целое число   | waterius/124121251/ctype1/set     | 0             | >=1.0.2   |
+| voltage_calibration | <топик из настроек>/voltage_calibration/set | целое число (только Waterius 2) | waterius/124121251/voltage_calibration/set | 100 | >=2.0.34 |
 
 Примечание: значения ctype0, ctype1 указано выше в разделе ctypeX
 Примечание: значения cname0, cname1 указано выше в разделе cnameX

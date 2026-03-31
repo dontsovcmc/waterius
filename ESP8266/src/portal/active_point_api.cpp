@@ -720,6 +720,10 @@ void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj
         save_param(p, sett.wakeup_per_min, errorsObj);
         reset_period_min_tuned(sett);
     }
+    else if (name == FPSTR(s_voltage_cal))
+    {
+        save_param(p, sett.voltage_cal, errorsObj);
+    }
     else if (name == FPSTR(PARAM_NTP_SERVER))
     {
         save_param(p, sett.ntp_server, HOST_LEN, errorsObj);

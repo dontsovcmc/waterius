@@ -80,6 +80,9 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("setup_started")] = data.setup_started_counter;
     root[F("ntp_errors")] = sett.ntp_error_counter;
     root[F("mqtt_retain")] = (bool)sett.mqtt_retain;
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+    root[F("voltage_cal")] = sett.voltage_cal;
+#endif
 
     // waterius
     root[F("key")] = sett.waterius_key;

@@ -633,7 +633,7 @@ struct Settings
     /*
     Поправочный коэффициент для voltage Attiny в процентах (100 = без коррекции)
     */
-    uint8_t voltage_calibration = 100;
+    uint8_t voltage_cal = 100;
 
     uint8_t reserved8 = 0;
     /*

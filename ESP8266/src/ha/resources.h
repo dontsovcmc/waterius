@@ -38,6 +38,7 @@ static const char s_vdiff[] PROGMEM = "voltage_diff";
 static const char s_icon_ba[] PROGMEM = "mdi:battery-alert";
 static const char s_bat_low_name[] PROGMEM = "Battery Low";
 static const char s_voltage_low[] PROGMEM = "voltage_low";
+static const char s_voltage_cal[] PROGMEM = "voltage_cal";
 static const char s_battery[] PROGMEM = "battery";
 static const char s_bat_name[] PROGMEM = "Battery";
 static const char s_perc[] PROGMEM = "%";

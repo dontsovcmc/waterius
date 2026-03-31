@@ -1,9 +1,11 @@
 #include "voltage.h"
 #include "Logging.h"
 #include "master_i2c.h"
+#include "setup.h"
 
 extern MasterI2C masterI2C;
 extern AttinyData runtime_data;
+extern Settings sett;
 
 Voltage::Voltage()
 {
@@ -28,7 +30,7 @@ void Voltage::update()
         return;
     }
 
-    _voltage = runtime_data.voltage;
+    _voltage = (uint32_t)runtime_data.voltage * sett.voltage_cal / 100;
 #endif
     if (_min_voltage == 0) {
         _min_voltage = _voltage;
