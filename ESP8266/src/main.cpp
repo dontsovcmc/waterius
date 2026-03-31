@@ -146,7 +146,7 @@ void loop()
                 }
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
-                if (json_settings_received[F("ota")].is<JsonObject>())
+                if (has_ota(json_settings_received))
                 {
                     perform_ota_update(json_settings_received[F("ota")].as<JsonObject>(), masterI2C, sett, voltage);
                 }

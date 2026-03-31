@@ -44,5 +44,14 @@ void send_data(const Settings &sett, const AttinyData &data, const CalculatedDat
 
 bool settings_received(const JsonDocument &json_settings_received)
 {
-    return json_settings_received.size() > 0;
+    if (json_settings_received.size() == 0)
+    {
+        return false;
+    }
+    // Только OTA — не считаем за настройки
+    if (json_settings_received.size() == 1 && has_ota(json_settings_received))
+    {
+        return false;
+    }
+    return true;
 }
