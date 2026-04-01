@@ -17,13 +17,10 @@ def getCppDefine(name: str) -> str:
 
 def prefix(env):
     FIRMWARE_VER = getCppDefine("FIRMWARE_VER")
-    WATERIUS_MODEL = getCppDefine("WATERIUS_MODEL")
     LOG_ON = getCppDefine("LOG_ON")
             
-    board = env.GetProjectOption("board")
-    out = f"{board}-{FIRMWARE_VER}"
-    if WATERIUS_MODEL and WATERIUS_MODEL > 0:
-        out = f"{out}-{WATERIUS_MODEL}"
+    env_name = env["PIOENV"]
+    out = f"{env_name}-{FIRMWARE_VER}"
     if LOG_ON:
         out = f"{out}-log"
     return out

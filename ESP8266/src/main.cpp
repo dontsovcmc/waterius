@@ -141,7 +141,7 @@ void loop()
 
                 if (settings_received(json_settings_received))
                 {
-                    apply_settings(json_settings_received);
+                    apply_settings(json_settings_received, sett, data, cdata);
                     send_data(sett, data, cdata, json_data, json_settings_received);
                 }
 

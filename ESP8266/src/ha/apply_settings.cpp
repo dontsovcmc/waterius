@@ -5,9 +5,10 @@
 #include "config.h"
 #include "setup.h"
 
-extern Settings sett;
-
-void apply_settings(const JsonDocument &json_settings_received)
+void apply_settings(const JsonDocument &json_settings_received, 
+                    Settings &sett, 
+                    const AttinyData &data, 
+                    CalculatedData &cdata)
 {
     JsonDocument errors_doc;
     JsonObject errorsObj = errors_doc.to<JsonObject>();
@@ -39,6 +40,7 @@ void apply_settings(const JsonDocument &json_settings_received)
             applyNonCheckBoxParameter(&p, errorsObj);
         }
     }
-
+    
     store_config(sett);
+    calculate_values(sett, data, cdata);
 }
