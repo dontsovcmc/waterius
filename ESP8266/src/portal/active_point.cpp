@@ -402,7 +402,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     // Канал WiFi роутера к кому подсоединимся должен совпадать с каналом точки доступа ESP
     // https://bbs.espressif.com/viewtopic.php?t=324
     // TODO добавить пароль для интерфейса
-    if (!WiFi.softAP(get_ap_name(), "", sett.wifi_channel, 0, 4))
+    if (!WiFi.softAP(get_ap_name(), "", sett.wifi_channel, 0, 2))
     {
         LOG_ERROR(F("AP started failed"));
         return;
@@ -422,6 +422,8 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
 
     LOG_INFO(F("Start HTTP server"));
     AsyncWebServer *server = new AsyncWebServer(80);
+
+    DefaultHeaders::Instance().addHeader(F("Connection"), F("close"));
 
     server->onNotFound(onNotFound);
 
