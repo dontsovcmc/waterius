@@ -10,7 +10,7 @@ bool settings_received(const JsonDocument &json_settings_received);
 
 inline bool has_ota(const JsonDocument &json_settings_received)
 {
-    return json_settings_received[F("ota")].is<JsonObject>();
+    return json_settings_received.containsKey(F("ota"));
 }
 
 #ifndef MQTT_DISABLED

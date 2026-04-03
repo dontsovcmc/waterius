@@ -35,7 +35,22 @@ void ha_fill_json_settings_data(const String &topic, const String &payload, Json
         String name = topic.substring(prevslash + 1, endslash);
         LOG_INFO(F("MQTT: CALLBACK: Parameter ") << name);
 
-        json_settings_received[name] = payload;
+        if (name == F("ota"))
+        {
+            JsonDocument ota_doc;
+            if (deserializeJson(ota_doc, payload) == DeserializationError::Ok)
+            {
+                json_settings_received[name] = ota_doc.as<JsonObject>();
+            }
+            else
+            {
+                LOG_ERROR(F("MQTT: Failed to parse OTA JSON"));
+            }
+        }
+        else
+        {
+            json_settings_received[name] = payload;
+        }
     }
 }
 
