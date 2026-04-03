@@ -48,7 +48,7 @@ def copy_file(source, target, env, postfix=''):
                         env["PROJECT_DIR"], f'{prefix(env)}{postfix}.{ext}')
     print(file_path + ' ->\n' + dest)
     shutil.copy(file_path, dest)
-    make_json(file_path, dest, env)
+    #make_json(file_path, dest, env)
 
 
 env.AddPostAction("$BUILD_DIR/firmware.bin", lambda source, target, env: copy_file(source, target, env))

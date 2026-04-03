@@ -24,6 +24,7 @@ bool exit_portal_flag = false;
 bool start_connect_flag = false;
 bool factory_reset_flag = false;
 wl_status_t wifi_connect_status = WL_DISCONNECTED;
+bool portal_page_opened = false;
 
 const String localIPURL = "http://192.168.4.1";
 
@@ -328,6 +329,7 @@ void onRedirectIP(AsyncWebServerRequest *request)
 
 void on_root(AsyncWebServerRequest *request)
 {
+    portal_page_opened = true;
     LOG_INFO(F("on_root GET ") << request->url());
     LOG_INFO(F("HEAP: free=") << ESP.getFreeHeap() << F(" max_block=") << ESP.getMaxFreeBlockSize());
 
@@ -442,12 +444,19 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     // SAFARI (IOS) there is a 128KB limit to the size of the HTML. The HTML can reference external resources/images that bring the total over 128KB
     // SAFARI (IOS) popup browser has some severe limitations (javascript disabled, cookies disabled)
 
-    // Required
+    // Windows 11 captive portal: redirect пока popup не открылся, потом 200 чтобы Windows прекратил повторные запросы
     server->on("/connecttest.txt", [](AsyncWebServerRequest *request)
                {
                    LOG_INFO(request->url());
-                   request->redirect("http://logout.net");
-               });                       // windows 11 captive portal workaround
+                   if (portal_page_opened)
+                   {
+                       request->send(200, "text/plain", "Microsoft Connect Test");
+                   }
+                   else
+                   {
+                       request->redirect("http://logout.net");
+                   }
+               });
     server->on("/wpad.dat", onNotFound); // Honestly don't understand what this is but a 404 stops win 10 keep calling this repeatedly and panicking the esp32 :)
 
     // Background responses: Probably not all are Required, but some are. Others might speed things up?

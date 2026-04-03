@@ -10,7 +10,7 @@
 #define MAX_PROBES 20
 
 class Voltage
-{
+{ 
 private:
     uint16_t _voltage;
     uint16_t _min_voltage;
