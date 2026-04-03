@@ -49,6 +49,7 @@ void setup()
     }
     LOG_INFO(F("ChipId: ") << String(getChipId(), HEX));
     LOG_INFO(F("FlashChipId: ") << String(ESP.getFlashChipId(), HEX));
+    LOG_INFO(F("ESP firmware ver: ") << FIRMWARE_VERSION);
 }
 
 void loop()
