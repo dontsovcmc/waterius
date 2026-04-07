@@ -24,7 +24,6 @@ bool exit_portal_flag = false;
 bool start_connect_flag = false;
 bool factory_reset_flag = false;
 wl_status_t wifi_connect_status = WL_DISCONNECTED;
-bool portal_page_opened = false;
 
 const String localIPURL = "http://192.168.4.1";
 
@@ -316,22 +315,18 @@ String processor_main(const String &var, const uint8_t input)
 void onNotFound(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("onNotFound ") << request->host() << request->url());
-    LOG_INFO(F("HEAP: free=") << ESP.getFreeHeap());
     request->send(404);
 };
 
 void onRedirectIP(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("redirect  ") << request->host() << request->url());
-    LOG_INFO(F("HEAP: free=") << ESP.getFreeHeap());
     request->redirect(localIPURL);
 }
 
 void on_root(AsyncWebServerRequest *request)
 {
-    portal_page_opened = true;
     LOG_INFO(F("on_root GET ") << request->url());
-    LOG_INFO(F("HEAP: free=") << ESP.getFreeHeap() << F(" max_block=") << ESP.getMaxFreeBlockSize());
 
     LOG_INFO(F("WIFI: wifi_connect_status=") << wifi_connect_status);
 
@@ -407,7 +402,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     // Канал WiFi роутера к кому подсоединимся должен совпадать с каналом точки доступа ESP
     // https://bbs.espressif.com/viewtopic.php?t=324
     // TODO добавить пароль для интерфейса
-    if (!WiFi.softAP(get_ap_name(), "", sett.wifi_channel, 0, 2))
+    if (!WiFi.softAP(get_ap_name(), "", sett.wifi_channel, 0, 4))
     {
         LOG_ERROR(F("AP started failed"));
         return;
@@ -428,8 +423,6 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     LOG_INFO(F("Start HTTP server"));
     AsyncWebServer *server = new AsyncWebServer(80);
 
-    DefaultHeaders::Instance().addHeader(F("Connection"), F("close"));
-
     server->onNotFound(onNotFound);
 
     // Главная страница
@@ -444,19 +437,12 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     // SAFARI (IOS) there is a 128KB limit to the size of the HTML. The HTML can reference external resources/images that bring the total over 128KB
     // SAFARI (IOS) popup browser has some severe limitations (javascript disabled, cookies disabled)
 
-    // Windows 11 captive portal: redirect пока popup не открылся, потом 200 чтобы Windows прекратил повторные запросы
+    // Required
     server->on("/connecttest.txt", [](AsyncWebServerRequest *request)
                {
                    LOG_INFO(request->url());
-                   if (portal_page_opened)
-                   {
-                       request->send(200, "text/plain", "Microsoft Connect Test");
-                   }
-                   else
-                   {
-                       request->redirect("http://logout.net");
-                   }
-               });
+                   request->redirect("http://logout.net");
+               });                       // windows 11 captive portal workaround
     server->on("/wpad.dat", onNotFound); // Honestly don't understand what this is but a 404 stops win 10 keep calling this repeatedly and panicking the esp32 :)
 
     // Background responses: Probably not all are Required, but some are. Others might speed things up?
@@ -593,23 +579,10 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     WiFi.scanNetworks(true);
 
     uint16_t start = millis();
-    uint32_t last_heap_log = 0;
-    uint32_t min_heap = ESP.getFreeHeap();
     while (!exit_portal_flag && ((millis() - start) / 1000) < SETUP_TIME_SEC)
     {
         dns->processNextRequest();
         yield();
-
-        uint32_t heap = ESP.getFreeHeap();
-        if (heap < min_heap)
-        {
-            min_heap = heap;
-        }
-        if (millis() - last_heap_log > 5000)
-        {
-            last_heap_log = millis();
-            LOG_INFO(F("HEAP: free=") << heap << F(" min=") << min_heap << F(" frag=") << ESP.getHeapFragmentation() << F("%") << F(" max_block=") << ESP.getMaxFreeBlockSize() << F(" clients=") << WiFi.softAPgetStationNum());
-        }
 
         if (start_connect_flag)
         {

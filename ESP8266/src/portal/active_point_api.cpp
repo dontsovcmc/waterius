@@ -26,7 +26,6 @@ static JsonDocument g_json_doc;
 
 inline void send_json_response(AsyncWebServerRequest *request, JsonDocument &json_doc)
 {
-    LOG_INFO(F("HEAP: free=") << ESP.getFreeHeap() << F(" max_block=") << ESP.getMaxFreeBlockSize());
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     if (response)
     {
@@ -35,7 +34,6 @@ inline void send_json_response(AsyncWebServerRequest *request, JsonDocument &jso
     }
     else
     {
-        LOG_ERROR(F("HEAP: beginResponseStream failed, free=") << ESP.getFreeHeap());
         request->send(503);
     }
 }
