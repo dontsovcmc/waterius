@@ -10,7 +10,7 @@
 #define MAX_PROBES 20
 
 class Voltage
-{
+{ 
 private:
     uint16_t _voltage;
     uint16_t _min_voltage;
@@ -19,9 +19,8 @@ private:
     uint16_t _probes[MAX_PROBES];
 
 public:
-    Voltage() = default;
+    Voltage();
     ~Voltage() = default;
-    void begin();
     void update();
     uint16_t value();
     uint16_t average();
@@ -29,7 +28,5 @@ public:
     bool low_voltage();
     uint8_t get_battery_level();
 };
-
-extern Voltage *get_voltage();
 
 #endif

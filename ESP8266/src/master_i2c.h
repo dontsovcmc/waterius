@@ -2,12 +2,20 @@
 #define _MASTERI2C_h
 
 #include <Arduino.h>
+#include "setup.h"
 
 /*
 Номера пинов линии i2c.
 */
+#if WATERIUS_MODEL == WATERIUS_MODEL_1      // MODEL_CLASSIC (ESP-01)
 #define SDA_PIN 0
 #define SCL_PIN 2
+#endif
+#if WATERIUS_MODEL == WATERIUS_MODEL_2    // MODEL_2 (NodeMCU/ESP-12F)
+#define SDA_PIN 4
+#define SCL_PIN 5
+#endif
+
 
 #define INIT_ATTINY_CRC 0xFF
 
@@ -17,8 +25,16 @@ class BusyGuard {
     volatile bool& busy;
 public:
     BusyGuard(volatile bool& flag) : busy(flag) {
-        while (busy) yield(); // Ждём, пока флаг не сброшен
-        busy = true;
+        while (true) {
+            noInterrupts();
+            if (!busy) {
+                busy = true;
+                interrupts();
+                break;
+            }
+            interrupts();
+            yield();
+        }
     }
     ~BusyGuard() {
         busy = false;
@@ -34,12 +50,15 @@ struct AttinyData
 {
     // Header
     uint8_t version;    // Версия ПО Attiny
-    uint8_t service;    // Причина загрузки Attiny
-    uint16_t reserved4; // Напряжение питания в мВ (после включения wi-fi под нагрузкой )
-    uint8_t reserved;
+    uint8_t service;    // Причина загрузки Attiny (биты 0-5), биты 6-7 = on_pulse флаги
+    bool on_pulse0;
+    bool on_pulse1;
+    uint8_t reserved5 = 0;
+    uint16_t voltage;   // Напряжение питания в мВ
+    uint8_t reserved;   // Для совместимости
     uint8_t setup_started_counter;
     uint8_t resets;
-    uint8_t model;         // WATERIUS_CLASSIC или  WATERIUS_4C2W
+    uint8_t model;         // WATERIUS_MODEL_1 или  WATERIUS_MODEL_2
     uint8_t counter_type0; // Тип входа, вход 0
     uint8_t counter_type1; //           вход 1
     uint32_t impulses0;    // Импульсов, канал 0
@@ -51,8 +70,6 @@ struct AttinyData
 
     uint8_t crc = 0; // Всегда в конце структуры данных
     uint8_t reserved2 = 0;
-    uint8_t reserved3 = 0;
-    uint8_t reserved5 = 0;
     // Кратно 16bit https://github.com/esp8266/Arduino/issues/1825
 };
 
@@ -80,11 +97,12 @@ public:
     bool getMode(uint8_t &mode);
     bool getAttinyData(AttinyData &data);
     bool setWakeUpPeriod(uint16_t per);
-    bool updateVoltage();
-    bool setReferenceVoltage(uint16_t voltage);
     bool setCountersType(const uint8_t type0, const uint8_t type1);
     bool setTransmitMode();
+    bool setSetupMode();
     bool setSleep();
+    bool extendWakeUp();
+    bool updateVoltage();
 };
 
 #endif

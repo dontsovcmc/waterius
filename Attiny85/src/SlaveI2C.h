@@ -23,6 +23,7 @@ protected:
     static void receiveEvent(int howMany);
     static void getWakeUpPeriod();
     static void getCounterTypes();
+    static void extendWakeUp();
 
 public:
     void begin(const uint8_t);

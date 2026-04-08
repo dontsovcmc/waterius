@@ -168,7 +168,10 @@ bool MasterI2C::getAttinyData(AttinyData &data)
     }
 
     good &= getByte(data.service, crc);
-    good &= getUint16(data.reserved4, crc);
+    data.on_pulse0 = (data.service >> 6) & 1;
+    data.on_pulse1 = (data.service >> 7) & 1;
+
+    good &= getUint16(data.voltage, crc);
     good &= getByte(data.reserved, crc);
     good &= getByte(data.setup_started_counter, crc);
 
@@ -187,12 +190,13 @@ bool MasterI2C::getAttinyData(AttinyData &data)
 
     if (good)
     {
-        LOG_INFO(F("v") << data.version 
-        << F(" service:") << data.service
-        << F(" reserved4:") << data.reserved4
-        << F(" reserved:") << data.reserved
-        << F(" setups:") << data.setup_started_counter 
-        << F(" resets:") << data.resets 
+        LOG_INFO(F("v") << data.version
+        << F(" service:") << (data.service & 0x3F)
+        << F(" on_pulse0:") << data.on_pulse0
+        << F(" on_pulse1:") << data.on_pulse1
+        << F(" voltage:") << data.voltage
+        << F(" setups:") << data.setup_started_counter
+        << F(" resets:") << data.resets
         << F(" model:") << data.model
         << F(" crc:") << data.crc);
 
@@ -222,6 +226,7 @@ bool MasterI2C::getAttinyData(AttinyData &data)
 
 bool MasterI2C::setWakeUpPeriod(uint16_t period)
 {
+    BusyGuard guard(i2c_busy);
     uint8_t txBuf[4];
 
     txBuf[0] = 'S';
@@ -237,8 +242,8 @@ bool MasterI2C::setWakeUpPeriod(uint16_t period)
 }
 
 bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
-{    
-    //sync
+{
+    BusyGuard guard(i2c_busy);
     uint8_t txBuf[4];
 
     txBuf[0] = 'C';
@@ -253,32 +258,16 @@ bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
     return true;
 }
 
-bool MasterI2C::setReferenceVoltage(uint16_t voltage)
-{   
-    /**
-     * Калибровать напряжение внутреннего регулярна текущим.
-     * Если voltage = 0, то attiny читает напряжение.
-     */
+bool MasterI2C::extendWakeUp()
+{
     BusyGuard guard(i2c_busy);
-    
-    uint8_t txBuf[4];
-
-    txBuf[0] = 'V';
-    txBuf[1] = (uint8_t)(voltage >> 8);
-    txBuf[2] = (uint8_t)(voltage);
-    txBuf[3] = crc_8(&txBuf[1], 2, INIT_ATTINY_CRC);
- 
-     if (!sendData(txBuf, 4))
-     {
-         return false;
-     }
-     return true;
+    return sendCmd('E');
 }
-
 
 bool MasterI2C::updateVoltage()
 {
-    return setReferenceVoltage(0);
+    BusyGuard guard(i2c_busy);
+    return sendCmd('V');
 }
 
 bool MasterI2C::setTransmitMode()
@@ -286,7 +275,13 @@ bool MasterI2C::setTransmitMode()
     BusyGuard guard(i2c_busy);
     return sendCmd('T');
 }
-    
+
+bool MasterI2C::setSetupMode()
+{
+    BusyGuard guard(i2c_busy);
+    return sendCmd('P');
+}
+
 bool MasterI2C::setSleep()
 {
     BusyGuard guard(i2c_busy);

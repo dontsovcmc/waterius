@@ -6,23 +6,41 @@
 #include <avr/power.h>
 #include "Power.h"
 
-// значения компаратора с pull-up
-//    : замкнут (0 ом) - намур-замкнут (1к5) - намур-разомкнут (5к5) - обрыв линии
-// 0  : ?                ?                     ?                       ?
-// 
-// если на входе 3к3 + 300ом на GND
-// 0   - 104
-// 1к5 - 130
-// 2к2 - 154
-// 3к0 - 171
-// 4к5 - 195
-// 3к3:  100-108 - 140-142  - 230 - 1000
-// 
+#if WATERIUS_MODEL == WATERIUS_MODEL_1 
+    // Значения компаратора с pull-up резистором ~30кОм.
+    // На входе последовательно 3к3 + 300ом на GND.
+    // 0   - 104 - замыкание
+    // 1к5 - 130 - намур замкнут
+    // 2к2 - 154
+    // 3к0 - 171
+    // 4к5 - 195
+    // 5к5 - 230 - намур разомкнут
+    #define LIMIT_CLOSED 115       // < 115 - замыкание
+    #define LIMIT_NAMUR_CLOSED 150 // < 150 - намур замкнут
+    #define LIMIT_NAMUR_OPEN 800   // < 800 - намур разомкнут
+                                   // > - обрыв
+#endif
+#if WATERIUS_MODEL == WATERIUS_MODEL_2 
+    // Значения компаратора с pull-up резистором ~30кОм.
+    // : замкнут (0 ом) - намур-замкнут (1к5) - намур-разомкнут (5к5) - обрыв линии
+    // на входе 1кОм, подтяжка значит 33кОм
+    // : 30  - 72 - 170 - 1000
 
-#define LIMIT_CLOSED 115       // < 115 - замыкание
-#define LIMIT_NAMUR_CLOSED 150 // < 150 - намур замкнут
-#define LIMIT_NAMUR_OPEN 800   // < 800 - намур разомкнут
-                               // > - обрыв
+    // Значения компаратора с pull-up резистором ~30кОм.
+    // На входе последовательно 1кОм
+    // 0   - 42 - замыкание
+    // 1к5 - 78 - намур замкнут
+    // 2к2 - 100 
+    // 3к0 - 116
+    // 4к5 - 150 
+    // 5к5 - 170 - намур разомкнут
+
+    #define LIMIT_CLOSED 50        // < 50 - замыкание
+    #define LIMIT_NAMUR_CLOSED 100 // < 150 - намур замкнут
+    #define LIMIT_NAMUR_OPEN 800   // < 800 - намур разомкнут
+                                   // > - обрыв
+#endif
+
 
 enum CounterState
 {
@@ -48,16 +66,17 @@ enum class CounterEvent
     TIME,
 };
 
+
 struct CounterB
 {
     uint8_t         _pin;       // дискретный вход
     uint8_t         _power;     // питание датчика
     uint8_t         _apin;      // номер аналогового входа
 
-    uint8_t         on_time;    // время в замкнутом состоянии
+    uint8_t         on_time;    // для того чтобы светодиод во время настройки загорался дольше чем на 2 сек (чтобы не бомбить i2c)
     uint8_t         off_time;   // время в разомкнутом состоянии
     uint8_t         levels;     // уровни входа
-    uint8_t         on_pulse;   // 
+    bool            on_pulse;   // 
     bool            active;     // идет потребление через счетчик
 
     uint16_t        adc;        // уровень замкнутого входа
@@ -110,30 +129,34 @@ struct CounterB
         return analogRead(_apin);
     }
 
-    bool electronic(CounterEvent event = CounterEvent::NONE)
+    bool electronic(CounterEvent event)
     {
+        if (on_time)
+            on_time -= 1;
+
         state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
         if (state == CounterState::CLOSE)
         {
             // Замкнут
-            if (on_time == 0)
+            if (!on_pulse)
             {
                 // Начало импульса
-                on_time = 1;
+                on_time = 10;
                 off_time = 0;
                 adc = aRead();
+                on_pulse = true;
                 return true;
             }
         }
         else
         {
             // Разомкнут
-            on_time = 0;
+            on_pulse = false;
         }
         return false;
     }
 
-    bool hall(CounterEvent event = CounterEvent::NONE)
+    bool hall(CounterEvent event)
     {
         PORTB |= _BV(_power);               // Включить питание
         delayMicroseconds(30);              // Задержка на включение датчика
@@ -196,15 +219,24 @@ struct CounterB
         return false;
     }
 
-    bool discrete(CounterEvent event = CounterEvent::NONE)
+    bool discrete(CounterEvent event)
     {   
+        /*
+        Вызывается раз в 250мс
+        Заполняем байт levels битами со смещением влево. 1 - если замкнут вход.
+        Если 11, то начало импульса.
+        Если было начало импульса и теперь 11000, то детектируем конец импульса и возвращаем true.
+        */
+        if (event == CounterEvent::FRONT) 
+            return false;
+
         PORTB |= _BV(_pin);                 // Включить pull-up
         delayMicroseconds(30);
         if (type == CounterType::NAMUR)
         {
             uint16_t a = aRead();
             state = value2state(a);
-            if (state <= CounterState::NAMUR_CLOSE)
+            if (state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE)
             {
                 adc = a;
             }
@@ -212,25 +244,30 @@ struct CounterB
         else
         {
             state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
-            if ((state == CounterState::CLOSE) && (on_time == 0))
+            if ((state == CounterState::CLOSE) && !on_pulse)
             {
                 adc = aRead();
             }
         }
         PORTB &= ~_BV(_pin);                // Отключить pull-up
         
-
         levels = levels << 1;
         levels |= ((state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE) & 1);
 
+        if (on_time)
+            on_time -= 1;
+
         if (on_pulse) {
-            if ((levels & 0x07) == 0x00) {  // 0x0001 1000
+            if (!on_time)
+                on_time = 1;  // держим пока on_pulse
+            if ((levels & 0x07) == 0x00) {  // 0x00011000
                 on_pulse = false;
                 return true;
             }
         } else {
-            if ((levels & 0x03) == 0x03) {  // 0x0000 0011
-                on_pulse = true;
+            if ((levels & 0x03) == 0x03) {  // 0x00000011
+                on_pulse = true;                
+                on_time = 10;  // 2.5 cек включение светодиода
             }
         }
 

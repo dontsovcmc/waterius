@@ -1,8 +1,6 @@
+
 #include "json.h"
-#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
-#include "setup.h"
-#include "master_i2c.h"
 #include "Logging.h"
 #include "utils.h"
 #include "porting.h"
@@ -10,10 +8,10 @@
 #include "sync_time.h"
 #include "wifi_helpers.h"
 
+extern Voltage voltage;
 
 void get_json_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data)
 {
-    Voltage *voltage = get_voltage();
     JsonObject root = json_data.to<JsonObject>();
     // Сведения по каналам
     root[F("delta0")] = cdata.delta0;
@@ -38,10 +36,10 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("data_type1")] = (uint8_t)data_type_by_name(sett.counter1_name);
 
     // Battery & Voltage
-    root[F("voltage")] = voltage->average() / 1000.0;
-    root[F("voltage_low")] = voltage->low_voltage();
-    root[F("voltage_diff")] = (float)voltage->diff() / 1000.0;
-    root[F("battery")] = voltage->get_battery_level();
+    root[F("voltage")] = voltage.average() / 1000.0;
+    root[F("voltage_low")] = voltage.low_voltage();
+    root[F("voltage_diff")] = (float)voltage.diff() / 1000.0;
+    root[F("battery")] = voltage.get_battery_level();
 
     // Wifi и сеть
     root[F("channel")] = WiFi.channel();
@@ -63,6 +61,7 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     // Общие сведения о приборе
     root[F("version")] = data.version;
     root[F("version_esp")] = FIRMWARE_VERSION;
+    root[F("model")] = data.model;
     root[F("esp_id")] = getChipId();
     root[F("flash_id")] = ESP.getFlashChipId();
 
@@ -80,6 +79,10 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("setup_finished")] = sett.setup_finished_counter;
     root[F("setup_started")] = data.setup_started_counter;
     root[F("ntp_errors")] = sett.ntp_error_counter;
+    root[F("mqtt_retain")] = (bool)sett.mqtt_retain;
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+    root[F("voltage_cal")] = sett.voltage_cal;
+#endif
 
     // waterius
     root[F("key")] = sett.waterius_key;
@@ -89,11 +92,13 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("mqtt")] = is_mqtt(sett);
     root[F("ha")] = is_ha(sett);
     root[F("http")] = is_http(sett);
-    root[F("mqtt_retain")] = (bool)sett.mqtt_retain;
 
     // Для юрлиц
     root[F("company")] = sett.company;
     root[F("place")] = sett.place;
+
+    // OTA error
+    root[F("ota_error")] = (int)sett.ota_error;
 
     LOG_INFO(F("JSON: Size: ") << measureJson(json_data));
 

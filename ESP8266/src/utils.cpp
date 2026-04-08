@@ -161,11 +161,7 @@ bool is_http(const Settings &sett)
  */
 bool is_mqtt(const Settings &sett)
 {
-#ifndef MQTT_DISABLED
 	return sett.mqtt_on && sett.mqtt_host[0];
-#else
-	return false;
-#endif
 }
 
 /**
@@ -177,11 +173,7 @@ bool is_mqtt(const Settings &sett)
  */
 bool is_ha(const Settings &sett)
 {
-#ifndef MQTT_DISABLED
 	return is_mqtt(sett) && sett.mqtt_auto_discovery;
-#else
-	return false;
-#endif
 }
 
 /**
@@ -261,18 +253,6 @@ extern void generateSha256Token(char *token, const int token_len, const char *em
 
 	LOG_INFO(F("SHA256 token: ") << token);
 	LOG_INFO(F("-- END --"));
-}
-
-void blink_led(int count, int period, int duty)
-{
-	pinMode(LED_PIN, OUTPUT);
-	for (int i = 0; i < count; i++)
-	{
-		digitalWrite(LED_PIN, HIGH);
-		delay(period - duty);
-		digitalWrite(LED_PIN, LOW);
-		delay(duty);
-	}
 }
 
 /**

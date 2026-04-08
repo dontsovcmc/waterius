@@ -44,8 +44,6 @@ extern void log_system_info();
 
 extern void generateSha256Token(char *token, const int token_len, const char *email);
 
-extern void blink_led(int count = 1, int period = 300, int duty = 150);
-
 extern DataType data_type_by_name(uint8_t counter_name);
 
 extern bool channel_is_work(const uint8_t ctype);

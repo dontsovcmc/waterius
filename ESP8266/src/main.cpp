@@ -1,35 +1,38 @@
 #include <user_interface.h>
 #include <umm_malloc/umm_heap_select.h>
 #include <ESP8266WiFi.h>
-#include <ArduinoJson.h>
+#include "json.h"
 #include "Logging.h"
 #include "config.h"
 #include "master_i2c.h"
-#include "senders/sender_waterius.h"
-#include "senders/sender_http.h"
-#include "senders/sender_mqtt.h"
+#include "senders/send_data.h"
+#include "ha/apply_settings.h"
 #include "portal/active_point.h"
 #include "voltage.h"
 #include "utils.h"
 #include "porting.h"
-#include "json.h"
-#include "Ticker.h"
 #include "sync_time.h"
 #include "wifi_helpers.h"
 #include "config.h"
+#include "wleds.h"
+#include "ota_update.h"
 
-MasterI2C masterI2C;  // Для общения с Attiny85 по i2c
-AttinyData data;       // Данные от Attiny85
-Settings sett;        // Настройки соединения и предыдущие показания из EEPROM
-CalculatedData cdata; // вычисляемые данные
+MasterI2C masterI2C;     // Для общения с Attiny85 по i2c
+AttinyData data;         // Данные от Attiny85 при включении
+AttinyData runtime_data; // Копия данных от Attiny85. Обновляются в webportal на странице детектирования и ввода значений счётчиков.
+Settings sett;           // Настройки соединения и предыдущие показания из EEPROM
+CalculatedData cdata;    // вычисляемые данные
 ADC_MODE(ADC_VCC);
-Ticker voltage_ticker;
+Voltage voltage;
+
 
 /*
 Выполняется однократно при включении
 */
 void setup()
 {
+    setup_leds();
+
     LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Waterius\n========\n"));
     LOG_INFO(F("Build: ") << __DATE__ << F(" ") << __TIME__);
@@ -46,10 +49,7 @@ void setup()
     }
     LOG_INFO(F("ChipId: ") << String(getChipId(), HEX));
     LOG_INFO(F("FlashChipId: ") << String(ESP.getFlashChipId(), HEX));
-
-    get_voltage()->begin();
-    voltage_ticker.attach_ms(300, []()
-                             { get_voltage()->update(); }); // через каждые 300 мс будет измеряться напряжение
+    LOG_INFO(F("ESP firmware ver: ") << FIRMWARE_VERSION);
 }
 
 void loop()
@@ -57,9 +57,22 @@ void loop()
     uint8_t mode = TRANSMIT_MODE; // TRANSMIT_MODE;
     bool config_loaded = false;
 
-    // спрашиваем у Attiny85 повод пробуждения и данные true) 
+    // спрашиваем у Attiny85 повод пробуждения и данные true)
     if (masterI2C.getMode(mode) && masterI2C.getAttinyData(data))
     {
+        runtime_data = data;
+
+        voltage.update();
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+        if (mode == MANUAL_TRANSMIT_MODE)
+        {
+            mode = wait_button_release();
+        }
+        if (mode == SETUP_MODE) // Если режим "Настройка"
+        {
+            masterI2C.setSetupMode(); 
+        }
+#endif
         // Загружаем конфигурацию из EEPROM
         config_loaded = load_config(sett);
         sett.mode = mode;
@@ -73,11 +86,7 @@ void loop()
             LOG_INFO(F("Entering in setup mode..."));
             // Режим настройки - запускаем точку доступа на 192.168.4.1
             // Запускаем точку доступа с вебсервером
-
             start_active_point(sett, cdata);
-
-            sett.setup_time = millis();
-            sett.setup_finished_counter++;
 
             store_config(sett);
 
@@ -99,17 +108,20 @@ void loop()
         {
             if (wifi_connect(sett))
             {
+                voltage.update();
                 log_system_info();
 
                 JsonDocument json_data;
+                JsonDocument json_settings_received;
 
-#ifndef MQTT_DISABLED
                 // Подключаемся и подписываемся на мктт
+#ifndef MQTT_DISABLED
                 if (is_mqtt(sett))
                 {
-                    connect_and_subscribe_mqtt(sett, data, cdata, json_data);
+                    connect_and_subscribe_mqtt(sett, json_settings_received);
                 }
 #endif
+
                 // устанавливать время только при использовани хттпс или мктт
                 if (is_mqtt(sett) || is_https(sett.waterius_host) || is_https(sett.http_url))
                 {
@@ -118,41 +130,29 @@ void loop()
                     }
                 }
 
-                voltage_ticker.detach(); // перестаем обновлять перед созданием объекта с данными
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 
-                // Формироуем JSON
-                get_json_data(sett, data, cdata, json_data);
+                send_data(sett, data, cdata, json_data, json_settings_received);
 
-                LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-
-#ifndef WATERIUS_RU_DISABLED
-                if (send_waterius(sett, json_data))
+                if (sett.ota_error != OTA_ERR_NONE)
                 {
-                    LOG_INFO(F("HTTP: Send OK"));
+                    sett.ota_error = OTA_ERR_NONE;
+                    store_config(sett);
+                }
+
+                if (settings_received(json_settings_received))
+                {
+                    apply_settings(json_settings_received, sett, data, cdata);
+                    send_data(sett, data, cdata, json_data, json_settings_received);
+                }
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+                if (has_ota(json_settings_received))
+                {
+                    perform_ota_update(json_settings_received[F("ota")].as<JsonObject>(), masterI2C, sett, voltage);
                 }
 #endif
 
-#ifndef HTTPS_DISABLED
-                if (send_http(sett, json_data))
-                {
-                    LOG_INFO(F("HTTP: Send OK"));
-                }
-#endif
-
-#ifndef MQTT_DISABLED
-                if (is_mqtt(sett))
-                {
-                    if (send_mqtt(sett, data, cdata, json_data))
-                    {
-                        LOG_INFO(F("MQTT: Send OK"));
-                    }
-                }
-                else
-                {
-                    LOG_INFO(F("MQTT: SKIP"));
-                }
-#endif
                 // Все уже отправили,  wifi не нужен - выключаем
                 wifi_shutdown();
 
@@ -166,11 +166,10 @@ void loop()
             store_config(sett);  // т.к. сохраняем число ошибок подключения
         }
     }
-    
+
     if (!config_loaded)
     {
-        delay(500);
-        blink_led(3, 1000, 500);
+        blynk_error(ErrorBlynks::ERROR_CONFIG);
     }
 
     LOG_INFO(F("Going to sleep"));
@@ -180,11 +179,19 @@ void loop()
 
     masterI2C.setSleep(); // через 20мс attiny отключит EN
 
+    release_leds();
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
     // { 0xC4, "Giantec Semiconductor, Inc." }, https://github.com/elitak/freeipmi/blob/master/libfreeipmi/spec/ipmi-jedec-manufacturer-identification-code-spec.c
-    if (vendor_id != 0xC4) 
+    if (vendor_id != 0xC4)
     {
-        ESP.deepSleepInstant(0, RF_DEFAULT); // Спим до следущего включения EN. (выключили Instant не ждет 92мс)
-    } 
-    
+        // Спим до следущего включения EN. (выключили Instant не ждет 92мс)
+        ESP.deepSleepInstant(0, RF_DEFAULT);
+    }
+#endif
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+    ESP.deepSleepInstant(1000000, RF_DEFAULT);
+#endif
+
     while(true) yield();
 }

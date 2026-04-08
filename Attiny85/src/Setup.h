@@ -3,7 +3,16 @@
 
 #include <Arduino.h>
 
-#define WATERIUS_2C 0 // attiny85 - 2 счетчика импульсов
+/*
+    Классический Ватериус
+ */
+#define WATERIUS_MODEL_1 0
+
+/*
+    Ватериус 2
+*/
+#define WATERIUS_MODEL_2 2
+
 
 /*
     Включение логирования
@@ -90,7 +99,7 @@ struct Config
 {
     uint8_t setup_started_counter;      // Включение режима настройки
     uint8_t resets;                     // Количество перезагрузок
-    uint8_t model;                      // Модификация: 0 - Классический. 2 счетчика, 1 - 4C2W. 4 счетчика
+    uint8_t model;                      // Модификация: 0 - Обычный Ватериус, 2 - Ватериус2
     CounterTypes types;                 // Типы входов счетчиков
 };
 
@@ -113,12 +122,14 @@ struct Header
     9  - 1001 - WDRF + PORF
     10 - 1010 - WDRF + EXTRF
     */
-    uint8_t service;
+    uint8_t service: 6;      // биты 0-5: причина перезагрузки
+    uint8_t on_pulse0: 1;    // бит 6: импульс на входе 0
+    uint8_t on_pulse1: 1;    // бит 7: импульс на входе 1
 
     /*
-    ver 24: убрал напряжение
+    Напряжение питания Attiny85 в мВ
     */
-    uint16_t reserved;
+    uint16_t voltage;
 
     /*
     Для совместимости с 0.10.0.

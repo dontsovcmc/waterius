@@ -184,7 +184,6 @@ void write_ssid_to_file()
         {
             const bss_info *it = WiFi.getScanInfoByIndex(i);
             char tmp[33];
-            String s;
 
             if (it)
             {

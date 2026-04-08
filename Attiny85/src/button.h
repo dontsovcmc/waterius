@@ -12,6 +12,9 @@ enum class ButtonPressType
     LONG,
 };
 
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
+
 struct ButtonB
 {
     uint8_t         _pin; // дискретный вход
@@ -24,13 +27,13 @@ struct ButtonB
     explicit ButtonB(uint8_t pin)
         : _pin(pin), on_time(0), off_time(0), press(ButtonPressType::NONE)
     {
-        DDRB &= ~_BV(pin);   // Input
-        PORTB &= ~_BV(_pin); // Disable pull-up
+        DDRB &= ~_BV(_pin);    // Input
+        PORTB &= ~_BV(_pin);   // Убедиться что pull-up выключен
     }
 
-    inline bool digBit()
+    inline void reset()
     {
-        return bit_is_set(PINB, _pin);
+        press = ButtonPressType::NONE;
     }
 
     // Проверка нажатия кнопки
@@ -92,7 +95,41 @@ struct ButtonB
 
         return press != ButtonPressType::NONE;
     }
-
 };
+#endif
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+
+struct ButtonB2
+{
+    uint8_t         _pin; // дискретный вход
+
+    ButtonPressType press;
+
+    explicit ButtonB2(uint8_t pin)
+        : _pin(pin), press(ButtonPressType::NONE)
+    {
+        DDRB &= ~_BV(_pin);    // Input
+        PORTB &= ~_BV(_pin);   // Убедиться что pull-up выключен
+    }
+
+    inline void reset()
+    {
+        press = ButtonPressType::NONE;
+    }
+
+    // Проверка нажатия кнопки
+    bool pressed(CounterEvent event)
+    {
+        if (bit_is_set(PINB, _pin) == LOW)
+        {
+            press = ButtonPressType::SHORT;
+            return true;
+        }
+
+        return false;
+    }
+};
+#endif
 
 #endif

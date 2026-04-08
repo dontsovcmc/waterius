@@ -10,6 +10,13 @@
 /*
 Версии прошивки для ESP
 
+2.0.34  - 2026.04.01 - dontsovcmc, Shagrat2
+                      1. Настройка параметров с сервера (и по mqtt)
+                      2. (Waterius-2) обновление прошивки 
+                      3. Оптимизация памяти
+
+2.0.0   - прошивки для платы Waterius-2
+
 1.1.20  - 2026.02.15 - dontsovcmc, Anat0l
                       1. добавлен default_entity_id для HomeAssistant
                       2. retain в MQTT можно отключить
@@ -305,8 +312,8 @@
 #define HOST_LEN 64
 
 #define COMPANY_LEN 20
-#define PLACE_LEN 20
-#define BLYNK_RESERVED 58
+#define PLACE_LEN 40
+#define BLYNK_RESERVED 38
 
 
 #define MQTT_LOGIN_LEN 32
@@ -357,18 +364,42 @@
 #define DEFAULT_MASK "255.255.255.0"
 #define DEFAULT_NTP_SERVER "ru.pool.ntp.org"
 
-#ifndef LED_PIN
-#define LED_PIN 1
-#endif
+
+// model
+#define WATERIUS_MODEL_1 0
+#define WATERIUS_MODEL_2 2
+
 
 // attiny85
 #define SETUP_MODE 1
 #define TRANSMIT_MODE 2
 #define MANUAL_TRANSMIT_MODE 3
 
-// model
-#define WATERIUS_CLASSIC 0
-#define WATERIUS_4C2W 1
+// waterius-2
+#define CH0_LED_PIN 12
+#define CH1_LED_PIN 13
+#define BUTTON_STATE_PIN 14
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
+#define GREEN_LED_PIN 1
+#define ERROR_RED_LED_PIN 1
+#endif
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+#define GREEN_LED_PIN 19
+#define ERROR_RED_LED_PIN CH0_LED_PIN 
+#endif
+
+/*
+    Статус обновления прошивки
+ */
+enum OtaError
+{
+    OTA_ERR_NONE = 0,
+    OTA_ERR_PARSE = 1,
+    OTA_ERR_FS_UPDATE = 2,
+    OTA_ERR_FW_UPDATE = 3,
+    OTA_ERR_LOW_BATTERY = 4
+};
 
 /*
    Вход attiny
@@ -588,7 +619,9 @@ struct Settings
     /* Включение передачи по mqtt */
     uint8_t mqtt_on = (uint8_t) false;
     
-    uint8_t reserved4 = 0;
+    /* Код ошибки обновления прошивки */
+    uint8_t ota_error = OTA_ERR_NONE;
+
     /* Включение DHCP или статических настроек */
     uint8_t dhcp_off = (uint8_t) false;
 
@@ -596,11 +629,18 @@ struct Settings
     uint8_t mqtt_retain = (uint8_t)true;
 
     time_t base_time = 0; // Size of time_t: 8
+
+    /*
+    Поправочный коэффициент для voltage Attiny в процентах (100 = без коррекции)
+    */
+    uint8_t voltage_cal = 100;
+
+    uint8_t reserved8 = 0;
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved9[76] = {0};
+    uint8_t reserved9[74] = {0};
 
 }; // 960 байт
 

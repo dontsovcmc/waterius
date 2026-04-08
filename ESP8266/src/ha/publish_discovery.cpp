@@ -113,8 +113,8 @@ void publish_discovery_entity_channel(PubSubClient &mqtt_client,
                                       const String &device_mac,
                                       const char *const entity[MQTT_PARAM_COUNT],
                                       const String &json_attributes_template,
-                                      const int channel = NONE,
-                                      const int channel_name = NONE)
+                                      const int channel = HA_NONE,
+                                      const int channel_name = HA_NONE)
 {
     String entity_type = FPSTR(entity[0]);
     String entity_name = FPSTR(entity[1]);
@@ -180,6 +180,8 @@ void publish_discovery_general_entities(PubSubClient &mqtt_client,
 
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_WIWI_CONNECT_ERRORS);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_NTP_ERRORS);
+    publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_OTA_ERROR);
+    publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_MODEL);
 }
 
 /**
@@ -227,7 +229,7 @@ String channel_entity_attributes(const int channel, const int channel_name)
  * @param discovery_topic топик для discovery данных
  * @param device_id device_id
  * @param device_mac device_mac
- * @param channel_is_work канал используется (тип входа не NONE)
+ * @param channel_is_work канал используется (тип входа не HA_NONE)
  * @param channel номер канала 0 или 1
  * @param channel_name название канала (вода, электричество, газ, тепло)
  */

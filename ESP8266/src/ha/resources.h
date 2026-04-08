@@ -15,7 +15,7 @@
 #include "setup.h"
 
 #define MQTT_PARAM_COUNT 9
-#define NONE -1
+#define HA_NONE -1
 
 // строки хранятся во флэш
 // https://arduino-esp8266.readthedocs.io/en/latest/PROGMEM.html#how-do-i-declare-arrays-of-strings-in-progmem-and-retrieve-an-element-from-it
@@ -38,6 +38,7 @@ static const char s_vdiff[] PROGMEM = "voltage_diff";
 static const char s_icon_ba[] PROGMEM = "mdi:battery-alert";
 static const char s_bat_low_name[] PROGMEM = "Battery Low";
 static const char s_voltage_low[] PROGMEM = "voltage_low";
+static const char s_voltage_cal[] PROGMEM = "voltage_cal";
 static const char s_battery[] PROGMEM = "battery";
 static const char s_bat_name[] PROGMEM = "Battery";
 static const char s_perc[] PROGMEM = "%";
@@ -148,8 +149,18 @@ static const char *const ENTITY_IP[MQTT_PARAM_COUNT] PROGMEM =
     {s_sensor, s_ip_name, s_ip, "", "", "", s_diagnostic, s_icon_ip, ""};                           // IP
 static const char *const ENTITY_WIWI_CONNECT_ERRORS[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_wifi_connect_errors_name, s_wifi_connect_errors, "", "", "", s_diagnostic, s_icon_cog_refresh, ""};  // wifi_connect_errors
-static const char *const ENTITY_NTP_ERRORS[MQTT_PARAM_COUNT] PROGMEM = 
+static const char *const ENTITY_NTP_ERRORS[MQTT_PARAM_COUNT] PROGMEM =
     {s_sensor, s_ntp_errors_name, s_ntp_errors, "", "", "", s_diagnostic, s_icon_cog_refresh, ""};  // ntp_errors
+
+static const char s_ota_error_name[] PROGMEM = "OTA Error";
+static const char s_ota_error[] PROGMEM = "ota_error";
+static const char *const ENTITY_OTA_ERROR[MQTT_PARAM_COUNT] PROGMEM =
+    {s_sensor, s_ota_error_name, s_ota_error, "", "", "", s_diagnostic, s_icon_cog_refresh, ""};    // ota_error
+
+static const char s_model_name[] PROGMEM = "Model";
+static const char s_model[] PROGMEM = "model";
+static const char *const ENTITY_MODEL[MQTT_PARAM_COUNT] PROGMEM =
+    {s_sensor, s_model_name, s_model, "", "", "", s_diagnostic, "", ""};                            // model
    
 /**
  * @brief массив с сущностями для одного канала

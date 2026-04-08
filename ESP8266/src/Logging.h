@@ -26,7 +26,7 @@ inline Print &operator<<(Print &obj, T arg)
 		char logFormattedTime[17];                                                                    \
 		snprintf_P(logFormattedTime, sizeof(logFormattedTime),                                        \
 				   PSTR("%02u:%02u:%03u"), minutes, seconds, ms);                                     \
-		Serial << String(logFormattedTime);                                                           \
+		Serial.print(logFormattedTime);                                                                \
 	} while (0)
 
 #ifdef LOG_FREE_HEAP
@@ -35,18 +35,18 @@ inline Print &operator<<(Print &obj, T arg)
 #define LOG_FREE_HEAP                                                                       \
 	do                                                                                      \
 	{                                                                                       \
-		char logHeap[10];                                                                   \
-		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d"), int(ESP.getFreeHeap() / 1024)); \
-		Serial << String(logHeap);                                                          \
+		char logHeap[18];                                                                   \
+		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d/%02d%%"), int(ESP.getFreeHeap() / 1024), ESP.getHeapFragmentation()); \
+		Serial.print(logHeap);                                                              \
 	} while (0)
 #else
 #define LOG_FREE_HEAP                                                  \
 	do                                                                 \
 	{                                                                  \
-		char logHeap[10];                                              \
+		char logHeap[15];                                              \
 		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d/%02d"),       \
 				   ESP_getFreeHeap1024(), ESP_getHeapFragmentation()); \
-		Serial << String(logHeap);                                     \
+		Serial.print(logHeap);                                         \
 	} while (0)
 #endif
 #else
