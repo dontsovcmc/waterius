@@ -31,6 +31,22 @@ The build system is PlatformIO. The binary is at `~/.platformio/penv/bin/pio`.
 
 **Local secrets:** Copy `ESP8266/secrets.ini.template` to `ESP8266/secrets.ini` and fill in credentials.
 
+### Manual Flashing (Waterius-2)
+
+When flashing compiled binaries directly (without PlatformIO upload):
+
+**Attiny85** (via USBasp programmer):
+```bash
+avrdude -p t85 -c usbasp -B 4 -P usb -U flash:w:"Attiny85/waterius_2-<version>.hex":i
+```
+
+**ESP8266** (via USB-serial adapter, e.g. `/dev/cu.usbserial-*` on macOS):
+```bash
+~/.platformio/penv/bin/python -m esptool --port /dev/cu.usbserial-XXXX --baud 460800 write_flash --flash_freq 40m --flash_size 4MB --flash_mode qio 0x0 ESP8266/waterius_2-<version>.bin 0x300000 ESP8266/waterius_2-<version>-fs.bin
+```
+
+Flash order: ATtiny85 first, then ESP8266.
+
 ### Attiny85 fuses
 ```
 E:FF, H:DF, L:62
