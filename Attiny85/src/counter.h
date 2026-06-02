@@ -41,6 +41,8 @@
                                    // > - обрыв
 #endif
 
+#define DELAY_PIN_READY_US 30
+#define IMPULSE_CONFIRM_MS 50  // подтверждение импульса: пауза перед повторным чтением входа
 
 enum CounterState
 {
@@ -113,7 +115,7 @@ struct CounterB
                 DDRB |= _BV(_power);                // Пин питания датчика ставим на выход
                 PORTB &= ~_BV(_pin);                // Отключить pull-up
                 PORTB |= _BV(_power);               // Включить питание
-                delayMicroseconds(30);              // Задержка на включение датчика
+                delayMicroseconds(DELAY_PIN_READY_US); // Задержка на включение датчика
                 state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
                 active = false;
                 break;
@@ -159,7 +161,7 @@ struct CounterB
     bool hall(CounterEvent event)
     {
         PORTB |= _BV(_power);               // Включить питание
-        delayMicroseconds(30);              // Задержка на включение датчика
+        delayMicroseconds(DELAY_PIN_READY_US); // Задержка на включение датчика
         CounterState new_state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
         if (new_state != state) 
         {
@@ -219,19 +221,11 @@ struct CounterB
         return false;
     }
 
-    bool discrete(CounterEvent event)
-    {   
-        /*
-        Вызывается раз в 250мс
-        Заполняем байт levels битами со смещением влево. 1 - если замкнут вход.
-        Если 11, то начало импульса.
-        Если было начало импульса и теперь 11000, то детектируем конец импульса и возвращаем true.
-        */
-        if (event == CounterEvent::FRONT) 
-            return false;
-
+    // Одно чтение входа: включить pull-up, измерить (ADC для NAMUR), вернуть "замкнуто?"
+    inline bool is_closed()
+    {
         PORTB |= _BV(_pin);                 // Включить pull-up
-        delayMicroseconds(30);
+        delayMicroseconds(DELAY_PIN_READY_US);
         if (type == CounterType::NAMUR)
         {
             uint16_t a = aRead();
@@ -250,24 +244,54 @@ struct CounterB
             }
         }
         PORTB &= ~_BV(_pin);                // Отключить pull-up
-        
-        levels = levels << 1;
-        levels |= ((state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE) & 1);
+        return (state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE);
+    }
+
+    bool discrete(CounterEvent event)
+    {
+        /*
+        Вызывается раз в 250мс.
+        Импульс счетчика длится дольше 100мс, а вход опрашивается раз в 250мс,
+        поэтому короткий импульс можно пропустить между опросами. Чтобы поднять
+        чувствительность без учащения опроса: при первом замыкании после паузы
+        ждём ~50мс и проверяем ещё раз. Если вход всё ещё замкнут - это импульс
+        (засчитываем сразу), иначе это глитч < 50мс - игнорируем.
+        Конец импульса детектируем как и раньше: 3 разомкнутых состояния подряд.
+        */
+        if (event == CounterEvent::FRONT)
+            return false;
+
+        bool closed = is_closed();
+        levels = (levels << 1) | (closed & 1);   // нужен для детекта конца импульса
 
         if (on_time)
             on_time -= 1;
 
-        if (on_pulse) {
+        if (on_pulse)
+        {
             if (!on_time)
-                on_time = 1;  // держим пока on_pulse
-            if ((levels & 0x07) == 0x00) {  // 0x00011000
+                on_time = 1;                      // держим пока on_pulse
+            if ((levels & 0x07) == 0x00)          // 3 разомкнуто подряд - конец импульса
+            {
                 on_pulse = false;
-                return true;
             }
-        } else {
-            if ((levels & 0x03) == 0x03) {  // 0x00000011
-                on_pulse = true;                
-                on_time = 10;  // 2.5 cек включение светодиода
+        }
+        else
+        {
+            if (closed)                           // первое замыкание после паузы
+            {
+                for (uint8_t i = 0; i < IMPULSE_CONFIRM_MS; i++)
+                {
+                    wdt_reset();
+                    delayMicroseconds(1000);      // пауза ~1мс
+                }
+                if (is_closed())                  // через ~50мс всё ещё замкнут?
+                {
+                    on_pulse = true;
+                    on_time = 10;                 // ~2.5с подсветка светодиода
+                    return true;                  // засчитать импульс
+                }
+                // иначе глитч < 50мс - игнорируем, флаг не поднимаем
             }
         }
 
