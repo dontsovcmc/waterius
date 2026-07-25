@@ -40,18 +40,35 @@ A third env `nodemcuv2` exists for bench debugging on a bare NodeMCU (verbose Wi
 
 **Local secrets:** Copy `ESP8266/secrets.ini.template` to `ESP8266/secrets.ini` and fill in credentials.
 
-### Manual Flashing (Waterius-2)
+### Manual Flashing
 
 When flashing compiled binaries directly (without PlatformIO upload):
+
+**Find the serial port** (the name changes between sessions/adapters — always detect, never hardcode):
+```bash
+ls /dev/cu.usbserial-*        # macOS; ignore Bluetooth/audio cu.* devices. If several, ask which.
+```
 
 **Attiny85** (via USBasp programmer):
 ```bash
 avrdude -p t85 -c usbasp -B 4 -P usb -U flash:w:"Attiny85/waterius_2-<version>.hex":i
 ```
 
-**ESP8266** (via USB-serial adapter, e.g. `/dev/cu.usbserial-*` on macOS):
+**ESP8266** — firmware + LittleFS in a SINGLE esptool session (see gotcha below):
 ```bash
-~/.platformio/penv/bin/python -m esptool --port /dev/cu.usbserial-XXXX --baud 460800 write_flash --flash_freq 40m --flash_size 4MB --flash_mode qio 0x0 ESP8266/waterius_2-<version>.bin 0x300000 ESP8266/waterius_2-<version>-fs.bin
+# Waterius-2 (ESP-12F, 4MB flash) — filesystem at 0x300000
+~/.platformio/penv/bin/python -m esptool --port <PORT> --baud 460800 write_flash --flash_freq 40m --flash_size 4MB --flash_mode qio 0x0 ESP8266/.pio/build/waterius_2/firmware.bin 0x300000 ESP8266/.pio/build/waterius_2/littlefs.bin
+
+# Classic (esp01_1m, ESP-01, 1MB flash) — filesystem at 0xBB000
+~/.platformio/penv/bin/python -m esptool --port <PORT> --baud 460800 write_flash --flash_freq 40m --flash_size 1MB --flash_mode qio 0x0 ESP8266/.pio/build/esp01_1m/firmware.bin 0xBB000 ESP8266/.pio/build/esp01_1m/littlefs.bin
+```
+Success = `Hash of data verified.` for BOTH images. Build the images first with `pio run -d ESP8266 -e <env>` and `... -t buildfs`; post_compile.py also copies them to `ESP8266/<env>-<version>.bin` / `-fs.bin`.
+
+**GOTCHA — do NOT flash firmware and filesystem as separate commands** (`pio -t upload` then `pio -t uploadfs`). After the firmware write the ESP hard-resets and boots the running firmware (which enters its I2C/deep-sleep cycle), so auto-reset no longer drops it back into the bootloader — the second upload dies with `Failed to connect to ESP8266: Timed out waiting for packet header`. Flashing both images in one esptool `write_flash` keeps the chip in the bootloader between writes and avoids this.
+
+**Filesystem offset** depends on the LittleFS partition (`board_build.ldscript` in platformio.ini). To derive it for any env: `_FS_start` from the ldscript minus `0x40200000`. esp01_1m uses `eagle.flash.1m256.ld` → `_FS_start=0x402BB000` → `0xBB000`.
+```bash
+grep _FS_start ~/.platformio/packages/framework-arduinoespressif8266/tools/sdk/ld/<ldscript>.ld
 ```
 
 Flash order: ATtiny85 first, then ESP8266.
