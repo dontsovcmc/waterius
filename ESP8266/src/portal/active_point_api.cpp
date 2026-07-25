@@ -731,10 +731,18 @@ void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj
     else if (name == FPSTR(PARAM_SSID))
     {
         save_param(p, sett.wifi_ssid, WIFI_SSID_LEN, errorsObj);
+        // Сброс кэша быстрого коннекта: канал/BSSID от прошлого роутера
+        // становятся неактуальны при смене сети — иначе первый коннект уходит
+        // на старый канал (в AP_STA портале это ещё и роняет телефон).
+        sett.wifi_channel = 0;
+        memset(sett.wifi_bssid, 0, sizeof(sett.wifi_bssid));
     }
     else if (name == FPSTR(PARAM_PASSWORD))
     {
         save_param(p, sett.wifi_password, WIFI_PWD_LEN, errorsObj, false);
+        // См. комментарий выше: смена пароля тоже сбрасывает кэш коннекта.
+        sett.wifi_channel = 0;
+        memset(sett.wifi_bssid, 0, sizeof(sett.wifi_bssid));
     }
 
     else if (name == FPSTR(PARAM_WIFI_PHY_MODE))
