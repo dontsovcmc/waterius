@@ -59,6 +59,7 @@ VERSION="$VERSION_CLEAN"
 
 FW_FILE="${BOARD}-${VERSION}.bin"
 FS_FILE="${BOARD}-${VERSION}-fs.bin"
+FULL_FILE="${BOARD}-${VERSION}-full.bin"   # единый образ для прошивки с 0x0 (web.esphome.io)
 
 echo "=== Версия: ${VERSION} ==="
 echo "=== Environment: ${ENVIRONMENT} ==="
@@ -100,6 +101,7 @@ echo "Filesystem: ${FS_FILE} (${FS_SIZE} bytes, md5: ${FS_MD5})"
 mkdir -p "$OTA_DIR"
 cp "$FW_FILE" "$OTA_DIR/"
 cp "$FS_FILE" "$OTA_DIR/"
+[ -f "$FULL_FILE" ] && cp "$FULL_FILE" "$OTA_DIR/" && echo "Full image: ${FULL_FILE} ($(stat -f%z "$FULL_FILE") bytes)"
 
 echo ""
 echo "--- Результат в ota/ ---"
