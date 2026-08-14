@@ -153,7 +153,7 @@
 
 ## Star History
 
-<img src="https://api.star-history.com/svg?repos=dontsovcmc/waterius&type=Date" width="400">
+<img src="https://star-history.dera.page/svg?repos=dontsovcmc/waterius&type=Date" width="400">
 
 ## Контакты
 
