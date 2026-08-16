@@ -8,6 +8,7 @@
 #include "utils.h"
 #include "config.h"
 #include "core/readings.h"
+#include "core/input.h"
 #include "wifi_helpers.h"
 #include "resources.h"
 #include "ha/resources.h"
@@ -285,42 +286,7 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
     send_json_response(request, g_json_doc);
 };
 
-inline bool is_all_asterisks(const String& s) {
-    if (s.length() == 0)
-        return false;
-    for (unsigned int i = 0; i < s.length(); ++i) {
-        char c = s[i];
-        if (c != '*' && c != ' ' && c != '\t')
-            return false;  // только *, пробел, таб
-    }
-    return true;
-}
-
-
-/**
- * @brief Копирует src в dest с обрезкой начальных и конечных пробелов, без аллокаций на heap.
- */
-static void strncpy_trimmed(char *dest, const char *src, size_t size)
-{
-    if (size == 0) return;
-
-    // Пропускаем начальные пробелы
-    while (*src && isspace((unsigned char)*src))
-        src++;
-
-    // Находим конец строки
-    size_t len = strlen(src);
-
-    // Обрезаем конечные пробелы
-    while (len > 0 && isspace((unsigned char)src[len - 1]))
-        len--;
-
-    if (len >= size)
-        len = size - 1;
-
-    memcpy(dest, src, len);
-    dest[len] = 0;
-}
+// is_all_asterisks(), strncpy_trimmed() и правила проверки значений — в core/input.h
 
 /**
  * @brief Запрос сохранения настроек
@@ -341,94 +307,94 @@ static void strncpy_trimmed(char *dest, const char *src, size_t size)
  *      }
  */
 
-void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required /*true*/)
+/**
+ * @brief Записывает код ошибки от ядра в JSON ответа и в лог
+ */
+static void report_param_error(const AsyncWebParameter *p, JsonObject &errorsObj, ParamError err)
 {
-    if (p->value().length() >= size)
+    switch (err)
     {
+    case PARAM_ERR_LENGTH:
         LOG_ERROR(FPSTR(ERROR_LENGTH_ERROR) << ": " << p->name());
         errorsObj[p->name()] = String(F("14"));  // Превышена длина поля
-    }
-    else if (required && p->value().length() == 0)
-    {
+        break;
+    case PARAM_ERR_EMPTY:
         LOG_ERROR(FPSTR(ERROR_EMPTY) << ": " << p->name());
         errorsObj[p->name()] = String(F("17"));  // Значение не может быть пустым
+        break;
+    case PARAM_ERR_VALUE:
+        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
+        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        break;
+    default:
+        break;
     }
-    else if (is_all_asterisks(p->value()))
+}
+
+void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required /*true*/)
+{
+    ParamError err = parse_text(dest, size, p->value().c_str(), required);
+
+    if (err == PARAM_MASKED)
     {
         LOG_INFO(F("NOT ") << FPSTR(PARAM_SAVED) << p->name() << F(" **** value"));
     }
+    else if (err == PARAM_OK)
+    {
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << dest);
+    }
     else
     {
-        strncpy_trimmed(dest, p->value().c_str(), size);
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << dest);
+        report_param_error(p, errorsObj, err);
     }
 }
 
 void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
 {
-    if (p->value().toInt() == 0)
+    ParamError err = parse_uint16(p->value().c_str(), v);
+
+    if (err == PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
     }
     else
     {
-        v = p->value().toInt();
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+        report_param_error(p, errorsObj, err);
     }
 }
 
 void save_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok)
 {
-    if (!zero_ok && p->value().toInt() == 0)
+    ParamError err = parse_uint8(p->value().c_str(), v, zero_ok);
+
+    if (err == PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
     }
     else
     {
-        v = p->value().toInt();
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+        report_param_error(p, errorsObj, err);
     }
 }
 
 void save_bool_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj)
 {
-    if (p->value().toInt() > 1)
+    ParamError err = parse_bool(p->value().c_str(), v);
+
+    if (err == PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
     }
     else
     {
-        v = p->value().toInt();
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+        report_param_error(p, errorsObj, err);
     }
 }
 
 void save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj)
 {
-    /* Позволяем вводить 0.0 у счётчиков.
-    if (p->value().toFloat() == 0.0)
-    {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = FPSTR(ERROR_VALUE);
-    }
-    else */
-    {
-        const String &value = p->value();
-        if (value.indexOf(',') >= 0)
-        {
-            String copy(value);
-            copy.replace(',', '.');
-            v = copy.toFloat();
-        }
-        else
-        {
-            v = value.toFloat();
-        }
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
-    }
+    parse_decimal(p->value().c_str(), v);
+    LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
 }
 
 void save_ip_param(const AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj)
