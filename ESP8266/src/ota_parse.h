@@ -2,7 +2,7 @@
 #define OTA_PARSE_H
 
 #include <ArduinoJson.h>
-#include "setup.h"
+#include "core/types.h"
 
 struct OtaParams
 {
