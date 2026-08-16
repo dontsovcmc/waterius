@@ -31,10 +31,20 @@ A third env `nodemcuv2` exists for bench debugging on a bare NodeMCU (verbose Wi
 ~/.platformio/penv/bin/pio run -d Attiny85 -t upload          # flash via USBasp
 ```
 
-**Tests** — host-side unit tests (googletest) for OTA URL parsing:
+**Tests** — host-side unit tests (googletest) for the ESP business logic:
 ```bash
-~/.platformio/penv/bin/pio test -d ESP8266 -e native          # runs test/test_ota/*
+~/.platformio/penv/bin/pio test -d ESP8266 -e native          # all suites in test/
+~/.platformio/penv/bin/pio test -d ESP8266 -e native -f test_ota   # one suite
 ```
+
+The `native` env compiles **only `src/core/`** (`build_src_filter = -<*> +<core/*>`)
+— pure C++ without `Arduino.h`, `String` or hardware access. Anything that needs
+Arduino stays in `src/` as an adapter and is not unit-tested. If a test needs
+`Arduino.h`, the logic must be moved into `src/core/` first.
+
+`pio test` exits 0 even when it collects no tests (e.g. a `test_filter` that
+matches nothing), so CI additionally fails on `0 test cases` in the output.
+Plan and suite list: `ESP8266/plan/tests_plan.md`.
 
 **OTA build/deploy:** `ESP8266/scripts/build_and_deploy.sh [version]` builds the `waterius_2` env and stages firmware/filesystem images in `ESP8266/ota/` for upload to the OTA server (URL hardcoded in the script — debug vs. release).
 
@@ -99,6 +109,9 @@ E:FF, H:DF, L:62
 - `WATERIUS_MODEL=2` (MODEL_2): Waterius-2 with ESP-12F and LED indicators
 
 ### ESP8266 Source Structure
+- `core/` — pure business logic, no Arduino: compiled into both the firmware and
+  the host tests. `core/types.h` holds the data model (`Settings`, `AttinyData`,
+  `CalculatedData`, the counter/data enums and the constants describing them)
 - `main.cpp` — Entry point: setup() → loop() with wake/read/send/sleep cycle
 - `master_i2c.cpp`: I2C master communication with Attiny85
 - `portal/` — Web configuration portal (ESPAsyncWebServer)
@@ -136,3 +149,5 @@ Disable modules via build_flags in `platformio.ini`:
 - Logging in Attiny85: Uncomment `LOG_ON` in `Setup.h` (uses PB3/TX pin, disables counter1)
 - Logging in ESP8266: Set `LOG_LEVEL_INFO` or `LOG_LEVEL_DEBUG` in build_flags
 - Pull requests go to `dev` branch; `master` is for releases only
+- CI (`.github/workflows/ci.yml`) runs on every PR and push to `dev`/`master`:
+  builds both ESP8266 envs and both Attiny85 envs, runs the native tests

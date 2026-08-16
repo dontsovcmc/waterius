@@ -1,0 +1,101 @@
+name: CI
+
+# Проверяем каждый PR и пуш в основные ветки: собираются все прошивки
+# и выполняются хостовые тесты бизнес-логики ESP.
+on:
+  push:
+    branches: [master, dev]
+  pull_request:
+    branches: [master, dev]
+
+jobs:
+  test:
+    name: Тесты бизнес-логики (native)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Кэш PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-native-${{ hashFiles('ESP8266/platformio.ini') }}
+
+      - name: Установка PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: pio test -e native
+        run: |
+          set -o pipefail
+          pio test -d ESP8266 -e native | tee test.log
+
+      # pio test завершается с кодом 0, даже если ни один тест не собран
+      # (например, из-за неверного test_filter). Ловим это явно.
+      - name: Тесты действительно выполнялись
+        run: |
+          if grep -qE '(^|[^0-9])0 test cases' test.log; then
+            echo "::error::pio test не собрал ни одного теста"
+            exit 1
+          fi
+
+  build-esp:
+    name: ESP8266 ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [esp01_1m, waterius_2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Кэш PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-esp-${{ matrix.environment }}-${{ hashFiles('ESP8266/platformio.ini') }}
+
+      - name: Установка PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: pio run -e ${{ matrix.environment }}
+        run: pio run -d ESP8266 -e ${{ matrix.environment }}
+
+  build-attiny:
+    name: Attiny85 ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [attiny85, waterius_2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Кэш PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-attiny-${{ matrix.environment }}-${{ hashFiles('Attiny85/platformio.ini') }}
+
+      - name: Установка PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: pio run -e ${{ matrix.environment }}
+        run: pio run -d Attiny85 -e ${{ matrix.environment }}
