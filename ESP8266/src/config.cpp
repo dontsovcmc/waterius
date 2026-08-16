@@ -2,6 +2,7 @@
 #include "config.h"
 #include "Logging.h"
 #include "core/readings.h"
+#include "core/wakeup.h"
 
 #include <ESP8266WiFi.h>
 #include <IPAddress.h>
@@ -281,68 +282,10 @@ void calculate_values(Settings &sett, const AttinyData &data, CalculatedData &cd
     LOG_INFO(F("value1    start=") << sett.channel1_start << F(" current=") << cdata.channel1 << F(" delta=") << cdata.delta1);
 }
 
-/*
- * @brief Корректируем период пробуждения только для автоматического режима.
- *
- * @param const time_t &now - Полученное по NTP время. Должно быть валидным.
- * @param const time_t &base_time - Время настройки пользователем
- * @param const time_t &last_send - Предыдущее время пробуждения
- * @param const uint16_t &wakeup_per_min - Установленный пользователем период пробуждения
- * @param const uint16_t &period_min_tuned - Скорректированный период пробуждения
- *
- * @returns uint16_t - Кол-во минут ("кривых attiny"), через которое должно проснуться устройство.
- */
-uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const time_t &last_send, 
-    const uint16_t &wakeup_per_min, const uint16_t &period_min_tuned)
-{
-    // 1. Оценка коэффициента 'k' на основе результатов последнего сна
-    // time_t обычно хранит секунды, поэтому difftime вернет разницу в секундах.
-    double actual_slept_min = difftime(now, last_send) / 60.0;
-
-    double k_estimated = 1.0;
-    if (period_min_tuned > 0) {
-        k_estimated = actual_slept_min / period_min_tuned;
-    }
-
-    // Если было отключение интернета, то k_estimated будет больше 2.0
-    k_estimated = k_estimated - (uint16_t)k_estimated;
-    if (k_estimated < 0.7) {  // корректируем не больше чем на 30% пробуждение
-        k_estimated += 1;
-    }
-
-    // 2. Определение следующей целевой временной отметки
-    double time_since_base_min = difftime(now, base_time) / 60.0;
-    
-    // Целочисленное деление для определения количества прошедших периодов
-    long long target_num = static_cast<long long>(floor(time_since_base_min / wakeup_per_min)) + 1;
-    
-    time_t next_expected = base_time + target_num * wakeup_per_min * 60;
-    double minutes_to_next = difftime(next_expected, now) / 60.0;
-
-    // 3. Защита от "ловушки": если до цели меньше минуты или до пробуждения меньше 30% периода, целимся в следующую точку
-    if (minutes_to_next < 1.0 || minutes_to_next < (wakeup_per_min * 0.3)) {
-        target_num++;
-        next_expected = base_time + target_num * wakeup_per_min * 60;
-        minutes_to_next = difftime(next_expected, now) / 60.0;
-    }
-
-    // 4. Расчет и округление нового периода сна
-    double ideal_period_tuned_float = minutes_to_next;
-    if (k_estimated > 0.1) { // Проверка, что k_estimated не слишком близок к нулю
-        ideal_period_tuned_float = minutes_to_next / k_estimated;
-    }
-
-    uint16_t new_period_min_tuned = static_cast<uint16_t>(round(ideal_period_tuned_float));
-    LOG_INFO(F("Tune: elapsed_min=") << actual_slept_min << ", new_period_min_tuned=" << new_period_min_tuned);
-
-    // Округляем до ближайшего целого и приводим к целевому типу uint16_t
-    return new_period_min_tuned;
-}
-
 /* Сбрасываем скорректированный период после изменения периода пользователем */
 void reset_period_min_tuned(Settings &sett)
 {
-    sett.period_min_tuned = sett.wakeup_per_min * 0.9;   
+    sett.period_min_tuned = period_after_user_change(sett.wakeup_per_min);
     LOG_INFO(F("RESET: period_min_tuned=") << sett.period_min_tuned);
 
 }
@@ -384,7 +327,9 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
     // Корректируем период пробуждения только для автоматического режима
     if (sett.mode == TRANSMIT_MODE)
     {    
-        sett.period_min_tuned = tune_wakeup(now, sett.base_time, sett.last_send, sett.wakeup_per_min, sett.period_min_tuned);
+        WakeupTune tune = tune_wakeup(now, sett.base_time, sett.last_send, sett.wakeup_per_min, sett.period_min_tuned);
+        LOG_INFO(F("Tune: elapsed_min=") << tune.slept_min << ", new_period_min_tuned=" << tune.period_min_tuned);
+        sett.period_min_tuned = tune.period_min_tuned;
     }
 
     // Обновляем метку последней активности
