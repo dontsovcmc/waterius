@@ -397,6 +397,33 @@ void save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj)
     LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
 }
 
+/**
+ * @brief Сохранение показаний счётчика с проверкой правдоподобности.
+ *
+ * Показания сохраняются только при успехе: если пользователь забыл запятую,
+ * нельзя ни записать значение, ни сбросить стартовые импульсы — иначе
+ * показания уедут даже после ввода правильного числа.
+ *
+ * @return true если значение сохранено
+ */
+bool save_reading(const AsyncWebParameter *p, float &v, const uint8_t counter_name, JsonObject &errorsObj)
+{
+    float value = 0.0;
+    parse_decimal(p->value().c_str(), value);
+
+    ParamError err = check_reading(value, counter_name);
+    if (err != PARAM_OK)
+    {
+        LOG_ERROR(FPSTR(ERROR_NO_COMMA) << ": " << p->name() << F("=") << value);
+        errorsObj[p->name()] = String(F("19"));  // Похоже, забыта запятая
+        return false;
+    }
+
+    v = value;
+    LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+    return true;
+}
+
 void save_ip_param(const AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj)
 {
     IPAddress ip;
@@ -448,16 +475,20 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
         switch (input)
         {
             case INPUT0_RED:
-                save_param(p, sett.channel0_start, errorsObj);
-                sett.impulses0_start = runtime_data.impulses0;
-                sett.impulses0_previous = sett.impulses0_start;
-                LOG_INFO("impulses0_start=" << sett.impulses0_start);
+                if (save_reading(p, sett.channel0_start, sett.counter0_name, errorsObj))
+                {
+                    sett.impulses0_start = runtime_data.impulses0;
+                    sett.impulses0_previous = sett.impulses0_start;
+                    LOG_INFO("impulses0_start=" << sett.impulses0_start);
+                }
                 break;
             case INPUT1_BLUE:
-                save_param(p, sett.channel1_start, errorsObj);
-                sett.impulses1_start = runtime_data.impulses1;
-                sett.impulses1_previous = sett.impulses1_start;
-                LOG_INFO("impulses1_start=" << sett.impulses1_start);
+                if (save_reading(p, sett.channel1_start, sett.counter1_name, errorsObj))
+                {
+                    sett.impulses1_start = runtime_data.impulses1;
+                    sett.impulses1_previous = sett.impulses1_start;
+                    LOG_INFO("impulses1_start=" << sett.impulses1_start);
+                }
                 break;
         }
     }

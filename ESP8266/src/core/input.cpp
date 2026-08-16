@@ -104,3 +104,18 @@ ParamError parse_bool(const char *value, uint8_t &out)
     out = v;
     return PARAM_OK;
 }
+
+bool is_water_counter(const uint8_t counter_name)
+{
+    return counter_name == CounterName::WATER_COLD
+        || counter_name == CounterName::WATER_HOT
+        || counter_name == CounterName::PORTABLE_WATER;
+}
+
+ParamError check_reading(const float value, const uint8_t counter_name)
+{
+    if (is_water_counter(counter_name) && value >= MAX_WATER_READING)
+        return PARAM_ERR_NO_COMMA;
+
+    return PARAM_OK;
+}

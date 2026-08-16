@@ -23,10 +23,11 @@ Arduino, это чужая реализация, а не наше правило
 enum ParamError : uint8_t
 {
     PARAM_OK = 0,
-    PARAM_ERR_LENGTH = 14,  // превышена длина поля
-    PARAM_ERR_VALUE = 15,   // неверное значение
-    PARAM_ERR_EMPTY = 17,   // значение не может быть пустым
-    PARAM_MASKED = 100      // пришли одни звёздочки: поле не редактировали
+    PARAM_ERR_LENGTH = 14,   // превышена длина поля
+    PARAM_ERR_VALUE = 15,    // неверное значение
+    PARAM_ERR_EMPTY = 17,    // значение не может быть пустым
+    PARAM_ERR_NO_COMMA = 19, // похоже, забыта запятая
+    PARAM_MASKED = 100       // пришли одни звёздочки: поле не редактировали
 };
 
 /*
@@ -65,5 +66,22 @@ ParamError parse_uint8(const char *value, uint8_t &out, const bool zero_ok);
 Флажок: допустимы только 0 и 1.
 */
 ParamError parse_bool(const char *value, uint8_t &out);
+
+/*
+Верхняя граница показаний счётчика воды. У бытового счётчика пять целых
+знаков, то есть 99999.999 — предел шкалы. Значение от 100000 и выше
+означает, что пользователь ввёл 12345 вместо 123.45.
+*/
+#define MAX_WATER_READING 100000.0f
+
+bool is_water_counter(const uint8_t counter_name);
+
+/*
+Проверка показаний, введённых пользователем.
+
+Ограничение только для воды. У электричества целые кВт*ч — обычное дело,
+показания газовых и тепловых счётчиков тоже не режем.
+*/
+ParamError check_reading(const float value, const uint8_t counter_name);
 
 #endif

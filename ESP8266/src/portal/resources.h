@@ -56,6 +56,7 @@ static const char ERROR_LENGTH_ERROR[] PROGMEM = "Превышена длина 
 static const char ERROR_VALUE[] PROGMEM = "Неверное значение";
 static const char ERROR_ATTINY_ERROR[] PROGMEM = "Ошибка связи с attiny";
 static const char ERROR_EMPTY[] PROGMEM = "Значение не может быть пустым";
+static const char ERROR_NO_COMMA[] PROGMEM = "Похоже, забыта запятая";
 
 // не из конфигурации
 static const char PARAM_BUILD_DATE_TIME[] PROGMEM = "build_date_time";
