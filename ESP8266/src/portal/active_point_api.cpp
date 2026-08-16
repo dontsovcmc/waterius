@@ -9,6 +9,7 @@
 #include "config.h"
 #include "core/readings.h"
 #include "core/input.h"
+#include "core/url.h"
 #include "wifi_helpers.h"
 #include "resources.h"
 #include "ha/resources.h"
@@ -326,9 +327,24 @@ static void report_param_error(const AsyncWebParameter *p, JsonObject &errorsObj
         LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
         errorsObj[p->name()] = String(F("15"));  // Неверное значение
         break;
-    default:
+    case PARAM_ERR_NO_COMMA:
+        LOG_ERROR(FPSTR(ERROR_NO_COMMA) << ": " << p->name());
+        errorsObj[p->name()] = String(F("19"));  // Похоже, забыта запятая
         break;
+    case PARAM_ERR_TLS:
+        LOG_ERROR(FPSTR(ERROR_TLS) << ": " << p->name());
+        errorsObj[p->name()] = String(F("20"));  // Шифрование не поддерживается
+        break;
+    case PARAM_ERR_PORT_IN_HOST:
+        LOG_ERROR(FPSTR(ERROR_PORT_IN_HOST) << ": " << p->name());
+        errorsObj[p->name()] = String(F("21"));  // Порт указывайте в отдельном поле
+        break;
+    case PARAM_OK:
+    case PARAM_MASKED:
+        break;   // не ошибки
     }
+    // без default: новый код ошибки не должен молча исчезнуть — компилятор
+    // напомнит про незакрытую ветку
 }
 
 void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required /*true*/)
@@ -392,6 +408,26 @@ void save_bool_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsO
 }
 
 /**
+ * @brief Адрес MQTT брокера. Снимает схему и путь, отвергает шифрование и порт.
+ *
+ * Отдельная функция, а не перегрузка save_param: от текстовой она отличалась бы
+ * только флагом, а рядом уже есть bool required — вызов стал бы нечитаемым.
+ */
+void save_broker_host(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj)
+{
+    ParamError err = parse_broker_host(dest, size, p->value().c_str());
+
+    if (err == PARAM_OK)
+    {
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << dest);
+    }
+    else
+    {
+        report_param_error(p, errorsObj, err);
+    }
+}
+
+/**
  * @brief Показания счётчика. Проверяются на правдоподобность по типу счётчика.
  *
  * Значение записывается только при успехе: если пользователь забыл запятую,
@@ -410,8 +446,7 @@ bool save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj, con
     ParamError err = check_reading(value, counter_name);
     if (err != PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_NO_COMMA) << ": " << p->name() << F("=") << value);
-        errorsObj[p->name()] = String(F("19"));  // Похоже, забыта запятая
+        report_param_error(p, errorsObj, err);
         return false;
     }
 
@@ -649,7 +684,7 @@ void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj
     {
         if (name == FPSTR(PARAM_MQTT_HOST))
         {
-            save_param(p, sett.mqtt_host, HOST_LEN, errorsObj);
+            save_broker_host(p, sett.mqtt_host, HOST_LEN, errorsObj);
         }
         else if (name == FPSTR(PARAM_MQTT_PORT))
         {

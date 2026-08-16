@@ -20,6 +20,7 @@ void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj);
 void save_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok = false);
 void save_bool_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj);
 bool save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj, const uint8_t counter_name);
+void save_broker_host(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj);
 void save_ip_param(const AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj);
 
 bool find_wizard_param(AsyncWebServerRequest *request);

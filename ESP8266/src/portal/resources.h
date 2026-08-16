@@ -57,6 +57,8 @@ static const char ERROR_VALUE[] PROGMEM = "Неверное значение";
 static const char ERROR_ATTINY_ERROR[] PROGMEM = "Ошибка связи с attiny";
 static const char ERROR_EMPTY[] PROGMEM = "Значение не может быть пустым";
 static const char ERROR_NO_COMMA[] PROGMEM = "Похоже, забыта запятая";
+static const char ERROR_TLS[] PROGMEM = "Шифрованное подключение к MQTT не поддерживается";
+static const char ERROR_PORT_IN_HOST[] PROGMEM = "Порт указывайте в отдельном поле";
 
 // не из конфигурации
 static const char PARAM_BUILD_DATE_TIME[] PROGMEM = "build_date_time";

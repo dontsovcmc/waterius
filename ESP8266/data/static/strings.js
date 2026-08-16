@@ -129,6 +129,8 @@ const S_ERROR_ATTINY_ERROR = 16;
 const S_ERROR_EMPTY = 17;
 const S_PLEASE_RECONNECT_WIFI = 18;
 const S_ERROR_NO_COMMA = 19;
+const S_ERROR_TLS = 20;
+const S_ERROR_PORT_IN_HOST = 21;
 
 
 function tr(str_id) {
@@ -154,6 +156,8 @@ function tr(str_id) {
         case S_ERROR_EMPTY: return "Значение не может быть пустым";
         case S_PLEASE_RECONNECT_WIFI: return "Wi-Fi соединение разорвано. Подключитесь ещё раз к Ватериусу.";
         case S_ERROR_NO_COMMA: return "Похоже, забыта запятая";
+        case S_ERROR_TLS: return "Шифрованное подключение к MQTT не поддерживается. Укажите адрес без mqtts:// и ssl://";
+        case S_ERROR_PORT_IN_HOST: return "Порт указывайте в отдельном поле, а не в адресе";
         default: 
             return "Незвестный id строки: " + toString(id);
     }
