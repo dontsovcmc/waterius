@@ -391,22 +391,18 @@ void save_bool_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsO
     }
 }
 
-void save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj)
-{
-    parse_decimal(p->value().c_str(), v);
-    LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
-}
-
 /**
- * @brief Сохранение показаний счётчика с проверкой правдоподобности.
+ * @brief Показания счётчика. Проверяются на правдоподобность по типу счётчика.
  *
- * Показания сохраняются только при успехе: если пользователь забыл запятую,
- * нельзя ни записать значение, ни сбросить стартовые импульсы — иначе
- * показания уедут даже после ввода правильного числа.
+ * Значение записывается только при успехе: если пользователь забыл запятую,
+ * нельзя ни сохранить показания, ни сбросить стартовые импульсы — иначе
+ * показания уедут даже после ввода правильного числа. Поэтому, в отличие от
+ * остальных save_param, эта возвращает результат.
  *
+ * @param counter_name тип счётчика: ограничение действует только для воды
  * @return true если значение сохранено
  */
-bool save_reading(const AsyncWebParameter *p, float &v, const uint8_t counter_name, JsonObject &errorsObj)
+bool save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj, const uint8_t counter_name)
 {
     float value = 0.0;
     parse_decimal(p->value().c_str(), value);
@@ -475,7 +471,7 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
         switch (input)
         {
             case INPUT0_RED:
-                if (save_reading(p, sett.channel0_start, sett.counter0_name, errorsObj))
+                if (save_param(p, sett.channel0_start, errorsObj, sett.counter0_name))
                 {
                     sett.impulses0_start = runtime_data.impulses0;
                     sett.impulses0_previous = sett.impulses0_start;
@@ -483,7 +479,7 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
                 }
                 break;
             case INPUT1_BLUE:
-                if (save_reading(p, sett.channel1_start, sett.counter1_name, errorsObj))
+                if (save_param(p, sett.channel1_start, errorsObj, sett.counter1_name))
                 {
                     sett.impulses1_start = runtime_data.impulses1;
                     sett.impulses1_previous = sett.impulses1_start;
