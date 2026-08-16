@@ -7,6 +7,7 @@
 #include "master_i2c.h"
 #include "utils.h"
 #include "config.h"
+#include "core/readings.h"
 #include "wifi_helpers.h"
 #include "resources.h"
 #include "ha/resources.h"
@@ -38,23 +39,7 @@ inline void send_json_response(AsyncWebServerRequest *request, JsonDocument &jso
     }
 }
 
-#define IMPULS_LIMIT_1 3 // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
-
-uint16_t get_auto_factor(const uint32_t runtime_impulses,
-                         const uint32_t impulses,
-                         const uint16_t factor,
-                         const uint16_t factor_cold)
-{
-    switch (factor)
-    {
-        case AUTO_IMPULSE_FACTOR:
-            return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
-        case AS_COLD_CHANNEL:
-            return factor_cold;
-    }
-    return factor;
-}
-
+// get_auto_factor() — в core/readings.h
 
 /**
  * @brief Запрос состояния подключения к роутеру.

@@ -1,6 +1,7 @@
 
 #include "config.h"
 #include "Logging.h"
+#include "core/readings.h"
 
 #include <ESP8266WiFi.h>
 #include <IPAddress.h>
@@ -259,51 +260,20 @@ void calculate_values(Settings &sett, const AttinyData &data, CalculatedData &cd
 {
     LOG_INFO(F("Calculating values..."));
 
-    if (sett.factor0 > 0) 
-    {
-        if (data.impulses0 < sett.impulses0_start) {
-            sett.impulses0_start = data.impulses0;
-            // Лучше потеряем в точности, чем будет показания миллионы
-            LOG_ERROR(F("Impulses0 less than start. Reset impulses0_start"));
-        }
+    ReadingsStatus status = calc_readings(sett, data, cdata);
 
-        if (sett.counter0_name == CounterName::ELECTRO)
-        { 
-            // factor0 кол-во импульсов на 1 кВт * ч
-            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / (sett.factor0 * 1.0);
-            cdata.delta0 = (data.impulses0 - sett.impulses0_previous) / (sett.factor0 * 1.0);
-        }
-        else 
-        {
-            // factor0 кол-во литров на 1 импульс, переводим в кубометры
-            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.factor0;
-            cdata.delta0 = (data.impulses0 - sett.impulses0_previous) * sett.factor0;
-        }
+    if (status.impulses0_start_reset)
+    {
+        LOG_ERROR(F("Impulses0 less than start. Reset impulses0_start"));
     }
 
     LOG_INFO(F("channel0  name=") << sett.counter0_name);
     LOG_INFO(F("impulses0 start=") << sett.impulses0_start << F(" current=") << data.impulses0 << F(" factor=") << sett.factor0);
     LOG_INFO(F("value0    start=") << sett.channel0_start << F(" current=") << cdata.channel0 << F(" delta=") << cdata.delta0);
 
-    if (sett.factor1 > 0) 
+    if (status.impulses1_start_reset)
     {
-        if (data.impulses1 < sett.impulses1_start) {
-            sett.impulses1_start = data.impulses1;
-            LOG_ERROR(F("Impulses1 less than start. Reset impulses1_start"));
-        }
-
-        if (sett.counter1_name == CounterName::ELECTRO)
-        {
-            // factor1 кол-во импульсов на 1 кВт * ч
-            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / (sett.factor1 * 1.0);
-            cdata.delta1 = (data.impulses1 - sett.impulses1_previous) / (sett.factor1 * 1.0);
-        }
-        else
-        {
-            // factor1 кол-во литров на 1 импульс, переводим в кубометры
-            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.factor1;
-            cdata.delta1 = (data.impulses1 - sett.impulses1_previous) * sett.factor1;
-        }
+        LOG_ERROR(F("Impulses1 less than start. Reset impulses1_start"));
     }
 
     LOG_INFO(F("channel1  name=") << sett.counter1_name);
