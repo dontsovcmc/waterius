@@ -16,12 +16,14 @@
 #include "Logging.h"
 #include "json.h"
 #include "https_helpers.h"
+#include "utils.h"
 
 #define HTTP_SEND_ATTEMPTS 3
 
 bool send_http(const Settings &sett, JsonDocument &jsonData, JsonDocument &json_settings)
 {
-    if (!(sett.http_on && sett.http_url[0]))
+    // то же правило, что и в is_http(): было продублировано вручную
+    if (!is_http(sett))
     {
         LOG_INFO(F("HTTP: SKIP"));
         return false;

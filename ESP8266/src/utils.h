@@ -1,6 +1,7 @@
 #ifndef _WATERIUS_INIT_h
 #define _WATERIUS_INIT_h
 #include "setup.h"
+#include "core/routing.h"
 
 #define MAC_STR "%02X:%02X:%02X:%02X:%02X:%02X"
 #define MAC_STR_HEX "%02X%02X%02X%02X%02X%02X"
@@ -27,16 +28,6 @@ extern uint16_t get_checksum(const Settings &sett);
 extern String get_proto(const String &url);
 
 extern void remove_trailing_slash(String &topic);
-
-extern bool is_waterius_site(const Settings &sett);
-
-extern bool is_http(const Settings &sett);
-
-extern bool is_mqtt(const Settings &sett);
-
-extern bool is_ha(const Settings &sett);
-
-extern bool is_dhcp(const Settings &sett);
 
 extern bool is_https(const char *url);
 
