@@ -33,11 +33,18 @@ A third env `nodemcuv2` exists for bench debugging on a bare NodeMCU (verbose Wi
 
 **Tests** — host-side unit tests (googletest) for the ESP business logic:
 ```bash
-~/.platformio/penv/bin/pio test -d ESP8266 -e native          # all suites in test/
-~/.platformio/penv/bin/pio test -d ESP8266 -e native -f test_ota   # one suite
+~/.platformio/penv/bin/pio test -d ESP8266 -e native_classic -e native_2   # both models
+~/.platformio/penv/bin/pio test -d ESP8266 -e native_2 -f test_ota         # one env, one suite
 ```
 
-The `native` env compiles **only `src/core/`** (`build_src_filter = -<*> +<core/*>`)
+There are two host envs because the two firmwares differ at compile time
+(`#if WATERIUS_MODEL`): `native_classic` (`WATERIUS_MODEL=0`) and `native_2`
+(`WATERIUS_MODEL=2`). Both must be listed explicitly — a bare `pio test` uses
+`default_envs` (`esp01_1m`), where tests are disabled via `test_ignore`. The
+`test_model` suite fails the build if `-DWATERIUS_MODEL` is missing, so a
+forgotten flag cannot make the two runs silently identical.
+
+The host envs compile **only `src/core/`** (`build_src_filter = -<*> +<core/*>`)
 — pure C++ without `Arduino.h`, `String` or hardware access. Anything that needs
 Arduino stays in `src/` as an adapter and is not unit-tested. If a test needs
 `Arduino.h`, the logic must be moved into `src/core/` first.
@@ -150,4 +157,5 @@ Disable modules via build_flags in `platformio.ini`:
 - Logging in ESP8266: Set `LOG_LEVEL_INFO` or `LOG_LEVEL_DEBUG` in build_flags
 - Pull requests go to `dev` branch; `master` is for releases only
 - CI (`.github/workflows/ci.yml`) runs on every PR and push to `dev`/`master`:
-  builds both ESP8266 envs and both Attiny85 envs, runs the native tests
+  builds both ESP8266 envs and both Attiny85 envs, runs the host tests under
+  both models

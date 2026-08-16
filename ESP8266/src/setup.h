@@ -325,10 +325,7 @@
 #define DEFAULT_NTP_SERVER "ru.pool.ntp.org"
 
 
-// model
-#define WATERIUS_MODEL_1 0
-#define WATERIUS_MODEL_2 2
-
+// model — WATERIUS_MODEL_1, WATERIUS_MODEL_2 в core/types.h
 
 // waterius-2
 #define CH0_LED_PIN 12

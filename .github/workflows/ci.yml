@@ -10,8 +10,13 @@ on:
 
 jobs:
   test:
-    name: Тесты бизнес-логики (native)
+    name: Тесты бизнес-логики ${{ matrix.environment }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # Прошивки две, различия компайл-таймовые — тесты гоняем под каждую модель
+      matrix:
+        environment: [native_classic, native_2]
     steps:
       - uses: actions/checkout@v4
 
@@ -25,15 +30,15 @@ jobs:
           path: |
             ~/.platformio
             ~/.cache/pip
-          key: pio-native-${{ hashFiles('ESP8266/platformio.ini') }}
+          key: pio-native-${{ matrix.environment }}-${{ hashFiles('ESP8266/platformio.ini') }}
 
       - name: Установка PlatformIO
         run: pip install --upgrade platformio
 
-      - name: pio test -e native
+      - name: pio test -e ${{ matrix.environment }}
         run: |
           set -o pipefail
-          pio test -d ESP8266 -e native | tee test.log
+          pio test -d ESP8266 -e ${{ matrix.environment }} | tee test.log
 
       # pio test завершается с кодом 0, даже если ни один тест не собран
       # (например, из-за неверного test_filter). Ловим это явно.

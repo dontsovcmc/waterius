@@ -84,30 +84,53 @@ ESP8266/src/
 
 Инклюды в адаптерах и тестах: `#include "core/readings.h"`.
 
-### Окружение native
+### Окружения для хостовых тестов
 
-По умолчанию PlatformIO **не собирает `src/` при `pio test`**
-(`test_build_src = no`), поэтому ядро с `.cpp`-файлами не слинкуется. Правка
-`[env:native]`:
+Прошивки две, и различаются они компайл-таймово (`#if WATERIUS_MODEL`), поэтому
+тестовых окружения тоже два — общая часть вынесена в `[native_base]`:
 
 ```ini
-[env:native]
+[native_base]
 platform = native
 test_framework = googletest
 test_build_src = yes
 build_src_filter = -<*> +<core/*>
 test_filter = test_*
-build_flags = -std=c++17 -DFIRMWARE_VERSION=${this.firmware_version}
 lib_deps = ArduinoJson@7.3.1
-platform_packages = platformio/tool-scons@~4.40801.0
+
+[env:native_classic]           ; Waterius Classic (ESP-01)
+extends = native_base
+build_flags = -std=c++17 -DFIRMWARE_VERSION=${this.firmware_version} -DWATERIUS_MODEL=0
+
+[env:native_2]                 ; Waterius-2 (ESP-12F)
+extends = native_base
+build_flags = -std=c++17 -DFIRMWARE_VERSION=${this.firmware_version} -DWATERIUS_MODEL=2
 ```
 
+Прогон: `pio test -d ESP8266 -e native_classic -e native_2`. Окружения
+приходится перечислять явно — голый `pio test` берёт `default_envs`
+(`esp01_1m`).
+
+По умолчанию PlatformIO **не собирает `src/` при `pio test`**
+(`test_build_src = no`), поэтому ядро с `.cpp`-файлами не слинкуется.
 `build_src_filter` оставляет от `src/` только `core/` — иначе в тестовый
 бинарник поедут `main.cpp`, `wifi_helpers.cpp` и прочее, что на хосте не
 соберётся. Прошивочные окружения фильтр не трогают, у них `src_filter` по
 умолчанию, ядро собирается вместе с остальным кодом.
 
 `test_filter = test_*` вместо `test_ota/*` — чинит молчаливый скип.
+
+В прошивочных окружениях (`esp01_1m`, `waterius_2`, `nodemcuv2`) стоит
+`test_ignore = *`: после починки `test_filter` без него `pio test` полез бы
+собирать тесты под ESP и заливать их в железо.
+
+На сегодня в `src/core` нет ни одного `#if WATERIUS_MODEL`, то есть оба
+окружения дают одинаковый результат. Второе окружение заведено на вырост:
+в payload поле `voltage_cal` есть только у Waterius-2, и это расхождение
+приедет в ядро вместе с `test_payload`. Чтобы прогоны не оказались молча
+одинаковыми из-за забытого флага, сюит `test_model` не компилируется без
+`-DWATERIUS_MODEL` (неопределённый макрос в `#if` считается нулём, то есть
+тихо превратился бы в Classic).
 
 ### Структура тестов
 
@@ -117,6 +140,7 @@ ESP8266/test/
 ├── test_wakeup/
 ├── test_input/
 ├── test_routing/
+├── test_model/        сторож: тесты обязаны гоняться под обе модели
 └── test_ota/          существующий, чинится
 ```
 
@@ -268,11 +292,12 @@ jobs:
 | 3 | `core/wakeup.*` + `test_wakeup` | нет | 16 |
 | 4 | `core/input.*` + `test_input` | нет | 32 |
 | 5 | `core/routing.*` + `test_routing` | нет | 13 |
+| 6 | два окружения `native_classic` / `native_2`, `test_ignore` в прошивочных, `test_model` | нет | 2 |
 
 Каждый PR идёт в `dev` и проходит CI. Только после PR 5 начинаются правки
 багов, и каждый фикс сопровождается тестом, который падает до фикса.
 
-Итого 91 тест, прогон около 5 секунд.
+Итого 93 теста × 2 модели = 186 прогонов, около 17 секунд.
 
 ### Что сделано иначе, чем планировалось
 
@@ -285,7 +310,11 @@ jobs:
    Arduino. Повторять его в ядре — значит проверять свою копию чужой
    реализации; тест бы ничего не доказывал про устройство.
 
-3. **Нейтральность PR 1 проверена бинарно.** Секции `text/data/bss` совпали
+3. **Тесты гоняются под обе модели.** Изначально планировалось одно
+   окружение `native`. Прошивки различаются компайл-таймово, поэтому
+   окружений два, а `test_model` не даёт им молча слиться в одно.
+
+4. **Нейтральность PR 1 проверена бинарно.** Секции `text/data/bss` совпали
    до байта, все 5854 символа ELF идентичны по имени, размеру и типу. Дальше
    так уже не выйдет — вынос функций меняет генерацию кода: PR 2 стоил
    +96 байт флеша, PR 4 вернул 16.

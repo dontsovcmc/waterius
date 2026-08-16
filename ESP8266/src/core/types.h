@@ -72,6 +72,13 @@
 #define AS_COLD_CHANNEL 7
 
 /*
+Модель устройства. Задаётся флагом компиляции -DWATERIUS_MODEL, приходит
+от attiny85 в поле AttinyData.model.
+*/
+#define WATERIUS_MODEL_1 0
+#define WATERIUS_MODEL_2 2
+
+/*
 Режим пробуждения, приходит от attiny85
 */
 #define SETUP_MODE 1
