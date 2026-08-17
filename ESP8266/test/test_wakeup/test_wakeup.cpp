@@ -160,3 +160,88 @@ TEST(Wakeup, UserChangeTruncatesTowardsZero)
     // 15 * 0.9 = 13.5, приведение к uint16_t отбрасывает дробную часть
     EXPECT_EQ(period_after_user_change(15), 13);
 }
+
+// --- долгий обрыв связи ---
+
+TEST(Wakeup, OfflineFor48HoursWithDailyPeriod)
+{
+    // Период сутки, устройство молчало двое суток: сервер лежал или роутер
+    // был выключен.
+    //
+    // Итог 1178 вместо 1440: k считается как 2880/1296 = 2.222, целая часть
+    // отбрасывается, и дробные 0.222 принимаются за уход частоты attiny —
+    // хотя это просто остаток от пропущенных периодов. Время выхода на связь
+    // сдвигается примерно на 4 часа и сходится обратно за несколько циклов.
+    // Характеризация: так работает сегодня (родня #345, #347).
+    WakeupTune tune = tune_wakeup(BASE + 2880 * MIN, BASE, BASE, 1440, 1296);
+
+    EXPECT_EQ(tune.period_min_tuned, 1178);
+    EXPECT_DOUBLE_EQ(tune.slept_min, 2880.0);
+}
+
+TEST(Wakeup, OfflineFor48HoursWithHourlyPeriod)
+{
+    // Тот же обрыв, но период час: 2880/60 = 48.0 ровно, дробного остатка
+    // нет — и поправка не портится вовсе.
+    WakeupTune tune = tune_wakeup(BASE + 2880 * MIN, BASE, BASE, 60, 60);
+
+    EXPECT_EQ(tune.period_min_tuned, 60);
+}
+
+TEST(Wakeup, OfflineForMonthShiftsScheduleButSurvives)
+{
+    // 43200/1296 = 33.33 — та же дробь, сдвиг около 6 часов
+    WakeupTune tune = tune_wakeup(BASE + 43200L * MIN, BASE, BASE, 1440, 1296);
+
+    EXPECT_EQ(tune.period_min_tuned, 1080);
+    EXPECT_GT(tune.period_min_tuned, 0);
+}
+
+// --- attiny перезагрузился ---
+
+TEST(Wakeup, AttinyRebootWakesEspMuchEarlier)
+{
+    // При перезагрузке attiny теряет заказанный период и будит ESP через
+    // свой период по умолчанию (#350): вместо 1296 минут сон вышел 15.
+    // Алгоритм всё равно целится в суточную отметку — 1409 минут.
+    WakeupTune tune = tune_wakeup(BASE + 15 * MIN, BASE, BASE, 1440, 1296);
+
+    EXPECT_EQ(tune.period_min_tuned, 1409);
+}
+
+TEST(Wakeup, AttinyRebootDoesNotPoisonCorrection)
+{
+    // Ранний выход на связь читается как "attiny спешит на 25%", поэтому
+    // на 45 реальных минут заказывается 36 кривых. Ошибка небольшая и
+    // уходит на следующем цикле — в мусор поправка не превращается.
+    WakeupTune tune = tune_wakeup(BASE + 15 * MIN, BASE, BASE, 60, 60);
+
+    EXPECT_EQ(tune.period_min_tuned, 36);
+}
+
+// --- время ушло назад ---
+
+TEST(Wakeup, ClockMovedBackwardsAfterNtp)
+{
+    // NTP может перевести часы назад: до синхронизации время было выдуманным.
+    // Тогда now < last_send и сон получается отрицательным.
+    //
+    // Точное значение здесь не проверяется намеренно: в tune_wakeup есть
+    // приведение (uint16_t)k_estimated, а приведение отрицательного double
+    // к беззнаковому типу — неопределённое поведение. От мусора спасает
+    // только проверка k_estimated > 0.1, после которой деление на поправку
+    // не выполняется. Проверяем инвариант: период остаётся рабочим.
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE + 120 * MIN, 60, 60);
+
+    EXPECT_GT(tune.period_min_tuned, 0);
+    EXPECT_LE(tune.period_min_tuned, 1440);
+    EXPECT_DOUBLE_EQ(tune.slept_min, -120.0);
+}
+
+TEST(Wakeup, ClockMovedBackwardsADay)
+{
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE + 1440 * MIN, 1440, 1296);
+
+    EXPECT_GT(tune.period_min_tuned, 0);
+    EXPECT_LE(tune.period_min_tuned, 2880);
+}
