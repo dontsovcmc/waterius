@@ -226,15 +226,13 @@ TEST(Wakeup, ClockMovedBackwardsAfterNtp)
     // NTP может перевести часы назад: до синхронизации время было выдуманным.
     // Тогда now < last_send и сон получается отрицательным.
     //
-    // Точное значение здесь не проверяется намеренно: в tune_wakeup есть
-    // приведение (uint16_t)k_estimated, а приведение отрицательного double
-    // к беззнаковому типу — неопределённое поведение. От мусора спасает
-    // только проверка k_estimated > 0.1, после которой деление на поправку
-    // не выполняется. Проверяем инвариант: период остаётся рабочим.
+    // Отрицательный сон ничего не говорит о частоте attiny, поэтому поправка
+    // остаётся нейтральной и устройство просто целится в следующую точку
+    // расписания. Раньше здесь было неопределённое поведение: приведение
+    // отрицательного double к uint16_t.
     WakeupTune tune = tune_wakeup(BASE, BASE, BASE + 120 * MIN, 60, 60);
 
-    EXPECT_GT(tune.period_min_tuned, 0);
-    EXPECT_LE(tune.period_min_tuned, 1440);
+    EXPECT_EQ(tune.period_min_tuned, 60);
     EXPECT_DOUBLE_EQ(tune.slept_min, -120.0);
 }
 
@@ -242,6 +240,45 @@ TEST(Wakeup, ClockMovedBackwardsADay)
 {
     WakeupTune tune = tune_wakeup(BASE, BASE, BASE + 1440 * MIN, 1440, 1296);
 
+    EXPECT_EQ(tune.period_min_tuned, 1440);
+}
+
+// --- длинные периоды: результат обязан влезать в uint16_t ---
+
+TEST(Wakeup, ThirtyDayPeriodFitsWithoutClamp)
+{
+    // 30 суток — законный период, до предела типа ещё есть запас
+    const uint16_t PER = 43200;
+    WakeupTune tune = tune_wakeup(BASE + 60, BASE, BASE + 60 - 30240L * MIN, PER, 43200);
+
+    EXPECT_EQ(tune.period_min_tuned, 61713);
+}
+
+TEST(Wakeup, PeriodBeyond32DaysFallsBackInsteadOfWrapping)
+{
+    // 47000 минут (32.6 суток): деление на k = 0.7 даёт 67141, что не влезает
+    // в uint16_t. Раньше приведение оборачивалось в 1605 — устройство
+    // просыпалось через сутки вместо 46. Теперь откат к номинальному периоду.
+    const uint16_t PER = 47000;
+    WakeupTune tune = tune_wakeup(BASE + 60, BASE, BASE + 60 - 32900L * MIN, PER, 47000);
+
+    EXPECT_EQ(tune.period_min_tuned, PER);
+}
+
+TEST(Wakeup, MaximumPeriodFallsBack)
+{
+    const uint16_t PER = 65535;
+    WakeupTune tune = tune_wakeup(BASE + 60, BASE, BASE + 60 - 45874L * MIN, PER, 65530);
+
+    EXPECT_EQ(tune.period_min_tuned, PER);
+}
+
+TEST(Wakeup, HugeSleepDoesNotOverflowCorrection)
+{
+    // Сон, деление которого на период даёт k больше 65535: приведение к
+    // uint16_t было бы неопределённым, floor — нет
+    WakeupTune tune = tune_wakeup(BASE + 900000L * MIN, BASE, BASE, 60, 13);
+
     EXPECT_GT(tune.period_min_tuned, 0);
-    EXPECT_LE(tune.period_min_tuned, 2880);
+    EXPECT_LE(tune.period_min_tuned, 65535);
 }

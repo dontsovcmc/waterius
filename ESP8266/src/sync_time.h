@@ -14,13 +14,14 @@
 #include <Arduino.h>
 #include "setup.h"
 #include "time.h"
+#include "core/timekeeping.h"
 
 extern bool sync_ntp_time(const Settings &sett);
-extern bool sync_ntp_time();
-extern bool sync_ntp_time(const String &ntp_server_name);
+extern bool sync_ntp_time(const time_t known_good = START_VALID_TIME);
+extern bool sync_ntp_time(const String &ntp_server_name, const time_t known_good = START_VALID_TIME);
 
 extern String get_current_time();
 
-extern bool is_valid_time(time_t time);
+// is_valid_time() объявлена в core/timekeeping.h
 
 #endif

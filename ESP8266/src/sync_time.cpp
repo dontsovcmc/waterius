@@ -10,19 +10,16 @@
 // https://github.com/letscontrolit/ESPEasy/blob/mega/src/src/Helpers/ESPEasy_time.cpp
 // https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_support/support_wifi.ino
 
-#define START_VALID_TIME 1704067201UL // Jan 01 2024 00:00:01
 #define DNS_TIMEOUT 1000              // 1 секунда
 #define NTP_TIMEOUT 300               // обычно ответ приходит за 30-50 мсек
 #define NTP_PORT 123
-#define SEVENTY_YEARS 2208988800UL // от 1900 до 1970 в секундах
-#define NSEC 1000000000UL
 #define USEC 1000000UL
 #define MSEC 1000UL
 #define TIME_FORMAT "%FT%T%z"
 #define UDP_PORT_ATTEMPTS 3
 #define NTP_ATTEMPTS 5
 
-const uint32_t NTP_PACKET_SIZE = 48;    // NTP time is in the first 48 bytes of message
+// NTP_PACKET_SIZE — в core/timekeeping.h
 uint8_t packet_buffer[NTP_PACKET_SIZE]; // Buffer to hold incoming & outgoing packets
 
 /**
@@ -33,19 +30,18 @@ uint8_t packet_buffer[NTP_PACKET_SIZE]; // Buffer to hold incoming & outgoing pa
 int get_next_ntp_server_id()
 {
     static int ntp_server_id = -1;
-    // первый раз сервер выбирается случайным образом из пула
-    // каждый следующий разу будет выбираться следующий в пуле
+    // первый раз сервер выбирается случайным образом из пула,
+    // каждый следующий раз будет выбираться следующий в пуле.
+    // Верхняя граница random исключается, поэтому NTP_POOL_SIZE, а не -1:
+    // раньше стояло random(0, 3) и сервер 3.ru.pool.ntp.org первым
+    // не выбирался никогда.
     if (ntp_server_id < 0)
     {
-        ntp_server_id = random(0, 3);
+        ntp_server_id = random(0, NTP_POOL_SIZE);
     }
     else
     {
-        ntp_server_id++;
-        if (ntp_server_id > 3)
-        {
-            ntp_server_id = 0;
-        }
+        ntp_server_id = next_ntp_server_id(ntp_server_id);
     }
     return ntp_server_id;
 }
@@ -106,33 +102,12 @@ uint64_t get_ntp_response(WiFiUDP &udp)
             udp.read(packet_buffer, NTP_PACKET_SIZE); // Read packet into the buffer
             udp.stop();
 
-            if ((packet_buffer[0] & 0b11000000) == 0b11000000)
+            uint64_t ntp_nanos = parse_ntp_packet(packet_buffer, NTP_PACKET_SIZE);
+            if (ntp_nanos == 0)
             {
-                // Leap-Indicator: unknown (clock unsynchronized)
-                // See: https://github.com/letscontrolit/ESPEasy/issues/2886#issuecomment-586656384
-                LOG_ERROR(F("NTP: unsynced IP"));
-                return false;
+                LOG_ERROR(F("NTP: bad reply"));
+                return 0;
             }
-
-            // convert four bytes starting at location 40 to a long integer
-            // TX time is used here.
-            uint32_t secs_since_1900 = (uint32_t)packet_buffer[40] << 24;
-            secs_since_1900 |= (uint32_t)packet_buffer[41] << 16;
-            secs_since_1900 |= (uint32_t)packet_buffer[42] << 8;
-            secs_since_1900 |= (uint32_t)packet_buffer[43];
-            if (0 == secs_since_1900) // No time stamp received
-            {
-                LOG_ERROR(F("NTP: No time stamp received"));
-                return false;
-            }
-
-            uint32_t tmp_fraction = (uint32_t)packet_buffer[44] << 24;
-            tmp_fraction |= (uint32_t)packet_buffer[45] << 16;
-            tmp_fraction |= (uint32_t)packet_buffer[46] << 8;
-            tmp_fraction |= (uint32_t)packet_buffer[47];
-            uint32_t fraction = (((uint64_t)tmp_fraction) * NSEC) >> 32;
-
-            uint64_t ntp_nanos = (((uint64_t)secs_since_1900) - SEVENTY_YEARS) * NSEC + fraction;
 
             uint32_t total_delay = millis() - begin_wait;
 
@@ -243,10 +218,13 @@ uint64_t get_ntp_nanos(const String &ntp_server_name)
  * @return true время синхронизировано
  * @return false время НЕ синхронизировано
  */
-bool sync_ntp_time(const String &ntp_server_name)
+bool sync_ntp_time(const String &ntp_server_name, const time_t known_good)
 {
     struct timeval tv;
-    tv.tv_sec = START_VALID_TIME;
+    // Часы приходится выставить до запроса, и при неудаче устройство останется
+    // с этим значением. Ставим последнее достоверно известное время, иначе
+    // получится now < last_send — "проснулись раньше, чем засыпали".
+    tv.tv_sec = known_good;
     tv.tv_usec = 0;
     settimeofday(&tv, NULL);
 
@@ -277,7 +255,7 @@ bool sync_ntp_time(const String &ntp_server_name)
  * @return true время синхронизировано
  * @return false время НЕ синхронизировано
  */
-bool sync_ntp_time()
+bool sync_ntp_time(const time_t known_good)
 {
     uint32_t start_time = millis();
     LOG_INFO(F("NTP: Sync time..."));
@@ -289,7 +267,7 @@ bool sync_ntp_time()
     {
         LOG_INFO(F("NTP: Attempt #") << NTP_ATTEMPTS - attempts + 1 << F(" from ") << NTP_ATTEMPTS);
         ntp_server_name = get_next_ntp_server_name();
-        if (sync_ntp_time(ntp_server_name))
+        if (sync_ntp_time(ntp_server_name, known_good))
         {
             LOG_INFO(F("NTP: Time successfully synced. Total time spent ") << millis() - start_time << F(" msec"));
             return true;
@@ -311,18 +289,19 @@ bool sync_ntp_time(const Settings &sett)
 {
 
     String ntp_server = sett.ntp_server;
+    const time_t known_good = clock_before_sync(sett.last_send);
 
     if (sett.ntp_server[0] && !ntp_server.equalsIgnoreCase(String(DEFAULT_NTP_SERVER))) // проверяем что сервер указан и не равняется по умолчанию
     {
         // Пробуем получить время с пользовательского сервера
-        if (sync_ntp_time(ntp_server))
+        if (sync_ntp_time(ntp_server, known_good))
         {
             return true;
         }
     }
     // если не удалось с пользовательского сервера получить время
     // то берем время по серврам из пула
-    return sync_ntp_time();
+    return sync_ntp_time(known_good);
 }
 
 /**
@@ -349,7 +328,4 @@ String get_current_time()
  * @return true время валидно
  * @return false время невалидно
  */
-bool is_valid_time(time_t time)
-{
-    return time > START_VALID_TIME;
-}
+// is_valid_time() — в core/timekeeping.cpp

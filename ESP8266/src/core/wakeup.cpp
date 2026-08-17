@@ -12,16 +12,25 @@ WakeupTune tune_wakeup(const time_t now, const time_t base_time, const time_t la
     double actual_slept_min = difftime(now, last_send) / 60.0;
     tune.slept_min = actual_slept_min;
 
+    // Поправку можно оценить только по нормально завершившемуся сну.
+    // Неположительный сон означает, что часы переставили назад — например
+    // NTP не ответил, а перед запросом время уже сбросили. Частоту attiny
+    // такой сон не характеризует, поэтому поправка остаётся нейтральной.
     double k_estimated = 1.0;
-    if (period_min_tuned > 0) {
+    if (period_min_tuned > 0 && actual_slept_min > 0.0)
+    {
         k_estimated = actual_slept_min / period_min_tuned;
-    }
 
-    // Если было отключение интернета, то k_estimated будет больше 2.0
-    k_estimated = k_estimated - (uint16_t)k_estimated;
-    if (k_estimated < 0.7) {  // корректируем не больше чем на 30% пробуждение
-        k_estimated += 1;
+        // Если было отключение интернета, то k_estimated будет больше 2.0.
+        // floor, а не приведение к uint16_t: приведение double, не попадающего
+        // в диапазон целевого типа, — неопределённое поведение, а здесь оно
+        // достижимо и для отрицательных значений, и для очень больших.
+        k_estimated -= floor(k_estimated);
+        if (k_estimated < 0.7) {  // корректируем не больше чем на 30% пробуждение
+            k_estimated += 1;
+        }
     }
+    // Дальше k_estimated всегда в диапазоне [0.7, 1.7)
 
     // 2. Определение следующей целевой временной отметки
     double time_since_base_min = difftime(now, base_time) / 60.0;
@@ -39,10 +48,18 @@ WakeupTune tune_wakeup(const time_t now, const time_t base_time, const time_t la
         minutes_to_next = difftime(next_expected, now) / 60.0;
     }
 
-    // 4. Расчет и округление нового периода сна
-    double ideal_period_tuned_float = minutes_to_next;
-    if (k_estimated > 0.1) { // Проверка, что k_estimated не слишком близок к нулю
-        ideal_period_tuned_float = minutes_to_next / k_estimated;
+    // 4. Расчет и округление нового периода сна.
+    // Проверка "k не близок к нулю" не нужна: по построению k >= 0.7
+    double ideal_period_tuned_float = minutes_to_next / k_estimated;
+
+    // Результат обязан влезать в uint16_t: приведение double за пределами
+    // диапазона типа — неопределённое поведение. Достижимо при длинном
+    // периоде: свыше ~45875 минут (32 суток) деление на k = 0.7 выходит
+    // за 65535, и вместо 46 суток устройство просыпалось бы через сутки.
+    // Запись через !(x >= 1.0) заодно отсекает NaN.
+    if (!(ideal_period_tuned_float >= 1.0) || ideal_period_tuned_float > 65535.0)
+    {
+        ideal_period_tuned_float = wakeup_per_min;
     }
 
     // Округляем до ближайшего целого и приводим к целевому типу uint16_t
