@@ -33,9 +33,15 @@ A third env `nodemcuv2` exists for bench debugging on a bare NodeMCU (verbose Wi
 
 **Tests** — host-side unit tests (googletest) for the ESP business logic:
 ```bash
-~/.platformio/penv/bin/pio test -d ESP8266 -e native_classic -e native_2   # both models
-~/.platformio/penv/bin/pio test -d ESP8266 -e native_2 -f test_ota         # one env, one suite
+ESP8266/scripts/run_tests.sh                       # both models
+ESP8266/scripts/run_tests.sh native_2 -f test_ota  # one env, one suite
 ```
+
+Always use the script, not `pio test` directly: `pio test` exits 0 even when it
+collected no tests at all (a `test_filter` that matches nothing, an env where
+tests are ignored), so an empty run looks like a successful one. The script
+takes the count from the JUnit report and fails when it is zero. CI runs the
+same script.
 
 There are two host envs because the two firmwares differ at compile time
 (`#if WATERIUS_MODEL`): `native_classic` (`WATERIUS_MODEL=0`) and `native_2`
@@ -49,8 +55,6 @@ The host envs compile **only `src/core/`** (`build_src_filter = -<*> +<core/*>`)
 Arduino stays in `src/` as an adapter and is not unit-tested. If a test needs
 `Arduino.h`, the logic must be moved into `src/core/` first.
 
-`pio test` exits 0 even when it collects no tests (e.g. a `test_filter` that
-matches nothing), so CI additionally fails on `0 test cases` in the output.
 Plan and suite list: `ESP8266/plan/tests_plan.md`.
 
 **OTA build/deploy:** `ESP8266/scripts/build_and_deploy.sh [version]` builds the `waterius_2` env and stages firmware/filesystem images in `ESP8266/ota/` for upload to the OTA server (URL hardcoded in the script — debug vs. release).

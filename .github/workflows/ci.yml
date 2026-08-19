@@ -39,19 +39,11 @@ jobs:
       - name: Установка PlatformIO
         run: pip install --upgrade platformio
 
-      - name: pio test -e ${{ matrix.environment }}
-        run: |
-          set -o pipefail
-          pio test -d ESP8266 -e ${{ matrix.environment }} | tee test.log
-
-      # pio test завершается с кодом 0, даже если ни один тест не собран
-      # (например, из-за неверного test_filter). Ловим это явно.
-      - name: Тесты действительно выполнялись
-        run: |
-          if grep -qE '(^|[^0-9])0 test cases' test.log; then
-            echo "::error::pio test не собрал ни одного теста"
-            exit 1
-          fi
+      # Скрипт берёт результат из машиночитаемого отчёта JUnit, а не из текста
+      # вывода: pio test выходит с кодом 0, даже если не собрал ни одного теста.
+      # Та же команда выполняется локально, поэтому проверка одна на оба места.
+      - name: Тесты ${{ matrix.environment }}
+        run: PIO=pio ESP8266/scripts/run_tests.sh ${{ matrix.environment }}
 
   build-esp:
     name: ESP8266 ${{ matrix.environment }}
