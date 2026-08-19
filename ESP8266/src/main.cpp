@@ -38,7 +38,7 @@ void setup()
     LOG_INFO(F("Waterius\n========\n"));
     LOG_INFO(F("Build: ") << __DATE__ << F(" ") << __TIME__);
 
-    static_assert((sizeof(Settings) == 960), "sizeof Settings != 960");
+    // static_assert на размер Settings — в core/types.h, рядом с самой структурой
 
     masterI2C.begin(); // Включаем i2c master
 
@@ -79,6 +79,14 @@ void loop()
         sett.mode = mode;
         LOG_INFO(F("Startup mode: ") << mode);
 
+        // Пробуждение по таймеру — ещё один проспанный период. Считаем их,
+        // потому что время между синхронизациями неизвестно, а число
+        // заказанных периодов известно точно (#357).
+        if (mode == TRANSMIT_MODE)
+        {
+            sett.wakeups_since_sync = bump_wakeups(sett.wakeups_since_sync);
+        }
+
         // Вычисляем текущие показания
         calculate_values(sett, data, cdata);
 
@@ -114,6 +122,7 @@ void loop()
 
                 JsonDocument json_data;
                 JsonDocument json_settings_received;
+                bool time_synced = false;
 
                 // Подключаемся и подписываемся на мктт
 #ifndef MQTT_DISABLED
@@ -126,9 +135,7 @@ void loop()
                 // устанавливать время только при использовани хттпс или мктт
                 if (is_mqtt(sett) || is_https(sett.waterius_host) || is_https(sett.http_url))
                 {
-                    if (!sync_ntp_time(sett)) {
-                        sett.ntp_error_counter++;
-                    }
+                    time_synced = maybe_sync_time(sett);
                 }
 
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
@@ -157,7 +164,7 @@ void loop()
                 // Все уже отправили,  wifi не нужен - выключаем
                 wifi_shutdown();
 
-                update_config(sett, data, cdata);
+                update_config(sett, data, cdata, time_synced);
 
                 if (!masterI2C.setWakeUpPeriod(sett.period_min_tuned))
                 {

@@ -53,3 +53,65 @@ int next_ntp_server_id(const int current)
 
     return (current + 1) % NTP_POOL_SIZE;
 }
+
+uint16_t bump_wakeups(const uint16_t wakeups)
+{
+    return wakeups == 0xFFFF ? wakeups : (uint16_t)(wakeups + 1);
+}
+
+/*
+Через сколько пробуждений подходит срок очередной синхронизации.
+Округление вверх: лучше синхронизироваться чуть позже срока, чем чуть раньше.
+*/
+static uint32_t sync_deadline_wakeups(const uint16_t wakeup_per_min)
+{
+    const uint32_t period_sec = (wakeup_per_min > 0 ? wakeup_per_min : 1) * 60UL;
+
+    return (NTP_SYNC_INTERVAL_SEC + period_sec - 1) / period_sec;
+}
+
+/*
+Сколько пробуждений пропустить из-за неудачных попыток: 2 после первой,
+ещё 4 после второй, 8 после третьей и так далее до потолка.
+*/
+static uint32_t backoff_wakeups(const uint8_t fail_count)
+{
+    uint32_t skip = 0;
+    for (uint8_t i = 1; i <= fail_count; ++i)
+    {
+        const uint8_t shift = i < NTP_BACKOFF_MAX_SHIFT ? i : NTP_BACKOFF_MAX_SHIFT;
+        skip += 1UL << shift;
+
+        if (i == 0xFF)   // uint8_t: i++ на 255 ушёл бы в вечный цикл
+            break;
+    }
+    return skip;
+}
+
+bool need_ntp_sync(const time_t last_sync, const uint16_t wakeups_since_sync,
+                   const uint8_t fail_count, const uint16_t wakeup_per_min,
+                   const uint8_t sync_count)
+{
+    uint32_t deadline = 0;
+
+    if (is_valid_time(last_sync))
+    {
+        // На прогреве синхронизируемся каждое пробуждение, пока не наберётся
+        // пара для измерения поправки. Дальше — раз в неделю.
+        deadline = sync_count < NTP_WARMUP_SYNCS ? 1 : sync_deadline_wakeups(wakeup_per_min);
+    }
+    // Время неизвестно — расписание построить не на чем, срок нулевой.
+    // Отступ после неудач всё равно действует: устройство без интернета
+    // с завода не должно опрашивать NTP при каждом пробуждении.
+
+    return (uint32_t)wakeups_since_sync >= deadline + backoff_wakeups(fail_count);
+}
+
+time_t estimate_time(const time_t last_sync, const uint16_t wakeups_since_sync,
+                     const uint16_t wakeup_per_min)
+{
+    if (!is_valid_time(last_sync))
+        return 0;
+
+    return last_sync + (time_t)wakeups_since_sync * wakeup_per_min * 60;
+}

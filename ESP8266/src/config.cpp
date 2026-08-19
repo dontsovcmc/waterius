@@ -288,10 +288,17 @@ void reset_period_min_tuned(Settings &sett)
     sett.period_min_tuned = period_after_user_change(sett.wakeup_per_min);
     LOG_INFO(F("RESET: period_min_tuned=") << sett.period_min_tuned);
 
+    // Накопленное измерение относилось к прежнему периоду: и число проспанных
+    // периодов, и точка отсчёта времени теперь врут. Начинаем заново, с
+    // прогрева, иначе первая поправка приедет только через неделю.
+    sett.last_time_sync = 0;
+    sett.wakeups_since_sync = 0;
+    sett.ntp_sync_count = 0;
 }
 
 /* Обновляем значения в конфиге */
-void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata)
+void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata,
+                   const bool time_synced)
 {
     LOG_INFO(F("Updating config..."));
     // Сохраним текущие значения в памяти.
@@ -324,12 +331,25 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
 
     LOG_INFO(F("Wakeup period, min:") << sett.wakeup_per_min);
 
-    // Корректируем период пробуждения только для автоматического режима
-    if (sett.mode == TRANSMIT_MODE)
+    // Корректируем период пробуждения только для автоматического режима и
+    // только по времени от NTP: между синхронизациями часы идут по оценке,
+    // и сравнивать с ней заказанный период бессмысленно.
+    if (sett.mode == TRANSMIT_MODE && time_synced && is_valid_time(sett.last_time_sync)
+        && sett.wakeups_since_sync > 0)
     {    
-        WakeupTune tune = tune_wakeup(now, sett.base_time, sett.last_send, sett.wakeup_per_min, sett.period_min_tuned);
-        LOG_INFO(F("Tune: elapsed_min=") << tune.slept_min << ", new_period_min_tuned=" << tune.period_min_tuned);
+        WakeupTune tune = tune_wakeup(now, sett.base_time, sett.last_time_sync, sett.wakeup_per_min,
+                                      sett.period_min_tuned, sett.wakeups_since_sync);
+        LOG_INFO(F("Tune: elapsed_min=") << tune.slept_min 
+                 << ", wakeups=" << sett.wakeups_since_sync
+                 << ", new_period_min_tuned=" << tune.period_min_tuned);
         sett.period_min_tuned = tune.period_min_tuned;
+    }
+
+    // Отсчёт до следующей синхронизации начинается заново
+    if (time_synced)
+    {
+        sett.last_time_sync = now;
+        sett.wakeups_since_sync = 0;
     }
 
     // Обновляем метку последней активности

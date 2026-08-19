@@ -28,14 +28,21 @@ struct WakeupTune
  *
  * @param now - Полученное по NTP время. Должно быть валидным.
  * @param base_time - Время настройки пользователем
- * @param last_send - Предыдущее время пробуждения
+ * @param measured_from - Предыдущее время, измеренное по NTP
  * @param wakeup_per_min - Установленный пользователем период пробуждения
  * @param period_min_tuned - Скорректированный период пробуждения
+ * @param periods_slept - Сколько раз устройство просыпалось за это время
+ *
+ * periods_slept обязателен и указывается на каждом вызове: без него единственный
+ * способ разделить "attiny спешит" и "не было связи три периода подряд" — гадать
+ * по дробной части, и устройство после суток без интернета уезжает от расписания
+ * на часы (#345, #347).
  *
  * @returns Кол-во минут ("кривых attiny"), через которое должно проснуться устройство.
  */
-WakeupTune tune_wakeup(const time_t now, const time_t base_time, const time_t last_send,
-                       const uint16_t wakeup_per_min, const uint16_t period_min_tuned);
+WakeupTune tune_wakeup(const time_t now, const time_t base_time, const time_t measured_from,
+                       const uint16_t wakeup_per_min, const uint16_t period_min_tuned,
+                       const uint16_t periods_slept);
 
 /*
 Период после того, как пользователь сам сменил период пробуждения:

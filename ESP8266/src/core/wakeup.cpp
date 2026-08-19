@@ -2,26 +2,33 @@
 
 #include <math.h>
 
-WakeupTune tune_wakeup(const time_t now, const time_t base_time, const time_t last_send,
-                       const uint16_t wakeup_per_min, const uint16_t period_min_tuned)
+WakeupTune tune_wakeup(const time_t now, const time_t base_time, const time_t measured_from,
+                       const uint16_t wakeup_per_min, const uint16_t period_min_tuned,
+                       const uint16_t periods_slept)
 {
     WakeupTune tune;
 
     // 1. Оценка коэффициента 'k' на основе результатов последнего сна
     // time_t обычно хранит секунды, поэтому difftime вернет разницу в секундах.
-    double actual_slept_min = difftime(now, last_send) / 60.0;
+    double actual_slept_min = difftime(now, measured_from) / 60.0;
     tune.slept_min = actual_slept_min;
+
+    // За измеренное время устройство просыпалось periods_slept раз, значит
+    // заказано было столько же периодов. Ноль означает, что считать не по
+    // чему — берём один период, это прежнее поведение.
+    const double ordered_min = (double)period_min_tuned * (periods_slept > 0 ? periods_slept : 1);
 
     // Поправку можно оценить только по нормально завершившемуся сну.
     // Неположительный сон означает, что часы переставили назад — например
     // NTP не ответил, а перед запросом время уже сбросили. Частоту attiny
     // такой сон не характеризует, поэтому поправка остаётся нейтральной.
     double k_estimated = 1.0;
-    if (period_min_tuned > 0 && actual_slept_min > 0.0)
+    if (ordered_min > 0.0 && actual_slept_min > 0.0)
     {
-        k_estimated = actual_slept_min / period_min_tuned;
+        k_estimated = actual_slept_min / ordered_min;
 
-        // Если было отключение интернета, то k_estimated будет больше 2.0.
+        // Страховка на случай, если число периодов всё-таки разошлось с
+        // реальностью: attiny мог перезагрузиться и проснуться не по заказу.
         // floor, а не приведение к uint16_t: приведение double, не попадающего
         // в диапазон целевого типа, — неопределённое поведение, а здесь оно
         // достижимо и для отрицательных значений, и для очень больших.

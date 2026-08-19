@@ -22,7 +22,14 @@ extern bool init_config(Settings &sett);
 extern void reset_period_min_tuned(Settings &sett);
 
 /* Обновляем данные в конфиге*/
-extern void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata);
+/*
+time_synced — получено ли время от NTP на этом пробуждении. Поправку частоты
+attiny можно считать только по такому времени: между синхронизациями часы
+идут по оценке, и разница "сколько проспали" в ней равна заказанному периоду
+по построению.
+*/
+extern void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata,
+                          const bool time_synced);
 
 /* Рассчитываем текущие показания */
 extern void calculate_values(Settings &sett, const AttinyData &data, CalculatedData &cdata);

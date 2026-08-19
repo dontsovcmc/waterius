@@ -305,6 +305,62 @@ bool sync_ntp_time(const Settings &sett)
 }
 
 /**
+ * @brief Синхронизирует время, если пришёл срок
+ *
+ * @param sett настройки устройства
+ * @return true время получено от NTP-сервера прямо сейчас
+ * @return false синхронизация не потребовалась или не удалась
+ */
+bool maybe_sync_time(Settings &sett)
+{
+    // Ручное пробуждение кнопкой задаёт base_time заново, то есть определяет
+    // расписание на будущее. Строить его по оценке нельзя — ошибка оценки
+    // осталась бы в расписании навсегда. Батарею тут беречь не от кого:
+    // пользователь стоит рядом и жмёт кнопку.
+    const bool forced = sett.mode != TRANSMIT_MODE;
+
+    if (forced || need_ntp_sync(sett.last_time_sync, sett.wakeups_since_sync,
+                                sett.ntp_error_counter, sett.wakeup_per_min, sett.ntp_sync_count))
+    {
+        if (sync_ntp_time(sett))
+        {
+            sett.ntp_error_counter = 0;
+            if (sett.ntp_sync_count < NTP_WARMUP_SYNCS)
+            {
+                sett.ntp_sync_count++;
+            }
+            return true;
+        }
+
+        // Счётчик неудач подряд задаёт паузу перед следующей попыткой.
+        // Насыщаем: переполнение обнулило бы паузу, и устройство с лежащим
+        // роутером снова начало бы опрашивать NTP каждое пробуждение.
+        if (sett.ntp_error_counter < 0xFF)
+        {
+            sett.ntp_error_counter++;
+        }
+        LOG_ERROR(F("NTP: sync failed, failures in row: ") << sett.ntp_error_counter);
+        return false;
+    }
+
+    // Срок не подошёл. Часы всё равно надо выставить: иначе метки времени
+    // в MQTT и в логах будут из 1970 года.
+    const time_t estimated = estimate_time(sett.last_time_sync, sett.wakeups_since_sync,
+                                           sett.wakeup_per_min);
+    if (is_valid_time(estimated))
+    {
+        struct timeval tv;
+        tv.tv_sec = estimated;
+        tv.tv_usec = 0;
+        settimeofday(&tv, NULL);
+        LOG_INFO(F("NTP: sync not due, wakeups since sync: ") << sett.wakeups_since_sync);
+        LOG_INFO(F("NTP: estimated time ") << get_current_time());
+    }
+
+    return false;
+}
+
+/**
  * @brief Получает текущее время
  *
  * @return строка с временем в формате C
