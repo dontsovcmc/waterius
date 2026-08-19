@@ -12,6 +12,12 @@ on:
     branches: [master, dev]
   pull_request:
 
+# Версия закреплена намеренно: с --upgrade результат сборки зависел от даты
+# запуска, а не от содержимого репозитория. Поднимать отдельным коммитом,
+# чтобы обновление инструмента было видно в истории и проверялось отдельно.
+env:
+  PLATFORMIO_VERSION: '6.1.19'
+
 jobs:
   test:
     name: Тесты бизнес-логики ${{ matrix.environment }}
@@ -34,10 +40,10 @@ jobs:
           path: |
             ~/.platformio
             ~/.cache/pip
-          key: pio-native-${{ matrix.environment }}-${{ hashFiles('ESP8266/platformio.ini') }}
+          key: pio-native-${{ matrix.environment }}-${{ env.PLATFORMIO_VERSION }}-${{ hashFiles('ESP8266/platformio.ini') }}
 
       - name: Установка PlatformIO
-        run: pip install --upgrade platformio
+        run: pip install "platformio==${{ env.PLATFORMIO_VERSION }}"
 
       # Скрипт берёт результат из машиночитаемого отчёта JUnit, а не из текста
       # вывода: pio test выходит с кодом 0, даже если не собрал ни одного теста.
@@ -65,10 +71,10 @@ jobs:
           path: |
             ~/.platformio
             ~/.cache/pip
-          key: pio-esp-${{ matrix.environment }}-${{ hashFiles('ESP8266/platformio.ini') }}
+          key: pio-esp-${{ matrix.environment }}-${{ env.PLATFORMIO_VERSION }}-${{ hashFiles('ESP8266/platformio.ini') }}
 
       - name: Установка PlatformIO
-        run: pip install --upgrade platformio
+        run: pip install "platformio==${{ env.PLATFORMIO_VERSION }}"
 
       - name: pio run -e ${{ matrix.environment }}
         run: pio run -d ESP8266 -e ${{ matrix.environment }}
@@ -93,10 +99,10 @@ jobs:
           path: |
             ~/.platformio
             ~/.cache/pip
-          key: pio-attiny-${{ matrix.environment }}-${{ hashFiles('Attiny85/platformio.ini') }}
+          key: pio-attiny-${{ matrix.environment }}-${{ env.PLATFORMIO_VERSION }}-${{ hashFiles('Attiny85/platformio.ini') }}
 
       - name: Установка PlatformIO
-        run: pip install --upgrade platformio
+        run: pip install "platformio==${{ env.PLATFORMIO_VERSION }}"
 
       - name: pio run -e ${{ matrix.environment }}
         run: pio run -d Attiny85 -e ${{ matrix.environment }}
