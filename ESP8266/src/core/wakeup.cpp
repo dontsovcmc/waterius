@@ -72,7 +72,23 @@ WakeupTune tune_wakeup(const time_t now, const time_t base_time, const time_t me
     // Округляем до ближайшего целого и приводим к целевому типу uint16_t
     tune.period_min_tuned = static_cast<uint16_t>(round(ideal_period_tuned_float));
 
+    // 5. Тот же расчёт, но на целый период: сколько кривых минут attiny
+    // соответствуют периоду пользователя. Расстояние до ближайшей точки
+    // расписания сюда не входит.
+    double full_period_tuned_float = wakeup_per_min / k_estimated;
+    if (!(full_period_tuned_float >= 1.0) || full_period_tuned_float > 65535.0)
+    {
+        full_period_tuned_float = wakeup_per_min;
+    }
+    tune.period_min_full = static_cast<uint16_t>(round(full_period_tuned_float));
+
     return tune;
+}
+
+uint16_t period_after_manual_wakeup(const uint16_t period_min_full,
+                                    const uint16_t wakeup_per_min)
+{
+    return period_min_full > 0 ? period_min_full : period_after_user_change(wakeup_per_min);
 }
 
 uint16_t period_after_user_change(const uint16_t wakeup_per_min)

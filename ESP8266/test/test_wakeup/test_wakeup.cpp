@@ -342,3 +342,79 @@ TEST(Wakeup, ZeroPeriodsSleptFallsBackToOne)
 
     EXPECT_EQ(zero.period_min_tuned, one.period_min_tuned);
 }
+
+
+// --- целый период с поправкой: для ручного пробуждения (#380) ---
+
+TEST(FullPeriod, EqualsNominalWhenAttinyIsExact)
+{
+    // k = 1: кривая минута равна реальной
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE - 60 * MIN, 60, 60, 1);
+
+    EXPECT_EQ(tune.period_min_full, 60);
+}
+
+TEST(FullPeriod, ShorterWhenAttinyRunsSlow)
+{
+    // attiny спит на 10% дольше заказанного: чтобы получить час реального
+    // времени, заказывать надо 55 кривых минут
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE - 66 * MIN, 60, 60, 1);
+
+    EXPECT_EQ(tune.period_min_full, 55);
+}
+
+TEST(FullPeriod, LongerWhenAttinyRunsFast)
+{
+    // attiny спешит: 57 реальных минут вместо 60 заказанных
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE - 57 * MIN, 60, 60, 1);
+
+    EXPECT_EQ(tune.period_min_full, 63);
+}
+
+TEST(FullPeriod, DoesNotDependOnDistanceToNextSlot)
+{
+    // Главное свойство: period_min_tuned меняется от того, куда целимся,
+    // а целый период — только от поправки. Из-за этого нажатие кнопки и
+    // промахивалось: в attiny уходило "сколько осталось до точки".
+    const time_t SLEPT = BASE - 66 * MIN;
+
+    WakeupTune near_slot = tune_wakeup(BASE, BASE - 1380 * MIN, SLEPT, 1440, 1309, 1);
+    WakeupTune far_slot = tune_wakeup(BASE, BASE, SLEPT, 1440, 1309, 1);
+
+    EXPECT_NE(near_slot.period_min_tuned, far_slot.period_min_tuned);
+    EXPECT_EQ(near_slot.period_min_full, far_slot.period_min_full);
+}
+
+TEST(FullPeriod, DailyPeriodWithDrift)
+{
+    // Сутки при attiny, спящем на 10% дольше: 1440 / 1.1 = 1309
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE - 1584 * MIN, 1440, 1440, 1);
+
+    EXPECT_EQ(tune.period_min_full, 1309);
+}
+
+TEST(FullPeriod, FitsUint16OnLongPeriods)
+{
+    // 65535 / 0.7 не влезает в uint16_t — как и period_min_tuned,
+    // откатываемся к номиналу вместо неопределённого поведения
+    const uint16_t PER = 65535;
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE - 45874L * MIN, PER, 65530, 1);
+
+    EXPECT_EQ(tune.period_min_full, PER);
+}
+
+TEST(ManualWakeup, UsesMeasuredFullPeriod)
+{
+    // Нажали кнопку: расписание начинается с этой минуты, значит заказать
+    // надо целый период с поправкой
+    EXPECT_EQ(period_after_manual_wakeup(1309, 1440), 1309);
+}
+
+TEST(ManualWakeup, FallsBackWhenDriftUnknown)
+{
+    // Поправку ещё не измеряли (новое устройство): заказываем как при смене
+    // периода — на 10% меньше номинала. Проснуться раньше цели не страшно,
+    // поправка доберёт на следующем цикле; проснуться сильно позже — хуже,
+    // ближайшая точка расписания будет уже пропущена.
+    EXPECT_EQ(period_after_manual_wakeup(0, 1440), period_after_user_change(1440));
+}

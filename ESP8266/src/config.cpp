@@ -294,6 +294,9 @@ void reset_period_min_tuned(Settings &sett)
     sett.last_time_sync = 0;
     sett.wakeups_since_sync = 0;
     sett.ntp_sync_count = 0;
+
+    // Поправка измерялась в кривых минутах прежнего периода
+    sett.period_min_full = 0;
 }
 
 /* Обновляем значения в конфиге */
@@ -312,6 +315,19 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
 
     // Перешлем время пробуждения на сервер при след. включении
     sett.wake_time = millis();
+
+    // Ручное пробуждение кнопкой задаёт расписание заново, поэтому заказываем
+    // целый период с поправкой, а не остаток до прежней цели. Раньше в attiny
+    // уходило значение из прошлого цикла, и нажатие промахивалось на часы,
+    // если то пробуждение было не по расписанию (#380).
+    //
+    // Делается до проверки времени: даже без интернета следующий выход на
+    // связь должен случиться через период после нажатия.
+    if (sett.mode == MANUAL_TRANSMIT_MODE)
+    {
+        sett.period_min_tuned = period_after_manual_wakeup(sett.period_min_full, sett.wakeup_per_min);
+        LOG_INFO(F("Manual wakeup: period_min_tuned=") << sett.period_min_tuned);
+    }
 
     time_t now = time(nullptr);
 
@@ -343,6 +359,7 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
                  << ", wakeups=" << sett.wakeups_since_sync
                  << ", new_period_min_tuned=" << tune.period_min_tuned);
         sett.period_min_tuned = tune.period_min_tuned;
+        sett.period_min_full = tune.period_min_full;
     }
 
     // Отсчёт до следующей синхронизации начинается заново

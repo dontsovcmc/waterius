@@ -4,10 +4,9 @@
 /*
 Решение "пора ли синхронизировать время" (#357).
 
-Раньше NTP опрашивался при каждом пробуждении: на суточном периоде это
-365 запросов в год на устройство, на 15-минутном — 35 тысяч. Теперь
-синхронизация раз в неделю, а между ними время считается по счётчику
-пробуждений.
+Раньше NTP опрашивался при каждом пробуждении: на 15-минутном периоде это
+35 тысяч запросов в год на устройство. Теперь раз в сутки, а между
+синхронизациями время считается по счётчику пробуждений.
 
 Счётчик пробуждений нужен не только для срока: по нему считается поправка
 частоты attiny. Знать точное число проспанных периодов — единственный
@@ -18,6 +17,7 @@ namespace
 {
     const time_t SYNCED = 1755000000;   // достоверное время последней синхронизации
     const uint16_t DAILY = 1440;        // период по умолчанию, мин
+    const uint16_t HOURLY = 60;         // период, на котором виден срок: 24 пробуждения
     const uint16_t QUARTER = 15;        // типичный период для Home Assistant
     const uint8_t SETTLED = NTP_WARMUP_SYNCS;   // поправка уже измерена
 }
@@ -38,23 +38,31 @@ TEST(NeedSync, BogusOldTimeCountsAsNeverSynced)
 
 TEST(NeedSync, NotBeforeIntervalPasses)
 {
-    // Суточный период: неделя — это 7 пробуждений
-    for (uint16_t w = 0; w < 7; ++w)
-        EXPECT_FALSE(need_ntp_sync(SYNCED, w, 0, DAILY, SETTLED)) << "пробуждение " << w;
+    // Часовой период: сутки — это 24 пробуждения
+    for (uint16_t w = 0; w < 24; ++w)
+        EXPECT_FALSE(need_ntp_sync(SYNCED, w, 0, HOURLY, SETTLED)) << "пробуждение " << w;
 
-    EXPECT_TRUE(need_ntp_sync(SYNCED, 7, 0, DAILY, SETTLED));
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 24, 0, HOURLY, SETTLED));
+}
+
+TEST(NeedSync, PeriodEqualToIntervalSyncsEveryWakeup)
+{
+    // Суточный период: реже раза в сутки не получится при всём желании,
+    // и это ровно тот случай, когда точность расписания важнее экономии
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 1, 0, DAILY, SETTLED));
 }
 
 TEST(NeedSync, ShortPeriodMeansMoreWakeupsPerInterval)
 {
-    // 15 минут: неделя — это 672 пробуждения
-    EXPECT_FALSE(need_ntp_sync(SYNCED, 671, 0, QUARTER, SETTLED));
-    EXPECT_TRUE(need_ntp_sync(SYNCED, 672, 0, QUARTER, SETTLED));
+    // 15 минут: сутки — это 96 пробуждений. Именно здесь экономия и живёт:
+    // 96 запросов к NTP в сутки превращаются в один
+    EXPECT_FALSE(need_ntp_sync(SYNCED, 95, 0, QUARTER, SETTLED));
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 96, 0, QUARTER, SETTLED));
 }
 
 TEST(NeedSync, PeriodLongerThanIntervalSyncsEveryWakeup)
 {
-    // Период 30 суток длиннее недели: синхронизируемся каждое пробуждение,
+    // Период 30 суток длиннее интервала: синхронизируемся каждое пробуждение,
     // иначе поправка частоты будет считаться по устаревшему времени
     EXPECT_TRUE(need_ntp_sync(SYNCED, 1, 0, 43200, SETTLED));
 }
@@ -68,23 +76,23 @@ TEST(NeedSync, ZeroPeriodDoesNotDivideByZero)
 
 TEST(Backoff, FirstFailureWaitsTwoWakeups)
 {
-    // Срок 7 пробуждений, попытка на 7-м не удалась.
-    // Следующая попытка не раньше 7 + 2
-    EXPECT_FALSE(need_ntp_sync(SYNCED, 8, 1, DAILY, SETTLED));
-    EXPECT_TRUE(need_ntp_sync(SYNCED, 9, 1, DAILY, SETTLED));
+    // Срок 24 пробуждения, попытка на 24-м не удалась.
+    // Следующая попытка не раньше 24 + 2
+    EXPECT_FALSE(need_ntp_sync(SYNCED, 25, 1, HOURLY, SETTLED));
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 26, 1, HOURLY, SETTLED));
 }
 
 TEST(Backoff, PauseDoublesWithEachFailure)
 {
-    // 7 + 2 = 9, 9 + 4 = 13, 13 + 8 = 21, 21 + 16 = 37
-    EXPECT_TRUE(need_ntp_sync(SYNCED, 13, 2, DAILY, SETTLED));
-    EXPECT_FALSE(need_ntp_sync(SYNCED, 12, 2, DAILY, SETTLED));
+    // 24 + 2 = 26, 26 + 4 = 30, 30 + 8 = 38, 38 + 16 = 54
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 30, 2, HOURLY, SETTLED));
+    EXPECT_FALSE(need_ntp_sync(SYNCED, 29, 2, HOURLY, SETTLED));
 
-    EXPECT_TRUE(need_ntp_sync(SYNCED, 21, 3, DAILY, SETTLED));
-    EXPECT_FALSE(need_ntp_sync(SYNCED, 20, 3, DAILY, SETTLED));
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 38, 3, HOURLY, SETTLED));
+    EXPECT_FALSE(need_ntp_sync(SYNCED, 37, 3, HOURLY, SETTLED));
 
-    EXPECT_TRUE(need_ntp_sync(SYNCED, 37, 4, DAILY, SETTLED));
-    EXPECT_FALSE(need_ntp_sync(SYNCED, 36, 4, DAILY, SETTLED));
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 54, 4, HOURLY, SETTLED));
+    EXPECT_FALSE(need_ntp_sync(SYNCED, 53, 4, HOURLY, SETTLED));
 }
 
 TEST(Backoff, PauseStopsGrowing)
@@ -93,16 +101,16 @@ TEST(Backoff, PauseStopsGrowing)
     // навсегда: 2^20 пробуждений — это дольше срока службы батареи.
     // Шаг ограничен 64 пробуждениями.
     const uint8_t many = 40;
-    const uint16_t capped = 7 + 2 + 4 + 8 + 16 + 32 + 64 * (many - 5);
+    const uint16_t capped = 24 + 2 + 4 + 8 + 16 + 32 + 64 * (many - 5);
 
-    EXPECT_TRUE(need_ntp_sync(SYNCED, capped, many, DAILY, SETTLED));
-    EXPECT_FALSE(need_ntp_sync(SYNCED, capped - 1, many, DAILY, SETTLED));
+    EXPECT_TRUE(need_ntp_sync(SYNCED, capped, many, HOURLY, SETTLED));
+    EXPECT_FALSE(need_ntp_sync(SYNCED, capped - 1, many, HOURLY, SETTLED));
 }
 
 TEST(Backoff, SuccessResetsPause)
 {
     // Счётчик неудач обнуляется при успехе, и следующий срок — обычный
-    EXPECT_TRUE(need_ntp_sync(SYNCED, 7, 0, DAILY, SETTLED));
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 24, 0, HOURLY, SETTLED));
 }
 
 TEST(Backoff, AppliesToNeverSyncedDeviceToo)
@@ -166,14 +174,14 @@ TEST(Warmup, SyncsEveryWakeupUntilDriftIsMeasured)
     // Поправка частоты attiny считается по паре синхронизаций. Пока пары нет,
     // устройство идёт с period_min_tuned из настройки и уезжает от расписания.
     // Поэтому первые NTP_WARMUP_SYNCS раз синхронизируемся каждое пробуждение.
-    EXPECT_TRUE(need_ntp_sync(SYNCED, 1, 0, DAILY, 0));
-    EXPECT_TRUE(need_ntp_sync(SYNCED, 1, 0, DAILY, 1));
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 1, 0, HOURLY, 0));
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 1, 0, HOURLY, 1));
 }
 
-TEST(Warmup, WeeklyScheduleStartsAfterWarmup)
+TEST(Warmup, RegularScheduleStartsAfterWarmup)
 {
-    EXPECT_FALSE(need_ntp_sync(SYNCED, 1, 0, DAILY, NTP_WARMUP_SYNCS));
-    EXPECT_TRUE(need_ntp_sync(SYNCED, 7, 0, DAILY, NTP_WARMUP_SYNCS));
+    EXPECT_FALSE(need_ntp_sync(SYNCED, 1, 0, HOURLY, NTP_WARMUP_SYNCS));
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 24, 0, HOURLY, NTP_WARMUP_SYNCS));
 }
 
 TEST(Warmup, BackoffAppliesDuringWarmupToo)
@@ -181,13 +189,13 @@ TEST(Warmup, BackoffAppliesDuringWarmupToo)
     // Даже на прогреве неудачи не должны превращаться в опрос NTP
     // при каждом пробуждении
     // Срок на прогреве — 1 пробуждение, после неудачи ждём ещё 2
-    EXPECT_FALSE(need_ntp_sync(SYNCED, 2, 1, DAILY, 0));
-    EXPECT_TRUE(need_ntp_sync(SYNCED, 3, 1, DAILY, 0));
+    EXPECT_FALSE(need_ntp_sync(SYNCED, 2, 1, HOURLY, 0));
+    EXPECT_TRUE(need_ntp_sync(SYNCED, 3, 1, HOURLY, 0));
 }
 
 TEST(Warmup, CounterAboveThresholdIsStillSettled)
 {
     // Счётчик насыщается, но на всякий случай: любое значение выше порога
     // означает "прогрев закончен"
-    EXPECT_FALSE(need_ntp_sync(SYNCED, 1, 0, DAILY, 200));
+    EXPECT_FALSE(need_ntp_sync(SYNCED, 1, 0, HOURLY, 200));
 }

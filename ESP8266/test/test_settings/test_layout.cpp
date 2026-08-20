@@ -39,7 +39,8 @@ TEST(SettingsLayout, NewFieldsLiveInTheReservedTail)
     // за этой границей, иначе поехали бы старые поля
     EXPECT_GE(offsetof(Settings, last_time_sync), 882u);
     EXPECT_GE(offsetof(Settings, wakeups_since_sync), 882u);
-    EXPECT_LT(offsetof(Settings, wakeups_since_sync), 960u);
+    EXPECT_GE(offsetof(Settings, period_min_full), 882u);
+    EXPECT_LT(offsetof(Settings, period_min_full), 960u);
 }
 
 TEST(SettingsLayout, RepurposedReservedByteStayedInPlace)
@@ -73,4 +74,5 @@ TEST(SettingsDefaults, FreshDeviceHasNoSyncHistory)
     EXPECT_EQ(sett.wakeups_since_sync, 0);
     EXPECT_EQ(sett.ntp_error_counter, 0);
     EXPECT_EQ(sett.ntp_sync_count, 0);
+    EXPECT_EQ(sett.period_min_full, 0);   // поправка ещё не измерена
 }
