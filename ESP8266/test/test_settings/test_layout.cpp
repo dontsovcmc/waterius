@@ -40,7 +40,9 @@ TEST(SettingsLayout, NewFieldsLiveInTheReservedTail)
     EXPECT_GE(offsetof(Settings, last_time_sync), 882u);
     EXPECT_GE(offsetof(Settings, wakeups_since_sync), 882u);
     EXPECT_GE(offsetof(Settings, period_min_full), 882u);
-    EXPECT_LT(offsetof(Settings, period_min_full), 960u);
+    EXPECT_GE(offsetof(Settings, minutes_since_send), 882u);
+    EXPECT_GE(offsetof(Settings, send_on_consumption), 882u);
+    EXPECT_LT(offsetof(Settings, send_on_consumption), 960u);
 }
 
 TEST(SettingsLayout, RepurposedReservedByteStayedInPlace)
@@ -75,4 +77,14 @@ TEST(SettingsDefaults, FreshDeviceHasNoSyncHistory)
     EXPECT_EQ(sett.ntp_error_counter, 0);
     EXPECT_EQ(sett.ntp_sync_count, 0);
     EXPECT_EQ(sett.period_min_full, 0);   // поправка ещё не измерена
+}
+
+TEST(SettingsDefaults, IdleModeIsOffAfterUpgrade)
+{
+    // Байты лежали нулями в резерве, поэтому у прошитых устройств режим
+    // экономии после обновления прошивки не включится сам собой (#361)
+    Settings sett;
+
+    EXPECT_EQ(sett.send_on_consumption, 0);
+    EXPECT_EQ(sett.minutes_since_send, 0);
 }

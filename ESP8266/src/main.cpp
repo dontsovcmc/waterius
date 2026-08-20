@@ -5,6 +5,7 @@
 #include "Logging.h"
 #include "config.h"
 #include "core/readings.h"
+#include "core/idle.h"
 #include "master_i2c.h"
 #include "senders/send_data.h"
 #include "ha/apply_settings.h"
@@ -86,10 +87,42 @@ void loop()
         if (mode == TRANSMIT_MODE)
         {
             sett.wakeups_since_sync = bump_wakeups(sett.wakeups_since_sync);
+            sett.minutes_since_send = add_minutes(sett.minutes_since_send, sett.wakeup_per_min);
         }
 
         // Вычисляем текущие показания
         calculate_values(sett, data, cdata);
+
+        /*
+        Режим "выходить на связь только при расходе воды" (#361).
+
+        Просыпаемся как обычно, но сеанс Wi-Fi затеваем, только если импульсы
+        пошли или пора отметиться, что устройство живо. Сеанс и есть главная
+        статья расхода батареи: секунды работы радио против долей секунды на
+        чтение attiny по i2c.
+
+        Сравнивать импульсы надо здесь: impulses_previous перезапишет
+        update_config в конце сеанса.
+        */
+        bool must_send = true;
+
+        if (mode == TRANSMIT_MODE && sett.send_on_consumption)
+        {
+            const bool consumed = consumption_detected(data.impulses0, sett.impulses0_previous,
+                                                       data.impulses1, sett.impulses1_previous);
+            must_send = need_transmit(true, consumed, sett.minutes_since_send);
+
+            LOG_INFO(F("Idle: consumed=") << consumed
+                     << F(", silence_min=") << sett.minutes_since_send
+                     << F(", transmit=") << must_send);
+
+            // Сбрасываем на попытке, а не на успехе: устройство без интернета
+            // иначе долбилось бы в сеть каждое пробуждение до конца батареи
+            if (must_send)
+            {
+                sett.minutes_since_send = 0;
+            }
+        }
 
         if (mode == SETUP_MODE)
         {
@@ -116,7 +149,7 @@ void loop()
 
         if (config_loaded)
         {
-            if (wifi_connect(sett))
+            if (must_send && wifi_connect(sett))
             {
                 voltage.update();
                 log_system_info();
@@ -179,6 +212,13 @@ void loop()
                     LOG_ERROR(F("Wakeup period wasn't set"));
                 }
             }
+            if (!must_send)
+            {
+                LOG_INFO(F("Idle: no consumption, WiFi stays off"));
+            }
+
+            // Сохраняем всегда: даже в молчаливом пробуждении изменились
+            // счётчики, а без них не наступит ни срок отметки, ни срок NTP
             store_config(sett);  // т.к. сохраняем число ошибок подключения
         }
     }

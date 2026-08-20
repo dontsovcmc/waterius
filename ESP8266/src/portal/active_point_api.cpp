@@ -655,6 +655,10 @@ void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
     {
         save_bool_param(p, sett.mqtt_auto_discovery, errorsObj);
     }
+    else if (name == FPSTR(PARAM_SEND_ON_CONSUMPTION) || name == FPSTR(s_sc))  // portal || ha
+    {
+        save_bool_param(p, sett.send_on_consumption, errorsObj);
+    }
 }
 
 void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)

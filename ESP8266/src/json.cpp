@@ -72,6 +72,9 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("waketime")] = sett.wake_time;
     root[F("period_min_tuned")] = sett.period_min_tuned;
     root[F("period_min")] = sett.wakeup_per_min;
+
+    // Состояние переключателя в Home Assistant (#361)
+    root[F("sc")] = sett.send_on_consumption;
     root[F("setuptime")] = sett.setup_time;
     root[F("boot")] = data.service;
     root[F("resets")] = data.resets;

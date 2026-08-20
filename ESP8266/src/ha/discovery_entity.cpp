@@ -128,6 +128,24 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("json_attributes_template")] = json_attributes_template;
     }
 
+    if (strcmp(entity_type, "switch") == 0)
+    {
+        // https://www.home-assistant.io/integrations/switch.mqtt
+        String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
+        entity[F("cmd_t")] = command_topic; // command_topic
+
+        // Значения ровно те, что понимает parse_bool на стороне устройства:
+        // "true"/"false" превратились бы в ноль и молча выключали бы режим
+        entity[F("pl_on")] = F("1");    // payload_on
+        entity[F("pl_off")] = F("0");   // payload_off
+        entity[F("stat_on")] = F("1");  // state_on
+        entity[F("stat_off")] = F("0"); // state_off
+
+        entity[F("optimistic")] = true; // optimistic
+        entity[F("retain")] = true; //retain
+        entity[F("qos")] = 1; //qos
+    }
+
     if (strcmp(entity_type, "number") == 0 && strcmp(advanced_conf, "50") == 0)  // format 5.0. TODO: добавить max min step... для коректной установки значений
     {
         // https://www.home-assistant.io/integrations/number.mqtt

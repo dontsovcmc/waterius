@@ -29,6 +29,7 @@
 static const char s_sensor[] PROGMEM = "sensor";
 static const char s_number[] PROGMEM = "number";
 static const char s_select[] PROGMEM = "select";
+static const char s_switch[] PROGMEM = "switch";
 static const char s_measurement[] PROGMEM = "measurement";
 static const char s_voltage[] PROGMEM = "voltage";
 static const char s_diagnostic[] PROGMEM = "diagnostic";
@@ -79,6 +80,7 @@ static const char s_duration[] PROGMEM = "duration";
 static const char s_min[] PROGMEM = "min";
 static const char s_config[] PROGMEM = "config";
 static const char s_icon_bed_clock[] PROGMEM = "mdi:bed-clock";
+static const char s_icon_water_sync[] PROGMEM = "mdi:water-sync";
 static const char s_total_name[] PROGMEM = "Total";
 static const char s_ch[] PROGMEM = "ch";
 static const char s_total[] PROGMEM = "total";
@@ -133,6 +135,18 @@ static const char *const ENTITY_RESETS[MQTT_PARAM_COUNT] PROGMEM =
 static const char *const ENTITY_TIMESTAMP[MQTT_PARAM_COUNT] PROGMEM =    
     {s_sensor, s_time_name, s_timestamp, "", s_timestamp, "", s_diagnostic, s_clock, ""};            // Время
     /*{s_sensor, s_period_min_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},*/ // Настройка для автоматического добавления времени пробуждения в Home Assistant
+static const char s_sc[] PROGMEM = "sc";
+static const char s_sc_name[] PROGMEM = "Send on consumption";
+
+/*
+Режим "выходить на связь только при расходе" (#361). Переключатель, а не
+сенсор: из Home Assistant его можно включить и выключить, команда приезжает
+в топик <корень>/sc/set и разбирается тем же обработчиком, что и чекбокс
+в веб-портале.
+*/
+static const char *const ENTITY_SEND_ON_CONSUMPTION[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_sc_name, s_sc, "", "", "", s_config, s_icon_water_sync, ""};
+
 static const char *const ENTITY_PERIOD_MIN[MQTT_PARAM_COUNT] PROGMEM =  
     {s_number, s_period_min_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50};
 //static const char *const ENTITY_PERIOD_MIN_TUNED[MQTT_PARAM_COUNT] PROGMEM =  

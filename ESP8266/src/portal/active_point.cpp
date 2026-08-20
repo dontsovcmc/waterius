@@ -259,6 +259,9 @@ String processor_main(const String &var, const uint8_t input)
     else if (var == FPSTR(PARAM_MQTT_DISCOVERY_TOPIC))
         return replace_value(sett.mqtt_discovery_topic);
 
+    else if (var == FPSTR(PARAM_SEND_ON_CONSUMPTION))
+        return template_bool(sett.send_on_consumption);
+
     else if (var == FPSTR(PARAM_NTP_SERVER))
         return String(sett.ntp_server);
 

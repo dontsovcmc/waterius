@@ -114,6 +114,13 @@
                                 <p>В минутах</p>
                                 <p class="error hd" id="period_min-error">Некорректное значение</p>
                             </div>
+                            <div class="toggle">
+                                <input type="checkbox" name="send_on_consumption" id="send_on_consumption" onclick="checkboxToggle(this)" %send_on_consumption%>
+                                <label for="send_on_consumption">Выходить на связь только при расходе воды</label>
+                            </div>
+                            <div class="f-row">
+                                <p class="text">Ватериус будет проверять счётчики с тем же периодом, но выходить в интернет только когда вода расходуется. Это экономит батарейки. Если расхода нет, выйдет на связь раз в 3 суток, чтобы было видно, что он жив.</p>
+                            </div>
                             <div class="f-row">
                                 <label for="place">Место установки</label>
                                 <input id="place" name="place" placeholder="Ленина 10-2-5 Ванна" value="%place%" maxlength="19">
