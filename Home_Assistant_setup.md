@@ -68,6 +68,8 @@ homeassistant:
       friendly_name: "Качество связи"
     "number.waterius_*_period_min":
       friendly_name: "Период отправки"
+    "switch.waterius_*_sc":
+      friendly_name: "Только при расходе"
 ```
 
 После перезагрузки Home Assistant свойства устройства будут выглядеть следующим образом
