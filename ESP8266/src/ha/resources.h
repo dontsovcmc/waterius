@@ -13,6 +13,7 @@
 
 #include <Arduino.h>
 #include "setup.h"
+#include "core/ha_units.h"
 
 #define MQTT_PARAM_COUNT 9
 #define HA_NONE -1
@@ -81,14 +82,19 @@ static const char s_icon_bed_clock[] PROGMEM = "mdi:bed-clock";
 static const char s_total_name[] PROGMEM = "Total";
 static const char s_ch[] PROGMEM = "ch";
 static const char s_total[] PROGMEM = "total";
-static const char s_water[] PROGMEM = "water";
-static const char s_gas[] PROGMEM = "gas";
-static const char s_energy[] PROGMEM = "energy";
+/*
+Классы устройств и единицы измерения берутся из core/ha_units.h: там же
+живёт проверка допустимых сочетаний, которую гоняют хостовые тесты. HA
+молча выбрасывает сущность с недопустимой парой, поэтому писать строки
+здесь руками нельзя (#356).
+*/
+static const char s_water[] PROGMEM = HA_CLASS_WATER;
+static const char s_gas[] PROGMEM = HA_CLASS_GAS;
+static const char s_energy[] PROGMEM = HA_CLASS_ENERGY;
 static const char s_heat[] PROGMEM = "heat";
-static const char s_m3[] PROGMEM = "m³";
-static const char s_kWh[] PROGMEM = "kWh";
-static const char s_gCal[] PROGMEM = "Gcal";
-static const char s_kWt[] PROGMEM = "kWt";
+static const char s_m3[] PROGMEM = HA_UNIT_M3;
+static const char s_kWh[] PROGMEM = HA_UNIT_KWH;
+static const char s_gCal[] PROGMEM = HA_UNIT_GCAL;
 static const char s_imp_name[] PROGMEM = "Impulses";
 static const char s_imp[] PROGMEM = "imp";
 static const char s_icon_pulse[] PROGMEM = "mdi:pulse";
@@ -187,11 +193,14 @@ static const char *const ENTITY_HEAT_GCAL_TOTAL[MQTT_PARAM_COUNT] PROGMEM =
 static const char *const ENTITY_HEAT_GCAL_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
     {s_number, s_total_name, s_ch, s_total, s_energy, s_gCal, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
 
-// пока нет типа данных https://github.com/home-assistant/core/blob/dev/homeassistant/components/sensor/const.py#L587
+// Тепло, посчитанное в киловатт-часах: единица та же, что у электричества.
+// Раньше здесь стояло "kWt" — такой единицы в HA нет, и сенсор не появлялся,
+// хотя number приезжал (#356). В интерфейсе тип называется "Тепло (кВт)",
+// в data/static/strings.js константа тоже названа CounterName_HEAT_KWH.
 static const char *const ENTITY_HEAT_KWT_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWt, "", "", ""};                 // chN Показания
+    {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWh, "", "", ""};                 // chN Показания
 static const char *const ENTITY_HEAT_KWT_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWt, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
+    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWh, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
             
 
 // Channel attributes
