@@ -68,3 +68,9 @@ uint16_t get_auto_factor(const uint32_t runtime_impulses,
     }
     return factor;
 }
+
+void apply_counter_types(AttinyData &snapshot, const AttinyData &current)
+{
+    snapshot.counter_type0 = current.counter_type0;
+    snapshot.counter_type1 = current.counter_type1;
+}

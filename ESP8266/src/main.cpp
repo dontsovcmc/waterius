@@ -4,6 +4,7 @@
 #include "json.h"
 #include "Logging.h"
 #include "config.h"
+#include "core/readings.h"
 #include "master_i2c.h"
 #include "senders/send_data.h"
 #include "ha/apply_settings.h"
@@ -151,6 +152,13 @@ void loop()
                 if (settings_received(json_settings_received))
                 {
                     apply_settings(json_settings_received, sett, data, cdata);
+
+                    // Типы входов команда меняет в attiny и в runtime_data, а
+                    // payload собирается из снимка data. Без переноса наверх
+                    // уходили бы прежние значения, и селектор в Home Assistant
+                    // отщёлкивал бы обратно (#360).
+                    apply_counter_types(data, runtime_data);
+
                     send_data(sett, data, cdata, json_data, json_settings_received);
                 }
 

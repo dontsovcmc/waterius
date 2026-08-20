@@ -247,3 +247,81 @@ TEST(AutoFactor, MagicValuesShadowRealFactors)
     EXPECT_NE(get_auto_factor(500, 100, 3, 1), 3);
     EXPECT_NE(get_auto_factor(500, 100, 7, 1), 7);
 }
+
+// --- снимок данных и изменение типов входов по MQTT (#360) ---
+
+TEST(CounterTypes, ChangedTypesReachTheSnapshot)
+{
+    // Команда из MQTT меняет тип входа: значение уходит в attiny и в живую
+    // копию runtime_data. Снимок data, из которого формируется payload,
+    // об этом не знал — HA получал обратно старый тип и селектор
+    // отщёлкивал назад.
+    AttinyData snapshot;
+    snapshot.counter_type0 = CounterType::NAMUR;
+    snapshot.counter_type1 = CounterType::NONE;
+
+    AttinyData current;
+    current.counter_type0 = CounterType::DISCRETE;
+    current.counter_type1 = CounterType::ELECTRONIC;
+
+    apply_counter_types(snapshot, current);
+
+    EXPECT_EQ(snapshot.counter_type0, CounterType::DISCRETE);
+    EXPECT_EQ(snapshot.counter_type1, CounterType::ELECTRONIC);
+}
+
+TEST(CounterTypes, BothChannelsAtOnce)
+{
+    // В issue симптом описан именно так: "меняется сразу оба типа входа"
+    AttinyData snapshot;
+    snapshot.counter_type0 = CounterType::NONE;
+    snapshot.counter_type1 = CounterType::NONE;
+
+    AttinyData current;
+    current.counter_type0 = CounterType::NAMUR;
+    current.counter_type1 = CounterType::NAMUR;
+
+    apply_counter_types(snapshot, current);
+
+    EXPECT_EQ(snapshot.counter_type0, CounterType::NAMUR);
+    EXPECT_EQ(snapshot.counter_type1, CounterType::NAMUR);
+}
+
+TEST(CounterTypes, ImpulsesStayFromBoot)
+{
+    // Показания трогать нельзя: runtime_data перечитывается из attiny во
+    // время сеанса, и импульсы там уже другие. На снимке посчитаны дельты,
+    // которые уже отправлены — подмена значений сдвинула бы расход.
+    AttinyData snapshot;
+    snapshot.impulses0 = 100;
+    snapshot.impulses1 = 200;
+    snapshot.voltage = 3300;
+    snapshot.version = 38;
+
+    AttinyData current;
+    current.impulses0 = 105;
+    current.impulses1 = 207;
+    current.voltage = 2900;
+    current.version = 99;
+
+    apply_counter_types(snapshot, current);
+
+    EXPECT_EQ(snapshot.impulses0, 100u);
+    EXPECT_EQ(snapshot.impulses1, 200u);
+    EXPECT_EQ(snapshot.voltage, 3300);
+    EXPECT_EQ(snapshot.version, 38);
+}
+
+TEST(CounterTypes, DisablingChannelReachesTheSnapshot)
+{
+    // Отключение входа — тоже смена типа, NONE == 255
+    AttinyData snapshot;
+    snapshot.counter_type1 = CounterType::NAMUR;
+
+    AttinyData current;
+    current.counter_type1 = CounterType::NONE;
+
+    apply_counter_types(snapshot, current);
+
+    EXPECT_EQ(snapshot.counter_type1, CounterType::NONE);
+}
