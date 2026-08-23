@@ -6,18 +6,6 @@
 Это не список задач — часть из них может быть осознанной. Но каждое стоит проверить, прежде
 чем строить на нём выводы.
 
-## Чекбокс «Retain Flag» не сохраняется
-
-`data/setup_send.html` содержит чекбокс `mqtt_retain`, а `active_point.cpp:processor_main`
-подставляет в него текущее значение. Обработчика с именем `PARAM_MQTT_RETAIN` в
-`applyCheckBoxParameter` и `applyNonCheckBoxParameter` нет.
-
-Значит галочка отображается корректно, но снять её через портал нельзя: значение из формы
-никуда не записывается. Работает то, что стоит по умолчанию (`mqtt_retain = true`,
-`ESP8266/src/config.cpp:init_config`).
-
-Проверить: `grep -c PARAM_MQTT_RETAIN ESP8266/src/portal/active_point_api.cpp` → 0.
-
 ## `mqtt_connect` возвращает успех после всех неудач
 
 `ESP8266/src/ha/subscribe.cpp:mqtt_connect` перебирает попытки в цикле `do…while(--attempts)` и
