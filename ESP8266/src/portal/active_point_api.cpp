@@ -428,27 +428,27 @@ void save_broker_host(const AsyncWebParameter *p, char *dest, size_t size, JsonO
 }
 
 /**
- * @brief Показания счётчика. Проверяются на правдоподобность по типу счётчика.
+ * @brief Показания счётчика. Показания воды обязаны содержать дробную часть.
  *
  * Значение записывается только при успехе: если пользователь забыл запятую,
  * нельзя ни сохранить показания, ни сбросить стартовые импульсы — иначе
  * показания уедут даже после ввода правильного числа. Поэтому, в отличие от
  * остальных save_param, эта возвращает результат.
  *
- * @param counter_name тип счётчика: ограничение действует только для воды
+ * @param counter_name тип счётчика: правило действует только для воды
  * @return true если значение сохранено
  */
 bool save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj, const uint8_t counter_name)
 {
-    float value = 0.0;
-    parse_decimal(p->value().c_str(), value);
-
-    ParamError err = check_reading(value, counter_name);
+    ParamError err = check_reading(p->value().c_str(), counter_name);
     if (err != PARAM_OK)
     {
         report_param_error(p, errorsObj, err);
         return false;
     }
+
+    float value = 0.0;
+    parse_decimal(p->value().c_str(), value);
 
     v = value;
     LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);

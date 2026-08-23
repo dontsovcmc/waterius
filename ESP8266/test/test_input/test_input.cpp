@@ -309,53 +309,59 @@ TEST(CheckReading, WaterTypesAreRecognised)
     EXPECT_FALSE(is_water_counter(CounterName::OTHER));
 }
 
-TEST(CheckReading, WaterWithinScaleIsAccepted)
+TEST(CheckReading, WaterWithFractionIsAccepted)
 {
-    EXPECT_EQ(check_reading(0.0, CounterName::WATER_COLD), PARAM_OK);
-    EXPECT_EQ(check_reading(123.45, CounterName::WATER_COLD), PARAM_OK);
-    EXPECT_EQ(check_reading(99999.0, CounterName::WATER_HOT), PARAM_OK);
+    EXPECT_EQ(check_reading("0.0", CounterName::WATER_COLD), PARAM_OK);
+    EXPECT_EQ(check_reading("123.45", CounterName::WATER_COLD), PARAM_OK);
+    EXPECT_EQ(check_reading("123,456", CounterName::WATER_HOT), PARAM_OK);
 }
 
-TEST(CheckReading, WaterNearFullScaleIsAccepted)
+TEST(CheckReading, BigWaterScaleIsAccepted)
 {
-    // Почти предел шкалы бытового счётчика — принимаем
-    EXPECT_EQ(check_reading(99999.99, CounterName::WATER_COLD), PARAM_OK);
+    // Ради этих пользователей правило и переделано: предела шкалы больше нет,
+    // счётчик на 250 тысяч кубов вводится как есть — с дробной частью
+    EXPECT_EQ(check_reading("250000.123", CounterName::WATER_COLD), PARAM_OK);
+    EXPECT_EQ(check_reading("99999.999", CounterName::WATER_HOT), PARAM_OK);
 }
 
-TEST(CheckReading, LastFourLitresOfScaleAreRejectedByFloatRounding)
+TEST(CheckReading, WaterWithoutSeparatorLooksLikeMissingComma)
 {
-    // 99999.999 в float не представимо: шаг float в этом диапазоне 0.0078,
-    // и значение округляется ровно до 100000.0. Поэтому последние ~4 литра
-    // шкалы отвергаются вместе с настоящими опечатками.
-    //
-    // Это не ошибка правила, а граница типа float, в котором показания
-    // хранятся в EEPROM. Практического вреда нет: счётчик на 99999.999 м3
-    // намотал 100 миллионов литров.
-    EXPECT_FLOAT_EQ(99999.999f, 100000.0f);
-    EXPECT_EQ(check_reading(99999.999, CounterName::WATER_COLD), PARAM_ERR_NO_COMMA);
+    // Пользователь переписал шкалу подряд: 12345 вместо 123.45
+    EXPECT_EQ(check_reading("12345", CounterName::WATER_COLD), PARAM_ERR_NO_COMMA);
+    EXPECT_EQ(check_reading("5678", CounterName::WATER_HOT), PARAM_ERR_NO_COMMA);
+    EXPECT_EQ(check_reading("123", CounterName::PORTABLE_WATER), PARAM_ERR_NO_COMMA);
 }
 
-TEST(CheckReading, WaterBeyondScaleLooksLikeMissingComma)
+TEST(CheckReading, EmptyWaterReadingIsRejectedToo)
 {
-    // Пользователь ввёл 12345 вместо 123.45
-    EXPECT_EQ(check_reading(100000.0, CounterName::WATER_COLD), PARAM_ERR_NO_COMMA);
-    EXPECT_EQ(check_reading(12345678.0, CounterName::WATER_HOT), PARAM_ERR_NO_COMMA);
-    EXPECT_EQ(check_reading(100000.0, CounterName::PORTABLE_WATER), PARAM_ERR_NO_COMMA);
+    // Пустая строка разделителя не содержит, а показания без дробной части
+    // сохранять нельзя — поле обязательное
+    EXPECT_EQ(check_reading("", CounterName::WATER_COLD), PARAM_ERR_NO_COMMA);
 }
 
-TEST(CheckReading, ElectricityIsNotLimited)
+TEST(CheckReading, ElectricityIsNotChecked)
 {
     // Целые кВт*ч — обычное дело, счётчик за 20 лет накручивает шестизначные
-    EXPECT_EQ(check_reading(123456.0, CounterName::ELECTRO), PARAM_OK);
-    EXPECT_EQ(check_reading(999999.0, CounterName::ELECTRO), PARAM_OK);
+    EXPECT_EQ(check_reading("123456", CounterName::ELECTRO), PARAM_OK);
+    EXPECT_EQ(check_reading("999999", CounterName::ELECTRO), PARAM_OK);
 }
 
-TEST(CheckReading, GasAndHeatAreNotLimited)
+TEST(CheckReading, GasAndHeatAreNotChecked)
 {
-    EXPECT_EQ(check_reading(100000.0, CounterName::GAS), PARAM_OK);
-    EXPECT_EQ(check_reading(100000.0, CounterName::HEAT_GCAL), PARAM_OK);
-    EXPECT_EQ(check_reading(100000.0, CounterName::HEAT_KWT), PARAM_OK);
-    EXPECT_EQ(check_reading(100000.0, CounterName::OTHER), PARAM_OK);
+    EXPECT_EQ(check_reading("100000", CounterName::GAS), PARAM_OK);
+    EXPECT_EQ(check_reading("100000", CounterName::HEAT_GCAL), PARAM_OK);
+    EXPECT_EQ(check_reading("100000", CounterName::HEAT_KWT), PARAM_OK);
+    EXPECT_EQ(check_reading("100000", CounterName::OTHER), PARAM_OK);
+}
+
+TEST(HasDecimalSeparator, DotAndCommaAreEqual)
+{
+    EXPECT_TRUE(has_decimal_separator("1.0"));
+    EXPECT_TRUE(has_decimal_separator("1,0"));
+    EXPECT_TRUE(has_decimal_separator("1."));
+
+    EXPECT_FALSE(has_decimal_separator("10"));
+    EXPECT_FALSE(has_decimal_separator(""));
 }
 
 TEST(CheckReading, ErrorCodeMatchesWebInterface)

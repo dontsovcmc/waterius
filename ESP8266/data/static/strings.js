@@ -155,7 +155,7 @@ function tr(str_id) {
         case S_ERROR_ATTINY_ERROR: return "Ошибка связи с attiny";
         case S_ERROR_EMPTY: return "Значение не может быть пустым";
         case S_PLEASE_RECONNECT_WIFI: return "Wi-Fi соединение разорвано. Подключитесь ещё раз к Ватериусу.";
-        case S_ERROR_NO_COMMA: return "Похоже, забыта запятая";
+        case S_ERROR_NO_COMMA: return "Показания воды вводятся с литрами: 123.456. Целое число обычно означает забытую запятую";
         case S_ERROR_TLS: return "Шифрованное подключение к MQTT не поддерживается. Укажите адрес без mqtts:// и ssl://";
         case S_ERROR_PORT_IN_HOST: return "Порт указывайте в отдельном поле, а не в адресе";
         default: 

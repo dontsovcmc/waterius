@@ -112,9 +112,14 @@ bool is_water_counter(const uint8_t counter_name)
         || counter_name == CounterName::PORTABLE_WATER;
 }
 
-ParamError check_reading(const float value, const uint8_t counter_name)
+bool has_decimal_separator(const char *value)
 {
-    if (is_water_counter(counter_name) && value >= MAX_WATER_READING)
+    return strchr(value, '.') != nullptr || strchr(value, ',') != nullptr;
+}
+
+ParamError check_reading(const char *value, const uint8_t counter_name)
+{
+    if (is_water_counter(counter_name) && !has_decimal_separator(value))
         return PARAM_ERR_NO_COMMA;
 
     return PARAM_OK;
