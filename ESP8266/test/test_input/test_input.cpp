@@ -189,12 +189,22 @@ TEST(ParseUint16, ZeroIsAnError)
 
 TEST(ParseUint16, GarbageIsAnError)
 {
-    // atol("abc") == 0, а ноль считается ошибкой — мусор отсеивается заодно
     uint16_t v = 42;
 
     EXPECT_EQ(parse_uint16("abc", v), PARAM_ERR_VALUE);
     EXPECT_EQ(parse_uint16("", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_uint16("1883abc", v), PARAM_ERR_VALUE);  // хвост после числа
+    EXPECT_EQ(parse_uint16("1883.5", v), PARAM_ERR_VALUE);   // дробное - не целое
     EXPECT_EQ(v, 42);
+}
+
+TEST(ParseUint16, SpacesAroundNumberAreAllowed)
+{
+    // Значение приходит из формы как есть, пробелы по краям не ошибка
+    uint16_t v = 0;
+
+    EXPECT_EQ(parse_uint16("  1883  ", v), PARAM_OK);
+    EXPECT_EQ(v, 1883);
 }
 
 TEST(ParseUint16, NormalValue)
@@ -205,14 +215,30 @@ TEST(ParseUint16, NormalValue)
     EXPECT_EQ(v, 1883);
 }
 
-TEST(ParseUint16, OverflowWrapsAroundSilently)
+TEST(ParseUint16, OverflowIsRejected)
 {
-    // 70000 не влезает в uint16_t и молча превращается в 4464.
-    // Например, номер порта MQTT.
-    uint16_t v = 0;
+    // 70000 не влезает в uint16_t. Раньше значение молча превращалось в
+    // 4464: портал отвечал "сохранено", а в настройках оказывался другой
+    // порт MQTT. Теперь это ошибка, и поле остаётся прежним.
+    uint16_t v = 1883;
 
-    EXPECT_EQ(parse_uint16("70000", v), PARAM_OK);
-    EXPECT_EQ(v, 4464);
+    EXPECT_EQ(parse_uint16("70000", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_uint16("65536", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_uint16("99999999999999999999", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(v, 1883);
+
+    // Верхняя граница остаётся допустимой
+    EXPECT_EQ(parse_uint16("65535", v), PARAM_OK);
+    EXPECT_EQ(v, 65535);
+}
+
+TEST(ParseUint16, NegativeIsRejected)
+{
+    // Отрицательное в беззнаковом поле стало бы большим положительным
+    uint16_t v = 1883;
+
+    EXPECT_EQ(parse_uint16("-1", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(v, 1883);
 }
 
 TEST(ParseUint8, ZeroOkFlagSwitchesBehaviour)
@@ -224,6 +250,20 @@ TEST(ParseUint8, ZeroOkFlagSwitchesBehaviour)
 
     EXPECT_EQ(parse_uint8("0", v, true), PARAM_OK);
     EXPECT_EQ(v, 0);
+}
+
+TEST(ParseUint8, OutOfRangeIsRejected)
+{
+    uint8_t v = 42;
+
+    EXPECT_EQ(parse_uint8("256", v, true), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_uint8("-1", v, true), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_uint8("abc", v, true), PARAM_ERR_VALUE);
+    EXPECT_EQ(v, 42);
+
+    // 255 - это CounterType::NONE, выключенный вход
+    EXPECT_EQ(parse_uint8("255", v, true), PARAM_OK);
+    EXPECT_EQ(v, 255);
 }
 
 // --- флажки ---
@@ -247,22 +287,27 @@ TEST(ParseBool, TwoIsRejected)
     EXPECT_EQ(v, 1);
 }
 
-TEST(ParseBool, NegativeSlipsThroughAs255)
+TEST(ParseBool, NegativeIsRejected)
 {
-    // Проверяется только верхняя граница, поэтому "-1" проходит и
-    // превращается в 255 — флажок оказывается включённым.
+    // Раньше проверялась только верхняя граница: "-1" проходил и
+    // превращался в 255, то есть выключатель оказывался включённым.
     uint8_t v = 0;
 
-    EXPECT_EQ(parse_bool("-1", v), PARAM_OK);
-    EXPECT_EQ(v, 255);
+    EXPECT_EQ(parse_bool("-1", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(v, 0);
 }
 
-TEST(ParseBool, GarbageBecomesZero)
+TEST(ParseBool, GarbageIsRejected)
 {
+    // Мусор больше не выключает флажок молча: значение остаётся прежним,
+    // а отправитель получает код ошибки. Home Assistant шлёт "1"/"0",
+    // так что "true" сюда прийти не должно - но если пришло, это ошибка.
     uint8_t v = 1;
 
-    EXPECT_EQ(parse_bool("abc", v), PARAM_OK);
-    EXPECT_EQ(v, 0);
+    EXPECT_EQ(parse_bool("abc", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_bool("", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_bool("true", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(v, 1);
 }
 
 // --- обрезка пробелов ---

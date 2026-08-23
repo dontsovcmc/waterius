@@ -65,7 +65,7 @@
                             </div>
                             <div class="f-row">
                                 <label for="mqtt_port">Порт</label>
-                                <input id="mqtt_port" name="mqtt_port" placeholder="1883" type="number" value="%mqtt_port%">
+                                <input id="mqtt_port" name="mqtt_port" placeholder="1883" type="number" min="1" max="65535" value="%mqtt_port%">
                                 <p class="error hd" id="mqtt_port-error">Некорректный номер порта</p>
                             </div>
                             <div class="f-row">
@@ -110,7 +110,7 @@
                             </div>
                             <div class="f-row">
                                 <label for="period_min">Период отправки</label>
-                                <input id="period_min" name="period_min" placeholder="1440" type="number" value="%period_min%">
+                                <input id="period_min" name="period_min" placeholder="1440" type="number" min="1" max="65535" value="%period_min%">
                                 <p>В минутах</p>
                                 <p class="error hd" id="period_min-error">Некорректное значение</p>
                             </div>

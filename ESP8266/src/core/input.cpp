@@ -1,6 +1,8 @@
 #include "input.h"
 
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -75,33 +77,73 @@ ParamError parse_decimal(const char *value, float &out)
     return PARAM_OK;
 }
 
-ParamError parse_uint16(const char *value, uint16_t &out)
+/*
+Целое из строки формы или MQTT, с проверкой диапазона.
+
+atol, который стоял здесь раньше, годился только на вид: он не отличает
+"abc" от нуля, срезает переполнение молча — 70000 в uint16_t превращалось
+в 4464, то есть порт MQTT сохранялся другим, а портал отвечал "сохранено",
+— и пропускает отрицательное, которое при записи в беззнаковое поле
+становится большим положительным: "-1" во флажке давало 255, то есть
+"включено".
+
+Поэтому strtol и три проверки: цифры вообще были, после числа нет мусора,
+результат влезает в допустимые границы. Хвостовые пробелы разрешены -
+значение приходит из формы как есть.
+*/
+static bool parse_long(const char *value, const long min, const long max, long &out)
 {
-    long v = atol(value);
-    if (v == 0)
-        return PARAM_ERR_VALUE;
+    if (value == nullptr)
+        return false;
+
+    char *end = nullptr;
+    errno = 0;
+    const long v = strtol(value, &end, 10);
+
+    if (end == value)
+        return false;  // ни одной цифры
+
+    while (*end && isspace((unsigned char)*end))
+        end++;
+
+    if (*end)
+        return false;  // после числа что-то ещё
+
+    if (errno == ERANGE || v < min || v > max)
+        return false;
 
     out = v;
+    return true;
+}
+
+ParamError parse_uint16(const char *value, uint16_t &out)
+{
+    long v = 0;
+    // Ноль — ошибка по контракту: это и незаполненное поле, и мусор
+    if (!parse_long(value, 1, 65535, v))
+        return PARAM_ERR_VALUE;
+
+    out = (uint16_t)v;
     return PARAM_OK;
 }
 
 ParamError parse_uint8(const char *value, uint8_t &out, const bool zero_ok)
 {
-    long v = atol(value);
-    if (!zero_ok && v == 0)
+    long v = 0;
+    if (!parse_long(value, zero_ok ? 0 : 1, 255, v))
         return PARAM_ERR_VALUE;
 
-    out = v;
+    out = (uint8_t)v;
     return PARAM_OK;
 }
 
 ParamError parse_bool(const char *value, uint8_t &out)
 {
-    long v = atol(value);
-    if (v > 1)
+    long v = 0;
+    if (!parse_long(value, 0, 1, v))
         return PARAM_ERR_VALUE;
 
-    out = v;
+    out = (uint8_t)v;
     return PARAM_OK;
 }
 

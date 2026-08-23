@@ -58,14 +58,20 @@ ParamError parse_text(char *dest, size_t size, const char *value, bool required)
 ParamError parse_decimal(const char *value, float &out);
 
 /*
-Целое: ноль считается ошибкой.
+Целое 1..65535. Ноль, отрицательное, значение больше границы, пустая
+строка и любой мусор — ошибка. Значение, не влезающее в тип, раньше
+молча обрезалось: 70000 сохранялось как 4464.
 */
 ParamError parse_uint16(const char *value, uint16_t &out);
 
+/*
+Целое 0..255 (ноль допустим только с zero_ok). Правила те же.
+*/
 ParamError parse_uint8(const char *value, uint8_t &out, const bool zero_ok);
 
 /*
-Флажок: допустимы только 0 и 1.
+Флажок: допустимы только 0 и 1, всё остальное — ошибка. Home Assistant шлёт
+именно "1"/"0" (payload_on/off в ha/discovery_entity.cpp), браузер — тоже.
 */
 ParamError parse_bool(const char *value, uint8_t &out);
 
