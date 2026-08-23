@@ -340,16 +340,7 @@
 #define ERROR_RED_LED_PIN 1
 #endif
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
-/*
-Зелёный светодиод сидит на GPIO9. Нумерация в прошивке прямая, маппинга платы
-нет: GPIO9 — это пин 9 (пад SD_DATA2, функция FUNC_GPIO9).
-
-Пин занят флешем: waterius_2 собирается с board_build.flash_mode = qio, а в
-QIO GPIO9 и GPIO10 — верхние две линии данных SPI. Поэтому его никто не
-трогает: pinMode отцепил бы вывод от флеша. Чтобы светодиод заработал,
-прошивку надо сначала перевести на dio/dout.
-*/
-#define GREEN_LED_PIN 9
+#define GREEN_LED_PIN 19
 #define ERROR_RED_LED_PIN CH0_LED_PIN 
 #endif
 

@@ -22,10 +22,8 @@ void setup_leds()
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
     pinMode(CH0_LED_PIN, OUTPUT);
     pinMode(CH1_LED_PIN, OUTPUT);
+    pinMode(GREEN_LED_PIN, OUTPUT);
     pinMode(BUTTON_STATE_PIN, INPUT);
-
-    // GREEN_LED_PIN не настраиваем: в режиме qio это линия данных флеша,
-    // подробности у самого define в setup.h
 
     digitalWrite(CH0_LED_PIN, LOW);
     digitalWrite(CH1_LED_PIN, LOW);
@@ -36,6 +34,7 @@ void release_leds()
 {
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
     pinMode(BUTTON_STATE_PIN, INPUT);
+    pinMode(GREEN_LED_PIN, INPUT);
     pinMode(CH0_LED_PIN, INPUT);
     pinMode(CH1_LED_PIN, INPUT);
 #endif
