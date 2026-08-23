@@ -1,3 +1,16 @@
+/*
+Весь текст веб-портала, который зависит от данных.
+
+Названия ресурсов, инструкции мастера, единицы измерения и расшифровки
+кодов ошибок собраны здесь, а в разметке лежат только пустые маркеры
+(`data-unit`, идентификаторы элементов) — значения подставляет JS при
+загрузке страницы.
+
+Так сделано ради перевода: второй язык — это копия одного этого файла, ни
+html, ни прошивку трогать не нужно. По той же причине здесь же лежат
+разделители: десятичная запятая и запятая перед единицей в других языках
+выглядят иначе.
+*/
 
 function fill_input_color(index) {
     var q = document.getElementById('input_color');
@@ -8,6 +21,20 @@ function fill_input_color(index) {
     }
 }
 
+/*
+Единицы измерения. Отдельными константами, потому что одна и та же
+единица встречается у нескольких ресурсов.
+*/
+const U_M3 = "м³";
+const U_L = "л";
+const U_KWH = "кВт·ч";
+const U_GCAL = "Гкал";
+const U_IMPULSE = "имп.";
+const U_NONE = "";          // размерность неизвестна, показывать нечего
+
+const DECIMAL_POINT = ",";  // разделитель дробной части
+const UNIT_SEPARATOR = ", "; // перед единицей в подписи поля: "Показания, м³"
+
 const CounterName_WATER_COLD = 0;
 const CounterName_WATER_HOT = 1;
 const CounterName_ELECTRO = 2;
@@ -17,96 +44,284 @@ const CounterName_PORTABLE_WATER = 5;
 const CounterName_OTHER = 6;
 const CounterName_HEAT_KWH = 7;
 
+const CounterType_NAMUR = 0;
+const CounterType_DISCRETE = 1;
+const CounterType_ELECTRONIC = 2;
+const CounterType_HALL = 3;
+const CounterType_ELECTRONIC_HIGH = 4;
+const CounterType_NONE = 0xFF;
+
+// Спецзначения веса импульса, ESP8266/src/core/types.h
+const AUTO_IMPULSE_FACTOR = 3;
+const AS_COLD_CHANNEL = 7;
+
+/*
+Ресурсы: что интерфейс показывает для каждого значения CounterName.
+
+  title       — заголовок страницы ("Холодная вода");
+  option      — пункт списка "Что считает" ("Холодную воду"): падеж другой,
+                поэтому строка отдельная;
+  instruction — что делать на странице определения счётчика;
+  unit        — единица показаний;
+  pulse, pulse_div — вес импульса: значение из формы, делённое на pulse_div,
+                в единицах pulse;
+  delta, delta_div — расход за время настройки: импульсы * вес / delta_div;
+  per_unit    — вес импульса задан в импульсах на единицу (электричество),
+                тогда расход = импульсы / вес.
+
+Пустая единица означает "не показывать": у типа «Другой» размерность знает
+только владелец счётчика, и портал больше не выдаёт её за кубометры (#358).
+
+Числа обязаны совпадать с расчётом в ESP8266/src/core/readings.cpp: там
+электричество считается как импульсы/вес, остальное — импульсы*вес/1000.
+Проверка — ESP8266/scripts/test_strings.js.
+*/
+const RESOURCES = {};
+
+RESOURCES[CounterName_WATER_COLD] = {
+    title: "Холодная&nbspвода",
+    option: "Холодную воду",
+    instruction: "Спускайте воду в&nbspунитазе пока устройство не&nbspперенесёт вас на&nbspследующую страницу",
+    unit: U_M3, pulse: U_L, pulse_div: 1, delta: U_L, delta_div: 1
+};
+RESOURCES[CounterName_WATER_HOT] = {
+    title: "Горячая&nbspвода",
+    option: "Горячую воду",
+    instruction: "Откройте кран горячей воды пока устройство не&nbspперенесёт вас на&nbspследующую страницу",
+    unit: U_M3, pulse: U_L, pulse_div: 1, delta: U_L, delta_div: 1
+};
+RESOURCES[CounterName_PORTABLE_WATER] = {
+    title: "Питьевая&nbspвода",
+    option: "Питьевую воду",
+    instruction: "Откройте кран питьевой воды пока устройство не&nbspперенесёт вас на&nbspследующую страницу",
+    unit: U_M3, pulse: U_L, pulse_div: 1, delta: U_L, delta_div: 1
+};
+RESOURCES[CounterName_ELECTRO] = {
+    title: "Электричество",
+    option: "Электричество",
+    instruction: "Включите электроприбор. После моргания светодиода должна открыться следующая страница. Если не&nbspоткрывается, значит некорректное подключение или&nbspсчётчик не&nbspподдерживается.",
+    unit: U_KWH, pulse: U_KWH, pulse_div: 1, delta: U_KWH, delta_div: 1,
+    per_unit: true
+};
+/*
+Газ и тепло: вес импульса на шкале счётчика написан в единицах показаний
+(0,01 м³ на импульс), а в прошивку он уходит тысячными — отсюда pulse_div.
+*/
+RESOURCES[CounterName_GAS] = {
+    title: "Газ",
+    option: "Газ",
+    instruction: "Приход импульса от&nbspгазового счётчика долго ожидать, нажмите Пропустить и&nbspпродолжите настройку.",
+    unit: U_M3, pulse: U_M3, pulse_div: 1000, delta: U_M3, delta_div: 1000
+};
+RESOURCES[CounterName_HEAT_GCAL] = {
+    title: "Тепло, Гкал",
+    option: "Тепло (Гкал)",
+    instruction: "Приход импульса от&nbspсчётчика тепла долго ожидать, нажмите Пропустить и&nbspпродолжите настройку.",
+    unit: U_GCAL, pulse: U_GCAL, pulse_div: 1000, delta: U_GCAL, delta_div: 1000
+};
+RESOURCES[CounterName_HEAT_KWH] = {
+    title: "Тепло, кВт·ч",
+    option: "Тепло (кВт·ч)",
+    instruction: "Приход импульса от&nbspсчётчика тепла долго ожидать, нажмите Пропустить и&nbspпродолжите настройку.",
+    unit: U_KWH, pulse: U_KWH, pulse_div: 1000, delta: U_KWH, delta_div: 1000
+};
+RESOURCES[CounterName_OTHER] = {
+    title: "Другой",
+    option: "Другой",
+    instruction: "При приходе импульса от&nbspсчётчика устройство перенесёт вас на&nbspследующую страницу",
+    unit: U_NONE, pulse: U_NONE, pulse_div: 1000, delta: U_NONE, delta_div: 1000
+};
+
+/*
+Типы входа для списка "Тип счётчика". Дискретный и датчик Холла в списке
+не предлагаются, поэтому их здесь нет.
+*/
+const COUNTER_TYPES = {};
+COUNTER_TYPES[CounterType_NAMUR] = "Механический";
+COUNTER_TYPES[CounterType_ELECTRONIC] = "Электронный";
+COUNTER_TYPES[CounterType_ELECTRONIC_HIGH] = "Электронный (+)";
+COUNTER_TYPES[CounterType_NONE] = "Выключен";
+
+const S_COUNTER_DISABLED = "Отключён";
+
+/*
+Ресурс по номеру. Неизвестное значение — это "Другой": чужое число может
+прийти из настроек старой прошивки, падать из-за него страница не должна.
+*/
+function resource(counter_name) {
+    var r = RESOURCES[Number(counter_name)];
+    return r ? r : RESOURCES[CounterName_OTHER];
+}
+
 function fill_title(q, counter_name)
 {
-    switch (counter_name)
-    {
-    case CounterName_WATER_COLD:
-        q.innerHTML = "Холодная&nbspвода";
-        break;
-    case CounterName_WATER_HOT:
-        q.innerHTML = "Горячая&nbspвода";
-        break;
-    case CounterName_ELECTRO:
-        q.innerHTML = "Электричество";
-        break;
-    case CounterName_GAS:
-        q.innerHTML = "Газ";
-        break;
-    case CounterName_HEAT_GCAL:
-        q.innerHTML = "Тепло ГКал";
-        break;
-    case CounterName_HEAT_KWH:
-        q.innerHTML = "Тепло КВт";
-        break;
-    case CounterName_PORTABLE_WATER:
-        q.innerHTML = "Питьевая&nbspвода";
-        break;
-    case CounterName_OTHER:
-    default:
-        q.innerHTML = "Другой";
-    }
+    q.innerHTML = resource(counter_name).title;
 }
+
 function fill_counter_title(counter_name)
-{   
+{
     var qlist = document.querySelectorAll('[id^="counter_title"]');
     qlist.forEach(function(q) {
         fill_title(q, counter_name);
     });
 }
 
-const CounterType_NAMUR = 0;
-const CounterType_DISCRETE = 1;
-const CounterType_ELECTRONIC = 2;
-const CounterType_HALL = 3;
-const CounterType_NONE = 0xFF;
-
 function fill_counter0_title(counter_name, counter_type)
 {
-    var q = document.getElementById('counter0_title');
-    if (counter_type == CounterType_NONE){
-        q.innerHTML = "Отключён"; 
-    } else {
-        fill_title(q, counter_name);
-    }
+    fill_counter_n_title('counter0_title', counter_name, counter_type);
 }
 
 function fill_counter1_title(counter_name, counter_type)
 {
-    var q = document.getElementById('counter1_title');
-    if (counter_type == CounterType_NONE){
-        q.innerHTML = "Отключён"; 
+    fill_counter_n_title('counter1_title', counter_name, counter_type);
+}
+
+function fill_counter_n_title(id, counter_name, counter_type)
+{
+    var q = document.getElementById(id);
+    if (counter_type == CounterType_NONE) {
+        q.innerHTML = S_COUNTER_DISABLED;
     } else {
         fill_title(q, counter_name);
     }
 }
 
 function fill_instruction(counter_name) {
-    var q = document.getElementById('counter_instruction');
-    switch(counter_name) {
-        case CounterName_WATER_COLD:
-            q.innerHTML = "Спускайте воду в&nbspунитазе пока устройство не&nbspперенесёт вас на&nbspследующую страницу";
-            break;
-        case CounterName_WATER_HOT:
-            q.innerHTML = "Откройте кран горячей воды пока устройство не&nbspперенесёт вас на&nbspследующую страницу";
-            break;
-        case CounterName_ELECTRO:
-            q.innerHTML = "Включите электроприбор. После моргания светодиода должна открыться следующая страница. Если не&nbspоткрывается, значит некорректное подключение или&nbspсчётчик не&nbspподдерживается.";
-            break;
-        case CounterName_GAS:
-            q.innerHTML = "Приход импульса от&nbspгазового счётчика долго ожидать, нажмите Пропустить и&nbspпродолжите настройку.";
-            break;
-        case CounterName_HEAT_GCAL:
-        case CounterName_HEAT_KWH:
-            q.innerHTML = "Приход импульса от&nbspсчётчика тепла долго ожидать, нажмите Пропустить и&nbspпродолжите настройку.";
-            break;
-        case CounterName_PORTABLE_WATER:
-            q.innerHTML = "Откройте кран питьевой воды пока устройство не&nbspперенесёт вас на&nbspследующую страницу";
-            break;
-        case CounterName_OTHER:
-        default:
-            q.innerHTML = "При приходе импульса от&nbspсчётчика устройство перенесёт вас на&nbspследующую страницу";
+    document.getElementById('counter_instruction').innerHTML = resource(counter_name).instruction;
+}
+
+/*
+Подписи выпадающих списков на странице выбора счётчика. Значения (числа
+CounterName и CounterType) остаются в разметке, текст приходит отсюда:
+иначе один и тот же список пришлось бы переводить в двух местах.
+*/
+function fill_resource_options() {
+    var names = document.getElementById('counter_name');
+    if (names) {
+        names.querySelectorAll('option').forEach(function(o) {
+            o.textContent = resource(o.value).option;
+        });
     }
+    var types = document.getElementById('counter_type');
+    if (types) {
+        types.querySelectorAll('option').forEach(function(o) {
+            var name = COUNTER_TYPES[Number(o.value)];
+            if (name) o.textContent = name;
+        });
+    }
+}
+
+/*
+Число для показа: до трёх знаков после запятой, хвостовые нули убраны.
+0.01 → "0,01", 30 → "30".
+*/
+function format_number(value) {
+    var s = Number(value).toFixed(3);
+    if (s.indexOf(".") >= 0) {
+        s = s.replace(/0+$/, "").replace(/\.$/, "");
+    }
+    return s.replace(".", DECIMAL_POINT);
+}
+
+// Единица показаний ресурса
+function unit_of(counter_name) {
+    return resource(counter_name).unit;
+}
+
+/*
+Единица в подписи поля: ", м³". У ресурса без размерности — пустая строка,
+чтобы в интерфейсе не осталась висячая запятая.
+*/
+function unit_suffix(counter_name) {
+    var u = unit_of(counter_name);
+    return u ? UNIT_SEPARATOR + u : U_NONE;
+}
+
+/*
+Подпись варианта веса импульса: "10 л" для воды, "0,01 м³" для газа.
+У ресурса без размерности остаётся голое число — доля показаний.
+*/
+function pulse_weight_text(counter_name, value) {
+    var r = resource(counter_name);
+    var num = format_number(value / r.pulse_div);
+    return r.pulse ? num + " " + r.pulse : num;
+}
+
+/*
+Расход за время настройки: " = 30 л". Пустая строка, если размерность
+неизвестна, вес импульса ещё не задан или импульсов не было.
+*/
+function delta_text(counter_name, impulses, factor) {
+    var r = resource(counter_name);
+    if (!r.delta || !(factor > 0) || !(impulses > 0)) {
+        return U_NONE;
+    }
+    var value = r.per_unit ? impulses / factor : impulses * factor / r.delta_div;
+    return " = " + format_number(value) + " " + r.delta;
+}
+
+/*
+Вес импульса, по которому считать расход прямо сейчас.
+
+На странице электричества пользователь вводит число сам, и показать надо
+введённое, ещё не сохранённое. У остальных ресурсов в форме встречаются
+спецзначения ("Авто", "как у холодной") — их разворачивает прошивка,
+поэтому там берётся значение из ответа /api/status.
+*/
+function effective_factor(counter_name, form_value, api_factor) {
+    var v = Number(form_value);
+    if (resource(counter_name).per_unit) {
+        return v > 0 ? v : Number(api_factor);
+    }
+    if (v > 0 && v != AUTO_IMPULSE_FACTOR && v != AS_COLD_CHANNEL) {
+        return v;
+    }
+    return Number(api_factor);
+}
+
+/*
+Заполняет размерности на странице. В разметке стоят пустые маркеры:
+
+  data-unit="total"    — единица показаний с запятой: ", м³"
+  data-unit="unit"     — единица показаний без запятой: "кВт·ч"
+  data-unit="impulses" — "имп."
+
+Заодно переписываются подписи вариантов веса импульса.
+*/
+function fill_units(counter_name) {
+    document.querySelectorAll('[data-unit]').forEach(function(q) {
+        switch (q.dataset.unit) {
+            case 'total':
+                q.textContent = unit_suffix(counter_name);
+                break;
+            case 'unit':
+                q.textContent = unit_of(counter_name);
+                break;
+            case 'impulses':
+                q.textContent = U_IMPULSE;
+                break;
+        }
+    });
+    fill_factor_options(counter_name);
+}
+
+/*
+Подписи вариантов веса импульса. Значения в форме не трогаем — прошивка
+ждёт те же числа, — меняем только текст: 1/10/100 превращаются в "1 л"
+или "0,01 м³". Спецзначения подписаны в разметке словами.
+*/
+function fill_factor_options(counter_name) {
+    var q = document.getElementById('factor');
+    if (!q || q.tagName != 'SELECT') {
+        return;
+    }
+    q.querySelectorAll('option').forEach(function(o) {
+        var v = Number(o.value);
+        if (v == AUTO_IMPULSE_FACTOR || v == AS_COLD_CHANNEL) {
+            return;
+        }
+        o.textContent = pulse_weight_text(counter_name, v);
+    });
 }
 
 const S_ANOTHER_CHANNEL = 0;
@@ -128,6 +343,9 @@ const S_ERROR_VALUE = 15;
 const S_ERROR_ATTINY_ERROR = 16;
 const S_ERROR_EMPTY = 17;
 const S_PLEASE_RECONNECT_WIFI = 18;
+const S_ERROR_NO_COMMA = 19;
+const S_ERROR_TLS = 20;
+const S_ERROR_PORT_IN_HOST = 21;
 
 
 function tr(str_id) {
@@ -152,8 +370,11 @@ function tr(str_id) {
         case S_ERROR_ATTINY_ERROR: return "Ошибка связи с attiny";
         case S_ERROR_EMPTY: return "Значение не может быть пустым";
         case S_PLEASE_RECONNECT_WIFI: return "Wi-Fi соединение разорвано. Подключитесь ещё раз к Ватериусу.";
-        default: 
-            return "Незвестный id строки: " + toString(id);
+        case S_ERROR_NO_COMMA: return "Показания воды вводятся с литрами: 123.456. Целое число обычно означает забытую запятую";
+        case S_ERROR_TLS: return "Шифрованное подключение к MQTT не поддерживается. Укажите адрес без mqtts:// и ssl://";
+        case S_ERROR_PORT_IN_HOST: return "Порт указывайте в отдельном поле, а не в адресе";
+        default:
+            return "Незвестный id строки: " + String(id);
     }
 }
 

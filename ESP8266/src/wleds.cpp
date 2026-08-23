@@ -1,6 +1,20 @@
 
 #include "setup.h"
 #include "wleds.h"
+#include "Logging.h"
+
+/*
+На классическом Ватериусе светодиод сидит на GPIO1 — это линия TX. Пока пин
+занят под моргание, UART не работает, поэтому после вспышек лог поднимаем
+заново: дальше по коду ещё пишутся строки про сон.
+*/
+static void restore_serial(uint8_t pin)
+{
+    if (pin == UART_TX_PIN)
+    {
+        LOG_BEGIN(LOG_BAUD);
+    }
+}
 
 
 void setup_leds()
@@ -68,6 +82,8 @@ void blynk_led(uint8_t pin, uint8_t times, uint16_t delay_ms /* 200 */, uint16_t
         }
     }
     pinMode(pin, INPUT);
+
+    restore_serial(pin);
 }
 
 void blynk_error(enum ErrorBlynks code)

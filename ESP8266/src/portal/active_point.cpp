@@ -13,6 +13,8 @@
 #include "utils.h"
 #include "config.h"
 #include "wifi_helpers.h"
+#include "core/wifi.h"
+#include "core/input.h"
 #include "resources.h"
 #include "ha/resources.h"
 #include "active_point_api.h"
@@ -58,7 +60,7 @@ String replace_value(const String &var)
 
 String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ctype)
 {
-    if (ctype == CounterType::ELECTRONIC)
+    if (ctype == CounterType::ELECTRONIC || ctype == CounterType::ELECTRONIC_HIGH)
     {
         switch (input)
         {
@@ -95,15 +97,9 @@ String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ct
 
 String valid_counter_type(const uint8_t ctype)
 {
-    switch (ctype)
-    {
-        case NAMUR: 
-        case DISCRETE: 
-        case ELECTRONIC: 
-        case HALL:
-        case NONE:
-            return String(ctype);
-    }
+    if (is_valid_counter_type(ctype))
+        return String(ctype);
+
     return String(CounterType::NAMUR);
 }
 
@@ -259,6 +255,9 @@ String processor_main(const String &var, const uint8_t input)
     else if (var == FPSTR(PARAM_MQTT_DISCOVERY_TOPIC))
         return replace_value(sett.mqtt_discovery_topic);
 
+    else if (var == FPSTR(PARAM_SEND_ON_CONSUMPTION))
+        return template_bool(sett.send_on_consumption);
+
     else if (var == FPSTR(PARAM_NTP_SERVER))
         return String(sett.ntp_server);
 
@@ -398,11 +397,17 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
 
     // WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
 
-    // TODO выбирать channel исходя из настроек.
-    // Канал WiFi роутера к кому подсоединимся должен совпадать с каналом точки доступа ESP
+    // Канал роутера, к которому подключимся, должен совпадать с каналом точки
+    // доступа ЕСП: одно радио на оба режима. Поэтому берём канал из настроек —
+    // его сохраняет портал при выборе сети и wifi_connect после подключения.
     // https://bbs.espressif.com/viewtopic.php?t=324
+    //
+    // ap_channel страхует от нуля: он лежит в настройках после неудачного
+    // коннекта и после смены сети, а SDK принимает только 1..13.
     // TODO добавить пароль для интерфейса
-    if (!WiFi.softAP(get_ap_name(), "", sett.wifi_channel, 0, 4))
+    const uint8_t channel = ap_channel(sett.wifi_channel);
+
+    if (!WiFi.softAP(get_ap_name(), "", channel, 0, 4))
     {
         LOG_ERROR(F("AP started failed"));
         return;
@@ -410,7 +415,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
 
     delay(500);
 
-    LOG_INFO(F("AP started on channel=") << sett.wifi_channel << F(" , ssid=") << get_ap_name());
+    LOG_INFO(F("AP started on channel=") << channel << F(" , ssid=") << get_ap_name());
     LOG_INFO(F("IP: ") << WiFi.softAPIP());
 
     LOG_INFO(F("Start DNS server"));

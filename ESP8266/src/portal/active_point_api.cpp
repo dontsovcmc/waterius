@@ -7,6 +7,10 @@
 #include "master_i2c.h"
 #include "utils.h"
 #include "config.h"
+#include "core/readings.h"
+#include "core/input.h"
+#include "core/url.h"
+#include "core/wifi.h"
 #include "wifi_helpers.h"
 #include "resources.h"
 #include "ha/resources.h"
@@ -38,23 +42,7 @@ inline void send_json_response(AsyncWebServerRequest *request, JsonDocument &jso
     }
 }
 
-#define IMPULS_LIMIT_1 3 // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
-
-uint16_t get_auto_factor(const uint32_t runtime_impulses,
-                         const uint32_t impulses,
-                         const uint16_t factor,
-                         const uint16_t factor_cold)
-{
-    switch (factor)
-    {
-        case AUTO_IMPULSE_FACTOR:
-            return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
-        case AS_COLD_CHANNEL:
-            return factor_cold;
-    }
-    return factor;
-}
-
+// get_auto_factor() — в core/readings.h
 
 /**
  * @brief Запрос состояния подключения к роутеру.
@@ -117,7 +105,11 @@ void get_api_networks(AsyncWebServerRequest *request)
             JsonObject obj = array.add<JsonObject>();
             obj["ssid"] = WiFi.SSID(i);
             obj["level"] = int(round(map(WiFi.RSSI(i), -100, -50, 1, 4)));
-            obj["wifi_channel"] = WiFi.channel();
+
+            // Канал и BSSID именно этой сети, а не текущего подключения:
+            // портал вернёт их в форме, и первый коннект пойдёт без скана
+            obj["wifi_channel"] = WiFi.channel(i);
+            obj["bssid"] = WiFi.BSSIDstr(i);
         }
 
         write_ssid_to_file();
@@ -127,6 +119,45 @@ void get_api_networks(AsyncWebServerRequest *request)
         send_json_response(request, g_json_doc);
     }
 };
+
+/**
+ * @brief Канал и BSSID выбранной сети из скрытых полей формы.
+ *
+ * Их отдаёт скан вместе со списком сетей (get_api_networks). Зная пару, ЕСП
+ * подключается без полного скана эфира — это секунды работы радио, главная
+ * статья расхода батареи в сеансе.
+ *
+ * Вызывается после applySettings, а не из его цепочки: сохранение SSID и
+ * пароля сбрасывает кэш коннекта, и при разборе в общем порядке результат
+ * зависел бы от порядка полей в форме.
+ *
+ * Пара пишется целиком: канал без BSSID означал бы подключение к точке
+ * 00:00:00:00:00:00 (см. core/wifi.h:has_bssid). Ничего не пришло или не
+ * разобралось — оставляем нули, то есть полный скан.
+ *
+ * @return true если пара сохранена — вызывающему нужно дописать конфигурацию:
+ *         applySettings свой store_config сделал раньше.
+ */
+bool save_fast_connect(AsyncWebServerRequest *request)
+{
+    const AsyncWebParameter *channel_param = request->getParam(FPSTR(PARAM_WIFI_CHANNEL), true);
+    const AsyncWebParameter *bssid_param = request->getParam(FPSTR(PARAM_BSSID), true);
+
+    if (!channel_param || !bssid_param)
+        return false;
+
+    const uint8_t channel = parse_wifi_channel(channel_param->value().c_str());
+
+    uint8_t bssid[6] = {0};
+    if (!channel || !parse_bssid(bssid_param->value().c_str(), bssid) || !has_bssid(bssid))
+        return false;
+
+    sett.wifi_channel = channel;
+    memcpy(sett.wifi_bssid, bssid, sizeof(sett.wifi_bssid));
+
+    LOG_INFO(F("Fast connect: channel=") << sett.wifi_channel << F(" bssid=") << bssid_param->value());
+    return true;
+}
 
 /**
  * @brief Подключение к точки доступа
@@ -151,6 +182,11 @@ void post_api_save_connect(AsyncWebServerRequest *request)
     if (!errorsObj.size())
     {
         ret.remove(F("errors"));
+
+        if (save_fast_connect(request))
+        {
+            store_config(sett);
+        }
 
         bool channel_changed = (channel != sett.wifi_channel);
 
@@ -300,42 +336,7 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
     send_json_response(request, g_json_doc);
 };
 
-inline bool is_all_asterisks(const String& s) {
-    if (s.length() == 0)
-        return false;
-    for (unsigned int i = 0; i < s.length(); ++i) {
-        char c = s[i];
-        if (c != '*' && c != ' ' && c != '\t')
-            return false;  // только *, пробел, таб
-    }
-    return true;
-}
-
-
-/**
- * @brief Копирует src в dest с обрезкой начальных и конечных пробелов, без аллокаций на heap.
- */
-static void strncpy_trimmed(char *dest, const char *src, size_t size)
-{
-    if (size == 0) return;
-
-    // Пропускаем начальные пробелы
-    while (*src && isspace((unsigned char)*src))
-        src++;
-
-    // Находим конец строки
-    size_t len = strlen(src);
-
-    // Обрезаем конечные пробелы
-    while (len > 0 && isspace((unsigned char)src[len - 1]))
-        len--;
-
-    if (len >= size)
-        len = size - 1;
-
-    memcpy(dest, src, len);
-    dest[len] = 0;
-}
+// is_all_asterisks(), strncpy_trimmed() и правила проверки значений — в core/input.h
 
 /**
  * @brief Запрос сохранения настроек
@@ -356,94 +357,151 @@ static void strncpy_trimmed(char *dest, const char *src, size_t size)
  *      }
  */
 
-void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required /*true*/)
+/**
+ * @brief Записывает код ошибки от ядра в JSON ответа и в лог
+ */
+static void report_param_error(const AsyncWebParameter *p, JsonObject &errorsObj, ParamError err)
 {
-    if (p->value().length() >= size)
+    switch (err)
     {
+    case PARAM_ERR_LENGTH:
         LOG_ERROR(FPSTR(ERROR_LENGTH_ERROR) << ": " << p->name());
         errorsObj[p->name()] = String(F("14"));  // Превышена длина поля
-    }
-    else if (required && p->value().length() == 0)
-    {
+        break;
+    case PARAM_ERR_EMPTY:
         LOG_ERROR(FPSTR(ERROR_EMPTY) << ": " << p->name());
         errorsObj[p->name()] = String(F("17"));  // Значение не может быть пустым
+        break;
+    case PARAM_ERR_VALUE:
+        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
+        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        break;
+    case PARAM_ERR_NO_COMMA:
+        LOG_ERROR(FPSTR(ERROR_NO_COMMA) << ": " << p->name());
+        errorsObj[p->name()] = String(F("19"));  // Похоже, забыта запятая
+        break;
+    case PARAM_ERR_TLS:
+        LOG_ERROR(FPSTR(ERROR_TLS) << ": " << p->name());
+        errorsObj[p->name()] = String(F("20"));  // Шифрование не поддерживается
+        break;
+    case PARAM_ERR_PORT_IN_HOST:
+        LOG_ERROR(FPSTR(ERROR_PORT_IN_HOST) << ": " << p->name());
+        errorsObj[p->name()] = String(F("21"));  // Порт указывайте в отдельном поле
+        break;
+    case PARAM_OK:
+    case PARAM_MASKED:
+        break;   // не ошибки
     }
-    else if (is_all_asterisks(p->value()))
+    // без default: новый код ошибки не должен молча исчезнуть — компилятор
+    // напомнит про незакрытую ветку
+}
+
+void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required /*true*/)
+{
+    ParamError err = parse_text(dest, size, p->value().c_str(), required);
+
+    if (err == PARAM_MASKED)
     {
         LOG_INFO(F("NOT ") << FPSTR(PARAM_SAVED) << p->name() << F(" **** value"));
     }
+    else if (err == PARAM_OK)
+    {
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << dest);
+    }
     else
     {
-        strncpy_trimmed(dest, p->value().c_str(), size);
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << dest);
+        report_param_error(p, errorsObj, err);
     }
 }
 
 void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
 {
-    if (p->value().toInt() == 0)
+    ParamError err = parse_uint16(p->value().c_str(), v);
+
+    if (err == PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
     }
     else
     {
-        v = p->value().toInt();
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+        report_param_error(p, errorsObj, err);
     }
 }
 
 void save_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok)
 {
-    if (!zero_ok && p->value().toInt() == 0)
+    ParamError err = parse_uint8(p->value().c_str(), v, zero_ok);
+
+    if (err == PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
     }
     else
     {
-        v = p->value().toInt();
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+        report_param_error(p, errorsObj, err);
     }
 }
 
 void save_bool_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj)
 {
-    if (p->value().toInt() > 1)
+    ParamError err = parse_bool(p->value().c_str(), v);
+
+    if (err == PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
     }
     else
     {
-        v = p->value().toInt();
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+        report_param_error(p, errorsObj, err);
     }
 }
 
-void save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj)
+/**
+ * @brief Адрес MQTT брокера. Снимает схему и путь, отвергает шифрование и порт.
+ *
+ * Отдельная функция, а не перегрузка save_param: от текстовой она отличалась бы
+ * только флагом, а рядом уже есть bool required — вызов стал бы нечитаемым.
+ */
+void save_broker_host(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj)
 {
-    /* Позволяем вводить 0.0 у счётчиков.
-    if (p->value().toFloat() == 0.0)
+    ParamError err = parse_broker_host(dest, size, p->value().c_str());
+
+    if (err == PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = FPSTR(ERROR_VALUE);
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << dest);
     }
-    else */
+    else
     {
-        const String &value = p->value();
-        if (value.indexOf(',') >= 0)
-        {
-            String copy(value);
-            copy.replace(',', '.');
-            v = copy.toFloat();
-        }
-        else
-        {
-            v = value.toFloat();
-        }
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+        report_param_error(p, errorsObj, err);
     }
+}
+
+/**
+ * @brief Показания счётчика. Показания воды обязаны содержать дробную часть.
+ *
+ * Значение записывается только при успехе: если пользователь забыл запятую,
+ * нельзя ни сохранить показания, ни сбросить стартовые импульсы — иначе
+ * показания уедут даже после ввода правильного числа. Поэтому, в отличие от
+ * остальных save_param, эта возвращает результат.
+ *
+ * @param counter_name тип счётчика: правило действует только для воды
+ * @return true если значение сохранено
+ */
+bool save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj, const uint8_t counter_name)
+{
+    ParamError err = check_reading(p->value().c_str(), counter_name);
+    if (err != PARAM_OK)
+    {
+        report_param_error(p, errorsObj, err);
+        return false;
+    }
+
+    float value = 0.0;
+    parse_decimal(p->value().c_str(), value);
+
+    v = value;
+    LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+    return true;
 }
 
 void save_ip_param(const AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj)
@@ -497,16 +555,20 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
         switch (input)
         {
             case INPUT0_RED:
-                save_param(p, sett.channel0_start, errorsObj);
-                sett.impulses0_start = runtime_data.impulses0;
-                sett.impulses0_previous = sett.impulses0_start;
-                LOG_INFO("impulses0_start=" << sett.impulses0_start);
+                if (save_param(p, sett.channel0_start, errorsObj, sett.counter0_name))
+                {
+                    sett.impulses0_start = runtime_data.impulses0;
+                    sett.impulses0_previous = sett.impulses0_start;
+                    LOG_INFO("impulses0_start=" << sett.impulses0_start);
+                }
                 break;
             case INPUT1_BLUE:
-                save_param(p, sett.channel1_start, errorsObj);
-                sett.impulses1_start = runtime_data.impulses1;
-                sett.impulses1_previous = sett.impulses1_start;
-                LOG_INFO("impulses1_start=" << sett.impulses1_start);
+                if (save_param(p, sett.channel1_start, errorsObj, sett.counter1_name))
+                {
+                    sett.impulses1_start = runtime_data.impulses1;
+                    sett.impulses1_previous = sett.impulses1_start;
+                    LOG_INFO("impulses1_start=" << sett.impulses1_start);
+                }
                 break;
         }
     }
@@ -642,6 +704,14 @@ void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
     {
         save_bool_param(p, sett.mqtt_auto_discovery, errorsObj);
     }
+    else if (name == FPSTR(PARAM_MQTT_RETAIN))
+    {
+        save_bool_param(p, sett.mqtt_retain, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_SEND_ON_CONSUMPTION) || name == FPSTR(s_sc))  // portal || ha
+    {
+        save_bool_param(p, sett.send_on_consumption, errorsObj);
+    }
 }
 
 void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
@@ -671,7 +741,7 @@ void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj
     {
         if (name == FPSTR(PARAM_MQTT_HOST))
         {
-            save_param(p, sett.mqtt_host, HOST_LEN, errorsObj);
+            save_broker_host(p, sett.mqtt_host, HOST_LEN, errorsObj);
         }
         else if (name == FPSTR(PARAM_MQTT_PORT))
         {

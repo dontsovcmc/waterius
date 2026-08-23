@@ -128,6 +128,24 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("json_attributes_template")] = json_attributes_template;
     }
 
+    if (strcmp(entity_type, "switch") == 0)
+    {
+        // https://www.home-assistant.io/integrations/switch.mqtt
+        String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
+        entity[F("cmd_t")] = command_topic; // command_topic
+
+        // Значения ровно те, что понимает parse_bool на стороне устройства:
+        // "true"/"false" превратились бы в ноль и молча выключали бы режим
+        entity[F("pl_on")] = F("1");    // payload_on
+        entity[F("pl_off")] = F("0");   // payload_off
+        entity[F("stat_on")] = F("1");  // state_on
+        entity[F("stat_off")] = F("0"); // state_off
+
+        entity[F("optimistic")] = true; // optimistic
+        entity[F("retain")] = true; //retain
+        entity[F("qos")] = 1; //qos
+    }
+
     if (strcmp(entity_type, "number") == 0 && strcmp(advanced_conf, "50") == 0)  // format 5.0. TODO: добавить max min step... для коректной установки значений
     {
         // https://www.home-assistant.io/integrations/number.mqtt
@@ -218,6 +236,7 @@ String build_entity_discovery(const char *mqtt_topic,
 
         options.add("MECHANIC");
         options.add("ELECTRONIC");
+        options.add("ELECTRONIC_HIGH");
         options.add("HALL");
         options.add("NOT_USED");
 
@@ -227,13 +246,14 @@ String build_entity_discovery(const char *mqtt_topic,
             F("{% if value_json.")   + entity_id + F("==0 %} MECHANIC ") +
             F("{% elif value_json.") + entity_id + F("==2 %} ELECTRONIC ") +
             F("{% elif value_json.") + entity_id + F("==3 %} HALL ") +
+            F("{% elif value_json.") + entity_id + F("==4 %} ELECTRONIC_HIGH ") +
             F("{% elif value_json.") + entity_id + F("==255 %} NOT_USED ") + 
             F("{% endif %}");
 
         entity[F("val_tpl")] = value_template;
 
         //"command_template": "{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1,  \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %}  {{ values[value] if value in values.keys() else 6 }}",
-        String cmd_tpl = F("{% set values = { \"MECHANIC\":0, \"ELECTRONIC\":2, \"HALL\":3, \"NOT_USED\":255} %} {{ values[value] if value in values.keys() else 255 }}");
+        String cmd_tpl = F("{% set values = { \"MECHANIC\":0, \"ELECTRONIC\":2, \"ELECTRONIC_HIGH\":4, \"HALL\":3, \"NOT_USED\":255} %} {{ values[value] if value in values.keys() else 255 }}");
         entity[F("cmd_tpl")] = cmd_tpl;
 
         entity[F("optimistic")] = true; // optimistic

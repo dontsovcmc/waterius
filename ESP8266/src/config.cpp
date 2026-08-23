@@ -1,6 +1,8 @@
 
 #include "config.h"
 #include "Logging.h"
+#include "core/readings.h"
+#include "core/wakeup.h"
 
 #include <ESP8266WiFi.h>
 #include <IPAddress.h>
@@ -259,51 +261,20 @@ void calculate_values(Settings &sett, const AttinyData &data, CalculatedData &cd
 {
     LOG_INFO(F("Calculating values..."));
 
-    if (sett.factor0 > 0) 
-    {
-        if (data.impulses0 < sett.impulses0_start) {
-            sett.impulses0_start = data.impulses0;
-            // Лучше потеряем в точности, чем будет показания миллионы
-            LOG_ERROR(F("Impulses0 less than start. Reset impulses0_start"));
-        }
+    ReadingsStatus status = calc_readings(sett, data, cdata);
 
-        if (sett.counter0_name == CounterName::ELECTRO)
-        { 
-            // factor0 кол-во импульсов на 1 кВт * ч
-            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / (sett.factor0 * 1.0);
-            cdata.delta0 = (data.impulses0 - sett.impulses0_previous) / (sett.factor0 * 1.0);
-        }
-        else 
-        {
-            // factor0 кол-во литров на 1 импульс, переводим в кубометры
-            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.factor0;
-            cdata.delta0 = (data.impulses0 - sett.impulses0_previous) * sett.factor0;
-        }
+    if (status.impulses0_start_reset)
+    {
+        LOG_ERROR(F("Impulses0 less than start. Reset impulses0_start"));
     }
 
     LOG_INFO(F("channel0  name=") << sett.counter0_name);
     LOG_INFO(F("impulses0 start=") << sett.impulses0_start << F(" current=") << data.impulses0 << F(" factor=") << sett.factor0);
     LOG_INFO(F("value0    start=") << sett.channel0_start << F(" current=") << cdata.channel0 << F(" delta=") << cdata.delta0);
 
-    if (sett.factor1 > 0) 
+    if (status.impulses1_start_reset)
     {
-        if (data.impulses1 < sett.impulses1_start) {
-            sett.impulses1_start = data.impulses1;
-            LOG_ERROR(F("Impulses1 less than start. Reset impulses1_start"));
-        }
-
-        if (sett.counter1_name == CounterName::ELECTRO)
-        {
-            // factor1 кол-во импульсов на 1 кВт * ч
-            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / (sett.factor1 * 1.0);
-            cdata.delta1 = (data.impulses1 - sett.impulses1_previous) / (sett.factor1 * 1.0);
-        }
-        else
-        {
-            // factor1 кол-во литров на 1 импульс, переводим в кубометры
-            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.factor1;
-            cdata.delta1 = (data.impulses1 - sett.impulses1_previous) * sett.factor1;
-        }
+        LOG_ERROR(F("Impulses1 less than start. Reset impulses1_start"));
     }
 
     LOG_INFO(F("channel1  name=") << sett.counter1_name);
@@ -311,74 +282,26 @@ void calculate_values(Settings &sett, const AttinyData &data, CalculatedData &cd
     LOG_INFO(F("value1    start=") << sett.channel1_start << F(" current=") << cdata.channel1 << F(" delta=") << cdata.delta1);
 }
 
-/*
- * @brief Корректируем период пробуждения только для автоматического режима.
- *
- * @param const time_t &now - Полученное по NTP время. Должно быть валидным.
- * @param const time_t &base_time - Время настройки пользователем
- * @param const time_t &last_send - Предыдущее время пробуждения
- * @param const uint16_t &wakeup_per_min - Установленный пользователем период пробуждения
- * @param const uint16_t &period_min_tuned - Скорректированный период пробуждения
- *
- * @returns uint16_t - Кол-во минут ("кривых attiny"), через которое должно проснуться устройство.
- */
-uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const time_t &last_send, 
-    const uint16_t &wakeup_per_min, const uint16_t &period_min_tuned)
-{
-    // 1. Оценка коэффициента 'k' на основе результатов последнего сна
-    // time_t обычно хранит секунды, поэтому difftime вернет разницу в секундах.
-    double actual_slept_min = difftime(now, last_send) / 60.0;
-
-    double k_estimated = 1.0;
-    if (period_min_tuned > 0) {
-        k_estimated = actual_slept_min / period_min_tuned;
-    }
-
-    // Если было отключение интернета, то k_estimated будет больше 2.0
-    k_estimated = k_estimated - (uint16_t)k_estimated;
-    if (k_estimated < 0.7) {  // корректируем не больше чем на 30% пробуждение
-        k_estimated += 1;
-    }
-
-    // 2. Определение следующей целевой временной отметки
-    double time_since_base_min = difftime(now, base_time) / 60.0;
-    
-    // Целочисленное деление для определения количества прошедших периодов
-    long long target_num = static_cast<long long>(floor(time_since_base_min / wakeup_per_min)) + 1;
-    
-    time_t next_expected = base_time + target_num * wakeup_per_min * 60;
-    double minutes_to_next = difftime(next_expected, now) / 60.0;
-
-    // 3. Защита от "ловушки": если до цели меньше минуты или до пробуждения меньше 30% периода, целимся в следующую точку
-    if (minutes_to_next < 1.0 || minutes_to_next < (wakeup_per_min * 0.3)) {
-        target_num++;
-        next_expected = base_time + target_num * wakeup_per_min * 60;
-        minutes_to_next = difftime(next_expected, now) / 60.0;
-    }
-
-    // 4. Расчет и округление нового периода сна
-    double ideal_period_tuned_float = minutes_to_next;
-    if (k_estimated > 0.1) { // Проверка, что k_estimated не слишком близок к нулю
-        ideal_period_tuned_float = minutes_to_next / k_estimated;
-    }
-
-    uint16_t new_period_min_tuned = static_cast<uint16_t>(round(ideal_period_tuned_float));
-    LOG_INFO(F("Tune: elapsed_min=") << actual_slept_min << ", new_period_min_tuned=" << new_period_min_tuned);
-
-    // Округляем до ближайшего целого и приводим к целевому типу uint16_t
-    return new_period_min_tuned;
-}
-
 /* Сбрасываем скорректированный период после изменения периода пользователем */
 void reset_period_min_tuned(Settings &sett)
 {
-    sett.period_min_tuned = sett.wakeup_per_min * 0.9;   
+    sett.period_min_tuned = period_after_user_change(sett.wakeup_per_min);
     LOG_INFO(F("RESET: period_min_tuned=") << sett.period_min_tuned);
 
+    // Накопленное измерение относилось к прежнему периоду: и число проспанных
+    // периодов, и точка отсчёта времени теперь врут. Начинаем заново, с
+    // прогрева, иначе первая поправка приедет только через неделю.
+    sett.last_time_sync = 0;
+    sett.wakeups_since_sync = 0;
+    sett.ntp_sync_count = 0;
+
+    // Поправка измерялась в кривых минутах прежнего периода
+    sett.period_min_full = 0;
 }
 
 /* Обновляем значения в конфиге */
-void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata)
+void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata,
+                   const bool time_synced)
 {
     LOG_INFO(F("Updating config..."));
     // Сохраним текущие значения в памяти.
@@ -392,6 +315,19 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
 
     // Перешлем время пробуждения на сервер при след. включении
     sett.wake_time = millis();
+
+    // Ручное пробуждение кнопкой задаёт расписание заново, поэтому заказываем
+    // целый период с поправкой, а не остаток до прежней цели. Раньше в attiny
+    // уходило значение из прошлого цикла, и нажатие промахивалось на часы,
+    // если то пробуждение было не по расписанию (#380).
+    //
+    // Делается до проверки времени: даже без интернета следующий выход на
+    // связь должен случиться через период после нажатия.
+    if (sett.mode == MANUAL_TRANSMIT_MODE)
+    {
+        sett.period_min_tuned = period_after_manual_wakeup(sett.period_min_full, sett.wakeup_per_min);
+        LOG_INFO(F("Manual wakeup: period_min_tuned=") << sett.period_min_tuned);
+    }
 
     time_t now = time(nullptr);
 
@@ -411,10 +347,26 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
 
     LOG_INFO(F("Wakeup period, min:") << sett.wakeup_per_min);
 
-    // Корректируем период пробуждения только для автоматического режима
-    if (sett.mode == TRANSMIT_MODE)
+    // Корректируем период пробуждения только для автоматического режима и
+    // только по времени от NTP: между синхронизациями часы идут по оценке,
+    // и сравнивать с ней заказанный период бессмысленно.
+    if (sett.mode == TRANSMIT_MODE && time_synced && is_valid_time(sett.last_time_sync)
+        && sett.wakeups_since_sync > 0)
     {    
-        sett.period_min_tuned = tune_wakeup(now, sett.base_time, sett.last_send, sett.wakeup_per_min, sett.period_min_tuned);
+        WakeupTune tune = tune_wakeup(now, sett.base_time, sett.last_time_sync, sett.wakeup_per_min,
+                                      sett.period_min_tuned, sett.wakeups_since_sync);
+        LOG_INFO(F("Tune: elapsed_min=") << tune.slept_min 
+                 << ", wakeups=" << sett.wakeups_since_sync
+                 << ", new_period_min_tuned=" << tune.period_min_tuned);
+        sett.period_min_tuned = tune.period_min_tuned;
+        sett.period_min_full = tune.period_min_full;
+    }
+
+    // Отсчёт до следующей синхронизации начинается заново
+    if (time_synced)
+    {
+        sett.last_time_sync = now;
+        sett.wakeups_since_sync = 0;
     }
 
     // Обновляем метку последней активности

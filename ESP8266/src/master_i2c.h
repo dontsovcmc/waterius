@@ -43,35 +43,7 @@ public:
     BusyGuard& operator=(const BusyGuard&) = delete;
 };
 
-/*
-Данные принимаемые от Attiny
-*/
-struct AttinyData
-{
-    // Header
-    uint8_t version;    // Версия ПО Attiny
-    uint8_t service;    // Причина загрузки Attiny (биты 0-5), биты 6-7 = on_pulse флаги
-    bool on_pulse0;
-    bool on_pulse1;
-    uint8_t reserved5 = 0;
-    uint16_t voltage;   // Напряжение питания в мВ
-    uint8_t reserved;   // Для совместимости
-    uint8_t setup_started_counter;
-    uint8_t resets;
-    uint8_t model;         // WATERIUS_MODEL_1 или  WATERIUS_MODEL_2
-    uint8_t counter_type0; // Тип входа, вход 0
-    uint8_t counter_type1; //           вход 1
-    uint32_t impulses0;    // Импульсов, канал 0
-    uint32_t impulses1;    //           канал 1
-    uint16_t adc0;         // Уровень,   канал 0
-    uint16_t adc1;         //           канал 1
-
-    // HEADER_DATA_SIZE
-
-    uint8_t crc = 0; // Всегда в конце структуры данных
-    uint8_t reserved2 = 0;
-    // Кратно 16bit https://github.com/esp8266/Arduino/issues/1825
-};
+// struct AttinyData — в core/types.h (подключается через setup.h)
 
 uint8_t crc_8(const unsigned char *input_str, size_t num_bytes, uint8_t crc = 0);
 

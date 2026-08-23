@@ -72,9 +72,10 @@
 #define LONG_PRESS_MSEC 2000
 
 /*
-    пауза мс перед переходом ESP в сон (чтобы успел отключиться)
+    Пауза мс между командой ЕСП "ухожу спать" и снятием питания:
+    ЕСП должен успеть уйти в deep sleep.
 */
-#define DELAY_SENT_SLEEP 20000
+#define DELAY_SENT_SLEEP 20
        
 
 struct Data

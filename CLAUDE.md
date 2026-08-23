@@ -31,10 +31,51 @@ A third env `nodemcuv2` exists for bench debugging on a bare NodeMCU (verbose Wi
 ~/.platformio/penv/bin/pio run -d Attiny85 -t upload          # flash via USBasp
 ```
 
-**Tests** — host-side unit tests (googletest) for OTA URL parsing:
+**Tests** — host-side unit tests (googletest) for the ESP business logic:
 ```bash
-~/.platformio/penv/bin/pio test -d ESP8266 -e native          # runs test/test_ota/*
+ESP8266/scripts/run_tests.sh                       # both models
+ESP8266/scripts/run_tests.sh native_2 -f test_ota  # one env, one suite
 ```
+
+The Attiny85 project has its own host env for the pure modules under
+`Attiny85/src/` that avoid `Arduino.h` and the registers (currently
+`electronic.h` — the pulse-counting rules):
+```bash
+Attiny85/scripts/run_tests.sh                          # all suites
+Attiny85/scripts/run_tests.sh native -f test_electronic
+```
+It is a thin wrapper: the actual runner (and the "zero tests is a failure"
+check) is shared with the ESP script via `PROJECT_DIR`/`DEFAULT_ENVS`.
+
+The web portal has its own tests — the units of measurement and the
+impulse arithmetic live in `ESP8266/data/static/strings.js`, which no C++
+test can reach:
+```bash
+node ESP8266/scripts/test_strings.js
+```
+It loads `strings.js` into a `node:vm` sandbox and also checks the contract
+between the markup and the script (unknown `data-unit` markers, pages that
+declare markers without calling `fill_units`, and so on). CI runs it too.
+
+Always use the script, not `pio test` directly: `pio test` exits 0 even when it
+collected no tests at all (a `test_filter` that matches nothing, an env where
+tests are ignored), so an empty run looks like a successful one. The script
+takes the count from the JUnit report and fails when it is zero. CI runs the
+same script.
+
+There are two host envs because the two firmwares differ at compile time
+(`#if WATERIUS_MODEL`): `native_classic` (`WATERIUS_MODEL=0`) and `native_2`
+(`WATERIUS_MODEL=2`). Both must be listed explicitly — a bare `pio test` uses
+`default_envs` (`esp01_1m`), where tests are disabled via `test_ignore`. The
+`test_model` suite fails the build if `-DWATERIUS_MODEL` is missing, so a
+forgotten flag cannot make the two runs silently identical.
+
+The host envs compile **only `src/core/`** (`build_src_filter = -<*> +<core/*>`)
+— pure C++ without `Arduino.h`, `String` or hardware access. Anything that needs
+Arduino stays in `src/` as an adapter and is not unit-tested. If a test needs
+`Arduino.h`, the logic must be moved into `src/core/` first.
+
+Plan and suite list: `ESP8266/plan/tests_plan.md`.
 
 **OTA build/deploy:** `ESP8266/scripts/build_and_deploy.sh [version]` builds the `waterius_2` env and stages firmware/filesystem images in `ESP8266/ota/` for upload to the OTA server (URL hardcoded in the script — debug vs. release).
 
@@ -99,6 +140,9 @@ E:FF, H:DF, L:62
 - `WATERIUS_MODEL=2` (MODEL_2): Waterius-2 with ESP-12F and LED indicators
 
 ### ESP8266 Source Structure
+- `core/` — pure business logic, no Arduino: compiled into both the firmware and
+  the host tests. `core/types.h` holds the data model (`Settings`, `AttinyData`,
+  `CalculatedData`, the counter/data enums and the constants describing them)
 - `main.cpp` — Entry point: setup() → loop() with wake/read/send/sleep cycle
 - `master_i2c.cpp`: I2C master communication with Attiny85
 - `portal/` — Web configuration portal (ESPAsyncWebServer)
@@ -136,3 +180,6 @@ Disable modules via build_flags in `platformio.ini`:
 - Logging in Attiny85: Uncomment `LOG_ON` in `Setup.h` (uses PB3/TX pin, disables counter1)
 - Logging in ESP8266: Set `LOG_LEVEL_INFO` or `LOG_LEVEL_DEBUG` in build_flags
 - Pull requests go to `dev` branch; `master` is for releases only
+- CI (`.github/workflows/ci.yml`) runs on every PR and push to `dev`/`master`:
+  builds both ESP8266 envs and both Attiny85 envs, runs the host tests under
+  both models

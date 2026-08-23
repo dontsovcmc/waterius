@@ -166,6 +166,7 @@ void publish_discovery_general_entities(PubSubClient &mqtt_client,
     publish_discovery_entity_extended(mqtt_client, topic, discovery_topic, data, device_id, device_mac, ENTITY_RESETS);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_TIMESTAMP);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN);
+    publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_SEND_ON_CONSUMPTION);
     //нужно ли это прям диагностическая информация 
     //publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN_TUNED);
     /* Сенсор с атрибутами  Группа №1 */
@@ -258,9 +259,12 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client,
         case CounterName::WATER_COLD:
         case CounterName::WATER_HOT:
         case CounterName::PORTABLE_WATER:
-        case CounterName::OTHER:
             publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_WATER_TOTAL, json_attributes_template, channel, channel_name);
             publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_WATER_TOTAL_CFG, "", channel, channel_name);
+            break;
+        case CounterName::OTHER:
+            publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_OTHER_TOTAL, json_attributes_template, channel, channel_name);
+            publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_OTHER_TOTAL_CFG, "", channel, channel_name);
             break;
         case CounterName::GAS:
             publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_GAS_TOTAL, json_attributes_template, channel, channel_name);

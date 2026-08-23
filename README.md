@@ -1,4 +1,4 @@
-# Ватериус 2.0.44
+# Ватериус 2.0.47
 ## Wi-Fi приставка для импульсных счётчиков воды, газа, тепла
 
 <a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
@@ -153,7 +153,7 @@
 
 ## Star History
 
-<img src="https://api.star-history.com/svg?repos=dontsovcmc/waterius&type=Date" width="400">
+<img src="https://star-history.dera.page/svg?repos=dontsovcmc/waterius&type=Date" width="400">
 
 ## Контакты
 

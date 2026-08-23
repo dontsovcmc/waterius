@@ -8,7 +8,7 @@
         <script src="/static/common.js"></script>
         <script src="/static/strings.js"></script>
     </head>
-    <body onload="fill_input_color(%input%); _init({
+    <body onload="fill_input_color(%input%); fill_resource_options(); _init({
         back: '/index.html',
         back_wizard: '/wifi_list.html?wizard=true',
         next: '/index.html',
@@ -43,7 +43,7 @@
                               <option value="4">Тепло (Гкал)</option>
                               <option value="5">Питьевую воду</option>
                               <option value="6">Другой</option>
-                              <option value="7">Тепло (кВт)</option>
+                              <option value="7">Тепло (кВт·ч)</option>
                             </select>
                             <p class="error hd" id="counter_name-error">Некорректное значение</p>
                         </div>
@@ -53,6 +53,7 @@
                             <select class="slct" id="counter_type" name="counter_type" option-value="%counter_type%">
                               <option selected="" value="0">Механический</option>
                               <option value="2">Электронный</option>
+                              <option value="4">Электронный (+)</option>
                               <option value="255">Выключен</option>
                             </select>
                             <p class="error hd" id="counter_type-error">Некорректное значение</p>

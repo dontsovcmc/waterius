@@ -12,16 +12,8 @@
 
 #include <Arduino.h>
 
-enum ErrorBlynks
-{
-    ERROR_OK = 0,
-    ERROR_LOW_VOLTAGE = 1,
-    ERROR_CONNECT_ROUTER = 2,
-    ERROR_CONNECT_CLOUD = 3,
-    ERROR_CONNECT_MQTT = 4,
-    ERROR_CONFIG = 5,
-    ERROR_CLOUD_ANSWER = 6
-};
+// Коды вспышек и их выбор по итогам сеанса — в чистом ядре, под тестами
+#include "core/blink.h"
 
 void blynk_led(uint8_t pin, uint8_t times, uint16_t delay_ms=200, uint16_t pause_ms=400);
 

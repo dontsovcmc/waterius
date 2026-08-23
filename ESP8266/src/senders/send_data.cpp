@@ -5,7 +5,7 @@
 #include "senders/sender_mqtt.h"
 
 
-void send_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data, JsonDocument &json_settings)
+void send_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data, JsonDocument &json_settings, SessionStatus &status)
 {
     // Формироуем JSON
     get_json_data(sett, data, cdata, json_data);
@@ -14,17 +14,21 @@ void send_data(const Settings &sett, const AttinyData &data, const CalculatedDat
     LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 
 #ifndef WATERIUS_RU_DISABLED
-    if (send_waterius(sett, json_data, json_settings))
+    SendStatus waterius_status = send_waterius(sett, json_data, json_settings);
+    if (waterius_status == SEND_OK)
     {
         LOG_INFO(F("HTTP: Send OK"));
     }
+    status.cloud = merge_status(status.cloud, waterius_status);
 #endif
 
 #ifndef HTTPS_DISABLED
-    if (send_http(sett, json_data, json_settings))
+    SendStatus http_status = send_http(sett, json_data, json_settings);
+    if (http_status == SEND_OK)
     {
         LOG_INFO(F("HTTP: Send OK"));
     }
+    status.cloud = merge_status(status.cloud, http_status);
 #endif
 
 #ifndef MQTT_DISABLED
@@ -33,6 +37,13 @@ void send_data(const Settings &sett, const AttinyData &data, const CalculatedDat
         if (send_mqtt(sett, json_data))
         {
             LOG_INFO(F("MQTT: Send OK"));
+            status.mqtt = merge_status(status.mqtt, SEND_OK);
+        }
+        else
+        {
+            // Подключение к брокеру делает connect_and_subscribe_mqtt, сюда
+            // приходим уже с готовым клиентом: не отправилось — значит связь
+            status.mqtt = merge_status(status.mqtt, SEND_NO_CONNECTION);
         }
     }
     else

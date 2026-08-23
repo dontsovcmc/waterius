@@ -126,68 +126,7 @@ void remove_trailing_slash(String &topic)
 	}
 }
 
-/**
- * @brief Возвращает признак включена ли передача на сайт Ватериуса
- *
- * @param sett настройки устройства
- * @return true настроена отправка на сайт Ватериус
- * @return false НЕ настроена  отправка на сайт Ватериус
- */
-bool is_waterius_site(const Settings &sett)
-{
-	return sett.waterius_on && sett.waterius_host[0] && sett.waterius_key[0];
-}
-
-
-/**
- * @brief Возвращает признак включена ли передача на веб сервер
- *
- * @param sett настройки устройства
- * @return true настроена отправка на веб сервер
- * @return false НЕ настроена  отправка на веб сервер
- */
-bool is_http(const Settings &sett)
-{
-	return sett.http_on && sett.http_url[0];
-}
-
-
-/**
- * @brief Возвращает признак настроена ли интеграция с MQTT
- *
- * @param sett настройки устройства
- * @return true настроена интеграция с MQTT
- * @return false настроена интеграция с MQTT
- */
-bool is_mqtt(const Settings &sett)
-{
-	return sett.mqtt_on && sett.mqtt_host[0];
-}
-
-/**
- * @brief Возвращает признак настроена ли интеграция с HomeAssistant
- *
- * @param sett настройки устройства
- * @return true настроена интеграция с HomeAssistant
- * @return false настроена интеграция с HomeAssistant
- */
-bool is_ha(const Settings &sett)
-{
-	return is_mqtt(sett) && sett.mqtt_auto_discovery;
-}
-
-/**
- * @brief Возвращает признак будет ли использоваться DHCP
- *
- * @param sett настройки устройства
- * @return true используется DHCP
- * @return false
- */
-
-bool is_dhcp(const Settings &sett)
-{
-	return sett.dhcp_off == 0;
-}
+// is_waterius_site(), is_http(), is_mqtt(), is_ha(), is_dhcp() — в core/routing.cpp
 
 /**
  * @brief Выводит информацию о системе

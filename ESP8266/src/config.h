@@ -16,14 +16,20 @@ extern bool load_config(Settings &sett);
 /* Инициализируем начальные значения конфигурации */
 extern bool init_config(Settings &sett);
 
-/* Корректируем период пробуждения только для автоматического режима */
-uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const uint16_t &wakeup_per_min);
+/* Корректируем период пробуждения только для автоматического режима — core/wakeup.h */
 
 /* Сбрасываем скорректированный период после изменения периода пользователем */
 extern void reset_period_min_tuned(Settings &sett);
 
 /* Обновляем данные в конфиге*/
-extern void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata);
+/*
+time_synced — получено ли время от NTP на этом пробуждении. Поправку частоты
+attiny можно считать только по такому времени: между синхронизациями часы
+идут по оценке, и разница "сколько проспали" в ней равна заказанному периоду
+по построению.
+*/
+extern void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata,
+                          const bool time_synced);
 
 /* Рассчитываем текущие показания */
 extern void calculate_values(Settings &sett, const AttinyData &data, CalculatedData &cdata);

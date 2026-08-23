@@ -13,6 +13,7 @@
 
 #include <Arduino.h>
 #include "setup.h"
+#include "core/ha_units.h"
 
 #define MQTT_PARAM_COUNT 9
 #define HA_NONE -1
@@ -28,6 +29,7 @@
 static const char s_sensor[] PROGMEM = "sensor";
 static const char s_number[] PROGMEM = "number";
 static const char s_select[] PROGMEM = "select";
+static const char s_switch[] PROGMEM = "switch";
 static const char s_measurement[] PROGMEM = "measurement";
 static const char s_voltage[] PROGMEM = "voltage";
 static const char s_diagnostic[] PROGMEM = "diagnostic";
@@ -78,17 +80,23 @@ static const char s_duration[] PROGMEM = "duration";
 static const char s_min[] PROGMEM = "min";
 static const char s_config[] PROGMEM = "config";
 static const char s_icon_bed_clock[] PROGMEM = "mdi:bed-clock";
+static const char s_icon_water_sync[] PROGMEM = "mdi:water-sync";
 static const char s_total_name[] PROGMEM = "Total";
 static const char s_ch[] PROGMEM = "ch";
 static const char s_total[] PROGMEM = "total";
-static const char s_water[] PROGMEM = "water";
-static const char s_gas[] PROGMEM = "gas";
-static const char s_energy[] PROGMEM = "energy";
+/*
+Классы устройств и единицы измерения берутся из core/ha_units.h: там же
+живёт проверка допустимых сочетаний, которую гоняют хостовые тесты. HA
+молча выбрасывает сущность с недопустимой парой, поэтому писать строки
+здесь руками нельзя (#356).
+*/
+static const char s_water[] PROGMEM = HA_CLASS_WATER;
+static const char s_gas[] PROGMEM = HA_CLASS_GAS;
+static const char s_energy[] PROGMEM = HA_CLASS_ENERGY;
 static const char s_heat[] PROGMEM = "heat";
-static const char s_m3[] PROGMEM = "m³";
-static const char s_kWh[] PROGMEM = "kWh";
-static const char s_gCal[] PROGMEM = "Gcal";
-static const char s_kWt[] PROGMEM = "kWt";
+static const char s_m3[] PROGMEM = HA_UNIT_M3;
+static const char s_kWh[] PROGMEM = HA_UNIT_KWH;
+static const char s_gCal[] PROGMEM = HA_UNIT_GCAL;
 static const char s_imp_name[] PROGMEM = "Impulses";
 static const char s_imp[] PROGMEM = "imp";
 static const char s_icon_pulse[] PROGMEM = "mdi:pulse";
@@ -127,6 +135,18 @@ static const char *const ENTITY_RESETS[MQTT_PARAM_COUNT] PROGMEM =
 static const char *const ENTITY_TIMESTAMP[MQTT_PARAM_COUNT] PROGMEM =    
     {s_sensor, s_time_name, s_timestamp, "", s_timestamp, "", s_diagnostic, s_clock, ""};            // Время
     /*{s_sensor, s_period_min_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},*/ // Настройка для автоматического добавления времени пробуждения в Home Assistant
+static const char s_sc[] PROGMEM = "sc";
+static const char s_sc_name[] PROGMEM = "Send on consumption";
+
+/*
+Режим "выходить на связь только при расходе" (#361). Переключатель, а не
+сенсор: из Home Assistant его можно включить и выключить, команда приезжает
+в топик <корень>/sc/set и разбирается тем же обработчиком, что и чекбокс
+в веб-портале.
+*/
+static const char *const ENTITY_SEND_ON_CONSUMPTION[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_sc_name, s_sc, "", "", "", s_config, s_icon_water_sync, ""};
+
 static const char *const ENTITY_PERIOD_MIN[MQTT_PARAM_COUNT] PROGMEM =  
     {s_number, s_period_min_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50};
 //static const char *const ENTITY_PERIOD_MIN_TUNED[MQTT_PARAM_COUNT] PROGMEM =  
@@ -187,12 +207,29 @@ static const char *const ENTITY_HEAT_GCAL_TOTAL[MQTT_PARAM_COUNT] PROGMEM =
 static const char *const ENTITY_HEAT_GCAL_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
     {s_number, s_total_name, s_ch, s_total, s_energy, s_gCal, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
 
-// пока нет типа данных https://github.com/home-assistant/core/blob/dev/homeassistant/components/sensor/const.py#L587
+// Тепло, посчитанное в киловатт-часах: единица та же, что у электричества.
+// Раньше здесь стояло "kWt" — такой единицы в HA нет, и сенсор не появлялся,
+// хотя number приезжал (#356). В интерфейсе тип называется "Тепло (кВт)",
+// в data/static/strings.js константа тоже названа CounterName_HEAT_KWH.
 static const char *const ENTITY_HEAT_KWT_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWt, "", "", ""};                 // chN Показания
+    {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWh, "", "", ""};                 // chN Показания
 static const char *const ENTITY_HEAT_KWT_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWt, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
+    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWh, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
             
+
+/*
+Тип «Другой»: ни класса устройства, ни единицы измерения. Что именно
+считает такой вход, знает только владелец счётчика, а раньше канал уезжал
+в Home Assistant водой в m³ независимо от содержимого (#358).
+
+state_class остаётся: без него HA не ведёт долгосрочную статистику, а
+пустая пара класс+единица для него допустима — см. core/ha_units.cpp.
+*/
+static const char *const ENTITY_OTHER_TOTAL[MQTT_PARAM_COUNT] PROGMEM =
+    {s_sensor, s_total_name, s_ch, s_total, "", "", "", s_icon_counter, ""};                 // chN Показания
+static const char *const ENTITY_OTHER_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_total_name, s_ch, s_total, "", "", s_config, s_icon_counter, s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
+
 
 // Channel attributes
 static const char *const ENTITY_CHANNEL_IMP[MQTT_PARAM_COUNT] PROGMEM = 

@@ -19,12 +19,12 @@
 
 #define HTTP_SEND_ATTEMPTS 3
 
-bool send_waterius(const Settings &sett, JsonDocument &jsonData, JsonDocument &json_settings)
+SendStatus send_waterius(const Settings &sett, JsonDocument &jsonData, JsonDocument &json_settings)
 {
     if (!is_waterius_site(sett))
     {
         LOG_INFO(F("WATR: SKIP"));
-        return false;
+        return SEND_SKIPPED;
     };
 
     uint32_t start_time = millis();
@@ -37,15 +37,15 @@ bool send_waterius(const Settings &sett, JsonDocument &jsonData, JsonDocument &j
     String url = sett.waterius_host;
 
     int attempts = HTTP_SEND_ATTEMPTS;
-    bool result = false;
+    SendStatus result = SEND_NO_CONNECTION;
     do
     {
         LOG_INFO(F("WATR: Attempt #") << HTTP_SEND_ATTEMPTS - attempts + 1 << F(" from ") << HTTP_SEND_ATTEMPTS);
         result = post_data(url, sett.waterius_key, sett.waterius_email, payload, json_settings);
 
-    } while (!result && --attempts);
+    } while (result != SEND_OK && --attempts);
 
-    if (result)
+    if (result == SEND_OK)
     {
         LOG_INFO(F("WATR: Data sent. Time ") << millis() - start_time << F(" ms"));
     }

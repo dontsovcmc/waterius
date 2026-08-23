@@ -1,0 +1,149 @@
+name: CI
+
+# Проверяем каждый PR — независимо от того, в какую ветку он нацелен —
+# и пуш в основные ветки. Собираются все прошивки и выполняются хостовые
+# тесты бизнес-логики ЕСП и чистых модулей attiny.
+#
+# Фильтра по базовой ветке у pull_request намеренно нет: PR в промежуточную
+# или фиче-ветку остался бы непроверенным, а в dev потом уехал бы уже
+# слитый и никем не собранный код.
+on:
+  push:
+    branches: [master, dev]
+  pull_request:
+
+# Версия закреплена намеренно: с --upgrade результат сборки зависел от даты
+# запуска, а не от содержимого репозитория. Поднимать отдельным коммитом,
+# чтобы обновление инструмента было видно в истории и проверялось отдельно.
+env:
+  PLATFORMIO_VERSION: '6.1.19'
+
+jobs:
+  test:
+    name: Тесты бизнес-логики ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # Прошивки две, различия компайл-таймовые — тесты гоняем под каждую модель
+      matrix:
+        environment: [native_classic, native_2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Кэш PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-native-${{ matrix.environment }}-${{ env.PLATFORMIO_VERSION }}-${{ hashFiles('ESP8266/platformio.ini') }}
+
+      - name: Установка PlatformIO
+        run: pip install "platformio==${{ env.PLATFORMIO_VERSION }}"
+
+      # Скрипт берёт результат из машиночитаемого отчёта JUnit, а не из текста
+      # вывода: pio test выходит с кодом 0, даже если не собрал ни одного теста.
+      # Та же команда выполняется локально, поэтому проверка одна на оба места.
+      - name: Тесты ${{ matrix.environment }}
+        run: PIO=pio ESP8266/scripts/run_tests.sh ${{ matrix.environment }}
+
+  test-attiny:
+    name: Тесты attiny native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Кэш PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-native-attiny-${{ env.PLATFORMIO_VERSION }}-${{ hashFiles('Attiny85/platformio.ini') }}
+
+      - name: Установка PlatformIO
+        run: pip install "platformio==${{ env.PLATFORMIO_VERSION }}"
+
+      # Обёртка зовёт общий скрипт ЕСП: проверка "ноль тестов — это провал" одна
+      - name: Тесты чистых модулей attiny
+        run: PIO=pio Attiny85/scripts/run_tests.sh
+
+  test-strings:
+    name: Тесты строк портала
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Единицы измерения и пересчёт импульсов живут в data/static/strings.js:
+      # браузера в CI нет, поэтому таблица ресурсов и её стыки с разметкой
+      # проверяются скриптом на node. Ноль тестов скрипт тоже считает провалом.
+      - name: Тесты strings.js
+        run: node ESP8266/scripts/test_strings.js
+
+  build-esp:
+    name: ESP8266 ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [esp01_1m, waterius_2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Кэш PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-esp-${{ matrix.environment }}-${{ env.PLATFORMIO_VERSION }}-${{ hashFiles('ESP8266/platformio.ini') }}
+
+      - name: Установка PlatformIO
+        run: pip install "platformio==${{ env.PLATFORMIO_VERSION }}"
+
+      - name: pio run -e ${{ matrix.environment }}
+        run: pio run -d ESP8266 -e ${{ matrix.environment }}
+
+  build-attiny:
+    name: Attiny85 ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [attiny85, waterius_2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Кэш PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-attiny-${{ matrix.environment }}-${{ env.PLATFORMIO_VERSION }}-${{ hashFiles('Attiny85/platformio.ini') }}
+
+      - name: Установка PlatformIO
+        run: pip install "platformio==${{ env.PLATFORMIO_VERSION }}"
+
+      - name: pio run -e ${{ matrix.environment }}
+        run: pio run -d Attiny85 -e ${{ matrix.environment }}

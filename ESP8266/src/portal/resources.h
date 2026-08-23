@@ -25,10 +25,14 @@ static const char PARAM_PLACE[] PROGMEM = "place";
 static const char PARAM_MQTT_AUTO_DISCOVERY[] PROGMEM = "mqtt_auto_discovery";
 static const char PARAM_MQTT_DISCOVERY_TOPIC[] PROGMEM = "mqtt_discovery_topic";
 static const char PARAM_MQTT_RETAIN[] PROGMEM = "mqtt_retain";
+static const char PARAM_SEND_ON_CONSUMPTION[] PROGMEM = "send_on_consumption";
 static const char PARAM_NTP_SERVER[] PROGMEM = "ntp_server";
 static const char PARAM_SSID[] PROGMEM = "ssid";
 static const char PARAM_PASSWORD[] PROGMEM = "password";
 static const char PARAM_WIFI_PHY_MODE[] PROGMEM = "wifi_phy_mode";
+// Скрытые поля формы: канал и MAC точки, выбранной в списке сетей
+static const char PARAM_WIFI_CHANNEL[] PROGMEM = "wifi_channel";
+static const char PARAM_BSSID[] PROGMEM = "bssid";
 
 static const char PARAM_WATERIUS_ON[] PROGMEM = "waterius_on";
 static const char PARAM_HTTP_ON[] PROGMEM = "http_on";
@@ -56,6 +60,9 @@ static const char ERROR_LENGTH_ERROR[] PROGMEM = "Превышена длина 
 static const char ERROR_VALUE[] PROGMEM = "Неверное значение";
 static const char ERROR_ATTINY_ERROR[] PROGMEM = "Ошибка связи с attiny";
 static const char ERROR_EMPTY[] PROGMEM = "Значение не может быть пустым";
+static const char ERROR_NO_COMMA[] PROGMEM = "Похоже, забыта запятая";
+static const char ERROR_TLS[] PROGMEM = "Шифрованное подключение к MQTT не поддерживается";
+static const char ERROR_PORT_IN_HOST[] PROGMEM = "Порт указывайте в отдельном поле";
 
 // не из конфигурации
 static const char PARAM_BUILD_DATE_TIME[] PROGMEM = "build_date_time";

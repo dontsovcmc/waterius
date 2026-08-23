@@ -14,13 +14,24 @@
 #include <Arduino.h>
 #include "setup.h"
 #include "time.h"
+#include "core/timekeeping.h"
+
+/*
+Синхронизировать время, если пришёл срок (#357).
+
+Раньше NTP опрашивался при каждом пробуждении. Теперь — раз в неделю, а
+между синхронизациями часы ставятся оценкой по числу проспанных периодов.
+Возвращает true, только если время действительно получено от сервера:
+по этому признаку решается, можно ли пересчитывать поправку частоты attiny.
+*/
+extern bool maybe_sync_time(Settings &sett);
 
 extern bool sync_ntp_time(const Settings &sett);
-extern bool sync_ntp_time();
-extern bool sync_ntp_time(const String &ntp_server_name);
+extern bool sync_ntp_time(const time_t known_good = START_VALID_TIME);
+extern bool sync_ntp_time(const String &ntp_server_name, const time_t known_good = START_VALID_TIME);
 
 extern String get_current_time();
 
-extern bool is_valid_time(time_t time);
+// is_valid_time() объявлена в core/timekeeping.h
 
 #endif
