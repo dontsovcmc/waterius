@@ -10,6 +10,7 @@
 #include "core/readings.h"
 #include "core/input.h"
 #include "core/url.h"
+#include "core/wifi.h"
 #include "wifi_helpers.h"
 #include "resources.h"
 #include "ha/resources.h"
@@ -104,7 +105,11 @@ void get_api_networks(AsyncWebServerRequest *request)
             JsonObject obj = array.add<JsonObject>();
             obj["ssid"] = WiFi.SSID(i);
             obj["level"] = int(round(map(WiFi.RSSI(i), -100, -50, 1, 4)));
-            obj["wifi_channel"] = WiFi.channel();
+
+            // Канал и BSSID именно этой сети, а не текущего подключения:
+            // портал вернёт их в форме, и первый коннект пойдёт без скана
+            obj["wifi_channel"] = WiFi.channel(i);
+            obj["bssid"] = WiFi.BSSIDstr(i);
         }
 
         write_ssid_to_file();
@@ -114,6 +119,45 @@ void get_api_networks(AsyncWebServerRequest *request)
         send_json_response(request, g_json_doc);
     }
 };
+
+/**
+ * @brief Канал и BSSID выбранной сети из скрытых полей формы.
+ *
+ * Их отдаёт скан вместе со списком сетей (get_api_networks). Зная пару, ЕСП
+ * подключается без полного скана эфира — это секунды работы радио, главная
+ * статья расхода батареи в сеансе.
+ *
+ * Вызывается после applySettings, а не из его цепочки: сохранение SSID и
+ * пароля сбрасывает кэш коннекта, и при разборе в общем порядке результат
+ * зависел бы от порядка полей в форме.
+ *
+ * Пара пишется целиком: канал без BSSID означал бы подключение к точке
+ * 00:00:00:00:00:00 (см. core/wifi.h:has_bssid). Ничего не пришло или не
+ * разобралось — оставляем нули, то есть полный скан.
+ *
+ * @return true если пара сохранена — вызывающему нужно дописать конфигурацию:
+ *         applySettings свой store_config сделал раньше.
+ */
+bool save_fast_connect(AsyncWebServerRequest *request)
+{
+    const AsyncWebParameter *channel_param = request->getParam(FPSTR(PARAM_WIFI_CHANNEL), true);
+    const AsyncWebParameter *bssid_param = request->getParam(FPSTR(PARAM_BSSID), true);
+
+    if (!channel_param || !bssid_param)
+        return false;
+
+    const uint8_t channel = parse_wifi_channel(channel_param->value().c_str());
+
+    uint8_t bssid[6] = {0};
+    if (!channel || !parse_bssid(bssid_param->value().c_str(), bssid) || !has_bssid(bssid))
+        return false;
+
+    sett.wifi_channel = channel;
+    memcpy(sett.wifi_bssid, bssid, sizeof(sett.wifi_bssid));
+
+    LOG_INFO(F("Fast connect: channel=") << sett.wifi_channel << F(" bssid=") << bssid_param->value());
+    return true;
+}
 
 /**
  * @brief Подключение к точки доступа
@@ -138,6 +182,11 @@ void post_api_save_connect(AsyncWebServerRequest *request)
     if (!errorsObj.size())
     {
         ret.remove(F("errors"));
+
+        if (save_fast_connect(request))
+        {
+            store_config(sett);
+        }
 
         bool channel_changed = (channel != sett.wifi_channel);
 

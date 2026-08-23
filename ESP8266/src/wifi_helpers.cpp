@@ -1,6 +1,7 @@
 #include "wifi_helpers.h"
 #include "Logging.h"
 #include "utils.h"
+#include "core/wifi.h"
 #include <LittleFS.h>
 #include <ESP8266WiFiScan.h>
 
@@ -82,8 +83,13 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
 
     if (sett.wifi_channel)
     {
+        // WiFi.begin считает BSSID заданным по самому факту ненулевого
+        // указателя, а в настройках лежит массив: нулевой адрес превратился бы
+        // в попытку подключиться к точке 00:00:00:00:00:00
+        const uint8_t *bssid = has_bssid(sett.wifi_bssid) ? sett.wifi_bssid : nullptr;
+
         LOG_INFO(F("WIFI: begin channel: ") << sett.wifi_channel);
-        WiFi.begin(sett.wifi_ssid, sett.wifi_password, sett.wifi_channel, sett.wifi_bssid);
+        WiFi.begin(sett.wifi_ssid, sett.wifi_password, sett.wifi_channel, bssid);
     }
     else
     {

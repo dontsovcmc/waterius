@@ -30,6 +30,9 @@ static const char PARAM_NTP_SERVER[] PROGMEM = "ntp_server";
 static const char PARAM_SSID[] PROGMEM = "ssid";
 static const char PARAM_PASSWORD[] PROGMEM = "password";
 static const char PARAM_WIFI_PHY_MODE[] PROGMEM = "wifi_phy_mode";
+// Скрытые поля формы: канал и MAC точки, выбранной в списке сетей
+static const char PARAM_WIFI_CHANNEL[] PROGMEM = "wifi_channel";
+static const char PARAM_BSSID[] PROGMEM = "bssid";
 
 static const char PARAM_WATERIUS_ON[] PROGMEM = "waterius_on";
 static const char PARAM_HTTP_ON[] PROGMEM = "http_on";

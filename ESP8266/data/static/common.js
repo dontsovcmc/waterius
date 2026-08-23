@@ -132,7 +132,7 @@ function refreshPage() {
 function getWifiRow(data, index) {
     let cl = ''
     if(index > 9) cl = ' hd';
-    return `<a class="link-row${cl}" href="/wifi_password.html?ssid=${encodeURIComponent(data.ssid)}&level=${data.level}&wifi_channel=${data.wifi_channel}${queryParams.wizard ? `&wizard=true` : ''}">
+    return `<a class="link-row${cl}" href="/wifi_password.html?ssid=${encodeURIComponent(data.ssid)}&level=${data.level}&wifi_channel=${data.wifi_channel}&bssid=${data.bssid}${queryParams.wizard ? `&wizard=true` : ''}">
         <div class="icon l${data.level}">
             <img src="/images/icons.png">
         </div>
