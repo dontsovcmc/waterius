@@ -32,7 +32,11 @@ function _init(_pages) {
                 return;
             }
             if (item.localName == 'span') {
-                item.textContent = queryParams[item.id];
+                // Только если параметр действительно пришёл: иначе в span
+                // с размерностью или числом импульсов попадало "undefined"
+                if (queryParams[item.id] !== undefined) {
+                    item.textContent = queryParams[item.id];
+                }
                 return;
             }
             if(queryParams[item.name]) item.value = queryParams[item.name];
@@ -346,23 +350,26 @@ function getStatus(i, next) {
         }, false);
     }, 2000);
 }
-function getImpulses(i) {
+/*
+Сколько импульсов пришло с начала настройки и сколько это в единицах
+ресурса. Размерность и пересчёт живут в strings.js — здесь только опрос.
+*/
+function getImpulses(i, counter_name) {
     setTimeout(() => {
         ajax('/api/status/' + i, {}, data => {
-            document.getElementById('impulses').textContent = data.impulses;
+            const f = document.getElementById('factor');
+            const factor = effective_factor(counter_name, f ? f.value : 0, data.factor);
+            setText('impulses', data.impulses);
+            setText('delta', delta_text(counter_name, data.impulses, factor));
             formError(data.error);
-            getImpulses(i);
+            getImpulses(i, counter_name);
         }, false);
     }, 2000);
 }
-function getImpulsesHall(i) {
-    setTimeout(() => {
-        ajax('/api/status/' + i, {}, data => {
-            document.getElementById('impulses').textContent = data.impulses;
-            formError(data.error);
-            getImpulsesHall(i);
-        }, false);
-    }, 2000);
+function setText(id, text) {
+    // Набор полей у страниц мастера разный, отсутствие элемента - не ошибка
+    const q = document.getElementById(id);
+    if (q) q.textContent = text;
 }
 function finish(btn){
     ajax('/api/turnoff', {}, () => {

@@ -259,9 +259,12 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client,
         case CounterName::WATER_COLD:
         case CounterName::WATER_HOT:
         case CounterName::PORTABLE_WATER:
-        case CounterName::OTHER:
             publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_WATER_TOTAL, json_attributes_template, channel, channel_name);
             publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_WATER_TOTAL_CFG, "", channel, channel_name);
+            break;
+        case CounterName::OTHER:
+            publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_OTHER_TOTAL, json_attributes_template, channel, channel_name);
+            publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_OTHER_TOTAL_CFG, "", channel, channel_name);
             break;
         case CounterName::GAS:
             publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_GAS_TOTAL, json_attributes_template, channel, channel_name);

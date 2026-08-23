@@ -217,6 +217,20 @@ static const char *const ENTITY_HEAT_KWT_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM =
     {s_number, s_total_name, s_ch, s_total, s_energy, s_kWh, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
             
 
+/*
+Тип «Другой»: ни класса устройства, ни единицы измерения. Что именно
+считает такой вход, знает только владелец счётчика, а раньше канал уезжал
+в Home Assistant водой в m³ независимо от содержимого (#358).
+
+state_class остаётся: без него HA не ведёт долгосрочную статистику, а
+пустая пара класс+единица для него допустима — см. core/ha_units.cpp.
+*/
+static const char *const ENTITY_OTHER_TOTAL[MQTT_PARAM_COUNT] PROGMEM =
+    {s_sensor, s_total_name, s_ch, s_total, "", "", "", s_icon_counter, ""};                 // chN Показания
+static const char *const ENTITY_OTHER_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_total_name, s_ch, s_total, "", "", s_config, s_icon_counter, s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
+
+
 // Channel attributes
 static const char *const ENTITY_CHANNEL_IMP[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_imp_name, s_imp, s_measurement, "", "", s_diagnostic, s_icon_pulse, ""};     // impN Количество импульсов

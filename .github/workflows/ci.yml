@@ -76,6 +76,22 @@ jobs:
       - name: Тесты чистых модулей attiny
         run: PIO=pio Attiny85/scripts/run_tests.sh
 
+  test-strings:
+    name: Тесты строк портала
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Единицы измерения и пересчёт импульсов живут в data/static/strings.js:
+      # браузера в CI нет, поэтому таблица ресурсов и её стыки с разметкой
+      # проверяются скриптом на node. Ноль тестов скрипт тоже считает провалом.
+      - name: Тесты strings.js
+        run: node ESP8266/scripts/test_strings.js
+
   build-esp:
     name: ESP8266 ${{ matrix.environment }}
     runs-on: ubuntu-latest

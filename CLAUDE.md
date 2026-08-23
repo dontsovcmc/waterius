@@ -47,6 +47,16 @@ Attiny85/scripts/run_tests.sh native -f test_electronic
 It is a thin wrapper: the actual runner (and the "zero tests is a failure"
 check) is shared with the ESP script via `PROJECT_DIR`/`DEFAULT_ENVS`.
 
+The web portal has its own tests — the units of measurement and the
+impulse arithmetic live in `ESP8266/data/static/strings.js`, which no C++
+test can reach:
+```bash
+node ESP8266/scripts/test_strings.js
+```
+It loads `strings.js` into a `node:vm` sandbox and also checks the contract
+between the markup and the script (unknown `data-unit` markers, pages that
+declare markers without calling `fill_units`, and so on). CI runs it too.
+
 Always use the script, not `pio test` directly: `pio test` exits 0 even when it
 collected no tests at all (a `test_filter` that matches nothing, an env where
 tests are ignored), so an empty run looks like a successful one. The script

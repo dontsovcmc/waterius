@@ -25,6 +25,7 @@ TEST(HaUnits, EveryEntityOfTheFirmwareIsValid)
         {"электричество",   HA_CLASS_ENERGY,  HA_UNIT_KWH},
         {"тепло Гкал",      HA_CLASS_ENERGY,  HA_UNIT_GCAL},
         {"тепло кВт",       HA_CLASS_ENERGY,  HA_UNIT_KWH},
+        {"другой",          "",               ""},
         {"напряжение",      HA_CLASS_VOLTAGE, HA_UNIT_VOLT},
         {"батарея",         HA_CLASS_BATTERY, HA_UNIT_PERCENT},
         {"уровень сигнала", HA_CLASS_SIGNAL,  HA_UNIT_DBM},
@@ -35,6 +36,15 @@ TEST(HaUnits, EveryEntityOfTheFirmwareIsValid)
         EXPECT_TRUE(ha_unit_matches_device_class(e.device_class, e.unit))
             << e.name << ": " << e.device_class << " + " << e.unit;
     }
+}
+
+TEST(HaUnits, OtherResourceHasNoClassAndNoUnit)
+{
+    // Тип «Другой» больше не притворяется водой: что он считает, знает
+    // только владелец счётчика (#358). Пустая пара для HA допустима,
+    // а вот класс воды без единицы — уже нет.
+    EXPECT_TRUE(ha_unit_matches_device_class("", ""));
+    EXPECT_FALSE(ha_unit_matches_device_class(HA_CLASS_WATER, ""));
 }
 
 TEST(HaUnits, TimestampHasNoUnit)
