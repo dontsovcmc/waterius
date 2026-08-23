@@ -36,7 +36,7 @@ void setup()
 {
     setup_leds();
 
-    LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
+    LOG_BEGIN(LOG_BAUD); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Waterius\n========\n"));
     LOG_INFO(F("Build: ") << __DATE__ << F(" ") << __TIME__);
 
@@ -59,6 +59,7 @@ void loop()
 {
     uint8_t mode = TRANSMIT_MODE; // TRANSMIT_MODE;
     bool config_loaded = false;
+    SessionStatus status; // чем закончился сеанс — этим моргнём перед сном
 
     // спрашиваем у Attiny85 повод пробуждения и данные true)
     if (masterI2C.getMode(mode) && masterI2C.getAttinyData(data))
@@ -149,7 +150,12 @@ void loop()
 
         if (config_loaded)
         {
-            if (must_send && wifi_connect(sett))
+            // Молчаливое пробуждение (режим "только при расходе") роутер не
+            // трогает и ошибкой связи не считается
+            const bool connected = must_send && wifi_connect(sett);
+            status.wifi_connected = !must_send || connected;
+
+            if (connected)
             {
                 voltage.update();
                 log_system_info();
@@ -162,7 +168,10 @@ void loop()
 #ifndef MQTT_DISABLED
                 if (is_mqtt(sett))
                 {
-                    connect_and_subscribe_mqtt(sett, json_settings_received);
+                    if (!connect_and_subscribe_mqtt(sett, json_settings_received))
+                    {
+                        status.mqtt = SEND_NO_CONNECTION;
+                    }
                 }
 #endif
 
@@ -174,7 +183,7 @@ void loop()
 
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 
-                send_data(sett, data, cdata, json_data, json_settings_received);
+                send_data(sett, data, cdata, json_data, json_settings_received, status);
 
                 if (sett.ota_error != OTA_ERR_NONE)
                 {
@@ -192,7 +201,7 @@ void loop()
                     // отщёлкивал бы обратно (#360).
                     apply_counter_types(data, runtime_data);
 
-                    send_data(sett, data, cdata, json_data, json_settings_received);
+                    send_data(sett, data, cdata, json_data, json_settings_received, status);
                 }
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
@@ -223,10 +232,28 @@ void loop()
         }
     }
 
-    if (!config_loaded)
+    // config_loaded остаётся false и когда attiny не ответил по i2c: код
+    // ошибки тот же, что и при испорченной конфигурации
+    status.config_loaded = config_loaded;
+    status.low_voltage = voltage.low_voltage();
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+    // Ватериус2 — единственная модель со светодиодами: на классике оба пина
+    // указывают на TX, и индикацией там занимается attiny.
+    //
+    // Успех не моргаем: GREEN_LED_PIN = 19, а у ESP8266 выводов больше 16 нет,
+    // так что зелёная вспышка — это просто 200 мс лишнего бодрствования
+    const ErrorBlynks code = blink_code(status);
+    if (code != ERROR_OK)
     {
-        blynk_error(ErrorBlynks::ERROR_CONFIG);
+        blynk_error(code);
     }
+#else
+    if (!status.config_loaded)
+    {
+        blynk_error(ERROR_CONFIG);
+    }
+#endif
 
     LOG_INFO(F("Going to sleep"));
     LOG_END();

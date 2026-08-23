@@ -403,7 +403,7 @@ void loop()
 		}
 		else
 		{
-			wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
+			wake_up_limit = WAIT_ESP_MSEC; // 2 мин при передаче данных
 			LOG(F("wake up for transmitting"));
 			slaveI2C.begin(TRANSMIT_MODE);
 		}
@@ -422,7 +422,7 @@ void loop()
 	{
 		counting_1ms(delay_loop_count);
 	}
-	uint8_t sleep_delay_ms = 20;
+	uint8_t sleep_delay_ms = DELAY_SENT_SLEEP;
 	while (sleep_delay_ms--) {
 		counting_1ms(delay_loop_count);
 	}

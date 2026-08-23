@@ -327,6 +327,9 @@
 
 // model — WATERIUS_MODEL_1, WATERIUS_MODEL_2 в core/types.h
 
+#define LOG_BAUD 115200 // скорость лога на TX
+#define UART_TX_PIN 1   // на классике на нём же висит светодиод
+
 // waterius-2
 #define CH0_LED_PIN 12
 #define CH1_LED_PIN 13

@@ -1,0 +1,69 @@
+#ifndef _WATERIUS_CORE_BLINK_H_
+#define _WATERIUS_CORE_BLINK_H_
+
+#include <stdint.h>
+
+/*
+Чем закончилась отправка у одного получателя.
+
+Различать «не достучались» и «ответил не то» приходится потому, что чинить их
+надо по-разному: первое — сеть и адрес, второе — токен, тариф или сам сервер.
+SEND_SKIPPED означает, что получатель не настроен и в итог не входит.
+*/
+enum SendStatus : uint8_t
+{
+    SEND_SKIPPED = 0,
+    SEND_OK = 1,
+    SEND_BAD_ANSWER = 2,
+    SEND_NO_CONNECTION = 3
+};
+
+/*
+Код ошибки = число вспышек красного светодиода. ERROR_OK — одна вспышка
+зелёным. Значения менять нельзя: их считает глазами пользователь, и они
+записаны в FAQ.
+*/
+enum ErrorBlynks : uint8_t
+{
+    ERROR_OK = 0,
+    ERROR_LOW_VOLTAGE = 1,
+    ERROR_CONNECT_ROUTER = 2,
+    ERROR_CONNECT_CLOUD = 3,
+    ERROR_CONNECT_MQTT = 4,
+    ERROR_CONFIG = 5,
+    ERROR_CLOUD_ANSWER = 6
+};
+
+/*
+Итог сеанса, собирается по ходу main.cpp:loop.
+
+Значения по умолчанию — «всё хорошо»: молчаливое пробуждение в режиме «только
+при расходе» вообще не поднимает Wi-Fi и не должно моргать ошибкой.
+*/
+struct SessionStatus
+{
+    bool config_loaded = true;
+    bool wifi_connected = true;
+    bool low_voltage = false;
+    SendStatus cloud = SEND_SKIPPED;
+    SendStatus mqtt = SEND_SKIPPED;
+};
+
+/*
+Итог двух отправителей в одном значении: побеждает худший, SEND_SKIPPED
+нейтрален. waterius.ru и произвольный HTTP настраивают независимо, а вспышка
+у нас одна.
+*/
+SendStatus merge_status(const SendStatus a, const SendStatus b);
+
+/*
+Какой код моргать по итогам сеанса.
+
+Порядок — по цепочке сеанса: конфигурация, роутер, облако, MQTT. Показываем
+первое место, где всё встало, потому что дальше него сеанс всё равно не ушёл.
+Низкое напряжение — последним: сеанс на подсевших батарейках обычно ещё
+проходит, а если не прошёл, пользователю полезнее увидеть, что именно упало.
+*/
+ErrorBlynks blink_code(const SessionStatus &status);
+
+#endif
