@@ -369,3 +369,34 @@ TEST(CheckReading, ErrorCodeMatchesWebInterface)
     // Код разбирается в data/static/strings.js, менять нельзя
     EXPECT_EQ(PARAM_ERR_NO_COMMA, 19);
 }
+
+TEST(CounterTypes, KnownTypesAreAccepted)
+{
+    EXPECT_TRUE(is_valid_counter_type(CounterType::NAMUR));
+    EXPECT_TRUE(is_valid_counter_type(CounterType::DISCRETE));
+    EXPECT_TRUE(is_valid_counter_type(CounterType::ELECTRONIC));
+    EXPECT_TRUE(is_valid_counter_type(CounterType::HALL));
+    EXPECT_TRUE(is_valid_counter_type(CounterType::ELECTRONIC_HIGH));
+    EXPECT_TRUE(is_valid_counter_type(CounterType::NONE));
+}
+
+TEST(CounterTypes, UnknownTypeIsRejected)
+{
+    // Число уезжает в attiny командой 'C'. Незнакомое значение там означает
+    // ненастроенный вход, который молча ничего не считает
+    EXPECT_FALSE(is_valid_counter_type(5));
+    EXPECT_FALSE(is_valid_counter_type(100));
+    EXPECT_FALSE(is_valid_counter_type(254));
+}
+
+TEST(CounterTypes, ValuesMatchAttinyFirmware)
+{
+    // Те же числа в Attiny85/src/counter.h:CounterType и в селекторе
+    // data/input_setup.html — менять нельзя
+    EXPECT_EQ(CounterType::NAMUR, 0);
+    EXPECT_EQ(CounterType::DISCRETE, 1);
+    EXPECT_EQ(CounterType::ELECTRONIC, 2);
+    EXPECT_EQ(CounterType::HALL, 3);
+    EXPECT_EQ(CounterType::ELECTRONIC_HIGH, 4);
+    EXPECT_EQ(CounterType::NONE, 255);
+}

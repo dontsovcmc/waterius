@@ -72,6 +72,13 @@ ParamError parse_bool(const char *value, uint8_t &out);
 bool is_water_counter(const uint8_t counter_name);
 
 /*
+Известен ли такой тип входа. Значение приходит из формы портала или из
+Home Assistant и уезжает в attiny командой 'C': чужое число там означало бы
+ненастроенный вход, который молча ничего не считает.
+*/
+bool is_valid_counter_type(const uint8_t counter_type);
+
+/*
 Есть ли в строке десятичный разделитель — точка или запятая.
 */
 bool has_decimal_separator(const char *value);

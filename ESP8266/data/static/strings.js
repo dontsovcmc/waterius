@@ -59,6 +59,7 @@ const CounterType_NAMUR = 0;
 const CounterType_DISCRETE = 1;
 const CounterType_ELECTRONIC = 2;
 const CounterType_HALL = 3;
+const CounterType_ELECTRONIC_HIGH = 4;
 const CounterType_NONE = 0xFF;
 
 function fill_counter0_title(counter_name, counter_type)

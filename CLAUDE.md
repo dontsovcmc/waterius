@@ -37,6 +37,16 @@ ESP8266/scripts/run_tests.sh                       # both models
 ESP8266/scripts/run_tests.sh native_2 -f test_ota  # one env, one suite
 ```
 
+The Attiny85 project has its own host env for the pure modules under
+`Attiny85/src/` that avoid `Arduino.h` and the registers (currently
+`electronic.h` — the pulse-counting rules):
+```bash
+Attiny85/scripts/run_tests.sh                          # all suites
+Attiny85/scripts/run_tests.sh native -f test_electronic
+```
+It is a thin wrapper: the actual runner (and the "zero tests is a failure"
+check) is shared with the ESP script via `PROJECT_DIR`/`DEFAULT_ENVS`.
+
 Always use the script, not `pio test` directly: `pio test` exits 0 even when it
 collected no tests at all (a `test_filter` that matches nothing, an env where
 tests are ignored), so an empty run looks like a successful one. The script

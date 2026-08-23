@@ -113,6 +113,7 @@ enum CounterType
     DISCRETE = 1,
     ELECTRONIC = 2,
     HALL = 3,
+    ELECTRONIC_HIGH = 4,   // электронный выход, импульс — подъём линии (issue #379)
     NONE = 0xFF   // 255
 };
 

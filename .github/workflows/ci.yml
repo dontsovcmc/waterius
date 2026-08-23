@@ -2,7 +2,7 @@ name: CI
 
 # Проверяем каждый PR — независимо от того, в какую ветку он нацелен —
 # и пуш в основные ветки. Собираются все прошивки и выполняются хостовые
-# тесты бизнес-логики ESP.
+# тесты бизнес-логики ЕСП и чистых модулей attiny.
 #
 # Фильтра по базовой ветке у pull_request намеренно нет: PR в промежуточную
 # или фиче-ветку остался бы непроверенным, а в dev потом уехал бы уже
@@ -50,6 +50,31 @@ jobs:
       # Та же команда выполняется локально, поэтому проверка одна на оба места.
       - name: Тесты ${{ matrix.environment }}
         run: PIO=pio ESP8266/scripts/run_tests.sh ${{ matrix.environment }}
+
+  test-attiny:
+    name: Тесты attiny native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Кэш PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-native-attiny-${{ env.PLATFORMIO_VERSION }}-${{ hashFiles('Attiny85/platformio.ini') }}
+
+      - name: Установка PlatformIO
+        run: pip install "platformio==${{ env.PLATFORMIO_VERSION }}"
+
+      # Обёртка зовёт общий скрипт ЕСП: проверка "ноль тестов — это провал" одна
+      - name: Тесты чистых модулей attiny
+        run: PIO=pio Attiny85/scripts/run_tests.sh
 
   build-esp:
     name: ESP8266 ${{ matrix.environment }}

@@ -105,6 +105,21 @@ ParamError parse_bool(const char *value, uint8_t &out)
     return PARAM_OK;
 }
 
+bool is_valid_counter_type(const uint8_t counter_type)
+{
+    switch (counter_type)
+    {
+        case CounterType::NAMUR:
+        case CounterType::DISCRETE:
+        case CounterType::ELECTRONIC:
+        case CounterType::HALL:
+        case CounterType::ELECTRONIC_HIGH:
+        case CounterType::NONE:
+            return true;
+    }
+    return false;
+}
+
 bool is_water_counter(const uint8_t counter_name)
 {
     return counter_name == CounterName::WATER_COLD

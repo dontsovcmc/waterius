@@ -5,6 +5,7 @@
 #include <avr/wdt.h>
 #include <avr/power.h>
 #include "Power.h"
+#include "electronic.h"
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_1 
     // Значения компаратора с pull-up резистором ~30кОм.
@@ -58,6 +59,7 @@ enum CounterType
     DISCRETE,
     ELECTRONIC,
     HALL,
+    ELECTRONIC_HIGH,    // электронный выход, импульс — подъём линии (issue #379)
     NONE = 0xFF
 };
 
@@ -84,6 +86,7 @@ struct CounterB
     uint16_t        adc;        // уровень замкнутого входа
     CounterState    state;      // состояние входа
     CounterType     type;       // тип выхода счетчика
+    ElectronicInput input;      // счёт импульсов электронного выхода
 
     explicit CounterB(uint8_t pin, uint8_t apin = 0, uint8_t power = (uint8_t)-1)
         : _pin(pin), _power(power), _apin(apin), on_time(0), off_time(0), adc(0), state(CounterState::CLOSE), type(CounterType::NAMUR)
@@ -104,11 +107,21 @@ struct CounterB
         switch (type)
         {
             case CounterType::ELECTRONIC:
-                PORTB |= _BV(_pin);                 // Включить pull-up
-		        PCMSK |= _BV(_pin);                 // Включем прерывание по фронту
+                DDRB &= ~_BV(_pin);                 // Вход
+                PORTB |= _BV(_pin);                 // Включить pull-up: выход с открытым стоком сам высокий уровень не держит
+                PCMSK |= _BV(_pin);                 // Включем прерывание по фронту
+                input.reset(false);                 // импульс — замыкание на минус
+                break;
+            case CounterType::ELECTRONIC_HIGH:
+                DDRB &= ~_BV(_pin);                 // Вход
+                PORTB &= ~_BV(_pin);                // Отключить pull-up: счётчик сам выдаёт уровень, а подтяжка нагружает его линию
+                PCMSK |= _BV(_pin);                 // Включем прерывание по фронту
+                input.reset(true);                  // импульс — подъём линии
+                break;
             case CounterType::DISCRETE:
             case CounterType::NAMUR:
                 DDRB &= ~_BV(_pin);                 // Вход
+                PCMSK &= ~_BV(_pin);                // Прерывание по фронту не нужно: опрос раз в 250мс
                 break;
             case CounterType::HALL:
                 DDRB &= ~_BV(_pin);                 // Вход
@@ -120,8 +133,23 @@ struct CounterB
                 active = false;
                 break;
             case CounterType::NONE:
+                PCMSK &= ~_BV(_pin);                // Выключенный вход attiny не будит
                 break;
         }
+    }
+
+    /*
+    Вызывается из ISR по фронту, pins — снимок PINB на этот момент.
+
+    Уровень снимается здесь, а не в главном цикле: импульс электронного
+    счётчика бывает короче миллисекунды и до пробуждения цикла не доживает.
+    */
+    inline void on_front(const uint8_t pins)
+    {
+        if (type != CounterType::ELECTRONIC && type != CounterType::ELECTRONIC_HIGH)
+            return;
+
+        input.on_front((pins & _BV(_pin)) != 0);
     }
 
     inline uint16_t aRead()
@@ -136,26 +164,21 @@ struct CounterB
         if (on_time)
             on_time -= 1;
 
-        state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
-        if (state == CounterState::CLOSE)
-        {
-            // Замкнут
-            if (!on_pulse)
-            {
-                // Начало импульса
-                on_time = 10;
-                off_time = 0;
-                adc = aRead();
-                on_pulse = true;
-                return true;
-            }
-        }
-        else
-        {
-            // Разомкнут
-            on_pulse = false;
-        }
-        return false;
+        // Импульс уже защёлкнут прерыванием (on_front), здесь только забираем.
+        // Прерывания на время чтения гасим: ISR пишет в тот же флаг, и фронт,
+        // пришедший между чтением и сбросом, потерялся бы.
+        noInterrupts();
+        const bool pulse = input.take(event == CounterEvent::TIME);
+        interrupts();
+
+        if (!pulse)
+            return false;
+
+        // АЦП не трогаем: у цифрового входа уровень замыкания ничего не значит,
+        // а измерение стоит ~100мкс и включения АЦП на каждый импульс
+        on_time = 10;
+        off_time = 0;
+        return true;
     }
 
     bool hall(CounterEvent event)
@@ -303,6 +326,7 @@ struct CounterB
         switch (type) 
         {
             case CounterType::ELECTRONIC:
+            case CounterType::ELECTRONIC_HIGH:
                 return electronic(event);
             case CounterType::HALL:
                 return hall(event);

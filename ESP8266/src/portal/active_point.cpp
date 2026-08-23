@@ -14,6 +14,7 @@
 #include "config.h"
 #include "wifi_helpers.h"
 #include "core/wifi.h"
+#include "core/input.h"
 #include "resources.h"
 #include "ha/resources.h"
 #include "active_point_api.h"
@@ -59,7 +60,7 @@ String replace_value(const String &var)
 
 String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ctype)
 {
-    if (ctype == CounterType::ELECTRONIC)
+    if (ctype == CounterType::ELECTRONIC || ctype == CounterType::ELECTRONIC_HIGH)
     {
         switch (input)
         {
@@ -96,15 +97,9 @@ String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ct
 
 String valid_counter_type(const uint8_t ctype)
 {
-    switch (ctype)
-    {
-        case NAMUR: 
-        case DISCRETE: 
-        case ELECTRONIC: 
-        case HALL:
-        case NONE:
-            return String(ctype);
-    }
+    if (is_valid_counter_type(ctype))
+        return String(ctype);
+
     return String(CounterType::NAMUR);
 }
 

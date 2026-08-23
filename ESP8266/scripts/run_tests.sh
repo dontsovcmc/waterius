@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 #
-# Прогон хостовых тестов бизнес-логики ESP.
+# Прогон хостовых тестов бизнес-логики.
+#
+# Скрипт общий для двух проектов: ЕСП зовёт его напрямую, attiny — через
+# обёртку Attiny85/scripts/run_tests.sh, которая задаёт PROJECT_DIR и
+# DEFAULT_ENVS. Проверка "ноль выполненных тестов - это провал" одна на оба.
 #
 # pio test выходит с кодом 0, даже если не собрал ни одного теста — например
 # из-за фильтра, который ни с чем не совпал, или из-за окружения, где тесты
@@ -16,7 +20,8 @@
 set -euo pipefail
 
 PIO="${PIO:-$HOME/.platformio/penv/bin/pio}"
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_DIR="${PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+DEFAULT_ENVS="${DEFAULT_ENVS:-native_classic native_2}"
 
 # Окружения — ведущие аргументы без дефиса; остальное уходит в pio как есть
 ENVIRONMENTS=()
@@ -25,7 +30,7 @@ while [ $# -gt 0 ] && [[ "$1" != -* ]]; do
     shift
 done
 if [ ${#ENVIRONMENTS[@]} -eq 0 ]; then
-    ENVIRONMENTS=(native_classic native_2)
+    read -ra ENVIRONMENTS <<< "$DEFAULT_ENVS"
 fi
 
 ENV_ARGS=()
