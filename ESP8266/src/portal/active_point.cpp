@@ -15,12 +15,11 @@
 #include "wifi_helpers.h"
 #include "core/wifi.h"
 #include "core/input.h"
+#include "core/portal_watchdog.h"
 #include "resources.h"
 #include "ha/resources.h"
 #include "active_point_api.h"
 #include "active_point.h"
-
-#define SETUP_TIME_SEC 600UL // На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
 
 bool exit_portal_flag = false;
 bool start_connect_flag = false;
@@ -36,6 +35,38 @@ extern AttinyData runtime_data;
 extern MasterI2C masterI2C;
 extern Settings sett;
 extern CalculatedData cdata;
+
+/*
+Момент последнего кормления сторожевого таймера, то есть последнего действия
+пользователя. Пишется из обработчиков сервера, читается в цикле портала -
+поэтому volatile.
+*/
+static volatile uint32_t portal_watchdog_feed_ms = 0;
+
+/*
+Пользователь что-то сделал: открыл страницу или сохранил форму.
+
+Питание снимает attiny, поэтому окно продлевается с двух сторон: командой
+'E' у attiny и своим таймером у ЕСП. Опрос /api/status сюда намеренно не
+входит - страница опрашивает вход сама, и открытая вкладка держала бы
+устройство включённым без всякого участия человека (#305).
+*/
+void feed_portal_watchdog()
+{
+    portal_watchdog_feed_ms = millis();
+    masterI2C.extendWakeUp();
+}
+
+/*
+Страница портала. Переход по страницам и есть та активность, ради которой
+задумано продление, поэтому все html идут через одну функцию: обработчик,
+отдающий страницу мимо неё, молча перестал бы продлевать таймер.
+*/
+static void send_page(AsyncWebServerRequest *request, const char *path, AwsTemplateProcessor processor)
+{
+    feed_portal_watchdog();
+    request->send(LittleFS, path, F("text/html"), false, processor);
+}
 
 String template_bool(const uint8_t value)
 {
@@ -334,24 +365,24 @@ void on_root(AsyncWebServerRequest *request)
         if (wifi_connect_status == WL_CONNECT_FAILED || wifi_connect_status == WL_CONNECTION_LOST || wifi_connect_status == WL_WRONG_PASSWORD)
         {
             LOG_INFO(F("> captive_portal_error.html"));
-            request->send(LittleFS, "/captive_portal_error.html", F("text/html"), false);
+            send_page(request, "/captive_portal_error.html", nullptr);
         }
         else if (wifi_connect_status == WL_CONNECTED)
         {
             LOG_INFO(F("> captive_portal_connected.html"));
-            request->send(LittleFS, "/captive_portal_connected.html", F("text/html"), false);
+            send_page(request, "/captive_portal_connected.html", nullptr);
         }   
         else 
         {
             // Первая настройка
             LOG_INFO(F("> captive_portal_start.html"));
-            request->send(LittleFS, "/captive_portal_start.html", F("text/html"), false);
+            send_page(request, "/captive_portal_start.html", nullptr);
         }
     }
     else
     {
         LOG_INFO(F("> captive_portal.html"));
-        request->send(LittleFS, "/captive_portal.html", F("text/html"), false);
+        send_page(request, "/captive_portal.html", nullptr);
     }
 }
 
@@ -466,7 +497,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
 
     // Об устройстве
     server->on("/about.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/about.html", F("text/html"), false, processor); });
+               { send_page(request, "/about.html", processor); });
 
     server->on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/favicon.ico", F("image/x-icon")); });
@@ -474,89 +505,89 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     // Captive portal
     // Он отобразится через / on_root, но кажется кнопки "назад" поведут в эти хэндлеры
     server->on("/captive_portal.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/captive_portal.html", F("text/html"), false); });
+               { send_page(request, "/captive_portal.html", nullptr); });
 
     server->on("/captive_portal_start.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/captive_portal_start.html", F("text/html"), false); });
+               { send_page(request, "/captive_portal_start.html", nullptr); });
 
     server->on("/captive_portal_error.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/captive_portal_error.html", F("text/html"), false); });
+               { send_page(request, "/captive_portal_error.html", nullptr); });
 
     server->on("/captive_portal_connected.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/captive_portal_connected.html", F("text/html"), false); });
+               { send_page(request, "/captive_portal_connected.html", nullptr); });
 
     // Завершение настройки (wizard)
     server->on("/finish.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/finish.html", F("text/html"), false, processor); });
+               { send_page(request, "/finish.html", processor); });
 
     // Нужно, т.к. при первой на стройке будет start.html и надо дать возможность открыть Главное меню
     server->on("/index.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/index.html", F("text/html"), false, processor); });
+               { send_page(request, "/index.html", processor); });
 
     server->on("/logs.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/logs.html", F("text/html"), false, processor); });
+               { send_page(request, "/logs.html", processor); });
 
     // Сброс к заводским настройкам
     server->on("/reset.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/reset.html", F("text/html"), false, processor); });
+               { send_page(request, "/reset.html", processor); });
 
     // Настройка счётчика
 
     // красный
     server->on("/input/0/setup.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_setup.html", F("text/html"), false, processor0); });
+               { send_page(request, "/input_setup.html", processor0); });
     // синий
     server->on("/input/1/setup.html", HTTP_GET, [](AsyncWebServerRequest *request)  
-               { request->send(LittleFS, "/input_setup.html", F("text/html"), false, processor1); });
+               { send_page(request, "/input_setup.html", processor1); });
 
     // Детектирование счётчика (только Холодная и Горячая вода)
     server->on("/input/0/detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_detect.html", F("text/html"), false, processor0); });
+               { send_page(request, "/input_detect.html", processor0); });
     server->on("/input/1/detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_detect.html", F("text/html"), false, processor1); });
+               { send_page(request, "/input_detect.html", processor1); });
 
     server->on("/input/0/input_electro_detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_electro_detect.html", F("text/html"), false, processor0); });
+               { send_page(request, "/input_electro_detect.html", processor0); });
     server->on("/input/1/input_electro_detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_electro_detect.html", F("text/html"), false, processor1); });
+               { send_page(request, "/input_electro_detect.html", processor1); });
 
     // Параметры счётчика
     server->on("/input/0/settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_settings.html", F("text/html"), false, processor0); });
+               { send_page(request, "/input_settings.html", processor0); });
     server->on("/input/1/settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_settings.html", F("text/html"), false, processor1); });
+               { send_page(request, "/input_settings.html", processor1); });
                
     server->on("/input/0/input_electro_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_electro_settings.html", F("text/html"), false, processor0); });
+               { send_page(request, "/input_electro_settings.html", processor0); });
     server->on("/input/1/input_electro_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_electro_settings.html", F("text/html"), false, processor1); });
+               { send_page(request, "/input_electro_settings.html", processor1); });
 
     // Отправка показаний
     server->on("/setup_send.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/setup_send.html", F("text/html"), false, processor); });
+               { send_page(request, "/setup_send.html", processor); });
 
     // Первая настройка
     server->on("/start.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/start.html", F("text/html"), false, processor); });
+               { send_page(request, "/start.html", processor); });
 
     server->on("/waterius_logs.txt", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/waterius_logs.txt", F("text/plain")); });
 
     // Процесс подключения к Wi-fi
     server->on("/wifi_connect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/wifi_connect.html", F("text/html"), false, processor); });
+               { send_page(request, "/wifi_connect.html", processor); });
 
     // Список Wi-Fi сетей
     server->on("/wifi_list.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/wifi_list.html", F("text/html"), false, processor); });
+               { send_page(request, "/wifi_list.html", processor); });
 
     // Ввод пароля от Wi-Fi сети
     server->on("/wifi_password.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/wifi_password.html", F("text/html"), false, processor); });
+               { send_page(request, "/wifi_password.html", processor); });
 
     // Настройки Wi-Fi, NTP
     server->on("/wifi_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/wifi_settings.html", F("text/html"), false, processor); });
+               { send_page(request, "/wifi_settings.html", processor); });
 
     // Файл характеристик всех найденных Wi-Fi сетей
     server->on("/ssid.txt", HTTP_GET, [](AsyncWebServerRequest *request) 
@@ -583,8 +614,15 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     LOG_INFO(F("Start scan Wi-Fi networks"));
     WiFi.scanNetworks(true);
 
-    uint16_t start = millis();
-    while (!exit_portal_flag && ((millis() - start) / 1000) < SETUP_TIME_SEC)
+    /*
+    Оба момента 32-битные: millis() в uint16_t обрезался до 65 секунд, и
+    условие выхода считало ерунду - спасало только то, что портал успевает
+    стартовать в первую минуту после включения.
+    */
+    const uint32_t portal_started_ms = millis();
+    portal_watchdog_feed_ms = portal_started_ms;
+
+    while (!exit_portal_flag && !portal_watchdog_fired(millis(), portal_started_ms, portal_watchdog_feed_ms))
     {
         dns->processNextRequest();
         yield();
@@ -602,9 +640,13 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
         }
     }
 
-    if (((millis() - start) / 1000) > SETUP_TIME_SEC)
+    if (portal_deadline_reached(millis(), portal_started_ms))
     {
-        LOG_ERROR(F("Portal setup time is over"));
+        LOG_ERROR(F("Portal total setup time is over"));
+    }
+    else if (!exit_portal_flag)
+    {
+        LOG_ERROR(F("Portal is idle, no user activity"));
     }
 
     LOG_INFO(F("Shutdown HTTP and DNS servers"));

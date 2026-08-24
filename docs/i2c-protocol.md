@@ -18,7 +18,7 @@ master.
 | `'C'` | `MasterI2C::setCountersType` | Задать типы входов, 2 байта + CRC |
 | `'T'` | `MasterI2C::setTransmitMode` | Перейти в режим разовой передачи |
 | `'P'` | `MasterI2C::setSetupMode` | Перейти в режим настройки (Waterius 2) |
-| `'E'` | `MasterI2C::extendWakeUp` | Продлить бодрствование |
+| `'E'` | `MasterI2C::extendWakeUp` | Продлить бодрствование: attiny отсчитывает `SETUP_TIME_MSEC` заново. Шлёт обновление по воздуху и портал на каждое действие пользователя — см. [setup-portal.md](setup-portal.md) |
 | `'V'` | `MasterI2C::updateVoltage` | Перемерить напряжение |
 | `'Z'` | `MasterI2C::setSleep` | «Ухожу спать», можно снимать питание |
 
