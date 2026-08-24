@@ -346,6 +346,7 @@ const S_PLEASE_RECONNECT_WIFI = 18;
 const S_ERROR_NO_COMMA = 19;
 const S_ERROR_TLS = 20;
 const S_ERROR_PORT_IN_HOST = 21;
+const S_ESP_RESTARTED = 22;
 
 
 function tr(str_id) {
@@ -373,6 +374,7 @@ function tr(str_id) {
         case S_ERROR_NO_COMMA: return "Показания воды вводятся с литрами: 123.456. Целое число обычно означает забытую запятую";
         case S_ERROR_TLS: return "Шифрованное подключение к MQTT не поддерживается. Укажите адрес без mqtts:// и ssl://";
         case S_ERROR_PORT_IN_HOST: return "Порт указывайте в отдельном поле, а не в адресе";
+        case S_ESP_RESTARTED: return "Ватериус внештатно перезагрузился. Возможно, батарейки садятся.";
         default:
             return "Незвестный id строки: " + String(id);
     }

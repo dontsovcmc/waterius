@@ -7,6 +7,7 @@
 #include "core/readings.h"
 #include "core/idle.h"
 #include "core/wakeup.h"
+#include "core/restart.h"
 #include "master_i2c.h"
 #include "senders/send_data.h"
 #include "ha/apply_settings.h"
@@ -28,6 +29,13 @@ Settings sett;           // Настройки соединения и пред�
 CalculatedData cdata;    // вычисляемые данные
 ADC_MODE(ADC_VCC);
 Voltage voltage;
+
+/*
+ЕСП перезагрузилась при живом питании (#354). Считается один раз на старте:
+позже флаг attiny взведён всегда, и вывод по нему был бы неверным. Читает
+портал - показывает плашку на главной странице.
+*/
+bool esp_restarted_flag = false;
 
 
 /*
@@ -66,6 +74,11 @@ void loop()
     if (masterI2C.getMode(mode) && masterI2C.getAttinyData(data))
     {
         runtime_data = data;
+
+        esp_restarted_flag = esp_restarted((uint8_t)ESP.getResetInfoPtr()->reason,
+                                           data.version, data.attiny_flags);
+        LOG_INFO(F("Reset reason: ") << ESP.getResetInfoPtr()->reason
+                 << F(", esp restarted: ") << esp_restarted_flag);
 
         voltage.update();
 #if WATERIUS_MODEL == WATERIUS_MODEL_2

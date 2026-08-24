@@ -20,6 +20,7 @@ extern bool exit_portal_flag;
 extern bool start_connect_flag;
 extern wl_status_t wifi_connect_status;
 extern bool factory_reset_flag;
+extern bool esp_restarted_flag;
 
 extern AttinyData data;
 extern AttinyData runtime_data;
@@ -247,6 +248,17 @@ void get_api_main_status(AsyncWebServerRequest *request)
 
     g_json_doc.clear();
     JsonArray array = g_json_doc.to<JsonArray>();
+
+    /*
+    Перезагрузка ЕСП во время настройки (#354). Пользователь видит, что
+    портал начался заново, и не понимает, сохранились ли настройки. Признак
+    посчитан на старте: сейчас флаг attiny взведён в любом случае.
+    */
+    if (esp_restarted_flag)
+    {
+        JsonObject obj = array.add<JsonObject>();
+        obj["error"] = F("22"); // S_ESP_RESTARTED "Ватериус внештатно перезагрузился..."
+    }
 
     wl_status_t status = WiFi.status();
     LOG_INFO(F("WIFI: status=") << status);
