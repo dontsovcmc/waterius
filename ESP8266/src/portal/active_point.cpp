@@ -41,7 +41,7 @@ extern CalculatedData cdata;
 пользователя. Пишется из обработчиков сервера, читается в цикле портала -
 поэтому volatile.
 */
-static volatile uint32_t portal_watchdog_fed_ms = 0;
+static volatile uint32_t portal_watchdog_feed_ms = 0;
 
 /*
 Пользователь что-то сделал: открыл страницу или сохранил форму.
@@ -53,7 +53,7 @@ static volatile uint32_t portal_watchdog_fed_ms = 0;
 */
 void feed_portal_watchdog()
 {
-    portal_watchdog_fed_ms = millis();
+    portal_watchdog_feed_ms = millis();
     masterI2C.extendWakeUp();
 }
 
@@ -620,9 +620,9 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     стартовать в первую минуту после включения.
     */
     const uint32_t portal_started_ms = millis();
-    portal_watchdog_fed_ms = portal_started_ms;
+    portal_watchdog_feed_ms = portal_started_ms;
 
-    while (!exit_portal_flag && !portal_watchdog_fired(millis(), portal_started_ms, portal_watchdog_fed_ms))
+    while (!exit_portal_flag && !portal_watchdog_fired(millis(), portal_started_ms, portal_watchdog_feed_ms))
     {
         dns->processNextRequest();
         yield();

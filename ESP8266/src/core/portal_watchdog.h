@@ -36,7 +36,7 @@
 через 49 суток. Поэтому сравниваются не сами моменты, а беззнаковые
 разности — они переполнение переживают, а прямое сравнение не пережило бы.
 */
-bool portal_watchdog_fired(const uint32_t now_ms, const uint32_t started_ms, const uint32_t last_fed_ms);
+bool portal_watchdog_fired(const uint32_t now_ms, const uint32_t started_ms, const uint32_t last_feed_ms);
 
 /*
 Кончилось именно общее время, а не окно между кормлениями. Нужно только для
