@@ -6,6 +6,7 @@
 #include "config.h"
 #include "core/readings.h"
 #include "core/idle.h"
+#include "core/wakeup.h"
 #include "master_i2c.h"
 #include "senders/send_data.h"
 #include "ha/apply_settings.h"
@@ -215,15 +216,24 @@ void loop()
                 wifi_shutdown();
 
                 update_config(sett, data, cdata, time_synced);
-
-                if (!masterI2C.setWakeUpPeriod(sett.period_min_tuned))
-                {
-                    LOG_ERROR(F("Wakeup period wasn't set"));
-                }
             }
             if (!must_send)
             {
                 LOG_INFO(F("Idle: no consumption, WiFi stays off"));
+            }
+
+            /*
+            Период заказываем в каждом сеансе, а не только после удачного
+            подключения (#350). Attiny держит его в ОЗУ и после перезагрузки
+            возвращается к умолчанию в 15 минут: раньше устройство без
+            интернета так и будило ЕСП каждые 15 минут вместо заданного
+            периода, а в молчаливом пробуждении период не уходил вниз вовсе.
+            */
+            const uint16_t period = period_to_attiny(sett.period_min_tuned, sett.wakeup_per_min);
+            LOG_INFO(F("Wakeup period, min (attiny):") << period);
+            if (!masterI2C.setWakeUpPeriod(period))
+            {
+                LOG_ERROR(F("Wakeup period wasn't set"));
             }
 
             // Сохраняем всегда: даже в молчаливом пробуждении изменились

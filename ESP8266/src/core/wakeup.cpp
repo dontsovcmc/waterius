@@ -95,3 +95,18 @@ uint16_t period_after_user_change(const uint16_t wakeup_per_min)
 {
     return wakeup_per_min * 0.9;
 }
+
+uint16_t period_to_attiny(const uint16_t period_min_tuned,
+                          const uint16_t wakeup_per_min)
+{
+    return period_min_tuned > 0 ? period_min_tuned : period_after_user_change(wakeup_per_min);
+}
+
+uint16_t restore_wakeup_period(const uint16_t stored, const uint16_t fallback)
+{
+    if (stored == 0 || stored > MAX_RESTORED_PERIOD_MIN)
+    {
+        return fallback;
+    }
+    return stored;
+}

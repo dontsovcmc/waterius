@@ -14,7 +14,7 @@ master.
 |---|---|---|
 | `'M'` | `MasterI2C::getMode` | Спросить причину пробуждения |
 | `'B'` | `MasterI2C::getAttinyData` | Забрать `Header` целиком |
-| `'S'` | `MasterI2C::setWakeUpPeriod` | Задать период сна, 2 байта + CRC |
+| `'S'` | `MasterI2C::setWakeUpPeriod` | Задать период сна, 2 байта + CRC. Шлётся в каждом сеансе, даже без Wi-Fi: период у attiny живёт только в ОЗУ — см. [scheduling.md](scheduling.md) |
 | `'C'` | `MasterI2C::setCountersType` | Задать типы входов, 2 байта + CRC |
 | `'T'` | `MasterI2C::setTransmitMode` | Перейти в режим разовой передачи |
 | `'P'` | `MasterI2C::setSetupMode` | Перейти в режим настройки (Waterius 2) |
@@ -22,7 +22,8 @@ master.
 | `'V'` | `MasterI2C::updateVoltage` | Перемерить напряжение |
 | `'Z'` | `MasterI2C::setSleep` | «Ухожу спать», можно снимать питание |
 
-Порядок в обычном сеансе: `'M'` → `'B'` → работа → `'S'` → `'Z'`.
+Порядок в обычном сеансе: `'M'` → `'B'` → работа → `'S'` → `'Z'`. Ноль в качестве периода
+attiny игнорирует и остаётся со своим умолчанием в 15 минут.
 
 Параметры шины задаются в `MasterI2C::begin`: 100 кГц и растянутый clock stretch (2500 мкс) —
 attiny медленный и не успевает отдать данные на стандартном таймауте.
