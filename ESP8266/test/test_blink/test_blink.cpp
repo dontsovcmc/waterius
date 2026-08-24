@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "core/blink.h"
+#include "core/types.h"
 
 /*
 Светодиод — единственный канал, по которому Ватериус2 объясняет пользователю,
@@ -72,8 +73,8 @@ TEST(BlinkCode, MqttFailureIsReportedWhenCloudIsFine)
 
 TEST(BlinkCode, LowVoltageShowsUpOnlyWhenSessionWentThrough)
 {
-    // Подсевшие батарейки — не причина отказа, а повод их заменить. Если
-    // сеанс всё же упал, полезнее увидеть, на чём именно
+    // Просевшее питание — не причина отказа, а повод заняться источником.
+    // Если сеанс всё же упал, полезнее увидеть, на чём именно
     SessionStatus ok_session;
     ok_session.cloud = SEND_OK;
     ok_session.low_voltage = true;
@@ -82,8 +83,33 @@ TEST(BlinkCode, LowVoltageShowsUpOnlyWhenSessionWentThrough)
     failed_session.cloud = SEND_NO_CONNECTION;
     failed_session.low_voltage = true;
 
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
     EXPECT_EQ(blink_code(ok_session), ERROR_LOW_VOLTAGE);
+#else
+    EXPECT_EQ(blink_code(ok_session), ERROR_OK);
+#endif
     EXPECT_EQ(blink_code(failed_session), ERROR_CONNECT_CLOUD);
+}
+
+TEST(BlinkCode, ClassicDoesNotBlinkLowVoltage)
+{
+    /*
+    На классике ESP меряет собственное питание после регулятора
+    (voltage.cpp:update зовёт ESP.getVcc), а регулятор держит 3,0 В. До
+    порога 2,9 В остаётся 100 мВ, то есть о состоянии источника значение
+    молчит, пока регулятор не сдастся. Успевает сработать только правило
+    просадки, а просадка при включении радио бывает и на здоровом
+    устройстве: вышла бы одна вспышка почти каждый сеанс.
+    */
+    SessionStatus status;
+    status.cloud = SEND_OK;
+    status.low_voltage = true;
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
+    EXPECT_EQ(blink_code(status), ERROR_OK);
+#else
+    EXPECT_EQ(blink_code(status), ERROR_LOW_VOLTAGE);
+#endif
 }
 
 TEST(BlinkCode, SkippedSenderIsNotAFailure)
