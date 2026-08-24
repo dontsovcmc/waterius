@@ -157,6 +157,27 @@ bool load_config(Settings &sett)
             
             strncpy0(sett.waterius_key, tmp_sett.waterius_key, WATERIUS_KEY_LEN);
             LOG_INFO(F("Restore waterius_key=") << sett.waterius_key);
+
+            /*
+            Период пробуждения переживает смену версии конфига (#350). Иначе
+            после обновления прошивки устройство замолкает на сутки: в attiny
+            уезжает умолчание 1440 минут вместо настроенных пользователем, и
+            выглядит это как зависшее устройство.
+
+            Значение проверяется на разумность: поле лежит глубоко в
+            структуре, и в конфиге прошлой версии по этому смещению мог
+            оказаться совсем другой байт.
+            */
+            const uint16_t restored = restore_wakeup_period(tmp_sett.wakeup_per_min,
+                                                            sett.wakeup_per_min);
+            if (restored != sett.wakeup_per_min)
+            {
+                sett.wakeup_per_min = restored;
+                // Накопленная поправка относилась к прежнему периоду
+                reset_period_min_tuned(sett);
+            }
+            LOG_INFO(F("Restore wakeup min=") << sett.wakeup_per_min);
+
             store_config(sett);
 
             return ret;

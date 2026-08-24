@@ -418,3 +418,59 @@ TEST(ManualWakeup, FallsBackWhenDriftUnknown)
     // ближайшая точка расписания будет уже пропущена.
     EXPECT_EQ(period_after_manual_wakeup(0, 1440), period_after_user_change(1440));
 }
+
+// --- период, который уезжает в attiny (#350) ---
+
+TEST(PeriodToAttiny, UsesTunedPeriod)
+{
+    // Обычный случай: поправка измерена, её и заказываем
+    EXPECT_EQ(period_to_attiny(1309, 1440), 1309);
+}
+
+TEST(PeriodToAttiny, FallsBackWhenTunedIsZero)
+{
+    // Ноль attiny игнорирует и остаётся со своим умолчанием в 15 минут.
+    // Такой конфиг встречается у старых устройств, поэтому подставляем
+    // номинал с запасом в 10%.
+    EXPECT_EQ(period_to_attiny(0, 1440), period_after_user_change(1440));
+    EXPECT_GT(period_to_attiny(0, 1440), 0);
+}
+
+TEST(PeriodToAttiny, ShortPeriodSurvives)
+{
+    // 5 минут при отладке — тот самый период, который терялся
+    EXPECT_EQ(period_to_attiny(4, 5), 4);
+}
+
+// --- период переживает смену версии конфига (#350) ---
+
+TEST(RestoreWakeupPeriod, KeepsUserPeriod)
+{
+    // Ради этого всё и делается: после обновления прошивки период
+    // пользователя остаётся, а не превращается в сутки молчания
+    EXPECT_EQ(restore_wakeup_period(5, 1440), 5);
+    EXPECT_EQ(restore_wakeup_period(60, 1440), 60);
+    EXPECT_EQ(restore_wakeup_period(1440, 1440), 1440);
+}
+
+TEST(RestoreWakeupPeriod, ZeroIsRejected)
+{
+    // Нулевого периода не бывает: в старом конфиге по этому смещению
+    // лежало что-то другое
+    EXPECT_EQ(restore_wakeup_period(0, 1440), 1440);
+}
+
+TEST(RestoreWakeupPeriod, TooLongIsRejected)
+{
+    // Мусор из чужого поля мог бы усыпить устройство на месяц.
+    // Откат к умолчанию — это прежнее поведение, оно безопасно.
+    EXPECT_EQ(restore_wakeup_period(MAX_RESTORED_PERIOD_MIN + 1, 1440), 1440);
+    EXPECT_EQ(restore_wakeup_period(60000, 1440), 1440);
+    EXPECT_EQ(restore_wakeup_period(65535, 1440), 1440);
+}
+
+TEST(RestoreWakeupPeriod, FallbackIsUsedAsIs)
+{
+    // Умолчание задаёт вызывающий код, ядро своего не выдумывает
+    EXPECT_EQ(restore_wakeup_period(0, 720), 720);
+}
