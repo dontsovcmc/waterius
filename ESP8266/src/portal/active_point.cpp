@@ -15,7 +15,7 @@
 #include "wifi_helpers.h"
 #include "core/wifi.h"
 #include "core/input.h"
-#include "core/portal.h"
+#include "core/portal_watchdog.h"
 #include "resources.h"
 #include "ha/resources.h"
 #include "active_point_api.h"
@@ -37,10 +37,11 @@ extern Settings sett;
 extern CalculatedData cdata;
 
 /*
-Момент последнего действия пользователя. Меняется из обработчиков сервера,
-читается в цикле портала - поэтому volatile.
+Момент последнего кормления сторожевого таймера, то есть последнего действия
+пользователя. Пишется из обработчиков сервера, читается в цикле портала -
+поэтому volatile.
 */
-static volatile uint32_t portal_activity_ms = 0;
+static volatile uint32_t portal_watchdog_fed_ms = 0;
 
 /*
 Пользователь что-то сделал: открыл страницу или сохранил форму.
@@ -50,9 +51,9 @@ static volatile uint32_t portal_activity_ms = 0;
 входит - страница опрашивает вход сама, и открытая вкладка держала бы
 устройство включённым без всякого участия человека (#305).
 */
-void portal_activity()
+void feed_portal_watchdog()
 {
-    portal_activity_ms = millis();
+    portal_watchdog_fed_ms = millis();
     masterI2C.extendWakeUp();
 }
 
@@ -63,7 +64,7 @@ void portal_activity()
 */
 static void send_page(AsyncWebServerRequest *request, const char *path, AwsTemplateProcessor processor)
 {
-    portal_activity();
+    feed_portal_watchdog();
     request->send(LittleFS, path, F("text/html"), false, processor);
 }
 
@@ -619,9 +620,9 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     стартовать в первую минуту после включения.
     */
     const uint32_t portal_started_ms = millis();
-    portal_activity_ms = portal_started_ms;
+    portal_watchdog_fed_ms = portal_started_ms;
 
-    while (!exit_portal_flag && !portal_expired(millis(), portal_started_ms, portal_activity_ms))
+    while (!exit_portal_flag && !portal_watchdog_fired(millis(), portal_started_ms, portal_watchdog_fed_ms))
     {
         dns->processNextRequest();
         yield();
@@ -639,7 +640,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
         }
     }
 
-    if (portal_time_limit_reached(millis(), portal_started_ms))
+    if (portal_deadline_reached(millis(), portal_started_ms))
     {
         LOG_ERROR(F("Portal total setup time is over"));
     }

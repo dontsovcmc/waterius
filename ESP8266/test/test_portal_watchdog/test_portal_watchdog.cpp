@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "core/portal.h"
+#include "core/portal_watchdog.h"
 
 /*
 Время жизни режима настройки (#305).
@@ -14,57 +14,57 @@
 
 static const uint32_t MINUTE = 60000UL;
 
-TEST(Portal, FreshPortalIsAlive)
+TEST(PortalWatchdog, FreshPortalIsAlive)
 {
-    EXPECT_FALSE(portal_expired(0, 0, 0));
-    EXPECT_FALSE(portal_expired(9 * MINUTE, 0, 0));
+    EXPECT_FALSE(portal_watchdog_fired(0, 0, 0));
+    EXPECT_FALSE(portal_watchdog_fired(9 * MINUTE, 0, 0));
 }
 
-TEST(Portal, IdlePortalExpires)
+TEST(PortalWatchdog, IdlePortalExpires)
 {
     // Никакой активности не было: окно отсчитывается от старта
-    EXPECT_TRUE(portal_expired(PORTAL_IDLE_MS, 0, 0));
-    EXPECT_TRUE(portal_expired(11 * MINUTE, 0, 0));
+    EXPECT_TRUE(portal_watchdog_fired(PORTAL_WATCHDOG_MS, 0, 0));
+    EXPECT_TRUE(portal_watchdog_fired(11 * MINUTE, 0, 0));
 }
 
-TEST(Portal, ActivityExtendsWindow)
+TEST(PortalWatchdog, ActivityExtendsWindow)
 {
     // Человек открыл страницу на девятой минуте — окно считается заново
     const uint32_t activity = 9 * MINUTE;
 
-    EXPECT_FALSE(portal_expired(activity + 9 * MINUTE, 0, activity));
-    EXPECT_TRUE(portal_expired(activity + PORTAL_IDLE_MS, 0, activity));
+    EXPECT_FALSE(portal_watchdog_fired(activity + 9 * MINUTE, 0, activity));
+    EXPECT_TRUE(portal_watchdog_fired(activity + PORTAL_WATCHDOG_MS, 0, activity));
 }
 
-TEST(Portal, TotalTimeIsLimited)
+TEST(PortalWatchdog, TotalTimeIsLimited)
 {
     // Активность не отменяет общий предел: страница определения счётчика
     // опрашивает устройство сама, и забытая вкладка держала бы Wi-Fi
-    const uint32_t activity = PORTAL_MAX_MS - MINUTE;
+    const uint32_t activity = PORTAL_DEADLINE_MS - MINUTE;
 
-    EXPECT_TRUE(portal_expired(PORTAL_MAX_MS, 0, activity));
-    EXPECT_TRUE(portal_time_limit_reached(PORTAL_MAX_MS, 0));
+    EXPECT_TRUE(portal_watchdog_fired(PORTAL_DEADLINE_MS, 0, activity));
+    EXPECT_TRUE(portal_deadline_reached(PORTAL_DEADLINE_MS, 0));
 }
 
-TEST(Portal, IdleAndTotalAreDistinguishable)
+TEST(PortalWatchdog, IdleAndTotalAreDistinguishable)
 {
     // Две причины выхода означают разное, в логе они не должны сливаться
-    EXPECT_TRUE(portal_expired(PORTAL_IDLE_MS, 0, 0));
-    EXPECT_FALSE(portal_time_limit_reached(PORTAL_IDLE_MS, 0));
+    EXPECT_TRUE(portal_watchdog_fired(PORTAL_WATCHDOG_MS, 0, 0));
+    EXPECT_FALSE(portal_deadline_reached(PORTAL_WATCHDOG_MS, 0));
 }
 
-TEST(Portal, IdleWindowMatchesAttiny)
+TEST(PortalWatchdog, IdleWindowMatchesAttiny)
 {
     /*
     Питание снимает attiny: после команды 'E' он держит ЕСП ровно
     SETUP_TIME_MSEC (Attiny85/src/Setup.h). Если окна разъедутся, продление
     станет бессмысленным — одна сторона выключится раньше другой.
     */
-    EXPECT_EQ(PORTAL_IDLE_MS, 600000UL);
-    EXPECT_GT(PORTAL_MAX_MS, PORTAL_IDLE_MS);
+    EXPECT_EQ(PORTAL_WATCHDOG_MS, 600000UL);
+    EXPECT_GT(PORTAL_DEADLINE_MS, PORTAL_WATCHDOG_MS);
 }
 
-TEST(Portal, MillisOverflowDoesNotCutSetupShort)
+TEST(PortalWatchdog, MillisOverflowDoesNotCutSetupShort)
 {
     /*
     millis() переполняется через 49 суток. Момент сам по себе ничего не
@@ -75,6 +75,6 @@ TEST(Portal, MillisOverflowDoesNotCutSetupShort)
     const uint32_t now = started + 5 * MINUTE; // счётчик уже перевалил через ноль
 
     EXPECT_LT(now, started);   // проверяем, что тест действительно про переполнение
-    EXPECT_FALSE(portal_expired(now, started, started));
-    EXPECT_TRUE(portal_expired(started + PORTAL_IDLE_MS, started, started));
+    EXPECT_FALSE(portal_watchdog_fired(now, started, started));
+    EXPECT_TRUE(portal_watchdog_fired(started + PORTAL_WATCHDOG_MS, started, started));
 }

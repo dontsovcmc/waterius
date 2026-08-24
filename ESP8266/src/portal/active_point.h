@@ -22,6 +22,6 @@ String processor_main(const String &var, const uint8_t input = 0xFF);
 Отметить действие пользователя: продлевает режим настройки и у ЕСП, и у
 attiny. Зовётся из обработчиков сохранения (#305).
 */
-void portal_activity();
+void feed_portal_watchdog();
 
 #endif

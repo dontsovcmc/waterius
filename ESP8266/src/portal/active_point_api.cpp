@@ -167,7 +167,7 @@ bool save_fast_connect(AsyncWebServerRequest *request)
  */
 void post_api_save_connect(AsyncWebServerRequest *request)
 {
-    portal_activity();   // продлеваем режим настройки (#305)
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
     LOG_INFO(F("POST ") << request->url());
 
     g_json_doc.clear();
@@ -220,7 +220,7 @@ void post_api_save_connect(AsyncWebServerRequest *request)
  */
 void get_api_start_connect(AsyncWebServerRequest *request)
 {
-    portal_activity();   // продлеваем режим настройки (#305)
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
     start_connect_flag = true;
     wifi_connect_status = WL_DISCONNECTED;
     LOG_INFO(F("Start connect"));
@@ -856,7 +856,7 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
 
 void post_api_save(AsyncWebServerRequest *request)
 {
-    portal_activity();   // продлеваем режим настройки (#305)
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
     LOG_INFO(F("POST ") << request->url());
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
@@ -872,7 +872,7 @@ void post_api_save(AsyncWebServerRequest *request)
 
 void post_api_save_input_type(AsyncWebServerRequest *request)
 {
-    portal_activity();   // продлеваем режим настройки (#305)
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
     LOG_INFO(F("POST ") << request->url());
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
@@ -942,7 +942,7 @@ void get_api_turnoff(AsyncWebServerRequest *request)
 
 void post_api_reset(AsyncWebServerRequest *request)
 {
-    portal_activity();   // продлеваем режим настройки (#305)
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
     LOG_INFO(F("POST ") << request->url());
 
     g_json_doc.clear();
