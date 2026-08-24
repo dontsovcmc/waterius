@@ -44,6 +44,14 @@ struct SessionStatus
 {
     bool config_loaded = true;
     bool wifi_connected = true;
+    /*
+    Питание просело. На классике не показывается: там ESP меряет своё
+    питание после регулятора (voltage.cpp:update зовёт ESP.getVcc), а
+    регулятор держит 3,0 В, то есть до порога 2,9 В остаётся 100 мВ и
+    значение молчит, пока регулятор не сдастся совсем. Сработать успевает
+    только правило просадки, а просадка при включении радио бывает и на
+    здоровом устройстве - вышла бы одна вспышка почти каждый сеанс.
+    */
     bool low_voltage = false;
     SendStatus cloud = SEND_SKIPPED;
     SendStatus mqtt = SEND_SKIPPED;

@@ -3,8 +3,8 @@
 #include "wleds.h"
 #include "Logging.h"
 
-// Пауза перед первой вспышкой, мс
-#define START_PAUSE_MS 300
+// Сколько держать светодиод погашенным перед вспышками кода, мс
+#define LED_OFF_BEFORE_CODE_MS 300
 
 /*
 На классическом Ватериусе светодиод сидит на GPIO1 — это линия TX. Пока пин
@@ -80,7 +80,7 @@ void blynk_led(uint8_t pin, uint8_t times, uint16_t delay_ms /* 200 */, uint16_t
     сливалась бы с этим свечением, и код было бы не сосчитать.
     */
     digitalWrite(pin, LOW);
-    delay(START_PAUSE_MS);
+    delay(LED_OFF_BEFORE_CODE_MS);
 
     while (times--)
     {
