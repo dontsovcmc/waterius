@@ -10,6 +10,7 @@
 #include "config.h"
 #include "core/readings.h"
 #include "core/input.h"
+#include "core/diagnostics.h"
 #include "core/url.h"
 #include "core/wifi.h"
 #include "wifi_helpers.h"
@@ -238,6 +239,30 @@ void get_api_start_connect(AsyncWebServerRequest *request)
 }
 
 /**
+ * @brief Плашка про конкретный вход.
+ *
+ * Номер входа уезжает отдельным полем: текст один на оба входа, название
+ * входа подставит портал (tr() в data/static/strings.js). Иначе на каждое
+ * сообщение пришлось бы заводить по две строки-близнеца.
+ *
+ * @param error код строки сообщения
+ * @param input номер входа, INPUT0_RED или INPUT1_BLUE
+ * @param page страница настройки, на которую ведёт ссылка
+ */
+static void add_input_problem(JsonArray &array, const __FlashStringHelper *error,
+                              const uint8_t input, const char *page)
+{
+    JsonObject obj = array.add<JsonObject>();
+    obj["error"] = error;
+    obj["input"] = input;
+    obj["link_text"] = F("5"); // S_SETUP Настроить
+
+    char link_buf[32];
+    snprintf(link_buf, sizeof(link_buf), "/input/%u/%s.html", input, page);
+    obj["link"] = link_buf;
+}
+
+/**
  * @brief Список диагностических сообщений на Главной странице вебсервера
  *
  * @param request запрос
@@ -258,6 +283,32 @@ void get_api_main_status(AsyncWebServerRequest *request)
     {
         JsonObject obj = array.add<JsonObject>();
         obj["error"] = F("22"); // S_ESP_RESTARTED "Ватериус внештатно перезагрузился..."
+    }
+
+    /*
+    Ошибки настройки счётчиков (#283). Считаем на каждый запрос, а не один
+    раз на старте: когда пользователь заново вводит показания, стартовые
+    импульсы уезжают на текущие, накопленный расход обнуляется и плашка
+    гаснет сама.
+    */
+    apply_counter_types(data, runtime_data);   // тип входа мог смениться в этом сеансе (#360)
+    const SetupProblems problems = check_setup(sett, data);
+
+    if (problems.factor_too_big0)
+    {   // S_FACTOR_TOO_BIG "Счётчик %s насчитал в разы больше второго..."
+        add_input_problem(array, F("23"), INPUT0_RED, "settings");
+    }
+    if (problems.factor_too_big1)
+    {
+        add_input_problem(array, F("23"), INPUT1_BLUE, "settings");
+    }
+    if (problems.silent_input0)
+    {   // S_INPUT_SILENT "Счётчик %s не насчитал ни одного импульса..."
+        add_input_problem(array, F("24"), INPUT0_RED, "setup");
+    }
+    if (problems.silent_input1)
+    {
+        add_input_problem(array, F("24"), INPUT1_BLUE, "setup");
     }
 
     wl_status_t status = WiFi.status();

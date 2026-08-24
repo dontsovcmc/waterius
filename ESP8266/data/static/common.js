@@ -397,7 +397,7 @@ function mainStatus(){
         if(!data.length) return;
         const html = [];
         data.forEach(mess => {
-            var error = tr(mess.error);
+            var error = tr(mess.error, INPUT_PLACE[mess.input]);
             var link_text = tr(mess.link_text);
             html.push(`<p class="form-error mt24">${error}${mess.link ? `<br><br><a class="link" href="${mess.link}">${link_text}</a>` : ''}</p>`);
         });
