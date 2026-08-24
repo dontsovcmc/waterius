@@ -172,7 +172,7 @@ bool MasterI2C::getAttinyData(AttinyData &data)
     data.on_pulse1 = (data.service >> 7) & 1;
 
     good &= getUint16(data.voltage, crc);
-    good &= getByte(data.reserved, crc);
+    good &= getByte(data.attiny_flags, crc);
     good &= getByte(data.setup_started_counter, crc);
 
     good &= getByte(data.resets, crc);
@@ -195,6 +195,7 @@ bool MasterI2C::getAttinyData(AttinyData &data)
         << F(" on_pulse0:") << data.on_pulse0
         << F(" on_pulse1:") << data.on_pulse1
         << F(" voltage:") << data.voltage
+        << F(" flags:") << data.attiny_flags
         << F(" setups:") << data.setup_started_counter
         << F(" resets:") << data.resets
         << F(" model:") << data.model

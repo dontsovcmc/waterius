@@ -22,11 +22,21 @@ struct ESPPowerPin
     //Время включения Wi-Fi
     unsigned long wake_up_timestamp;
 
+    /*
+    Время подачи питания на ESP. Отдельно от wake_up_timestamp, который
+    сдвигает extend_wake_up() на каждое действие пользователя в портале:
+    тот показывает время последнего действия, а не включения.
+    */
+    unsigned long power_on_timestamp;
+
     //Подать или снять питание с ESP
     void power(const bool);
 
     //Прошло ли больше msec времени с момента wake_up_timestamp
     bool elapsed(const unsigned long msec);
+
+    //Подано ли питание на ESP дольше msec
+    bool powered_longer_than(const unsigned long msec);
 
     // Продлить время включения
     void extend_wake_up();

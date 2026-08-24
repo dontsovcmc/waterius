@@ -79,6 +79,19 @@
 #define WATERIUS_MODEL_2 2
 
 /*
+Флаги состояния из AttinyData.attiny_flags.
+
+ESP_POWERED_LONG: attiny держит питание ЕСП дольше нескольких секунд.
+
+Байт появился в версии ATTINY_VER_POWER_FLAGS: до неё на его месте лежал
+резерв, всегда нулевой, но полагаться на это нельзя - значение проверяется
+по версии прошивки attiny. Порог назван по содержимому байта, а не по
+конкретному флагу: следующие флаги лягут в этот же байт.
+*/
+#define ATTINY_FLAG_ESP_POWERED_LONG 0x01
+#define ATTINY_VER_POWER_FLAGS 40
+
+/*
 Режим пробуждения, приходит от attiny85
 */
 #define SETUP_MODE 1
@@ -161,7 +174,7 @@ struct AttinyData
     bool on_pulse1;
     uint8_t reserved5 = 0;
     uint16_t voltage;   // Напряжение питания в мВ
-    uint8_t reserved;   // Для совместимости
+    uint8_t attiny_flags = 0;  // Флаги состояния attiny, см. ATTINY_FLAG_*
     uint8_t setup_started_counter;
     uint8_t resets;
     uint8_t model;         // WATERIUS_MODEL_1 или  WATERIUS_MODEL_2

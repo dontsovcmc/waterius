@@ -10,6 +10,7 @@ extern struct Header info;
 extern void saveConfig();
 extern uint32_t wakeup_period;
 extern void extendWakeUpPeriod();
+extern bool is_esp_powered_long();
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -58,6 +59,8 @@ void SlaveI2C::receiveEvent(int howMany)
     switch (command)
     {
     case 'B': // данные
+        // Флаги собираем в момент запроса: главному циклу их вести незачем
+        info.flags = is_esp_powered_long() ? HEADER_FLAG_ESP_POWERED_LONG : 0;
         info.crc = crc_8((unsigned char *)&info, HEADER_DATA_SIZE);
         memcpy(txBuffer, &info, TX_BUFFER_SIZE);
         break;
