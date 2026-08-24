@@ -237,23 +237,16 @@ void loop()
     status.config_loaded = config_loaded;
     status.low_voltage = voltage.low_voltage();
 
-#if WATERIUS_MODEL == WATERIUS_MODEL_2
-    // Ватериус2 — единственная модель со светодиодами: на классике оба пина
-    // указывают на TX, и индикацией там занимается attiny.
-    //
-    // Успех не моргаем: GREEN_LED_PIN = 19, а у ESP8266 выводов больше 16 нет,
-    // так что зелёная вспышка — это просто 200 мс лишнего бодрствования
+    // Коды ошибок моргаются на обеих моделях (#355). На классике светодиод
+    // сидит на линии TX: на время вспышек лог замолкает, blynk_led поднимает
+    // его обратно. Успех не моргается ни там, ни там: у Ватериуса2 зелёный
+    // светодиод занят флешем, а на классике одна вспышка уже занята кодом
+    // "села батарейка" - зелёного пина там нет, он тот же самый.
     const ErrorBlynks code = blink_code(status);
     if (code != ERROR_OK)
     {
         blynk_error(code);
     }
-#else
-    if (!status.config_loaded)
-    {
-        blynk_error(ERROR_CONFIG);
-    }
-#endif
 
     LOG_INFO(F("Going to sleep"));
     LOG_END();
