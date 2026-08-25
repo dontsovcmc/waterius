@@ -120,6 +120,12 @@ jobs:
       - name: pio run -e ${{ matrix.environment }}
         run: pio run -d ESP8266 -e ${{ matrix.environment }}
 
+      # Раздел LittleFS у Классики - 256 КБ, и переполняется он тихо: прошивка
+      # собирается, а образ файловой системы падает с "File system is full".
+      # Без этого шага такое доезжает до релиза
+      - name: pio run -e ${{ matrix.environment }} -t buildfs
+        run: pio run -d ESP8266 -e ${{ matrix.environment }} -t buildfs
+
   build-attiny:
     name: Attiny85 ${{ matrix.environment }}
     runs-on: ubuntu-latest
