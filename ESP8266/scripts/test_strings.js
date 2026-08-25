@@ -1,5 +1,6 @@
 /*
-Тесты строк и единиц измерения веб-портала (data/static/strings.js).
+Тесты веб-портала: строки и единицы измерения (data/static/strings.js) плюс
+те правила из data/static/common.js, которые не про разметку.
 
 Запуск:
     node ESP8266/scripts/test_strings.js
@@ -19,11 +20,19 @@ const path = require('path');
 const vm = require('vm');
 
 const STRINGS = path.join(__dirname, '..', 'data', 'static', 'strings.js');
+const COMMON = path.join(__dirname, '..', 'data', 'static', 'common.js');
 
 // Файла нет — это провал, а не повод пропустить проверку
 const source = fs.readFileSync(STRINGS, 'utf8');
 const sandbox = vm.createContext({});
 vm.runInContext(source, sandbox, { filename: STRINGS });
+
+/*
+common.js грузится в ту же песочницу: на верхнем уровне он объявляет только
+константы и функции, к DOM обращаются лишь их тела, поэтому заглушки браузера
+не нужны. Проверяем из него правила, которые не про разметку.
+*/
+vm.runInContext(fs.readFileSync(COMMON, 'utf8'), sandbox, { filename: COMMON });
 
 /*
 Объявленные через const имена не попадают в объект контекста — они живут в
@@ -172,6 +181,36 @@ test('у каждого сообщения про вход есть место �
     assert.strictEqual(ctx.INPUT_PLACE.length, 2, 'входа два: красный и синий');
 });
 
+test('до устройства не дошли только сетевые ошибки, а не ответы прошивки', () => {
+    // fetch() отвергает промис объектом ошибки — связи нет
+    assert.strictEqual(ctx.is_device_unreachable(new TypeError('Failed to fetch')), true);
+    assert.strictEqual(ctx.is_device_unreachable(new TypeError('NetworkError')), true);
+    // Safari на телефоне пишет своё, и это основной браузер наших пользователей
+    assert.strictEqual(ctx.is_device_unreachable(new TypeError('Load failed')), true);
+    assert.strictEqual(ctx.is_device_unreachable(undefined), true);
+
+    // Ответ сервера с плохим статусом (Response) — прошивка жива, окно про
+    // Wi-Fi было бы враньём
+    assert.strictEqual(ctx.is_device_unreachable({status: 500, statusText: 'Internal Error'}), false);
+    assert.strictEqual(ctx.is_device_unreachable({status: 404, statusText: 'Not Found'}), false);
+});
+
+test('в окне потери связи есть заголовок, объяснение и подпись кнопки', () => {
+    assert.strictEqual(ctx.tr(ctx.S_LOST_LINK_TITLE), 'Нет связи с Ватериусом');
+    assert.strictEqual(ctx.tr(ctx.S_RETRY), 'Повторить');
+
+    // Текст обязан назвать оба выхода: вернуться в сеть и включить режим заново
+    const text = ctx.tr(ctx.S_PLEASE_RECONNECT_WIFI);
+    assert.ok(text.includes('waterius-'), 'не сказано, к какой сети подключаться: ' + text);
+    assert.ok(text.includes('кнопку'), 'не сказано, что делать, если сети нет: ' + text);
+});
+
+test('повторы ограничены, иначе вкладка стучится вечно', () => {
+    assert.ok(ctx.AJAX_TRIES >= 2, 'один обрыв не должен сразу открывать окно');
+    assert.ok(ctx.LOST_LINK_RETRY_MS >= 2000, 'фоновые повторы не должны частить');
+    assert.ok(ctx.LOST_LINK_GIVE_UP_MS > ctx.LOST_LINK_RETRY_MS);
+});
+
 test('типы входа названы для всех значений из списка на странице', () => {
     // Значения из data/input_setup.html
     for (const type of [0, 2, 4, 0xFF]) {
@@ -250,4 +289,4 @@ if (failed > 0) {
     console.error('Провалено тестов: ' + failed + ' из ' + executed);
     process.exit(1);
 }
-console.log('Выполнено тестов: ' + executed + ' (strings.js)');
+console.log('Выполнено тестов: ' + executed + ' (портал)');
