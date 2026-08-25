@@ -152,6 +152,26 @@ test('неизвестный тип ресурса не роняет стран�
     assert.strictEqual(ctx.unit_suffix(42), '');
 });
 
+test('название входа подставляется в сообщение, а без него текст цел', () => {
+    // Сообщения про вход одни на оба входа: подставляется только название
+    const red = ctx.tr(ctx.S_FACTOR_TOO_BIG, ctx.INPUT_PLACE[0]);
+    assert.ok(red.includes('на красном входе'), 'название входа не подставилось: ' + red);
+    assert.ok(!red.includes('%s'), 'в тексте остался маркер подстановки: ' + red);
+    assert.ok(ctx.tr(ctx.S_INPUT_SILENT, ctx.INPUT_PLACE[1]).includes('на синем входе'));
+
+    // mainStatus() зовёт tr() с INPUT_PLACE[undefined] для всех остальных
+    // сообщений: текст без маркера не должен от этого пострадать
+    const plain = ctx.tr(ctx.S_WIFI_CONNECT, undefined);
+    assert.strictEqual(plain, 'Ошибка подключения к Wi-Fi');
+});
+
+test('у каждого сообщения про вход есть место для названия', () => {
+    for (const id of [ctx.S_FACTOR_TOO_BIG, ctx.S_INPUT_SILENT]) {
+        assert.ok(ctx.tr(id).includes('%s'), 'в сообщении ' + id + ' некуда подставить вход');
+    }
+    assert.strictEqual(ctx.INPUT_PLACE.length, 2, 'входа два: красный и синий');
+});
+
 test('типы входа названы для всех значений из списка на странице', () => {
     // Значения из data/input_setup.html
     for (const type of [0, 2, 4, 0xFF]) {

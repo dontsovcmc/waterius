@@ -12,6 +12,14 @@ html, ни прошивку трогать не нужно. По той же п�
 выглядят иначе.
 */
 
+/*
+Название входа для подстановки в сообщения главной страницы: одно и то же
+сообщение приходит и для красного, и для синего входа, отличается только
+это место. Целой фразой, а не одним прилагательным: в другом языке
+предлог и порядок слов свои.
+*/
+const INPUT_PLACE = ["на красном входе", "на синем входе"];
+
 function fill_input_color(index) {
     var q = document.getElementById('input_color');
     if (index == 0) {
@@ -347,10 +355,20 @@ const S_ERROR_NO_COMMA = 19;
 const S_ERROR_TLS = 20;
 const S_ERROR_PORT_IN_HOST = 21;
 const S_ESP_RESTARTED = 22;
+const S_FACTOR_TOO_BIG = 23;
+const S_INPUT_SILENT = 24;
 
 
-function tr(str_id) {
-    var id = Number(str_id);
+/*
+Текст сообщения по номеру. Второй аргумент подставляется вместо "%s" -
+так сообщение про вход остаётся одной строкой на оба входа.
+*/
+function tr(str_id, arg) {
+    var text = tr_text(Number(str_id));
+    return (arg === undefined) ? text : text.replace("%s", arg);
+}
+
+function tr_text(id) {
     switch (id) {
         case S_ANOTHER_CHANNEL: return "Канал Wi-Fi роутера отличается от текущего соединения. Если телефон потеряет связь с Ватериусом, подключитесь заново.";
         case S_WIFI_CONNECT: return "Ошибка подключения к Wi-Fi";
@@ -375,6 +393,8 @@ function tr(str_id) {
         case S_ERROR_TLS: return "Шифрованное подключение к MQTT не поддерживается. Укажите адрес без mqtts:// и ssl://";
         case S_ERROR_PORT_IN_HOST: return "Порт указывайте в отдельном поле, а не в адресе";
         case S_ESP_RESTARTED: return "Ватериус внештатно перезагрузился. Возможно, батарейки садятся.";
+        case S_FACTOR_TOO_BIG: return "Счётчик %s насчитал в разы больше второго. Похоже, вес импульса завышен в 10 раз: проверьте, сколько литров на импульс написано на счётчике.";
+        case S_INPUT_SILENT: return "Счётчик %s не насчитал ни одного импульса. Проверьте подключение и тип входа.";
         default:
             return "Незвестный id строки: " + String(id);
     }
