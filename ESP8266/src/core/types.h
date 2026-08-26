@@ -92,11 +92,31 @@ ESP_POWERED_LONG: attiny держит питание ЕСП дольше нес�
 #define ATTINY_VER_POWER_FLAGS 40
 
 /*
+Тревоги из того же байта, по три бита на вход (issue #202). Зеркало
+HEADER_ALARM_* в Attiny85/src/Setup.h.
+
+FLOW: расход выше порога - прорыв трубы.
+LEAK: расход не прекращается дольше заданного времени - капающий кран.
+WET:  датчик протечки на входе замкнут.
+
+Приезжают с версии ATTINY_VER_ALARM. Разбирает core/alarm.h.
+*/
+#define ALARM_FLOW 0x01
+#define ALARM_LEAK 0x02
+#define ALARM_WET 0x04
+
+#define ATTINY_ALARM_SHIFT0 1
+#define ATTINY_ALARM_SHIFT1 4
+#define ATTINY_ALARM_MASK 0x07
+#define ATTINY_VER_ALARM 41
+
+/*
 Режим пробуждения, приходит от attiny85
 */
 #define SETUP_MODE 1
 #define TRANSMIT_MODE 2
 #define MANUAL_TRANSMIT_MODE 3
+#define ALARM_MODE 4
 
 /*
     Статус обновления прошивки
@@ -127,6 +147,7 @@ enum CounterType
     ELECTRONIC = 2,
     HALL = 3,
     ELECTRONIC_HIGH = 4,   // электронный выход, импульс — подъём линии (issue #379)
+    LEAKAGE = 5,           // датчик протечки: замыкание — тревога, а не импульс (issue #202)
     NONE = 0xFF   // 255
 };
 
@@ -433,10 +454,26 @@ struct Settings
     uint8_t send_on_consumption = 0;
 
     /*
+    Пороги тревог, по каналам (#202). Ноль - тревога выключена, и это
+    умолчание: у прошитых устройств поведение не меняется.
+
+    alarm_flow - порог расхода: л/ч для воды, газа и тепла, Вт для
+    электричества. alarm_leak - минут непрерывного расхода.
+
+    Поля взяты из reserved9, поэтому размещение остальных не поехало:
+    у прошитых устройств конфигурация читается как прежде, а новые поля
+    приезжают нулями.
+    */
+    uint16_t alarm_flow0 = 0;
+    uint16_t alarm_flow1 = 0;
+    uint16_t alarm_leak0 = 0;
+    uint16_t alarm_leak1 = 0;
+
+    /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved9[53] = {0};
+    uint8_t reserved9[45] = {0};
 
 }; // 960 байт
 

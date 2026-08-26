@@ -238,7 +238,26 @@ TEST(ParseUint16, NegativeIsRejected)
     uint16_t v = 1883;
 
     EXPECT_EQ(parse_uint16("-1", v), PARAM_ERR_VALUE);
-    EXPECT_EQ(v, 1883);
+}
+
+TEST(ParseUint16, ZeroAllowedOnDemand)
+{
+    /*
+    По умолчанию ноль - ошибка: это и незаполненное поле, и мусор. Но у порогов
+    тревог (#202) ноль значит "выключено" и приходит из формы штатно.
+    */
+    uint16_t v = 42;
+
+    EXPECT_EQ(parse_uint16("0", v, true), PARAM_OK);
+    EXPECT_EQ(v, 0);
+
+    // Разрешение нуля не отменяет остальных проверок
+    EXPECT_EQ(parse_uint16("-1", v, true), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_uint16("65536", v, true), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_uint16("abc", v, true), PARAM_ERR_VALUE);
+
+    // Отвергнутое значение не затирает прежнее
+    EXPECT_EQ(v, 0);
 }
 
 TEST(ParseUint8, ZeroOkFlagSwitchesBehaviour)

@@ -350,6 +350,24 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
         LOG_INFO(F("Manual wakeup: period_min_tuned=") << sett.period_min_tuned);
     }
 
+    /*
+    Сеанс по тревоге (#202) разрезал период сна пополам: attiny после него
+    засыпает на целый период заново, и время до следующего планового выхода
+    на связь оказывается больше заказанного. Подстройка приняла бы это за
+    отставание часов attiny и переложила бы руль. Поэтому сбрасываем точку
+    отсчёта: один пропущенный цикл подстройки безобиден, промах расписания
+    на часы - нет.
+
+    base_time не трогаем: пользователь по-прежнему ждёт показания в то же
+    время суток.
+    */
+    if (sett.mode == ALARM_MODE)
+    {
+        sett.last_time_sync = 0;
+        sett.wakeups_since_sync = 0;
+        LOG_INFO(F("Alarm wakeup: tuning base reset"));
+    }
+
     time_t now = time(nullptr);
 
     // Проверяем валидность текущего времени

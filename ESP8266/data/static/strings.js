@@ -57,6 +57,7 @@ const CounterType_DISCRETE = 1;
 const CounterType_ELECTRONIC = 2;
 const CounterType_HALL = 3;
 const CounterType_ELECTRONIC_HIGH = 4;
+const CounterType_LEAKAGE = 5;
 const CounterType_NONE = 0xFF;
 
 // Спецзначения веса импульса, ESP8266/src/core/types.h
@@ -148,9 +149,18 @@ const COUNTER_TYPES = {};
 COUNTER_TYPES[CounterType_NAMUR] = "Механический";
 COUNTER_TYPES[CounterType_ELECTRONIC] = "Электронный";
 COUNTER_TYPES[CounterType_ELECTRONIC_HIGH] = "Электронный (+)";
+COUNTER_TYPES[CounterType_LEAKAGE] = "Датчик протечки";
 COUNTER_TYPES[CounterType_NONE] = "Выключен";
 
 const S_COUNTER_DISABLED = "Отключён";
+
+/*
+Тревоги не настроить: либо вес импульса ещё не определён, либо прошивка
+attiny старее 41. Обновляется она только программатором, поэтому у части
+устройств в поле так и останется.
+*/
+const S_ALARM_NOT_READY = "Тревоги недоступны: сначала настройте счётчики. " +
+    "Если счётчики настроены, нужна прошивка attiny 41 или новее.";
 
 /*
 Ресурс по номеру. Неизвестное значение — это "Другой": чужое число может
@@ -231,6 +241,49 @@ function format_number(value) {
     return s.replace(".", DECIMAL_POINT);
 }
 
+/*
+Подпись и единица порога расхода (#202). У электричества это мощность в
+ваттах: там вес импульса задан наоборот, импульсами на киловатт-час, и
+считается порог по другой формуле.
+*/
+function alarm_flow_label(counter_name) {
+    return Number(counter_name) == CounterName_ELECTRO
+        ? "Порог мощности, Вт"
+        : "Порог расхода, л/ч";
+}
+
+/*
+Страница тревог: два канала сразу, поэтому подписи заполняются по каждому
+отдельно, а не общим fill_units.
+
+ready приходит от прошивки: тревоги требуют известного веса импульса и attiny
+не старее 41. Настройку, которая ничего не делает, лучше не показывать вовсе,
+чем показать неработающей.
+*/
+function fill_alarms(counter0_name, counter1_name, ready0, ready1) {
+    fill_counter0_title(counter0_name, CounterType_NAMUR);
+    fill_counter1_title(counter1_name, CounterType_NAMUR);
+
+    var names = [counter0_name, counter1_name];
+    var ready = [ready0, ready1];
+
+    document.querySelectorAll('[data-alarm-label]').forEach(function(q) {
+        q.textContent = alarm_flow_label(names[Number(q.dataset.alarmLabel)]);
+    });
+
+    for (var i = 0; i < 2; i++) {
+        if (!ready[i]) {
+            document.getElementById('alarm' + i).classList.add('hd');
+        }
+    }
+
+    if (!ready0 && !ready1) {
+        var note = document.getElementById('alarm_none');
+        note.textContent = S_ALARM_NOT_READY;
+        note.classList.remove('hd');
+    }
+}
+
 // Единица показаний ресурса
 function unit_of(counter_name) {
     return resource(counter_name).unit;
@@ -307,6 +360,9 @@ function fill_units(counter_name) {
                 break;
             case 'impulses':
                 q.textContent = U_IMPULSE;
+                break;
+            case 'alarm_flow':
+                q.textContent = alarm_flow_label(counter_name);
                 break;
         }
     });

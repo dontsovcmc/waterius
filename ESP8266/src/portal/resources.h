@@ -50,6 +50,14 @@ static const char PARAM_COUNTER0_TYPE[] PROGMEM = "counter0_type";
 static const char PARAM_COUNTER1_TYPE[] PROGMEM = "counter1_type";
 static const char PARAM_COUNTER_IMG[] PROGMEM = "counter_img";
 static const char PARAM_FACTOR[] PROGMEM = "factor";
+static const char PARAM_ALARM_FLOW[] PROGMEM = "alarm_flow";
+static const char PARAM_ALARM_LEAK[] PROGMEM = "alarm_leak";
+static const char PARAM_ALARM_FLOW0[] PROGMEM = "alarm_flow0";
+static const char PARAM_ALARM_FLOW1[] PROGMEM = "alarm_flow1";
+static const char PARAM_ALARM_LEAK0[] PROGMEM = "alarm_leak0";
+static const char PARAM_ALARM_LEAK1[] PROGMEM = "alarm_leak1";
+static const char PARAM_ALARM_READY0[] PROGMEM = "alarm_ready0";
+static const char PARAM_ALARM_READY1[] PROGMEM = "alarm_ready1";
 static const char PARAM_ASTERICS[] PROGMEM = "********";
 
 

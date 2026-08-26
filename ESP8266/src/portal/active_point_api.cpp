@@ -11,6 +11,7 @@
 #include "core/readings.h"
 #include "core/input.h"
 #include "core/diagnostics.h"
+#include "core/alarm.h"
 #include "core/url.h"
 #include "core/wifi.h"
 #include "wifi_helpers.h"
@@ -22,6 +23,7 @@ extern bool start_connect_flag;
 extern wl_status_t wifi_connect_status;
 extern bool factory_reset_flag;
 extern bool esp_restarted_flag;
+extern void send_alarm_config(const Settings &sett);   // main.cpp
 
 extern AttinyData data;
 extern AttinyData runtime_data;
@@ -480,9 +482,9 @@ void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject 
     }
 }
 
-void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
+void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj, const bool zero_ok)
 {
-    ParamError err = parse_uint16(p->value().c_str(), v);
+    ParamError err = parse_uint16(p->value().c_str(), v, zero_ok);
 
     if (err == PARAM_OK)
     {
@@ -693,6 +695,32 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
                 break;
         }
 
+    }
+    else if (name == FPSTR(PARAM_ALARM_FLOW) || name == FPSTR(s_af)) // portal || ha
+    {
+        // Порог расхода: л/ч для объёма, Вт для электричества. 0 - выключено
+        switch (input)
+        {
+            case INPUT0_RED:
+                save_param(p, sett.alarm_flow0, errorsObj, true);
+                break;
+            case INPUT1_BLUE:
+                save_param(p, sett.alarm_flow1, errorsObj, true);
+                break;
+        }
+    }
+    else if (name == FPSTR(PARAM_ALARM_LEAK) || name == FPSTR(s_al)) // portal || ha
+    {
+        // Минут непрерывного расхода. 0 - выключено
+        switch (input)
+        {
+            case INPUT0_RED:
+                save_param(p, sett.alarm_leak0, errorsObj, true);
+                break;
+            case INPUT1_BLUE:
+                save_param(p, sett.alarm_leak1, errorsObj, true);
+                break;
+        }
     }
     else if (name == FPSTR(PARAM_FACTOR) || name == FPSTR(s_f)) // portal || ha
     {
@@ -917,6 +945,19 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
     store_config(sett);
 }
 
+/*
+Необязательное uint16-поле формы: чего нет в запросе, того не трогаем.
+*/
+static void save_uint16_param(AsyncWebServerRequest *request, const String &name,
+                              uint16_t &value, JsonObject &errorsObj)
+{
+    if (!request->hasParam(name, true))
+        return;
+
+    const AsyncWebParameter *p = request->getParam(name, true);
+    save_param(p, value, errorsObj, true);  // ноль допустим: тревога выключена
+}
+
 void post_api_save(AsyncWebServerRequest *request)
 {
     feed_portal_watchdog();   // продлеваем режим настройки (#305)
@@ -929,6 +970,39 @@ void post_api_save(AsyncWebServerRequest *request)
 
     uint8_t input = get_param_uint8(request, FPSTR(PARAM_INPUT));
     applyInputSettings(request, errorsObj, input);
+
+    send_json_response(request, g_json_doc);
+}
+
+/*
+Пороги тревог (#202).
+
+Отдельный обработчик, а не /api/save: та страница настраивает один вход, а
+тревоги показываются обоими каналами сразу, чтобы не гонять пользователя по
+двум формам ради двух чисел.
+
+Пороги тут же уезжают в attiny: у неё они живут в ОЗУ, и ждать следующего
+сеанса значило бы, что настройка вступит в силу через сутки.
+*/
+void post_api_save_alarms(AsyncWebServerRequest *request)
+{
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
+    LOG_INFO(F("POST ") << request->url());
+    g_json_doc.clear();
+    JsonObject ret = g_json_doc.to<JsonObject>();
+    JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
+
+    save_uint16_param(request, FPSTR(PARAM_ALARM_FLOW0), sett.alarm_flow0, errorsObj);
+    save_uint16_param(request, FPSTR(PARAM_ALARM_LEAK0), sett.alarm_leak0, errorsObj);
+    save_uint16_param(request, FPSTR(PARAM_ALARM_FLOW1), sett.alarm_flow1, errorsObj);
+    save_uint16_param(request, FPSTR(PARAM_ALARM_LEAK1), sett.alarm_leak1, errorsObj);
+
+    if (errorsObj.size() == 0)
+    {
+        store_config(sett);
+        send_alarm_config(sett);
+        ret[F("redirect")] = F("/index.html");
+    }
 
     send_json_response(request, g_json_doc);
 }
@@ -947,7 +1021,12 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
 
     if (input == INPUT0_RED)
     {
-        if (sett.counter0_name == CounterName::ELECTRO)
+        // Датчик протечки - не счётчик: ни веса импульса, ни показаний (#202)
+        if (runtime_data.counter_type0 == CounterType::LEAKAGE)
+        {
+            ret[F("redirect")] = F("/index.html");
+        }
+        else if (sett.counter0_name == CounterName::ELECTRO)
         {
             ret[F("redirect")] = F("/input/0/input_electro_detect.html");
         }
@@ -966,7 +1045,12 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     }
     else if (input == INPUT1_BLUE)
     {
-        if (sett.counter1_name == CounterName::ELECTRO)
+        // Датчик протечки - не счётчик: ни веса импульса, ни показаний (#202)
+        if (runtime_data.counter_type1 == CounterType::LEAKAGE)
+        {
+            ret[F("redirect")] = F("/index.html");
+        }
+        else if (sett.counter1_name == CounterName::ELECTRO)
         {
             ret[F("redirect")] = F("/input/1/input_electro_detect.html");
         }

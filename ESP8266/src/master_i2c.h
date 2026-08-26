@@ -70,6 +70,9 @@ public:
     bool getAttinyData(AttinyData &data);
     bool setWakeUpPeriod(uint16_t per);
     bool setCountersType(const uint8_t type0, const uint8_t type1);
+    bool setAlarmConfig(const uint16_t interval0, const uint16_t leak_min0,
+                        const uint16_t interval1, const uint16_t leak_min1);
+    bool confirmAlarm();
     bool setTransmitMode();
     bool setSetupMode();
     bool setSleep();

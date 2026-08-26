@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Тревоги</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
+        <script src="/static/strings.js"></script>
+    </head>
+    <body onload="fill_alarms(%counter0_name%, %counter1_name%, %alarm_ready0%, %alarm_ready1%);
+    _init({back: '/index.html', next: '/index.html'});">
+        <form onsubmit="formSubmit(event, this, '/api/save_alarms');">
+            <div class="wrap">
+                <div class="container f1">
+                    <header>
+                        <a onclick="_goto()">
+                            <div class="icon bf">
+                                <img src="/images/icons.png">
+                            </div>
+                            Назад</a>
+                        <div class="icon logo">
+                            <img src="/images/icons.png">
+                        </div>
+                    </header>
+                    <main>
+                        <h2>Тревоги</h2>
+                        <p class="text">Ватериус разбудит себя и сообщит об аварии, не дожидаясь очередной отправки показаний. Ноль — тревога выключена.</p>
+                        <p class="form-error hd"></p>
+
+                        <div id="alarm1">
+                            <h3 class="mt24"><span class="circle"></span><span id="counter1_title"></span></h3>
+                            <div class="f-row">
+                                <label for="alarm_flow1"><span data-alarm-label="1"></span></label>
+                                <input pattern="^\d{1,5}$" id="alarm_flow1" name="alarm_flow1" placeholder="0" value="%alarm_flow1%">
+                                <p class="note">Прорыв трубы: расход выше порога.</p>
+                                <p class="error hd" id="alarm_flow1-error">Целое число от 0 до 65535</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="alarm_leak1">Непрерывный расход, мин</label>
+                                <input pattern="^\d{1,5}$" id="alarm_leak1" name="alarm_leak1" placeholder="0" value="%alarm_leak1%">
+                                <p class="note">Протечка: вода не останавливается дольше этого времени.</p>
+                                <p class="error hd" id="alarm_leak1-error">Целое число от 0 до 65535</p>
+                            </div>
+                        </div>
+
+                        <div id="alarm0">
+                            <h3 class="mt24"><span class="circle hot"></span><span id="counter0_title"></span></h3>
+                            <div class="f-row">
+                                <label for="alarm_flow0"><span data-alarm-label="0"></span></label>
+                                <input pattern="^\d{1,5}$" id="alarm_flow0" name="alarm_flow0" placeholder="0" value="%alarm_flow0%">
+                                <p class="note">Прорыв трубы: расход выше порога.</p>
+                                <p class="error hd" id="alarm_flow0-error">Целое число от 0 до 65535</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="alarm_leak0">Непрерывный расход, мин</label>
+                                <input pattern="^\d{1,5}$" id="alarm_leak0" name="alarm_leak0" placeholder="0" value="%alarm_leak0%">
+                                <p class="note">Протечка: вода не останавливается дольше этого времени.</p>
+                                <p class="error hd" id="alarm_leak0-error">Целое число от 0 до 65535</p>
+                            </div>
+                        </div>
+
+                        <p class="note mt16 hd" id="alarm_none"></p>
+                    </main>
+                    <footer class="btns">
+                        <button class="btn" type="submit">Сохранить</button>
+                    </footer>
+                </div>
+            </div>
+        </form>
+    </body>
+</html>

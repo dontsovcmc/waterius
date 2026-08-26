@@ -128,6 +128,19 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("json_attributes_template")] = json_attributes_template;
     }
 
+    /*
+    Состояния тревог (#202). Значения ровно те, что кладёт в JSON json.cpp:
+    единица и ноль, как у переключателя ниже. Числами, а не true/false, потому
+    что шаблон value_template проходит через Jinja, и булево значение JSON
+    отрендерилось бы как "True" - сущность бы не переключалась.
+    */
+    if (strcmp(entity_type, "binary_sensor") == 0)
+    {
+        // https://www.home-assistant.io/integrations/binary_sensor.mqtt
+        entity[F("pl_on")] = F("1");  // payload_on
+        entity[F("pl_off")] = F("0"); // payload_off
+    }
+
     if (strcmp(entity_type, "switch") == 0)
     {
         // https://www.home-assistant.io/integrations/switch.mqtt
@@ -158,6 +171,28 @@ String build_entity_discovery(const char *mqtt_topic,
 
         entity[F("min")] = 1;     // min
         entity[F("max")] = 99999; // max
+        entity[F("step")] = 1;    // step
+
+        entity[F("optimistic")] = true; // optimistic
+        entity[F("retain")] = true; //retain
+        entity[F("qos")] = 1; //qos
+    }
+
+    /*
+    Пороги тревог (#202): тот же number, что и "50", но min = 0 - нулём порог
+    выключается. С min = 1 тревогу нельзя было бы снять из Home Assistant.
+    */
+    if (strcmp(entity_type, "number") == 0 && strcmp(advanced_conf, "50z") == 0)
+    {
+        String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
+        entity[F("cmd_t")] = command_topic; // command_topic
+
+        entity[F("cmd_tpl")] = F("{{value | round(0) | int}}"); // command_template
+
+        entity[F("mode")] = F("box"); // mode "box"
+
+        entity[F("min")] = 0;     // min: 0 - тревога выключена
+        entity[F("max")] = 65535; // max
         entity[F("step")] = 1;    // step
 
         entity[F("optimistic")] = true; // optimistic
@@ -238,6 +273,7 @@ String build_entity_discovery(const char *mqtt_topic,
         options.add("ELECTRONIC");
         options.add("ELECTRONIC_HIGH");
         options.add("HALL");
+        options.add("LEAKAGE");
         options.add("NOT_USED");
 
         //"value_template": "{% set values = { \"0\":\"WATER_COLD\", \"1\":\"WATER_HOT\", \"2\":\"ELECTRO\", \"3\":\"GAS\", \"4\":\"HEAT\", \"5\":\"PORTABLE_WATER\", \"6\": \"OTHER\" } %} {{ values[ value_json.cname0 ] if value_json.cname0 in values.keys() else \"6\" }}",
@@ -247,13 +283,14 @@ String build_entity_discovery(const char *mqtt_topic,
             F("{% elif value_json.") + entity_id + F("==2 %} ELECTRONIC ") +
             F("{% elif value_json.") + entity_id + F("==3 %} HALL ") +
             F("{% elif value_json.") + entity_id + F("==4 %} ELECTRONIC_HIGH ") +
+            F("{% elif value_json.") + entity_id + F("==5 %} LEAKAGE ") +
             F("{% elif value_json.") + entity_id + F("==255 %} NOT_USED ") + 
             F("{% endif %}");
 
         entity[F("val_tpl")] = value_template;
 
         //"command_template": "{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1,  \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %}  {{ values[value] if value in values.keys() else 6 }}",
-        String cmd_tpl = F("{% set values = { \"MECHANIC\":0, \"ELECTRONIC\":2, \"ELECTRONIC_HIGH\":4, \"HALL\":3, \"NOT_USED\":255} %} {{ values[value] if value in values.keys() else 255 }}");
+        String cmd_tpl = F("{% set values = { \"MECHANIC\":0, \"ELECTRONIC\":2, \"ELECTRONIC_HIGH\":4, \"HALL\":3, \"LEAKAGE\":5, \"NOT_USED\":255} %} {{ values[value] if value in values.keys() else 255 }}");
         entity[F("cmd_tpl")] = cmd_tpl;
 
         entity[F("optimistic")] = true; // optimistic

@@ -62,7 +62,7 @@ ParamError parse_decimal(const char *value, float &out);
 строка и любой мусор — ошибка. Значение, не влезающее в тип, раньше
 молча обрезалось: 70000 сохранялось как 4464.
 */
-ParamError parse_uint16(const char *value, uint16_t &out);
+ParamError parse_uint16(const char *value, uint16_t &out, const bool zero_ok = false);
 
 /*
 Целое 0..255 (ноль допустим только с zero_ok). Правила те же.
