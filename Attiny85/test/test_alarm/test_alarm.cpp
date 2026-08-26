@@ -331,6 +331,70 @@ TEST(AlarmReportTest, ConfirmStopsRetries)
     EXPECT_FALSE(r.failed());
 }
 
+/*
+Полный цикл датчика протечки: намок - доложили, высох - доложили снова.
+
+Ниже session() повторяет то, что делает главный цикл attiny вокруг сеанса:
+новость превращается в доклад, состояние замораживается до подтверждения.
+*/
+static bool session(AlarmDetector &a, AlarmReport &r, const bool delivered)
+{
+    const bool woke = r.pending || a.changed;
+
+    if (a.changed)
+    {
+        r.start();
+        a.changed = 0;
+    }
+    a.hold(r.pending);
+
+    if (delivered)
+        r.confirm();
+    else if (r.pending)
+        r.failed();
+
+    a.hold(r.pending);
+    return woke;
+}
+
+TEST(AlarmReportTest, WetSensorReportsBothEdges)
+{
+    AlarmDetector a;
+    AlarmReport r;
+
+    // Намок
+    a.set_wet(true);
+    EXPECT_TRUE(session(a, r, true));
+    EXPECT_TRUE(a.state & ALARM_WET);
+
+    // Высох - это тоже новость, и её тоже надо отвезти
+    a.set_wet(false);
+    EXPECT_EQ(a.changed, 1);
+    EXPECT_TRUE(session(a, r, true));
+    EXPECT_FALSE(a.state & ALARM_WET);
+
+    // Больше докладывать нечего
+    EXPECT_FALSE(session(a, r, true));
+}
+
+TEST(AlarmReportTest, ScheduledSessionCarriesTheNews)
+{
+    /*
+    Плановый сеанс увозит состояние не хуже внепланового: Header ЕСП читает
+    всегда. Раньше флаг "есть новость" после него оставался, и устройство
+    просыпалось ещё раз - доложить уже доложенное.
+    */
+    AlarmDetector a;
+    AlarmReport r;
+
+    a.set_wet(true);
+    session(a, r, true); // сеанс по расписанию, подвернулся первым
+
+    EXPECT_EQ(a.changed, 0);
+    EXPECT_EQ(r.pending, 0);
+    EXPECT_FALSE(session(a, r, true)); // второго пробуждения быть не должно
+}
+
 TEST(AlarmReportTest, StateFrozenBetweenRetries)
 {
     /*

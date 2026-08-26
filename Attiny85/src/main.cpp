@@ -528,6 +528,9 @@ void loop()
 
 	unsigned long wake_up_limit = SETUP_TIME_MSEC;  // 10 мин при настройке
 
+	// Разбудила тревога, а не расписание и не кнопка
+	const bool alarm_wake = alarm_pending();
+
 	if (button.press == ButtonPressType::LONG)
 	{ 
 		LOG(F("SETUP pressed"));
@@ -542,20 +545,8 @@ void loop()
 			LOG(F("Manual transmit wake up"));
 			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
 		}
-		else if (alarm_pending())
+		else if (alarm_wake)
 		{
-			// Новая тревога начинает доклад заново: счётчик попыток с нуля
-			if (alarm0.changed || alarm1.changed)
-			{
-				alarm_report.start();
-				alarm0.changed = 0;
-				alarm1.changed = 0;
-			}
-			// Пока ЕСП не подтвердит доставку, состояние не снимаем: иначе
-			// тревога успела бы погаснуть до чтения байта флагов
-			alarm0.hold(true);
-			alarm1.hold(true);
-
 			wake_up_limit = WAIT_ESP_MSEC;
 			LOG(F("Alarm wake up"));
 			slaveI2C.begin(ALARM_MODE);
@@ -571,6 +562,26 @@ void loop()
 	// Нажатие кнопки обработали и удаляем
 	button.reset();
 	info.voltage = readVcc(); // Прочитаем Vcc после включения ESP
+
+	/*
+	Любой сеанс показывает серверу текущее состояние тревог: Header ЕСП читает
+	всегда. Поэтому новость считается отданной независимо от режима, а ждём мы
+	не сеанса, а подтверждения доставки.
+
+	Иначе после планового сеанса, увёзшего свежую тревогу, флаг "есть новость"
+	остался бы висеть, и устройство проснулось бы ещё раз - доложить уже
+	доложенное.
+	*/
+	if (alarm0.changed || alarm1.changed)
+	{
+		alarm_report.start();
+		alarm0.changed = 0;
+		alarm1.changed = 0;
+	}
+	// Пока ЕСП не подтвердит доставку, состояние не снимаем: иначе тревога
+	// успела бы погаснуть до чтения байта флагов
+	alarm0.hold(alarm_report.pending);
+	alarm1.hold(alarm_report.pending);
 
 	esp.power(true);
 
@@ -604,7 +615,12 @@ void loop()
 	alarm0.hold(alarm_report.pending);
 	alarm1.hold(alarm_report.pending);
 
-	if (alarm_report.pending || alarm0.state || alarm1.state)
+	/*
+	Пауза после внепланового сеанса - и до следующей попытки, и просто чтобы
+	дребезжащий датчик протечки не поднимал ЕСП по кругу. Без неё связка
+	"намок - высох - намок" будила бы устройство на каждом переходе.
+	*/
+	if (alarm_report.pending || alarm_wake)
 	{
 		alarm_hold_min = ALARM_HOLD_MIN;
 	}
