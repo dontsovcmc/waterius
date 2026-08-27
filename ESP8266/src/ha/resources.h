@@ -121,6 +121,12 @@ static const char s_alarm_leak[] PROGMEM = "alarm_leak";
 static const char s_alarm_leak_name[] PROGMEM = "Alarm: continuous flow";
 static const char s_alarm_wet[] PROGMEM = "alarm_wet";
 static const char s_alarm_wet_name[] PROGMEM = "Alarm: water sensor";
+static const char s_as[] PROGMEM = "as";
+static const char s_as_name[] PROGMEM = "Alarm stop hours";
+static const char s_alarm_stop[] PROGMEM = "alarm_stop";
+static const char s_alarm_stop_name[] PROGMEM = "Alarm: consumption stopped";
+static const char s_vac[] PROGMEM = "vac";
+static const char s_vac_name[] PROGMEM = "Away mode";
 static const char s_icon_numeric[] PROGMEM = "mdi:numeric";
 static const char s_cname_name[] PROGMEM = "Resource Type";
 static const char s_cname[] PROGMEM = "cname";
@@ -136,6 +142,9 @@ min = 1, а нулём пороги выключаются - без этого �
 static const char s_format50z[] PROGMEM = "50z";
 static const char s_lph[] PROGMEM = "L/h";
 static const char s_watt[] PROGMEM = "W";
+static const char s_hour[] PROGMEM = "h";
+static const char s_icon_home_export[] PROGMEM = "mdi:home-export-outline";
+static const char s_icon_water_off[] PROGMEM = "mdi:water-off";
 static const char s_binary_sensor[] PROGMEM = "binary_sensor";
 static const char s_problem[] PROGMEM = "problem";
 static const char s_moisture[] PROGMEM = "moisture";
@@ -167,6 +176,8 @@ static const char s_sc_name[] PROGMEM = "Send on consumption";
 */
 static const char *const ENTITY_SEND_ON_CONSUMPTION[MQTT_PARAM_COUNT] PROGMEM =
     {s_switch, s_sc_name, s_sc, "", "", "", s_config, s_icon_water_sync, ""};
+static const char *const ENTITY_VACATION[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_vac_name, s_vac, "", "", "", s_config, s_icon_home_export, ""};               // vac Режим "я уехал" (#88)
 
 static const char *const ENTITY_PERIOD_MIN[MQTT_PARAM_COUNT] PROGMEM =  
     {s_number, s_period_min_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50};
@@ -294,6 +305,10 @@ static const char *const ENTITY_CHANNEL_ALARM_LEAK[MQTT_PARAM_COUNT] PROGMEM =
     {s_binary_sensor, s_alarm_leak_name, s_alarm_leak, "", s_problem, "", "", s_icon_water_sync, ""};
 static const char *const ENTITY_CHANNEL_ALARM_WET[MQTT_PARAM_COUNT] PROGMEM =
     {s_binary_sensor, s_alarm_wet_name, s_alarm_wet, "", s_moisture, "", "", "", ""};
+static const char *const ENTITY_CHANNEL_ALARM_STOP_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_as_name, s_as, "", "", s_hour, s_config, s_icon_water_off, s_format50z};      // asN Часов без расхода
+static const char *const ENTITY_CHANNEL_ALARM_STOP[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_alarm_stop_name, s_alarm_stop, "", s_problem, "", "", s_icon_water_off, ""};
 
 
 /**

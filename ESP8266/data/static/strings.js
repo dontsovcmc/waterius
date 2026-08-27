@@ -58,6 +58,7 @@ const CounterType_ELECTRONIC = 2;
 const CounterType_HALL = 3;
 const CounterType_ELECTRONIC_HIGH = 4;
 const CounterType_LEAKAGE = 5;
+const CounterType_LEAKAGE_NC = 6;
 const CounterType_NONE = 0xFF;
 
 // Спецзначения веса импульса, ESP8266/src/core/types.h
@@ -149,18 +150,19 @@ const COUNTER_TYPES = {};
 COUNTER_TYPES[CounterType_NAMUR] = "Механический";
 COUNTER_TYPES[CounterType_ELECTRONIC] = "Электронный";
 COUNTER_TYPES[CounterType_ELECTRONIC_HIGH] = "Электронный (+)";
-COUNTER_TYPES[CounterType_LEAKAGE] = "Датчик протечки";
+COUNTER_TYPES[CounterType_LEAKAGE] = "Датчик протечки (замыкание)";
+COUNTER_TYPES[CounterType_LEAKAGE_NC] = "Датчик протечки (размыкание)";
 COUNTER_TYPES[CounterType_NONE] = "Выключен";
 
 const S_COUNTER_DISABLED = "Отключён";
 
 /*
-Тревоги не настроить: либо вес импульса ещё не определён, либо прошивка
-attiny старее 41. Обновляется она только программатором, поэтому у части
-устройств в поле так и останется.
+Настраивать нечего: ни один вход не считает импульсы. Порог расхода вдобавок
+требует прошивки attiny 41 или новее, но остановка потребления считается на
+ЕСП и работает на любой - поэтому про версию тут уже не пишем.
 */
-const S_ALARM_NOT_READY = "Тревоги недоступны: сначала настройте счётчики. " +
-    "Если счётчики настроены, нужна прошивка attiny 41 или новее.";
+const S_ALARM_NOT_READY = "Тревоги недоступны: ни один вход не считает импульсы. " +
+    "Сначала настройте счётчики.";
 
 /*
 Ресурс по номеру. Неизвестное значение — это "Другой": чужое число может
@@ -260,12 +262,18 @@ ready приходит от прошивки: тревоги требуют из
 не старее 41. Настройку, которая ничего не делает, лучше не показывать вовсе,
 чем показать неработающей.
 */
-function fill_alarms(counter0_name, counter1_name, ready0, ready1) {
+/*
+Пороги расхода и остановку прячем по отдельности: расход считает attiny и ему
+нужен известный вес импульса, а остановку считает сама ЕСП по приросту
+импульсов - она доступна и на старой прошивке attiny, и до настройки веса.
+*/
+function fill_alarms(counter0_name, counter1_name, ready0, ready1, stop0, stop1) {
     fill_counter0_title(counter0_name, CounterType_NAMUR);
     fill_counter1_title(counter1_name, CounterType_NAMUR);
 
     var names = [counter0_name, counter1_name];
     var ready = [ready0, ready1];
+    var stop = [stop0, stop1];
 
     document.querySelectorAll('[data-alarm-label]').forEach(function(q) {
         q.textContent = alarm_flow_label(names[Number(q.dataset.alarmLabel)]);
@@ -273,11 +281,17 @@ function fill_alarms(counter0_name, counter1_name, ready0, ready1) {
 
     for (var i = 0; i < 2; i++) {
         if (!ready[i]) {
+            document.getElementById('thresholds' + i).classList.add('hd');
+        }
+        if (!stop[i]) {
+            document.getElementById('stop' + i).classList.add('hd');
+        }
+        if (!ready[i] && !stop[i]) {
             document.getElementById('alarm' + i).classList.add('hd');
         }
     }
 
-    if (!ready0 && !ready1) {
+    if (!ready0 && !ready1 && !stop0 && !stop1) {
         var note = document.getElementById('alarm_none');
         note.textContent = S_ALARM_NOT_READY;
         note.classList.remove('hd');

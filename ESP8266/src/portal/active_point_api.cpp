@@ -12,6 +12,7 @@
 #include "core/input.h"
 #include "core/diagnostics.h"
 #include "core/alarm.h"
+#include "core/idle.h"
 #include "core/url.h"
 #include "core/wifi.h"
 #include "wifi_helpers.h"
@@ -496,6 +497,33 @@ void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj, 
     }
 }
 
+/*
+Порог остановки потребления: часы, не больше ALARM_STOP_MAX_HOURS.
+
+Выше счётчик простоя просто не досчитает - он ведётся в минутах и упирается в
+65535. Молча не работающая тревога хуже отсутствующей, поэтому не принимаем.
+*/
+static void save_stop_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
+{
+    uint16_t value = 0;
+    ParamError err = parse_uint16(p->value().c_str(), value, true); // ноль - выключено
+
+    if (err == PARAM_OK && value > ALARM_STOP_MAX_HOURS)
+    {
+        err = PARAM_ERR_VALUE;
+    }
+
+    if (err == PARAM_OK)
+    {
+        v = value;
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+    }
+    else
+    {
+        report_param_error(p, errorsObj, err);
+    }
+}
+
 void save_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok)
 {
     ParamError err = parse_uint8(p->value().c_str(), v, zero_ok);
@@ -722,6 +750,19 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
                 break;
         }
     }
+    else if (name == FPSTR(PARAM_ALARM_STOP) || name == FPSTR(s_as)) // portal || ha
+    {
+        // Часов без расхода. 0 - выключено
+        switch (input)
+        {
+            case INPUT0_RED:
+                save_stop_param(p, sett.alarm_stop0, errorsObj);
+                break;
+            case INPUT1_BLUE:
+                save_stop_param(p, sett.alarm_stop1, errorsObj);
+                break;
+        }
+    }
     else if (name == FPSTR(PARAM_FACTOR) || name == FPSTR(s_f)) // portal || ha
     {
         uint16_t value = p->value().toInt();
@@ -805,6 +846,10 @@ void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
     else if (name == FPSTR(PARAM_SEND_ON_CONSUMPTION) || name == FPSTR(s_sc))  // portal || ha
     {
         save_bool_param(p, sett.send_on_consumption, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_VACATION) || name == FPSTR(s_vac))  // portal || ha
+    {
+        save_bool_param(p, sett.vacation, errorsObj);
     }
 }
 
@@ -997,6 +1042,15 @@ void post_api_save_alarms(AsyncWebServerRequest *request)
     save_uint16_param(request, FPSTR(PARAM_ALARM_FLOW1), sett.alarm_flow1, errorsObj);
     save_uint16_param(request, FPSTR(PARAM_ALARM_LEAK1), sett.alarm_leak1, errorsObj);
 
+    if (request->hasParam(FPSTR(PARAM_ALARM_STOP0), true))
+        save_stop_param(request->getParam(FPSTR(PARAM_ALARM_STOP0), true), sett.alarm_stop0, errorsObj);
+    if (request->hasParam(FPSTR(PARAM_ALARM_STOP1), true))
+        save_stop_param(request->getParam(FPSTR(PARAM_ALARM_STOP1), true), sett.alarm_stop1, errorsObj);
+
+    // Галочка приходит всегда: common.js шлёт 0 или 1, а не отсутствие поля
+    if (request->hasParam(FPSTR(PARAM_VACATION), true))
+        save_bool_param(request->getParam(FPSTR(PARAM_VACATION), true), sett.vacation, errorsObj);
+
     if (errorsObj.size() == 0)
     {
         store_config(sett);
@@ -1022,7 +1076,8 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     if (input == INPUT0_RED)
     {
         // Датчик протечки - не счётчик: ни веса импульса, ни показаний (#202)
-        if (runtime_data.counter_type0 == CounterType::LEAKAGE)
+        if (runtime_data.counter_type0 == CounterType::LEAKAGE ||
+            runtime_data.counter_type0 == CounterType::LEAKAGE_NC)
         {
             ret[F("redirect")] = F("/index.html");
         }
@@ -1046,7 +1101,8 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     else if (input == INPUT1_BLUE)
     {
         // Датчик протечки - не счётчик: ни веса импульса, ни показаний (#202)
-        if (runtime_data.counter_type1 == CounterType::LEAKAGE)
+        if (runtime_data.counter_type1 == CounterType::LEAKAGE ||
+            runtime_data.counter_type1 == CounterType::LEAKAGE_NC)
         {
             ret[F("redirect")] = F("/index.html");
         }

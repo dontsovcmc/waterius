@@ -112,3 +112,72 @@ TEST(Alarm, DisabledInputHasNoAlarms)
 {
     EXPECT_FALSE(alarm_configurable(CounterType::NONE, 10));
 }
+
+TEST(Alarm, LeakSensorHasNoFlowThreshold)
+{
+    // Датчик протечки не считает импульсы: порог расхода ему не из чего считать
+    EXPECT_FALSE(alarm_configurable(CounterType::LEAKAGE, 10));
+    EXPECT_FALSE(alarm_configurable(CounterType::LEAKAGE_NC, 10));
+}
+
+// --- режим "я уехал" (#88) ---
+
+TEST(Vacation, OverridesThreshold)
+{
+    // Уехал - тревогой становится любой расход, а не только выше порога
+    EXPECT_EQ(alarm_interval_ticks(true, CounterType::NAMUR, 600, 10, false), UINT16_MAX);
+    EXPECT_EQ(alarm_interval_ticks(true, CounterType::ELECTRONIC, 3000, 1000, true), UINT16_MAX);
+}
+
+TEST(Vacation, OffKeepsUserThreshold)
+{
+    EXPECT_EQ(alarm_interval_ticks(false, CounterType::NAMUR, 600, 10, false),
+              flow_to_interval_ticks(600, 10, false));
+}
+
+TEST(Vacation, OverridesEvenDisabledAlarm)
+{
+    // Порог не задан, но уехал - расход всё равно должен стать тревогой:
+    // иначе режим молча не работал бы на самых частых настройках
+    EXPECT_EQ(alarm_interval_ticks(true, CounterType::NAMUR, 0, 10, false), UINT16_MAX);
+}
+
+TEST(Vacation, WorksWithoutKnownImpulseWeight)
+{
+    /*
+    Вес импульса нужен, чтобы пересчитать литры в час в тики. Режиму отпуска
+    пересчитывать нечего: тревогой объявлен любой импульс. Спецзначение веса
+    (вход ещё не настроен до конца) не должно молча выключать режим.
+    */
+    EXPECT_EQ(alarm_interval_ticks(true, CounterType::NAMUR, 0, AUTO_IMPULSE_FACTOR, false),
+              UINT16_MAX);
+    EXPECT_EQ(alarm_interval_ticks(true, CounterType::NAMUR, 0, AS_COLD_CHANNEL, false),
+              UINT16_MAX);
+
+    // А обычный порог без веса импульса по-прежнему не посчитать
+    EXPECT_EQ(alarm_interval_ticks(false, CounterType::NAMUR, 600, AUTO_IMPULSE_FACTOR, false), 0);
+}
+
+TEST(Vacation, SkipsInputsWithoutImpulses)
+{
+    // У датчика протечки и выключенного входа импульсов нет
+    EXPECT_EQ(alarm_interval_ticks(true, CounterType::LEAKAGE, 600, 10, false), 0);
+    EXPECT_EQ(alarm_interval_ticks(true, CounterType::LEAKAGE_NC, 600, 10, false), 0);
+    EXPECT_EQ(alarm_interval_ticks(true, CounterType::NONE, 600, 10, false), 0);
+}
+
+TEST(Vacation, SaturatedThresholdNeverClears)
+{
+    /*
+    attiny снимает тревогу расхода, когда (ticks >> 1) > min_interval. При
+    максимальном пороге это невозможно ни при каком ticks, поэтому "расход
+    был" держится до выключения режима - и оповещение приходит один раз.
+    */
+    const uint16_t interval = alarm_interval_ticks(true, CounterType::NAMUR, 0, 10, false);
+
+    for (uint32_t ticks = 0; ticks <= UINT16_MAX; ticks += 257)
+    {
+        ASSERT_LE(ticks >> 1, interval) << "ticks=" << ticks;
+    }
+    EXPECT_LE((uint32_t)UINT16_MAX >> 1, interval);
+}

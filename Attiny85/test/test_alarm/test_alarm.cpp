@@ -335,11 +335,19 @@ TEST(AlarmReportTest, ConfirmStopsRetries)
 Полный цикл датчика протечки: намок - доложили, высох - доложили снова.
 
 Ниже session() повторяет то, что делает главный цикл attiny вокруг сеанса:
-новость превращается в доклад, состояние замораживается до подтверждения.
+новость превращается в доклад, состояние замораживается до подтверждения,
+бюджет внеплановых сеансов тратится или начинается заново.
+
+@param scheduled сеанс по расписанию, а не по тревоге
+@return состоялся ли внеплановый сеанс
 */
-static bool session(AlarmDetector &a, AlarmReport &r, const bool delivered)
+static bool session(AlarmDetector &a, AlarmReport &r, const bool delivered,
+                    const bool scheduled = false)
 {
-    const bool woke = r.pending || a.changed;
+    const bool alarm_wake = r.budget_left() && (r.pending || a.changed);
+
+    if (!scheduled && !alarm_wake)
+        return false; // будить нечем: ни новости, ни бюджета
 
     if (a.changed)
     {
@@ -353,8 +361,29 @@ static bool session(AlarmDetector &a, AlarmReport &r, const bool delivered)
     else if (r.pending)
         r.failed();
 
-    a.hold(r.pending);
-    return woke;
+    if (scheduled)
+        r.new_period();
+    else
+        r.spend();
+
+    a.hold(r.pending && r.budget_left());
+    return !scheduled && alarm_wake;
+}
+
+/*
+Сколько внеплановых сеансов вытянет из устройства дребезжащий датчик.
+*/
+static int chatter(AlarmDetector &a, AlarmReport &r, const int transitions)
+{
+    int wakeups = 0;
+
+    for (int i = 0; i < transitions; i++)
+    {
+        a.set_wet(i % 2 == 0);
+        if (session(a, r, true))
+            wakeups++;
+    }
+    return wakeups;
 }
 
 TEST(AlarmReportTest, WetSensorReportsBothEdges)
@@ -388,7 +417,7 @@ TEST(AlarmReportTest, ScheduledSessionCarriesTheNews)
     AlarmReport r;
 
     a.set_wet(true);
-    session(a, r, true); // сеанс по расписанию, подвернулся первым
+    session(a, r, true, true); // сеанс по расписанию, подвернулся первым
 
     EXPECT_EQ(a.changed, 0);
     EXPECT_EQ(r.pending, 0);
@@ -437,4 +466,83 @@ TEST(AlarmReportTest, NewAlarmResetsTries)
         wakeups++;
 
     EXPECT_EQ(wakeups, ALARM_MAX_TRIES);
+}
+
+
+/*
+Дребезг датчика протечки ограничен бюджетом, а не только паузой (issue #202).
+
+Пауза в ALARM_HOLD_MIN задаёт темп - двенадцать сеансов в час, - но не потолок:
+ALARM_MAX_TRIES считает попытки одного доклада, а каждый новый переход датчика
+начинал счёт заново. Без бюджета связка "намок - высох - намок" держала бы
+устройство в эфире до конца батареи.
+*/
+TEST(AlarmReportTest, WetChatterIsBounded)
+{
+    AlarmDetector a;
+    AlarmReport r;
+
+    EXPECT_EQ(chatter(a, r, 20), ALARM_MAX_SESSIONS);
+}
+
+/*
+Плановый сеанс увозит текущее состояние, поэтому бюджет начинается заново.
+*/
+TEST(AlarmReportTest, ScheduledSessionRestoresBudget)
+{
+    AlarmDetector a;
+    AlarmReport r;
+
+    ASSERT_EQ(chatter(a, r, 20), ALARM_MAX_SESSIONS);
+    ASSERT_FALSE(r.budget_left());
+
+    session(a, r, true, true);
+    EXPECT_TRUE(r.budget_left());
+
+    a.set_wet(true);
+    EXPECT_TRUE(session(a, r, true));
+}
+
+/*
+Исчерпанный бюджет новость не теряет: она уезжает ближайшим плановым сеансом.
+*/
+TEST(AlarmReportTest, ExhaustedBudgetKeepsTheNews)
+{
+    AlarmDetector a;
+    AlarmReport r;
+
+    ASSERT_EQ(chatter(a, r, 20), ALARM_MAX_SESSIONS);
+
+    a.set_wet(true);
+    ASSERT_EQ(a.changed, 1);
+
+    EXPECT_FALSE(session(a, r, true)); // внепланово больше не будим
+    EXPECT_EQ(a.changed, 1);           // но и новость не выбрасываем
+
+    session(a, r, true, true);
+    EXPECT_EQ(a.changed, 0);
+}
+
+/*
+Кончился бюджет - отпускаем состояние.
+
+Держать его дальше значит увезти плановым сеансом застывшую тревогу вместо
+правды: за сутки до этого сеанса датчик успеет высохнуть.
+*/
+TEST(AlarmReportTest, ExhaustedBudgetReleasesHold)
+{
+    AlarmDetector a;
+    AlarmReport r;
+
+    // Четыре новости доехали
+    ASSERT_EQ(chatter(a, r, 4), 4);
+
+    // Пятая - уже без сети: бюджет кончился, а доклад не подтверждён
+    a.set_wet(true);
+    ASSERT_TRUE(session(a, r, false));
+    ASSERT_EQ(r.pending, 1);
+    ASSERT_FALSE(r.budget_left());
+
+    a.set_wet(false);
+    EXPECT_FALSE(a.state & ALARM_WET);
 }

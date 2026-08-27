@@ -17,6 +17,7 @@
 #include "core/input.h"
 #include "core/portal_watchdog.h"
 #include "core/alarm.h"
+#include "core/idle.h"
 #include "resources.h"
 #include "ha/resources.h"
 #include "active_point_api.h"
@@ -236,6 +237,12 @@ String processor_main(const String &var, const uint8_t input)
         return String(sett.alarm_leak0);
     else if (var == FPSTR(PARAM_ALARM_LEAK1))
         return String(sett.alarm_leak1);
+    else if (var == FPSTR(PARAM_ALARM_STOP0))
+        return String(sett.alarm_stop0);
+    else if (var == FPSTR(PARAM_ALARM_STOP1))
+        return String(sett.alarm_stop1);
+    else if (var == FPSTR(PARAM_VACATION))
+        return template_bool(sett.vacation);
 
     /*
     Можно ли вообще настроить тревоги на входе: нужен известный вес импульса
@@ -248,6 +255,15 @@ String processor_main(const String &var, const uint8_t input)
     else if (var == FPSTR(PARAM_ALARM_READY1))
         return String(runtime_data.version >= ATTINY_VER_ALARM &&
                       alarm_configurable(runtime_data.counter_type1, sett.factor1) ? 1 : 0);
+
+    /*
+    Остановку потребления считает ЕСП, а не attiny, поэтому версия прошивки
+    attiny тут ни при чём: достаточно, чтобы вход считал импульсы.
+    */
+    else if (var == FPSTR(PARAM_STOP_READY0))
+        return String(counts_impulses(runtime_data.counter_type0) ? 1 : 0);
+    else if (var == FPSTR(PARAM_STOP_READY1))
+        return String(counts_impulses(runtime_data.counter_type1) ? 1 : 0);
 
     else if (var == FPSTR(PARAM_COUNTER_IMG))
     {

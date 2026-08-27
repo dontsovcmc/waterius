@@ -33,6 +33,25 @@ uint16_t flow_to_interval_ticks(const uint16_t threshold, const uint16_t factor,
     return (uint16_t)ticks;
 }
 
+uint16_t alarm_interval_ticks(const bool vacation, const uint8_t counter_type,
+                              const uint16_t threshold, const uint16_t factor,
+                              const bool electricity)
+{
+    if (!counts_impulses(counter_type))
+    {
+        return 0;
+    }
+    if (vacation)
+    {
+        return UINT16_MAX;
+    }
+    if (!alarm_configurable(counter_type, factor))
+    {
+        return 0;
+    }
+    return flow_to_interval_ticks(threshold, factor, electricity);
+}
+
 uint8_t alarm_bits(const uint8_t attiny_flags, const uint8_t input,
                    const uint8_t attiny_version)
 {
@@ -47,7 +66,9 @@ uint8_t alarm_bits(const uint8_t attiny_flags, const uint8_t input,
 
 bool alarm_configurable(const uint8_t counter_type, const uint16_t factor)
 {
-    if (counter_type == CounterType::NONE)
+    if (counter_type == CounterType::NONE ||
+        counter_type == CounterType::LEAKAGE ||
+        counter_type == CounterType::LEAKAGE_NC)
     {
         return false;
     }

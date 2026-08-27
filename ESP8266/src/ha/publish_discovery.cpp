@@ -167,6 +167,7 @@ void publish_discovery_general_entities(PubSubClient &mqtt_client,
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_TIMESTAMP);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_SEND_ON_CONSUMPTION);
+    publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_VACATION);
     //нужно ли это прям диагностическая информация 
     //publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN_TUNED);
     /* Сенсор с атрибутами  Группа №1 */
@@ -250,7 +251,7 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client,
     Датчик протечки - не счётчик: показания по нему не растут, вес импульса и
     серийный номер бессмысленны. Публикуем только состояние (#202).
     */
-    if (counter_type == CounterType::LEAKAGE)
+    if (counter_type == CounterType::LEAKAGE || counter_type == CounterType::LEAKAGE_NC)
     {
         publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_WET, "", channel, channel_name);
         return;
@@ -308,8 +309,10 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client,
                                                                           : ENTITY_CHANNEL_ALARM_FLOW_CFG,
                                      "", channel, channel_name);
     publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_LEAK_CFG, "", channel, channel_name);
+    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_STOP_CFG, "", channel, channel_name);
     publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_FLOW, "", channel, channel_name);
     publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_LEAK, "", channel, channel_name);
+    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_STOP, "", channel, channel_name);
 
 }
 
