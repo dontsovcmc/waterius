@@ -21,3 +21,28 @@ bool need_transmit(const bool send_on_consumption, const bool consumed,
 
     return (uint32_t)minutes_since_send >= MAX_SILENCE_MIN;
 }
+
+uint16_t update_idle_minutes(const bool consumed, const uint16_t accumulated,
+                             const uint16_t minutes)
+{
+    if (consumed)
+    {
+        return 0;
+    }
+    return add_minutes(accumulated, minutes);
+}
+
+bool consumption_stopped(const uint16_t idle_min, const uint16_t stop_hours)
+{
+    if (stop_hours == 0)
+    {
+        return false; // тревога выключена
+    }
+
+    // Считаем в 32 битах: часы, умноженные на 60, из uint16_t выходят уже на
+    // 1093-м часе. Порог выше ALARM_STOP_MAX_HOURS отсекается при сохранении,
+    // но арифметика не должна зависеть от того, что кто-то это проверил
+    const uint32_t stop_min = (uint32_t)stop_hours * 60;
+
+    return (uint32_t)idle_min >= stop_min;
+}

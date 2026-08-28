@@ -11,6 +11,9 @@ extern void saveConfig();
 extern uint32_t wakeup_period;
 extern void extendWakeUpPeriod();
 extern bool is_esp_powered_long();
+extern uint8_t alarm_bits();
+extern void set_alarm_config(const uint8_t *data);
+extern void confirm_alarm();
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -60,7 +63,7 @@ void SlaveI2C::receiveEvent(int howMany)
     {
     case 'B': // данные
         // Флаги собираем в момент запроса: главному циклу их вести незачем
-        info.flags = is_esp_powered_long() ? HEADER_FLAG_ESP_POWERED_LONG : 0;
+        info.flags = (is_esp_powered_long() ? HEADER_FLAG_ESP_POWERED_LONG : 0) | alarm_bits();
         info.crc = crc_8((unsigned char *)&info, HEADER_DATA_SIZE);
         memcpy(txBuffer, &info, TX_BUFFER_SIZE);
         break;
@@ -86,6 +89,12 @@ void SlaveI2C::receiveEvent(int howMany)
         break;
     case 'C': // ESP присылает новую конфигурацию
         getCounterTypes();
+        break;
+    case 'A': // ESP присылает пороги тревог
+        getAlarmConfig();
+        break;
+    case 'K': // ESP подтверждает, что доложила о тревоге получателю
+        confirm_alarm();
         break;
     case 'V': // обновить напряжение
         info.voltage = readVcc();
@@ -123,6 +132,29 @@ void SlaveI2C::getCounterTypes()
     {
         memcpy((void*)&(info.config.types), data, sizeof(CounterTypes));
         saveConfig();
+    }
+}
+
+/*
+Пороги тревог: по два uint16 на канал, старшим байтом вперёд (issue #202).
+
+Живут в ОЗУ и приезжают в каждом сеансе, как период пробуждения: EEPROM не
+трогаем, иначе конфигурация у прошитых устройств не прошла бы проверку CRC.
+Цена - после замены батареек тревоги молчат до первого сеанса ЕСП.
+*/
+void SlaveI2C::getAlarmConfig()
+{
+    uint8_t data[8];
+
+    for (uint8_t i = 0; i < sizeof(data); i++)
+    {
+        data[i] = Wire.read();
+    }
+    uint8_t crc = Wire.read();
+
+    if (crc == crc_8(data, sizeof(data)))
+    {
+        set_alarm_config(data);
     }
 }
 

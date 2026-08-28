@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include <Arduino.h>
 #include "setup.h"
+#include "core/alarm.h"
 
 // https://github.com/lammertb/libcrc/blob/600316a01924fd5bb9d47d535db5b8f3987db178/src/crc8.c
 
@@ -196,6 +197,8 @@ bool MasterI2C::getAttinyData(AttinyData &data)
         << F(" on_pulse1:") << data.on_pulse1
         << F(" voltage:") << data.voltage
         << F(" flags:") << data.attiny_flags
+        << F(" alarm0:") << alarm_bits(data.attiny_flags, INPUT0_RED, data.version)
+        << F(" alarm1:") << alarm_bits(data.attiny_flags, INPUT1_BLUE, data.version)
         << F(" setups:") << data.setup_started_counter
         << F(" resets:") << data.resets
         << F(" model:") << data.model
@@ -257,6 +260,41 @@ bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
         return false;
     }
     return true;
+}
+
+/*
+Пороги тревог для attiny (issue #202).
+
+Уходят в каждом сеансе, как и период пробуждения: у attiny они живут в ОЗУ,
+а EEPROM там занята показаниями и конфигурацией входов.
+*/
+bool MasterI2C::setAlarmConfig(const uint16_t interval0, const uint16_t leak_min0,
+                               const uint16_t interval1, const uint16_t leak_min1)
+{
+    BusyGuard guard(i2c_busy);
+    uint8_t txBuf[10];
+
+    txBuf[0] = 'A';
+    txBuf[1] = (uint8_t)(interval0 >> 8);
+    txBuf[2] = (uint8_t)(interval0);
+    txBuf[3] = (uint8_t)(leak_min0 >> 8);
+    txBuf[4] = (uint8_t)(leak_min0);
+    txBuf[5] = (uint8_t)(interval1 >> 8);
+    txBuf[6] = (uint8_t)(interval1);
+    txBuf[7] = (uint8_t)(leak_min1 >> 8);
+    txBuf[8] = (uint8_t)(leak_min1);
+    txBuf[9] = crc_8(&txBuf[1], 8, INIT_ATTINY_CRC);
+
+    return sendData(txBuf, sizeof(txBuf));
+}
+
+/*
+Тревога доставлена получателю: attiny может перестать будить нас (issue #202).
+*/
+bool MasterI2C::confirmAlarm()
+{
+    BusyGuard guard(i2c_busy);
+    return sendCmd('K');
 }
 
 bool MasterI2C::extendWakeUp()

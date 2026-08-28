@@ -60,6 +60,8 @@ enum CounterType
     ELECTRONIC,
     HALL,
     ELECTRONIC_HIGH,    // электронный выход, импульс — подъём линии (issue #379)
+    LEAKAGE,            // датчик протечки: замыкание - тревога, а не импульс (issue #202)
+    LEAKAGE_NC,         // нормально-замкнутый датчик: тревога - размыкание (issue #202)
     NONE = 0xFF
 };
 
@@ -120,6 +122,8 @@ struct CounterB
                 break;
             case CounterType::DISCRETE:
             case CounterType::NAMUR:
+            case CounterType::LEAKAGE:
+            case CounterType::LEAKAGE_NC:
                 DDRB &= ~_BV(_pin);                 // Вход
                 PCMSK &= ~_BV(_pin);                // Прерывание по фронту не нужно: опрос раз в 250мс
                 break;
@@ -333,6 +337,14 @@ struct CounterB
             case CounterType::NAMUR:
             case CounterType::DISCRETE:
                 return discrete(event);
+            case CounterType::LEAKAGE:
+            case CounterType::LEAKAGE_NC:
+                // Срабатывание датчика - это тревога, а не показания: считаем его
+                // тем же кодом (там уже есть подтверждение через 50мс, #371),
+                // но импульс не возвращаем. Состояние берётся из on_pulse, а
+                // какой уровень считать тревогой, решает alarm_tick по типу.
+                discrete(event);
+                return false;
             case CounterType::NONE:
             default:
                 return false;

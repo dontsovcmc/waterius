@@ -8,6 +8,7 @@
 #include "Storage.h"
 #include "counter.h"
 #include "button.h"
+#include "alarm.h"
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include <avr/power.h>
@@ -20,6 +21,25 @@ TinyDebugSerial mySerial;
 
 /*
 Версии прошивок
+
+41 - 2026.08.26 - dontsov
+	1. Детекция аварий по импульсам счётчика. Issue #202.
+	   Большой расход: интервал между импульсами короче порога.
+	   Протечка: расход не прекращается дольше заданного времени - считается
+	   по ритму импульсов, а не по объёму за окно, иначе капающий кран (один
+	   импульс в 10 минут) не детектировался бы вовсе.
+	   Тревога прерывает сон и поднимает ЕСП вне расписания (ALARM_MODE).
+	2. Новые типы входа: LEAKAGE (5) - проводной датчик протечки, замыкание -
+	   тревога, импульсы не считаются; LEAKAGE_NC (6) - то же для нормально
+	   замкнутого датчика, где тревога размыкание. У второго обрывом провода
+	   становится авария, а не тишина.
+	3. Команда 'A' - пороги тревог от ЕСП, живут в ОЗУ как период пробуждения.
+	   Команда 'K' - ЕСП подтверждает, что доложила о тревоге получателю. Без
+	   подтверждения будим её снова, до ALARM_MAX_TRIES раз.
+	4. Внеплановых сеансов не больше ALARM_MAX_SESSIONS на период пробуждения.
+	   Пауза задаёт темп, бюджет - потолок: дребезжащий датчик иначе выдавал бы
+	   новости бесконечно, а счёт попыток начинался бы заново на каждой.
+	5. Тревоги уложены в свободные биты Header.flags: размер Header прежний.
 
 40 - 2026.08.25 - dontsov
 	1. В Header появился байт флагов (бывший reserved2, у старых прошивок
@@ -172,6 +192,14 @@ static CounterB counter1(3, 3); 	// Вход 2, Blynk: V1, холодная во
 
 static ESPPowerPin esp(1); // Питание на ESP
 
+// Детекция аварий (issue #202). Счётчик минут, пауза и доклад - общие на оба
+// канала: тревоги уезжают одним сеансом, а ОЗУ у attiny 512 байт
+static AlarmDetector alarm0;
+static AlarmDetector alarm1;
+static AlarmReport alarm_report;
+static uint8_t alarm_minute_ticks = 0;
+static uint8_t alarm_hold_min = 0;
+
 #if WATERIUS_MODEL == WATERIUS_MODEL_1
 static ButtonB button(2);  // PB2 кнопка (на линии SCL)
                            // Долгое нажатие: ESP включает точку доступа с веб сервером для настройки
@@ -237,6 +265,52 @@ ISR(PCINT0_vect)
 	event = CounterEvent::FRONT;
 }
 
+/*
+Ход времени для детекции аварий (issue #202).
+
+Тик опроса входов - 250мс, он же единственная мера времени у attiny: и во сне,
+и во время сеанса с ЕСП. Минута считается одним счётчиком на оба канала.
+*/
+inline void alarm_tick(CounterEvent ev)
+{
+	/*
+	Только по тику опроса. По фронту CounterB::discrete выходит, не читая вход,
+	поэтому on_pulse там ещё прошлый - а у нормально-замкнутого датчика прошлое
+	значение на старте это ложная тревога: до первого опроса on_pulse нулевой,
+	то есть "разомкнут".
+	*/
+	if (ev != CounterEvent::TIME)
+		return;
+
+	/*
+	Нормально-замкнутый датчик (LEAKAGE_NC) - то же состояние наоборот: тревога
+	не замыкание, а размыкание. Заодно тревогой становится обрыв провода,
+	который у нормально-разомкнутого неотличим от тишины.
+	*/
+	if (counter0.type == CounterType::LEAKAGE)
+		alarm0.set_wet(counter0.on_pulse);
+	else if (counter0.type == CounterType::LEAKAGE_NC)
+		alarm0.set_wet(!counter0.on_pulse);
+
+	if (counter1.type == CounterType::LEAKAGE)
+		alarm1.set_wet(counter1.on_pulse);
+	else if (counter1.type == CounterType::LEAKAGE_NC)
+		alarm1.set_wet(!counter1.on_pulse);
+
+	alarm0.on_tick();
+	alarm1.on_tick();
+
+	if (++alarm_minute_ticks < ALARM_TICKS_PER_MINUTE)
+		return;
+
+	alarm_minute_ticks = 0;
+	alarm0.on_minute();
+	alarm1.on_minute();
+
+	if (alarm_hold_min)
+		alarm_hold_min--;
+}
+
 // Проверяем входы на замыкание.
 // Замыкание засчитывается только при повторной проверке.
 inline void counting(CounterEvent ev)
@@ -245,6 +319,7 @@ inline void counting(CounterEvent ev)
 	{
 		info.data.value0++; 				//нужен т.к. при пробуждении запрашиваем данные
 		info.adc.adc0 = counter0.adc;
+		alarm0.on_pulse();
 #ifdef LOG_ON
 		LOG(F("Input0:"));
 		LOG(info.data.value0);
@@ -263,6 +338,7 @@ inline void counting(CounterEvent ev)
 	{
 		info.data.value1++;
 		info.adc.adc1 = counter1.adc;
+		alarm1.on_pulse();
 		if (storage_write_limit == 0)
 		{
 			storage.add(info.data);
@@ -271,6 +347,8 @@ inline void counting(CounterEvent ev)
 	}
 	info.on_pulse1 = counter1.on_time > 0;
 #endif
+
+	alarm_tick(ev);
 
 #ifdef COUNTER_DEBUG
 	noInterrupts();
@@ -307,6 +385,52 @@ void extendWakeUpPeriod()
 bool is_esp_powered_long()
 {
 	return esp.powered_longer_than(ESP_POWERED_LONG_MSEC);
+}
+
+/*
+Состояние тревог обоих каналов одним байтом (issue #202).
+
+Зовётся из SlaveI2C при сборке Header: главному циклу вести этот байт незачем.
+Раскладка - HEADER_ALARM_* в Setup.h.
+*/
+uint8_t alarm_bits()
+{
+	return (uint8_t)(alarm0.state << HEADER_ALARM_SHIFT0) |
+		   (uint8_t)(alarm1.state << HEADER_ALARM_SHIFT1);
+}
+
+/*
+Пороги тревог от ЕСП: по два uint16 на канал, старшим байтом вперёд.
+*/
+void set_alarm_config(const uint8_t *data)
+{
+	alarm0.configure((uint16_t)(data[0] << 8) | data[1],
+					 (uint16_t)(data[2] << 8) | data[3]);
+	alarm1.configure((uint16_t)(data[4] << 8) | data[5],
+					 (uint16_t)(data[6] << 8) | data[7]);
+}
+
+/*
+ЕСП доложила о тревоге получателю: повторять сеанс не нужно.
+*/
+void confirm_alarm()
+{
+	alarm_report.confirm();
+}
+
+/*
+Есть ли повод разбудить ЕСП вне расписания.
+
+Три условия. Пауза после сеанса задаёт темп: для подтверждённого доклада это
+защита от дребезга датчика протечки, для неподтверждённого - интервал до
+следующей попытки. Бюджет задаёт потолок: пауза одна лишь ограничивает частоту,
+но не количество, а дребезжащий датчик способен выдавать новости бесконечно.
+И наконец, собственно новость или неподтверждённый доклад.
+*/
+inline bool alarm_pending()
+{
+	return alarm_hold_min == 0 && alarm_report.budget_left() &&
+		   (alarm_report.pending || alarm0.changed || alarm1.changed);
 }
 
 //Запрос периода при инициализции. Также период может изменится после настройки.
@@ -396,7 +520,7 @@ void loop()
 	counter1.set_type((CounterType)info.config.types.type1);
 
 	wdt_count = 0;
-	while ((wdt_count < wakeup_period) && !button.pressed(event))
+	while ((wdt_count < wakeup_period) && !button.pressed(event) && !alarm_pending())
 	{
 		noInterrupts();
 		CounterEvent ev = event;
@@ -428,6 +552,9 @@ void loop()
 
 	unsigned long wake_up_limit = SETUP_TIME_MSEC;  // 10 мин при настройке
 
+	// Разбудила тревога, а не расписание и не кнопка
+	const bool alarm_wake = alarm_pending();
+
 	if (button.press == ButtonPressType::LONG)
 	{ 
 		LOG(F("SETUP pressed"));
@@ -442,6 +569,12 @@ void loop()
 			LOG(F("Manual transmit wake up"));
 			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
 		}
+		else if (alarm_wake)
+		{
+			wake_up_limit = WAIT_ESP_MSEC;
+			LOG(F("Alarm wake up"));
+			slaveI2C.begin(ALARM_MODE);
+		}
 		else
 		{
 			wake_up_limit = WAIT_ESP_MSEC; // 2 мин при передаче данных
@@ -453,6 +586,26 @@ void loop()
 	// Нажатие кнопки обработали и удаляем
 	button.reset();
 	info.voltage = readVcc(); // Прочитаем Vcc после включения ESP
+
+	/*
+	Любой сеанс показывает серверу текущее состояние тревог: Header ЕСП читает
+	всегда. Поэтому новость считается отданной независимо от режима, а ждём мы
+	не сеанса, а подтверждения доставки.
+
+	Иначе после планового сеанса, увёзшего свежую тревогу, флаг "есть новость"
+	остался бы висеть, и устройство проснулось бы ещё раз - доложить уже
+	доложенное.
+	*/
+	if (alarm0.changed || alarm1.changed)
+	{
+		alarm_report.start();
+		alarm0.changed = 0;
+		alarm1.changed = 0;
+	}
+	// Пока ЕСП не подтвердит доставку, состояние не снимаем: иначе тревога
+	// успела бы погаснуть до чтения байта флагов
+	alarm0.hold(alarm_report.pending);
+	alarm1.hold(alarm_report.pending);
 
 	esp.power(true);
 
@@ -469,6 +622,52 @@ void loop()
 	}
 
 	slaveI2C.end(); // выключаем i2c slave.
+
+	/*
+	Итог доклада о тревоге. Квитанцию присылает ЕСП командой 'K', когда данные
+	приняты получателем. Не пришла - пробуем ещё, но не больше ALARM_MAX_TRIES
+	раз: без сети сеансы только жгут батарею, а состояние всё равно уедет со
+	следующим плановым выходом на связь.
+	*/
+	if (alarm_report.pending)
+	{
+		alarm_report.failed();
+	}
+
+	/*
+	Бюджет внеплановых сеансов. Плановый сеанс увёз текущее состояние, значит
+	счёт начинается заново; внеплановый - потрачен.
+	*/
+	if (alarm_wake)
+	{
+		alarm_report.spend();
+	}
+	else
+	{
+		alarm_report.new_period();
+	}
+
+	/*
+	Состояние держим, пока доклад не подтверждён: между попытками тревога иначе
+	успела бы погаснуть, и на сервер уехало бы "всё хорошо".
+
+	Но только пока мы действительно собираемся доложить. Исчерпали бюджет -
+	ближайший сеанс будет плановым, и держать до него нечего: за это время
+	датчик успеет высохнуть, и увезти надо правду, а не застывшую тревогу.
+	*/
+	const bool waiting = alarm_report.pending && alarm_report.budget_left();
+	alarm0.hold(waiting);
+	alarm1.hold(waiting);
+
+	/*
+	Пауза после внепланового сеанса - и до следующей попытки, и просто чтобы
+	дребезжащий датчик протечки не поднимал ЕСП по кругу. Без неё связка
+	"намок - высох - намок" будила бы устройство на каждом переходе.
+	*/
+	if (alarm_report.pending || alarm_wake)
+	{
+		alarm_hold_min = ALARM_HOLD_MIN;
+	}
 
 	if (!slaveI2C.masterGoingToSleep())
 	{

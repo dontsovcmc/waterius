@@ -160,3 +160,63 @@ TEST(AddMinutes, SaturatedCounterStillDemandsTransmission)
     // Насыщение не должно превращаться в "срок никогда не наступит"
     EXPECT_TRUE(need_transmit(ON, SILENCE, 65535));
 }
+
+// --- остановка потребления (#202) ---
+
+TEST(ConsumptionStopped, DisabledStaysSilent)
+{
+    // Порог 0 - тревога выключена, сколько бы ни молчал счётчик
+    EXPECT_FALSE(consumption_stopped(0, 0));
+    EXPECT_FALSE(consumption_stopped(65535, 0));
+}
+
+TEST(ConsumptionStopped, RaisesAtThreshold)
+{
+    EXPECT_FALSE(consumption_stopped(48 * 60 - 1, 48));
+    EXPECT_TRUE(consumption_stopped(48 * 60, 48));
+    EXPECT_TRUE(consumption_stopped(48 * 60 + 1, 48));
+}
+
+TEST(ConsumptionStopped, ThresholdDoesNotOverflow)
+{
+    // Час, умноженный на 60, из uint16_t выходит уже на 1093-м часе:
+    // в 16 битах порог свернулся бы и тревога сработала бы почти сразу
+    EXPECT_FALSE(consumption_stopped(60, ALARM_STOP_MAX_HOURS));
+    EXPECT_TRUE(consumption_stopped(65520, ALARM_STOP_MAX_HOURS));
+}
+
+TEST(IdleMinutes, ResetsOnConsumption)
+{
+    EXPECT_EQ(update_idle_minutes(true, 5000, 15), 0);
+}
+
+TEST(IdleMinutes, AccumulatesAcrossWakeups)
+{
+    uint16_t idle = 0;
+
+    for (int i = 0; i < 4; i++)
+        idle = update_idle_minutes(false, idle, 15);
+
+    EXPECT_EQ(idle, 60);
+}
+
+TEST(IdleMinutes, Saturates)
+{
+    // 45 суток тишины - дальше точное значение уже ничего не решает,
+    // но свернуться счётчик не должен: тревога снялась бы сама собой
+    EXPECT_EQ(update_idle_minutes(false, 65535, 1440), 65535);
+    EXPECT_TRUE(consumption_stopped(update_idle_minutes(false, 65535, 1440),
+                                    ALARM_STOP_MAX_HOURS));
+}
+
+TEST(ConsumptionStopped, OnlyForInputsThatCount)
+{
+    // Вес импульса не нужен: сравнивается сам факт прироста, поэтому остановку
+    // можно задать и до того, как вход настроен до конца
+    EXPECT_TRUE(counts_impulses(CounterType::NAMUR));
+    EXPECT_TRUE(counts_impulses(CounterType::ELECTRONIC));
+
+    EXPECT_FALSE(counts_impulses(CounterType::NONE));
+    EXPECT_FALSE(counts_impulses(CounterType::LEAKAGE));
+    EXPECT_FALSE(counts_impulses(CounterType::LEAKAGE_NC));
+}

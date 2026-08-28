@@ -167,6 +167,7 @@ void publish_discovery_general_entities(PubSubClient &mqtt_client,
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_TIMESTAMP);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_SEND_ON_CONSUMPTION);
+    publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_VACATION);
     //нужно ли это прям диагностическая информация 
     //publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN_TUNED);
     /* Сенсор с атрибутами  Группа №1 */
@@ -230,7 +231,7 @@ String channel_entity_attributes(const int channel, const int channel_name)
  * @param discovery_topic топик для discovery данных
  * @param device_id device_id
  * @param device_mac device_mac
- * @param channel_is_work канал используется (тип входа не HA_NONE)
+ * @param counter_type тип входа attiny (CounterType)
  * @param channel номер канала 0 или 1
  * @param channel_name название канала (вода, электричество, газ, тепло)
  */
@@ -239,14 +240,24 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client,
                                         const String &discovery_topic,
                                         const String &device_id, 
                                         const String &device_mac,
-                                        const bool channel_is_work,
+                                        const uint8_t counter_type,
                                         const int channel,
                                         const int channel_name)
 {
     // Публикуем настройку типа входа, даже если он отключён
     publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_CTYPE, "", channel, channel_name);
-    
-    if (!channel_is_work)
+
+    /*
+    Датчик протечки - не счётчик: показания по нему не растут, вес импульса и
+    серийный номер бессмысленны. Публикуем только состояние (#202).
+    */
+    if (counter_type == CounterType::LEAKAGE || counter_type == CounterType::LEAKAGE_NC)
+    {
+        publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_WET, "", channel, channel_name);
+        return;
+    }
+
+    if (!channel_is_work(counter_type))
     {
         LOG_INFO(F("MQTT: Channel ") + String(channel) + F(" is turned off"));
         return;
@@ -288,6 +299,21 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client,
     publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_FACTOR, "", channel, channel_name);
     publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_CNAME, "", channel, channel_name);
 
+    /*
+    Тревоги: пороги настраиваются, состояния показываются (#202). Порог у
+    электричества задаётся в ваттах, у остальных - в литрах в час: считаются
+    они по разным формулам, и единица должна об этом говорить.
+    */
+    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac,
+                                     channel_name == CounterName::ELECTRO ? ENTITY_CHANNEL_ALARM_POWER_CFG
+                                                                          : ENTITY_CHANNEL_ALARM_FLOW_CFG,
+                                     "", channel, channel_name);
+    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_LEAK_CFG, "", channel, channel_name);
+    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_STOP_CFG, "", channel, channel_name);
+    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_FLOW, "", channel, channel_name);
+    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_LEAK, "", channel, channel_name);
+    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_STOP, "", channel, channel_name);
+
 }
 
 /**
@@ -315,9 +341,9 @@ void publish_discovery(PubSubClient &mqtt_client,
 
     LOG_INFO(F("MQTT: Channel entities"));
     publish_discovery_channel_entities(mqtt_client, topic, discovery_topic, device_id, device_mac, 
-                                       channel_is_work(data.counter_type0), 0, sett.counter0_name);
+                                       data.counter_type0, 0, sett.counter0_name);
     publish_discovery_channel_entities(mqtt_client, topic, discovery_topic, device_id, device_mac, 
-                                       channel_is_work(data.counter_type1), 1, sett.counter1_name);
+                                       data.counter_type1, 1, sett.counter1_name);
 
     LOG_INFO(F("MQTT: Discovery topic published: ") << millis() - start_time << F(" milliseconds elapsed"));
 }

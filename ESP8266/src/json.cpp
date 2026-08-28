@@ -7,6 +7,8 @@
 #include "voltage.h"
 #include "sync_time.h"
 #include "wifi_helpers.h"
+#include "core/alarm.h"
+#include "core/idle.h"
 
 extern Voltage voltage;
 
@@ -34,6 +36,39 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("cname1")] = sett.counter1_name;
     root[F("data_type0")] = (uint8_t)data_type_by_name(sett.counter0_name);
     root[F("data_type1")] = (uint8_t)data_type_by_name(sett.counter1_name);
+
+    // Тревоги (#202). Тремя полями на канал, а не битовой маской: их читают и
+    // сервер, и шаблоны Home Assistant, где маску пришлось бы разбирать
+    // отдельным выражением под каждый бит
+    const uint8_t alarm0 = alarm_bits(data.attiny_flags, INPUT0_RED, data.version);
+    const uint8_t alarm1 = alarm_bits(data.attiny_flags, INPUT1_BLUE, data.version);
+
+    root[F("alarm_flow0")] = (uint8_t)((alarm0 & ALARM_FLOW) ? 1 : 0);
+    root[F("alarm_flow1")] = (uint8_t)((alarm1 & ALARM_FLOW) ? 1 : 0);
+    root[F("alarm_leak0")] = (uint8_t)((alarm0 & ALARM_LEAK) ? 1 : 0);
+    root[F("alarm_leak1")] = (uint8_t)((alarm1 & ALARM_LEAK) ? 1 : 0);
+    root[F("alarm_wet0")] = (uint8_t)((alarm0 & ALARM_WET) ? 1 : 0);
+    root[F("alarm_wet1")] = (uint8_t)((alarm1 & ALARM_WET) ? 1 : 0);
+
+    // Остановку потребления считает ЕСП, а не attiny: признак берётся из
+    // прироста импульсов, поэтому она работает и со старой attiny
+    root[F("alarm_stop0")] = (uint8_t)(consumption_stopped(sett.idle_min0, sett.alarm_stop0) ? 1 : 0);
+    root[F("alarm_stop1")] = (uint8_t)(consumption_stopped(sett.idle_min1, sett.alarm_stop1) ? 1 : 0);
+
+    // Пороги: сервер должен видеть, с чем сравнивали
+    root[F("af0")] = sett.alarm_flow0;
+    root[F("af1")] = sett.alarm_flow1;
+    root[F("al0")] = sett.alarm_leak0;
+    root[F("al1")] = sett.alarm_leak1;
+    root[F("as0")] = sett.alarm_stop0;
+    root[F("as1")] = sett.alarm_stop1;
+
+    // Режим "я уехал" (#88): по нему сервер отличает "прорыв трубы" от
+    // "был расход, пока вас нет" - порог в обоих случаях один и тот же
+    root[F("vac")] = (uint8_t)(sett.vacation ? 1 : 0);
+
+    // Сеанс внеплановый, по тревоге, а не по расписанию
+    root[F("alarm")] = (uint8_t)(sett.mode == ALARM_MODE ? 1 : 0);
 
     // Battery & Voltage
     root[F("voltage")] = voltage.average() / 1000.0;

@@ -16,7 +16,7 @@
 
 
 void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required = true);
-void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj);
+void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj, const bool zero_ok = false);
 void save_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok = false);
 void save_bool_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj);
 bool save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj, const uint8_t counter_name);
@@ -31,6 +31,7 @@ void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj
 void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj);
 
 void post_api_save_connect(AsyncWebServerRequest *request);
+void post_api_save_alarms(AsyncWebServerRequest *request);
 void get_api_start_connect(AsyncWebServerRequest *request);
 void get_api_connect_status(AsyncWebServerRequest *request);
 void post_api_save_input_type(AsyncWebServerRequest *request);

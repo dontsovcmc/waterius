@@ -111,6 +111,22 @@ static const char s_serial[] PROGMEM = "serial";
 static const char s_icon_identifier[] PROGMEM = "mdi:identifier";
 static const char s_f_name[] PROGMEM = "Factor";
 static const char s_f[] PROGMEM = "f";
+static const char s_af[] PROGMEM = "af";
+static const char s_af_name[] PROGMEM = "Alarm flow threshold";
+static const char s_al[] PROGMEM = "al";
+static const char s_al_name[] PROGMEM = "Alarm leak minutes";
+static const char s_alarm_flow[] PROGMEM = "alarm_flow";
+static const char s_alarm_flow_name[] PROGMEM = "Alarm: high flow";
+static const char s_alarm_leak[] PROGMEM = "alarm_leak";
+static const char s_alarm_leak_name[] PROGMEM = "Alarm: continuous flow";
+static const char s_alarm_wet[] PROGMEM = "alarm_wet";
+static const char s_alarm_wet_name[] PROGMEM = "Alarm: water sensor";
+static const char s_as[] PROGMEM = "as";
+static const char s_as_name[] PROGMEM = "Alarm stop hours";
+static const char s_alarm_stop[] PROGMEM = "alarm_stop";
+static const char s_alarm_stop_name[] PROGMEM = "Alarm: consumption stopped";
+static const char s_vac[] PROGMEM = "vac";
+static const char s_vac_name[] PROGMEM = "Away mode";
 static const char s_icon_numeric[] PROGMEM = "mdi:numeric";
 static const char s_cname_name[] PROGMEM = "Resource Type";
 static const char s_cname[] PROGMEM = "cname";
@@ -118,6 +134,20 @@ static const char s_ctype_name[] PROGMEM = "Input Type";
 static const char s_ctype[] PROGMEM = "ctype";
 static const char s_format50[] PROGMEM = "50";   // float format 5.0f
 static const char s_format63[] PROGMEM = "63";   // float format 6.3f
+/*
+Формат числа для порогов тревог (#202). Отдельный от "50" потому, что там
+min = 1, а нулём пороги выключаются - без этого тревогу нельзя было бы снять
+из Home Assistant.
+*/
+static const char s_format50z[] PROGMEM = "50z";
+static const char s_lph[] PROGMEM = "L/h";
+static const char s_watt[] PROGMEM = "W";
+static const char s_hour[] PROGMEM = "h";
+static const char s_icon_home_export[] PROGMEM = "mdi:home-export-outline";
+static const char s_icon_water_off[] PROGMEM = "mdi:water-off";
+static const char s_binary_sensor[] PROGMEM = "binary_sensor";
+static const char s_problem[] PROGMEM = "problem";
+static const char s_moisture[] PROGMEM = "moisture";
 
 /**
  * @brief массив с общими сущностями с указанием их атрибутов в MQTT
@@ -146,6 +176,8 @@ static const char s_sc_name[] PROGMEM = "Send on consumption";
 */
 static const char *const ENTITY_SEND_ON_CONSUMPTION[MQTT_PARAM_COUNT] PROGMEM =
     {s_switch, s_sc_name, s_sc, "", "", "", s_config, s_icon_water_sync, ""};
+static const char *const ENTITY_VACATION[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_vac_name, s_vac, "", "", "", s_config, s_icon_home_export, ""};               // vac Режим "я уехал" (#88)
 
 static const char *const ENTITY_PERIOD_MIN[MQTT_PARAM_COUNT] PROGMEM =  
     {s_number, s_period_min_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50};
@@ -252,6 +284,31 @@ static const char *const ENTITY_CHANNEL_CNAME[MQTT_PARAM_COUNT] PROGMEM =
 
 static const char *const ENTITY_CHANNEL_CTYPE[MQTT_PARAM_COUNT] PROGMEM = 
     {s_select, s_ctype_name, s_ctype, "", "", "", s_config, "", s_ctype};                     // ctypeN Тип входа attiny
+
+/*
+Тревоги (#202). Пороги - number, состояния - binary_sensor.
+
+Единица порога расхода зависит от того, что считает канал: литры в час у
+объёма, ватты у электричества. Подставляется при публикации, поэтому в
+таблице её нет.
+*/
+static const char *const ENTITY_CHANNEL_ALARM_FLOW_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_af_name, s_af, "", "", s_lph, s_config, s_icon_pulse, s_format50z};          // afN Порог расхода, л/ч
+static const char *const ENTITY_CHANNEL_ALARM_POWER_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_af_name, s_af, "", "", s_watt, s_config, s_icon_pulse, s_format50z};         // afN Порог мощности, Вт
+static const char *const ENTITY_CHANNEL_ALARM_LEAK_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_al_name, s_al, "", "", s_min, s_config, s_icon_water_sync, s_format50z};     // alN Минут непрерывного расхода
+
+static const char *const ENTITY_CHANNEL_ALARM_FLOW[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_alarm_flow_name, s_alarm_flow, "", s_problem, "", "", s_icon_pulse, ""};
+static const char *const ENTITY_CHANNEL_ALARM_LEAK[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_alarm_leak_name, s_alarm_leak, "", s_problem, "", "", s_icon_water_sync, ""};
+static const char *const ENTITY_CHANNEL_ALARM_WET[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_alarm_wet_name, s_alarm_wet, "", s_moisture, "", "", "", ""};
+static const char *const ENTITY_CHANNEL_ALARM_STOP_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_as_name, s_as, "", "", s_hour, s_config, s_icon_water_off, s_format50z};      // asN Часов без расхода
+static const char *const ENTITY_CHANNEL_ALARM_STOP[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_alarm_stop_name, s_alarm_stop, "", s_problem, "", "", s_icon_water_off, ""};
 
 
 /**

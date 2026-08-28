@@ -55,6 +55,13 @@ struct SessionStatus
     bool low_voltage = false;
     SendStatus cloud = SEND_SKIPPED;
     SendStatus mqtt = SEND_SKIPPED;
+    /*
+    Хоть один получатель принял данные (#202). Отдельно от cloud и mqtt
+    потому, что там merge_status оставляет худший статус: с двумя облачными
+    получателями, из которых один сломан, cloud никогда не станет SEND_OK.
+    По этому признаку attiny узнаёт, что о тревоге доложено.
+    */
+    bool delivered = false;
 };
 
 /*

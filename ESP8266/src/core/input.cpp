@@ -116,11 +116,12 @@ static bool parse_long(const char *value, const long min, const long max, long &
     return true;
 }
 
-ParamError parse_uint16(const char *value, uint16_t &out)
+ParamError parse_uint16(const char *value, uint16_t &out, const bool zero_ok)
 {
     long v = 0;
-    // Ноль — ошибка по контракту: это и незаполненное поле, и мусор
-    if (!parse_long(value, 1, 65535, v))
+    // По умолчанию ноль — ошибка: это и незаполненное поле, и мусор. Явное
+    // разрешение нужно там, где ноль значит "выключено" (пороги тревог, #202)
+    if (!parse_long(value, zero_ok ? 0 : 1, 65535, v))
         return PARAM_ERR_VALUE;
 
     out = (uint16_t)v;

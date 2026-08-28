@@ -8,6 +8,7 @@
 #include "core/idle.h"
 #include "core/wakeup.h"
 #include "core/restart.h"
+#include "core/alarm.h"
 #include "master_i2c.h"
 #include "senders/send_data.h"
 #include "ha/apply_settings.h"
@@ -37,6 +38,40 @@ Voltage voltage;
 */
 bool esp_restarted_flag = false;
 
+
+/*
+Пороги тревог в attiny (#202).
+
+Уходят в каждом сеансе: у attiny они живут в ОЗУ и после снятия питания
+теряются, как и период пробуждения. Пересчёт в тики - здесь, потому что вес
+импульса и тип счётчика знает только ЕСП.
+*/
+void send_alarm_config(const Settings &sett)
+{
+    if (data.version < ATTINY_VER_ALARM)
+    {
+        return; // старая attiny тревог не умеет
+    }
+
+    const bool electro0 = sett.counter0_name == CounterName::ELECTRO;
+    const bool electro1 = sett.counter1_name == CounterName::ELECTRO;
+
+    const bool vacation = sett.vacation != 0;
+
+    const uint16_t interval0 = alarm_interval_ticks(vacation, runtime_data.counter_type0,
+                                                   sett.alarm_flow0, sett.factor0, electro0);
+    const uint16_t interval1 = alarm_interval_ticks(vacation, runtime_data.counter_type1,
+                                                   sett.alarm_flow1, sett.factor1, electro1);
+
+    LOG_INFO(F("Alarm config: interval0=") << interval0 << F(" leak0=") << sett.alarm_leak0
+             << F(" interval1=") << interval1 << F(" leak1=") << sett.alarm_leak1
+             << F(" vacation=") << vacation);
+
+    if (!masterI2C.setAlarmConfig(interval0, sett.alarm_leak0, interval1, sett.alarm_leak1))
+    {
+        LOG_ERROR(F("Alarm config wasn't set"));
+    }
+}
 
 /*
 Выполняется однократно при включении
@@ -105,8 +140,37 @@ void loop()
             sett.minutes_since_send = add_minutes(sett.minutes_since_send, sett.wakeup_per_min);
         }
 
+        // Сеанс по тревоге - это тоже выход на связь: в режиме "только при
+        // расходе" отметка "я жив" состоялась, срок начинается заново (#361)
+        if (mode == ALARM_MODE)
+        {
+            sett.minutes_since_send = 0;
+        }
+
         // Вычисляем текущие показания
         calculate_values(sett, data, cdata);
+
+        /*
+        Остановка потребления (#202).
+
+        Считается здесь по той же причине, что и расход ниже: impulses_previous
+        перезапишет update_config в конце сеанса, и сравнивать будет уже не с
+        чем. Поканально - "расход хоть где-то" для остановки не годится.
+
+        Минуты набегают только в плановом пробуждении: сеанс по кнопке или по
+        тревоге времени не добавляет, иначе один период засчитался бы дважды.
+        Расход же обнуляет счётчик в любом режиме - он и есть событие.
+        */
+        const uint16_t slept_min = (mode == TRANSMIT_MODE) ? sett.wakeup_per_min : 0;
+
+        sett.idle_min0 = update_idle_minutes(data.impulses0 != sett.impulses0_previous,
+                                             sett.idle_min0, slept_min);
+        sett.idle_min1 = update_idle_minutes(data.impulses1 != sett.impulses1_previous,
+                                             sett.idle_min1, slept_min);
+
+        LOG_INFO(F("Idle min: ") << sett.idle_min0 << F("/") << sett.idle_min1
+                 << F(", stop: ") << consumption_stopped(sett.idle_min0, sett.alarm_stop0)
+                 << F("/") << consumption_stopped(sett.idle_min1, sett.alarm_stop1));
 
         /*
         Режим "выходить на связь только при расходе воды" (#361).
@@ -225,6 +289,24 @@ void loop()
                 }
 #endif
 
+                /*
+                Данные дошли - говорим об этом attiny, иначе она будет будить
+                нас снова, пока не исчерпает попытки (#202).
+
+                В любом режиме, а не только в ALARM_MODE: состояние тревог едет
+                в каждом сеансе, и плановый увозит его не хуже внепланового.
+                Проверять режим здесь значило бы гонять лишний сеанс за уже
+                доставленной новостью. Attiny игнорирует команду, если доклада
+                не ждёт.
+
+                Обязательно до wifi_shutdown: attiny должна узнать об этом в
+                том же сеансе.
+                */
+                if (status.delivered)
+                {
+                    masterI2C.confirmAlarm();
+                }
+
                 // Все уже отправили,  wifi не нужен - выключаем
                 wifi_shutdown();
 
@@ -242,6 +324,8 @@ void loop()
             интернета так и будило ЕСП каждые 15 минут вместо заданного
             периода, а в молчаливом пробуждении период не уходил вниз вовсе.
             */
+            send_alarm_config(sett);
+
             const uint16_t period = period_to_attiny(sett.period_min_tuned, sett.wakeup_per_min);
             LOG_INFO(F("Wakeup period, min (attiny):") << period);
             if (!masterI2C.setWakeUpPeriod(period))

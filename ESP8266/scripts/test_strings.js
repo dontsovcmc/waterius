@@ -174,9 +174,20 @@ test('у каждого сообщения про вход есть место �
 
 test('типы входа названы для всех значений из списка на странице', () => {
     // Значения из data/input_setup.html
-    for (const type of [0, 2, 4, 0xFF]) {
+    for (const type of [0, 2, 4, 5, 0xFF]) {
         assert.ok(ctx.COUNTER_TYPES[type], 'нет названия у типа входа ' + type);
     }
+});
+
+test('порог расхода подписан по ресурсу канала', () => {
+    /*
+    У электричества вес импульса задан наоборот - импульсами на киловатт-час,
+    - и порог считается по другой формуле. Единица должна об этом говорить,
+    иначе пользователь введёт литры там, где ждут ватты (#202).
+    */
+    assert.ok(ctx.alarm_flow_label(ctx.CounterName_ELECTRO).includes('Вт'));
+    assert.ok(ctx.alarm_flow_label(ctx.CounterName_WATER_COLD).includes('л/ч'));
+    assert.ok(ctx.alarm_flow_label(ctx.CounterName_GAS).includes('л/ч'));
 });
 
 /*
@@ -191,6 +202,53 @@ const PAGES = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.html'));
 function page(name) {
     return fs.readFileSync(path.join(DATA_DIR, name), 'utf8');
 }
+
+test('на странице тревог у каждого поля есть подпись и обработчик', () => {
+    /*
+    Страница одна на оба канала, поэтому подписи заполняются не общим
+    fill_units, а маркерами data-alarm-label с номером входа.
+    */
+    const html = page('alarms.html');
+
+    for (const field of ['alarm_flow0', 'alarm_leak0', 'alarm_stop0',
+                         'alarm_flow1', 'alarm_leak1', 'alarm_stop1']) {
+        assert.ok(html.includes('name="' + field + '"'), 'нет поля ' + field);
+        assert.ok(html.includes('%' + field + '%'), 'поле ' + field + ' не подставляется прошивкой');
+    }
+
+    for (const input of ['0', '1']) {
+        assert.ok(html.includes('data-alarm-label="' + input + '"'),
+                  'у входа ' + input + ' нет подписи порога');
+    }
+
+    assert.ok(html.includes('fill_alarms('), 'страница не зовёт fill_alarms');
+    assert.ok(html.includes("'/api/save_alarms'"), 'форма шлёт настройки не туда');
+});
+
+test('пороги расхода и остановки прячутся по отдельности', () => {
+    /*
+    Порог расхода считает attiny, и ему нужен известный вес импульса; остановку
+    считает сама ЕСП по приросту импульсов, поэтому она доступна и на attiny 40.
+    Один общий признак готовности спрятал бы работающую тревогу.
+    */
+    const html = page('alarms.html');
+
+    for (const input of ['0', '1']) {
+        assert.ok(html.includes('id="thresholds' + input + '"'),
+                  'у входа ' + input + ' пороги расхода не в своём блоке');
+        assert.ok(html.includes('id="stop' + input + '"'),
+                  'у входа ' + input + ' остановка не в своём блоке');
+        assert.ok(html.includes('%stop_ready' + input + '%'),
+                  'готовность остановки на входе ' + input + ' не подставляется');
+    }
+});
+
+test('режим "я уехал" есть на странице тревог', () => {
+    const html = page('alarms.html');
+
+    assert.ok(html.includes('name="vacation"'), 'нет галочки режима отпуска');
+    assert.ok(html.includes('%vacation%'), 'состояние галочки не подставляется прошивкой');
+});
 
 test('в разметке нет маркеров, которых не знает fill_units', () => {
     const known = ['total', 'unit', 'impulses'];

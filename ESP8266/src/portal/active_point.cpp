@@ -16,6 +16,8 @@
 #include "core/wifi.h"
 #include "core/input.h"
 #include "core/portal_watchdog.h"
+#include "core/alarm.h"
+#include "core/idle.h"
 #include "resources.h"
 #include "ha/resources.h"
 #include "active_point_api.h"
@@ -222,6 +224,46 @@ String processor_main(const String &var, const uint8_t input)
     {
         return String(sett.counter1_name);
     }
+
+    /*
+    Пороги тревог (#202). Страница одна на оба входа, поэтому параметры
+    именные, а не по номеру входа.
+    */
+    else if (var == FPSTR(PARAM_ALARM_FLOW0))
+        return String(sett.alarm_flow0);
+    else if (var == FPSTR(PARAM_ALARM_FLOW1))
+        return String(sett.alarm_flow1);
+    else if (var == FPSTR(PARAM_ALARM_LEAK0))
+        return String(sett.alarm_leak0);
+    else if (var == FPSTR(PARAM_ALARM_LEAK1))
+        return String(sett.alarm_leak1);
+    else if (var == FPSTR(PARAM_ALARM_STOP0))
+        return String(sett.alarm_stop0);
+    else if (var == FPSTR(PARAM_ALARM_STOP1))
+        return String(sett.alarm_stop1);
+    else if (var == FPSTR(PARAM_VACATION))
+        return template_bool(sett.vacation);
+
+    /*
+    Можно ли вообще настроить тревоги на входе: нужен известный вес импульса
+    и attiny не старее ATTINY_VER_ALARM. Иначе поля прячем - настройка,
+    которая ничего не делает, хуже её отсутствия.
+    */
+    else if (var == FPSTR(PARAM_ALARM_READY0))
+        return String(runtime_data.version >= ATTINY_VER_ALARM &&
+                      alarm_configurable(runtime_data.counter_type0, sett.factor0) ? 1 : 0);
+    else if (var == FPSTR(PARAM_ALARM_READY1))
+        return String(runtime_data.version >= ATTINY_VER_ALARM &&
+                      alarm_configurable(runtime_data.counter_type1, sett.factor1) ? 1 : 0);
+
+    /*
+    Остановку потребления считает ЕСП, а не attiny, поэтому версия прошивки
+    attiny тут ни при чём: достаточно, чтобы вход считал импульсы.
+    */
+    else if (var == FPSTR(PARAM_STOP_READY0))
+        return String(counts_impulses(runtime_data.counter_type0) ? 1 : 0);
+    else if (var == FPSTR(PARAM_STOP_READY1))
+        return String(counts_impulses(runtime_data.counter_type1) ? 1 : 0);
 
     else if (var == FPSTR(PARAM_COUNTER_IMG))
     {
@@ -566,6 +608,10 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     server->on("/setup_send.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { send_page(request, "/setup_send.html", processor); });
 
+    // Тревоги: одна страница на оба входа (#202)
+    server->on("/alarms.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { send_page(request, "/alarms.html", processor); });
+
     // Первая настройка
     server->on("/start.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { send_page(request, "/start.html", processor); });
@@ -599,6 +645,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     server->on("/api/start_connect", HTTP_GET, get_api_start_connect);             // Поднимаем флаг старта подключения и redirect в wifi_connect.html
     server->on("/api/connect_status", HTTP_GET, get_api_connect_status);           // Статус подключения (из wifi_connect.html)
     server->on("/api/save", HTTP_POST, post_api_save);                             // Сохраняем настройки
+    server->on("/api/save_alarms", HTTP_POST, post_api_save_alarms);               // Сохраняем пороги тревог (#202)
     server->on("/api/save_input_type", HTTP_POST, post_api_save_input_type);       // Сохраняем тип счётчика и переносим на страницу настройки
     server->on("/api/main_status", HTTP_GET, get_api_main_status);                 // Информационные сообщения на главной странице
     server->on("/api/status/0", HTTP_GET, get_api_status_0);                       // Статус 0-го входа (ХВС)  (из setup_cold_welcome.html)
