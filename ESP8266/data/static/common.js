@@ -1,11 +1,28 @@
 const queryParams = {};
 let pages = {};
 
+// Пользователь сам нажал "Завершить": выключение штатное
+let portal_closing = false;
+
+// Потеря связи и повторы: docs/setup-portal.md, "Потеря связи с устройством"
+const AJAX_TRIES = 3;
+const AJAX_RETRY_MS = 1000;
+const LOST_LINK_RETRY_MS = 3000;
+const LOST_LINK_GIVE_UP_MS = 5 * 60 * 1000;
+
 function _init(_pages) {
     // Должна выполняться при загрузке каждой страницы
     
     pages = _pages;
     parseQueryParams();
+
+    // Вернулись к вкладке - жива ли связь. Переход по обычной ссылке делает
+    // браузер, там своё окно уже не покажешь. main_status не продлевает
+    // режим настройки (#305)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState != 'visible' || portal_closing) return;
+        ajax('/api/main_status', {}, () => {}, false);
+    });
 
 
     if(document.querySelector('form')) {
@@ -21,13 +38,8 @@ function _init(_pages) {
         // заполним из url parameters
         document.querySelectorAll('input,textarea,select,span').forEach(item => {
             if(item.type == 'checkbox'){
-                if(parseInt(queryParams[item.name]) || (queryParams[item.name] && queryParams[item.name].toLowerCase() == 'true'))//{
+                if(parseInt(queryParams[item.name]) || (queryParams[item.name] && queryParams[item.name].toLowerCase() == 'true'))
                     item.checked = true;
-                    //item.parentNode.classList.add('active');
-                //}else{
-                    //item.checked = false;
-                    //item.parentNode.classList.remove('active');
-                //}
                 checkboxToggle(item);
                 return;
             }
@@ -54,7 +66,6 @@ function _init(_pages) {
 
     // wifi-password
     if(document.getElementById('wifi-form') && queryParams.ssid) {
-        //document.getElementById('ssid').value = queryParams.ssid;
         document.querySelector('.link-row span').innerText = queryParams.ssid;
         document.querySelector('main').classList.add('ssid');
         
@@ -105,7 +116,6 @@ function getWifiList(_pages){
 
     const showAllBtn = document.getElementById('show-all');
     ajax('/api/networks', {}, data => {
-        //if(data && data.length) {
             let html = '';
             var sorted = data.sort(function(a, b) {
                 return b.level - a.level;
@@ -126,7 +136,6 @@ function getWifiList(_pages){
                     showAllBtn.classList.add('hd');
                 }
             } 
-        //}
         document.getElementById('wifi-name').classList.remove('hd');
     });
 }
@@ -150,11 +159,6 @@ function formSubmit(event, form, action) {
     event.preventDefault();
 
     const data = new URLSearchParams();
-    //const data = {};// json
-    /*for (const pair of new FormData(form)) {
-        data.append(pair[0], pair[1]);
-        //data[pair[0]] = pair[1];// json
-    }*/
     form.querySelectorAll('input,textarea,select').forEach(inp => {
         if(inp.type == 'checkbox') return inp.checked ? data.append(inp.name, 1) : data.append(inp.name, 0);
         if(inp.type == 'radio' ) return inp.checked ? data.append(inp.name, 1) : ''; //data.append(inp.name, 0);
@@ -165,29 +169,10 @@ function formSubmit(event, form, action) {
         method: 'POST',
         headers: {
             "Content-Type": "application/x-www-form-urlencoded"
-            //"Content-Type": "application/json"// json
         },
         body: data
-        //body: JSON.stringify(data)// json
     }, data =>{
         
-        // ответ сервера: ошибки полей формы
-        /*
-        {
-            "errors": {
-                "form": "Текст ошибки вверху страницы", // не обязательно
-                // далее по полям формы
-                "ssid": "Введите имя сети",
-                "password": "Введите пароль",
-                ...
-            },
-            // тут можно доделать функционал например выводить подсказки, они в фигме есть
-            "tips": {
-                "password": "Длина пароля 6-20 символов",
-                ...
-            }
-        }
-        */
         if(data.errors && Object.keys(data.errors).length > 0) {
             document.querySelectorAll('.f-row p.error').forEach(item => item.classList.add('hd'));
             for(let k in data.errors) {
@@ -200,18 +185,6 @@ function formSubmit(event, form, action) {
             return;
         }
         
-        //---------
-        // ответ сервера: ошибка с редиректом
-        /*
-        {
-            "redirect": "/some_page.html",
-            "error": "Текст ошибки вверху страницы", // не обязательно
-            // далее параметры заполнения формы на новой странице
-            "ssid": "имя сети",
-            "password": "123123",
-            ...
-        }
-        */
         if(data.redirect) {
             let uri = data.redirect;
             delete data.redirect;
@@ -226,18 +199,7 @@ function formSubmit(event, form, action) {
             return window.location = uri;
         }
 
-        //---------
-        // success
-        // ответ сервера: пустой json {}
-        // или с параметрами
-        /*
-        {
-            "error": "Текст ошибки вверху страницы",
-            "ssid": "имя сети",
-            "password": "123123",
-            ...
-        }
-        */
+        // Формат ответа формы - docs/setup-portal.md, "REST API портала"
         window.location = queryParams.wizard ? pages.next_wizard : pages.next;
     });
 }
@@ -250,57 +212,83 @@ function ajax(action, data, callback, pl = true, _try = 0) {
         })
         .then(text => {
             if(pl) preloader(false);
+            lostLinkDone();   // запрос дошёл - связь есть
             try{
                 callback(JSON.parse(text));
             }catch(e){
                 callback(text);
             }
         })
-        /*.then(res => {
-            if (!res.ok) return Promise.reject(res);
-            return res.json();
-        })
-        .then(res => {
-            if(pl) preloader(false);
-            callback(res);
-        })*/
         .catch(err => {
-            //console.log(err);
             _try++;
-            let errorMsg = null;
 
-            if (err && err.message) {
-                // Проверка на таймаут и сетевые ошибки
-                if (
-                    err.message.includes('timed out') ||
-                    err.message.includes('Timeout') ||
-                    err.message.includes('NetworkError') ||
-                    err.message.includes('Failed to fetch')
-                ) {
-                    errorMsg = tr(S_PLEASE_RECONNECT_WIFI);
-                } else {
-                    errorMsg = err.message;
-                }
-            } else if (err && err.statusText) {
-                errorMsg = err.statusText;
-            }
-
-            if(_try == 3) {
-                // вывод ошибки
-                if(pl) preloader(false);
-
-                if (errorMsg) {
-                    alert(errorMsg);
-                } 
-                console.log(err);
+            if(_try < AJAX_TRIES) {
+                // Короткий обрыв: повторяем молча
+                setTimeout(() => {
+                    ajax(action, data, callback, pl, _try);
+                }, AJAX_RETRY_MS);
                 return;
             }
-            // повторный запрос в случае ошибки ответа через 1 сек
-            setTimeout(() => {
-                ajax(action, data, callback, pl, _try);
-            },1000);
+
+            if(pl) preloader(false);
+            console.log(err);
+
+            if (is_device_unreachable(err)) {
+                // Счётчик попыток сбрасываем: у повтора будут свои AJAX_TRIES
+                lostLink(() => ajax(action, data, callback, pl, 0));
+                return;
+            }
+
+            // Ответила прошивка: это её ошибка, а не потеря связи
+            if (err && err.statusText) {
+                alert(err.statusText);
+            }
         });
 }
+/*
+Запрос не дошёл до устройства? fetch отвергает промис, только если ответа не
+было вовсе; ответ с плохим статусом приходит объектом Response. По тексту
+сообщения решать нельзя: у Safari на телефоне это просто "Load failed".
+*/
+function is_device_unreachable(err) {
+    if (!err) return true;
+    return err.status === undefined && err.statusText === undefined;
+}
+
+// Окно рисуется отсюда, как preloader(): разметку страниц трогать не надо
+function lostLink(retry) {
+    if (portal_closing) return;
+
+    let box = document.querySelector('.modal');
+    if (!box) {
+        box = document.createElement('div');
+        box.classList.add('modal');
+        box.innerHTML = '<div class="modal-box">'
+            + '<h3>' + tr(S_LOST_LINK_TITLE) + '</h3>'
+            + '<p class="text">' + tr(S_PLEASE_RECONNECT_WIFI) + '</p>'
+            + '<button class="btn" type="button">' + tr(S_RETRY) + '</button>'
+            + '</div>';
+        box.since = Date.now();
+        document.body.appendChild(box);
+    }
+    box.classList.add('show');
+    box.querySelector('button').onclick = retry;
+
+    // Телефон возвращается в сеть Ватериуса сам, поэтому повторяем в фоне
+    if (Date.now() - box.since < LOST_LINK_GIVE_UP_MS) {
+        clearTimeout(box.timer);
+        box.timer = setTimeout(retry, LOST_LINK_RETRY_MS);
+    }
+}
+
+// Связь вернулась: любой дошедший запрос закрывает окно
+function lostLinkDone() {
+    const box = document.querySelector('.modal');
+    if (!box) return;
+    clearTimeout(box.timer);
+    box.remove();
+}
+
 function preloader(show) {
     let _pl = document.querySelector('.preloader');
     if(!_pl) {
@@ -372,6 +360,7 @@ function setText(id, text) {
     if (q) q.textContent = text;
 }
 function finish(btn){
+    portal_closing = true;   // выключение штатное, про потерю связи молчим
     ajax('/api/turnoff', {}, () => {
         btn.classList.add('disabled');
         btn.disabled = true;

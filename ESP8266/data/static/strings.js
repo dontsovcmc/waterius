@@ -52,10 +52,9 @@ const CounterName_PORTABLE_WATER = 5;
 const CounterName_OTHER = 6;
 const CounterName_HEAT_KWH = 7;
 
+// Дискретный (1) и датчик Холла (3) портал не предлагает, см. src/setup.h
 const CounterType_NAMUR = 0;
-const CounterType_DISCRETE = 1;
 const CounterType_ELECTRONIC = 2;
-const CounterType_HALL = 3;
 const CounterType_ELECTRONIC_HIGH = 4;
 const CounterType_LEAKAGE = 5;
 const CounterType_LEAKAGE_NC = 6;
@@ -142,10 +141,7 @@ RESOURCES[CounterName_OTHER] = {
     unit: U_NONE, pulse: U_NONE, pulse_div: 1000, delta: U_NONE, delta_div: 1000
 };
 
-/*
-Типы входа для списка "Тип счётчика". Дискретный и датчик Холла в списке
-не предлагаются, поэтому их здесь нет.
-*/
+// Типы входа для списка "Тип счётчика"
 const COUNTER_TYPES = {};
 COUNTER_TYPES[CounterType_NAMUR] = "Механический";
 COUNTER_TYPES[CounterType_ELECTRONIC] = "Электронный";
@@ -427,6 +423,8 @@ const S_ERROR_PORT_IN_HOST = 21;
 const S_ESP_RESTARTED = 22;
 const S_FACTOR_TOO_BIG = 23;
 const S_INPUT_SILENT = 24;
+const S_LOST_LINK_TITLE = 25;
+const S_RETRY = 26;
 
 
 /*
@@ -458,13 +456,15 @@ function tr_text(id) {
         case S_ERROR_VALUE: return "Неверное значение";
         case S_ERROR_ATTINY_ERROR: return "Ошибка связи с attiny";
         case S_ERROR_EMPTY: return "Значение не может быть пустым";
-        case S_PLEASE_RECONNECT_WIFI: return "Wi-Fi соединение разорвано. Подключитесь ещё раз к Ватериусу.";
+        case S_PLEASE_RECONNECT_WIFI: return "Подключитесь к Wi-Fi сети waterius-xxxx заново. Если её нет, а лампочка погасла, то режим настройки закончился: нажмите кнопку на 5 сек ещё раз.";
         case S_ERROR_NO_COMMA: return "Показания воды вводятся с литрами: 123.456. Целое число обычно означает забытую запятую";
         case S_ERROR_TLS: return "Шифрованное подключение к MQTT не поддерживается. Укажите адрес без mqtts:// и ssl://";
         case S_ERROR_PORT_IN_HOST: return "Порт указывайте в отдельном поле, а не в адресе";
         case S_ESP_RESTARTED: return "Ватериус внештатно перезагрузился. Возможно, батарейки садятся.";
         case S_FACTOR_TOO_BIG: return "Счётчик %s насчитал в разы больше второго. Похоже, вес импульса завышен в 10 раз: проверьте, сколько литров на импульс написано на счётчике.";
         case S_INPUT_SILENT: return "Счётчик %s не насчитал ни одного импульса. Проверьте подключение и тип входа.";
+        case S_LOST_LINK_TITLE: return "Нет связи с Ватериусом";
+        case S_RETRY: return "Повторить";
         default:
             return "Незвестный id строки: " + String(id);
     }
