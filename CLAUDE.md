@@ -157,6 +157,25 @@ E:FF, H:DF, L:62
 - `ota_update.cpp` / `ota_parse.h` — OTA update flow; URL parsing is unit-tested in `test/test_ota`
 - `data/` — Web interface HTML files (served via LittleFS, flashed via `uploadfs`)
 
+### Portal Simulator (`simulator/`)
+Browser-based simulator of the setup portal: serves the real pages from `ESP8266/data/`
+with a JS port of the placeholder rendering, `/api/*` handlers and field validation.
+See `simulator/README.md`.
+
+**When you change the portal, change the simulator in the same PR** — it is a second
+implementation of the same logic, and nothing in the build catches drift by itself.
+Field names, lengths and defaults are generated from the firmware sources
+(`simulator/gen_from_firmware.js`), so those do not drift; branches and numbers do.
+
+```bash
+node simulator/test_simulator.js   # placeholders, routes, form fields, wizard scenario
+node simulator/test_worker.js      # the service worker itself, in a Node sandbox
+simulator/build.sh                 # static bundle in simulator/dist/
+```
+
+Nothing may be added to `ESP8266/data/` for the simulator: that directory goes into
+the LittleFS image, which is nearly full.
+
 ### Attiny85 Source Structure
 - `main.cpp`: Counter logic, sleep management, I2C slave
 - `counter.h`: Pulse detection algorithms (supports dry contact, NAMUR, Hall sensor)

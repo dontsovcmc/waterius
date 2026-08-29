@@ -1,0 +1,60 @@
+# Публикация симулятора портала на GitHub Pages.
+#
+# Перед первым запуском в настройках репозитория нужно включить Pages:
+# Settings -> Pages -> Build and deployment -> Source: GitHub Actions,
+# и там же указать Custom domain (см. DOMAIN ниже) плюс Enforce HTTPS.
+# Без HTTPS не заработает service worker, а без него - весь симулятор.
+name: simulator-deploy
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'simulator/**'
+      - 'ESP8266/data/**'
+      - 'ESP8266/src/setup.h'
+      - 'ESP8266/src/core/**'
+      - 'ESP8266/src/portal/**'
+      - 'ESP8266/src/ha/resources.h'
+      - '.github/workflows/simulator-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Публикация одна на репозиторий: параллельные деплои затирали бы друг друга
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  DOMAIN: firmware-simulator.waterius.ru
+
+jobs:
+  deploy:
+    name: Публикация симулятора портала
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Проверки
+        run: |
+          node simulator/test_simulator.js
+          node simulator/test_worker.js
+      - name: Сборка
+        run: |
+          simulator/build.sh
+          echo "$DOMAIN" > simulator/dist/CNAME
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: simulator/dist
+      - id: pages
+        uses: actions/deploy-pages@v4
