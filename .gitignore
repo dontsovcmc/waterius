@@ -38,3 +38,4 @@ Release
 .pio
 .DS_Store
 .claude
+simulator/dist

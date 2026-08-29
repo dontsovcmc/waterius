@@ -1,0 +1,38 @@
+# Симулятор портала - вторая реализация логики портала, на JS.
+# Проверки ловят расхождение с прошивкой: новый плейсхолдер, адрес, поле формы.
+name: simulator
+
+on:
+  push:
+    branches: [dev, master]
+    paths:
+      - 'simulator/**'
+      - 'ESP8266/data/**'
+      - 'ESP8266/src/setup.h'
+      - 'ESP8266/src/portal/**'
+      - 'ESP8266/src/ha/resources.h'
+      - '.github/workflows/simulator.yml'
+  pull_request:
+    paths:
+      - 'simulator/**'
+      - 'ESP8266/data/**'
+      - 'ESP8266/src/setup.h'
+      - 'ESP8266/src/portal/**'
+      - 'ESP8266/src/ha/resources.h'
+      - '.github/workflows/simulator.yml'
+
+jobs:
+  simulator:
+    name: Проверки симулятора портала
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Проверки симулятора
+        run: |
+          node simulator/test_simulator.js
+          node simulator/test_worker.js
+      - name: Сборка статики
+        run: simulator/build.sh
