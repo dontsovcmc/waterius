@@ -1,9 +1,10 @@
 # Публикация симулятора портала на GitHub Pages.
 #
-# Перед первым запуском в настройках репозитория нужно включить Pages:
-# Settings -> Pages -> Build and deployment -> Source: GitHub Actions,
-# и там же указать Custom domain (см. DOMAIN ниже) плюс Enforce HTTPS.
-# Без HTTPS не заработает service worker, а без него - весь симулятор.
+# Настройки репозитория, без которых не поедет (подробности - simulator/README.md):
+# Settings -> Pages -> Source: GitHub Actions, там же Custom domain (см. DOMAIN ниже)
+# и Enforce HTTPS - без него не заработает service worker, а с ним и симулятор.
+# Settings -> Environments -> github-pages -> Deployment branches: разрешить dev,
+# иначе job падает за три секунды, не начав шагов.
 name: simulator-deploy
 
 on:
