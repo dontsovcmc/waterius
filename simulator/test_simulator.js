@@ -210,16 +210,15 @@ function testWizard() {
     if (long.json.errors.mqtt_host !== '14') problems.push('длинный mqtt_host не отвергнут');
 
     /*
-     * Датчик протечки: тип 5 прошивка сохраняет, но is_valid_counter_type()
-     * его не знает, поэтому страница показывает NAMUR. Симулятор повторяет
-     * это поведение - см. simulator/README.md.
+     * Датчик протечки настраивается и возвращается на страницу тем же типом.
+     * Пока is_valid_counter_type() про типы 5 и 6 не знал, страница показывала
+     * NAMUR, и следующее сохранение затирало настройку.
      */
-    state.attiny.counter_type0 = 5;
-    if (SimProcessor.value('counter0_type', state, 0) !== '0') {
-        problems.push('поведение прошивки с датчиком протечки изменилось - проверьте README');
-    }
     const leak = call('/api/save_input_type', { input: '0', counter_type: '5' });
     if (leak.json.redirect !== '/index.html') problems.push('датчик протечки уводит не на главную');
+    if (SimProcessor.value('counter0_type', state, 0) !== '5') {
+        problems.push('датчик протечки показан как тип ' + SimProcessor.value('counter0_type', state, 0));
+    }
 
     // Без связи с attiny тип входа не сохраняется
     state.attiny.link = false;

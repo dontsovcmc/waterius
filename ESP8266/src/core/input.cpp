@@ -157,6 +157,8 @@ bool is_valid_counter_type(const uint8_t counter_type)
         case CounterType::ELECTRONIC:
         case CounterType::HALL:
         case CounterType::ELECTRONIC_HIGH:
+        case CounterType::LEAKAGE:
+        case CounterType::LEAKAGE_NC:
         case CounterType::NONE:
             return true;
     }
