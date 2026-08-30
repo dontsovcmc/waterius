@@ -7,8 +7,8 @@
  */
 'use strict';
 
+/* Главная страница открывается кнопкой, остальные - списком под ней */
 var PORTAL_LINKS = [
-    { path: '/index.html', text: 'Главная' },
     { path: '/captive_portal_start.html', text: 'Мастер настройки' },
     { path: '/wifi_settings.html', text: 'Wi-Fi' },
     { path: '/input/1/setup.html', text: 'Вход 1 (синий)' },
@@ -17,7 +17,7 @@ var PORTAL_LINKS = [
     { path: '/alarms.html', text: 'Тревоги' },
     { path: '/about.html', text: 'О программе' },
     { path: '/logs.html', text: 'Логи' },
-    { path: '/reset.html', text: 'Сброс' },
+    { path: '/reset.html', text: 'Сброс к заводским' },
 ];
 
 var COUNTER_TYPES = [
@@ -92,11 +92,13 @@ function drawLinks() {
     var box = el('links');
     if (box.childElementCount) return;
     PORTAL_LINKS.forEach(function (link) {
+        var item = document.createElement('li');
         var a = document.createElement('a');
         a.href = link.path;
         a.target = 'waterius-portal';
         a.textContent = link.text;
-        box.appendChild(a);
+        item.appendChild(a);
+        box.appendChild(item);
     });
 }
 
@@ -107,13 +109,13 @@ function drawInputs() {
             var block = document.createElement('div');
             block.className = 'input-block';
             block.innerHTML =
-                '<h3><span class="dot ' + (input === 0 ? 'red' : 'blue') + '"></span>Вход ' + input +
+                '<h3><span class="circle' + (input === 0 ? ' hot' : '') + '"></span>Вход ' + input +
                 (input === 0 ? ' (красный)' : ' (синий)') + '</h3>' +
                 '<div class="row">' +
-                '<label>тип входа<select data-type="' + input + '"></select></label>' +
-                '<button data-impulse="' + input + '">+1 импульс</button>' +
-                '<label>серия<input type="number" data-count="' + input + '" value="10" min="1" max="1000"></label>' +
-                '<button class="ghost" data-series="' + input + '">Подать серию</button>' +
+                '<label class="field">тип входа<select data-type="' + input + '"></select></label>' +
+                '<button class="btn btn-sm" data-impulse="' + input + '">+1 импульс</button>' +
+                '<label class="field">серия<input type="number" data-count="' + input + '" value="10" min="1" max="1000"></label>' +
+                '<button class="btn btn-sm btn2" data-series="' + input + '">Подать серию</button>' +
                 '</div>' +
                 '<p class="note" data-info="' + input + '"></p>';
             box.appendChild(block);

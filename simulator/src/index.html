@@ -15,18 +15,21 @@
 <main>
     <section class="card">
         <h2>Портал</h2>
-        <p class="note">Страницы открываются в соседней вкладке — они те же, что лежат в прошивке.</p>
-        <div class="links" id="links"></div>
+        <a class="btn" href="/index.html" target="waterius-portal">Ватериус</a>
+        <ul class="pages" id="links"></ul>
     </section>
 
     <section class="card">
         <h2>Сеанс</h2>
         <div class="row">
-            <button data-cmd="button">Нажать кнопку Ватериуса</button>
-            <button data-cmd="reset" class="danger">Сброс к заводским</button>
-            <button id="refresh">Обновить страницу портала</button>
+            <button class="btn btn-sm" data-cmd="button">Нажать кнопку Ватериуса</button>
+            <button class="btn btn-sm btn2" id="refresh">Обновить портал</button>
+            <button class="btn btn-sm btn-red" data-cmd="reset">Сброс к заводским</button>
         </div>
-        <label class="check"><input type="checkbox" id="auto-refresh"> обновлять портал после каждого действия</label>
+        <div class="toggle">
+            <input type="checkbox" id="auto-refresh">
+            <label for="auto-refresh">обновлять портал после каждого действия</label>
+        </div>
         <p class="note" id="session-note"></p>
     </section>
 
@@ -38,10 +41,16 @@
     <section class="card">
         <h2>attiny</h2>
         <div class="row">
-            <label>версия <input type="number" id="attiny-version" min="0" max="255"></label>
-            <label>напряжение, мВ <input type="number" id="attiny-voltage" min="0" max="5000" step="50"></label>
-            <label class="check"><input type="checkbox" id="attiny-link"> есть связь по i2c</label>
-            <label class="check"><input type="checkbox" id="esp-restarted"> ЕСП перезагрузилась внештатно</label>
+            <label class="field">версия <input type="number" id="attiny-version" min="0" max="255"></label>
+            <label class="field">напряжение, мВ <input type="number" id="attiny-voltage" min="0" max="5000" step="50"></label>
+        </div>
+        <div class="toggle">
+            <input type="checkbox" id="attiny-link">
+            <label for="attiny-link">есть связь по i2c</label>
+        </div>
+        <div class="toggle">
+            <input type="checkbox" id="esp-restarted">
+            <label for="esp-restarted">ЕСП перезагрузилась внештатно</label>
         </div>
         <p class="note">Без связи страницы входов покажут ошибку 7, а сохранение типа входа — ошибку 16.
         Версия ниже 41 прячет пороги тревог: их считает attiny. Внештатная перезагрузка даёт плашку на главной.</p>
@@ -50,7 +59,7 @@
     <section class="card">
         <h2>Wi-Fi</h2>
         <div class="row">
-            <label>чем закончится подключение
+            <label class="field">чем закончится подключение
                 <select id="wifi-outcome">
                     <option value="connected">успешно</option>
                     <option value="wrong_password">неверный пароль</option>
@@ -60,12 +69,12 @@
                     <option value="idle">код 0</option>
                 </select>
             </label>
-            <label>статус сейчас <input type="text" id="wifi-status" readonly></label>
+            <label class="field">статус сейчас <input type="text" id="wifi-status" readonly></label>
         </div>
         <label class="block">сети для списка — по строке «имя, уровень 1..4, канал»
-            <textarea id="wifi-networks" rows="4"></textarea>
+            <textarea id="wifi-networks" rows="3"></textarea>
         </label>
-        <button id="wifi-save">Применить сети</button>
+        <button class="btn btn-sm btn2" id="wifi-save" style="margin-top:8px">Применить сети</button>
     </section>
 
     <section class="card wide">
