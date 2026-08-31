@@ -53,15 +53,18 @@ enum CounterState
     OPEN
 };
 
+/*
+Тип входа. Число присылает ЕСП командой 'C' и оно же лежит в EEPROM, поэтому
+переиспользовать значения нельзя: 1 (дискретный) и 3 (датчик Холла) заняты
+снятыми типами и попадают в ветку "вход выключен".
+*/
 enum CounterType 
 {
-    NAMUR,
-    DISCRETE,
-    ELECTRONIC,
-    HALL,
-    ELECTRONIC_HIGH,    // электронный выход, импульс — подъём линии (issue #379)
-    LEAKAGE,            // датчик протечки: замыкание - тревога, а не импульс (issue #202)
-    LEAKAGE_NC,         // нормально-замкнутый датчик: тревога - размыкание (issue #202)
+    NAMUR = 0,          // механический: геркон, сухой контакт, namur
+    ELECTRONIC = 2,     // электронный выход, импульс — замыкание на минус
+    ELECTRONIC_HIGH = 4, // электронный выход, импульс — подъём линии (issue #379)
+    LEAKAGE = 5,        // датчик протечки: замыкание - тревога, а не импульс (issue #202)
+    LEAKAGE_NC = 6,     // нормально-замкнутый датчик: тревога - размыкание (issue #202)
     NONE = 0xFF
 };
 
@@ -76,36 +79,27 @@ enum class CounterEvent
 struct CounterB
 {
     uint8_t         _pin;       // дискретный вход
-    uint8_t         _power;     // питание датчика
     uint8_t         _apin;      // номер аналогового входа
 
     uint8_t         on_time;    // для того чтобы светодиод во время настройки загорался дольше чем на 2 сек (чтобы не бомбить i2c)
     uint8_t         off_time;   // время в разомкнутом состоянии
     uint8_t         levels;     // уровни входа
     bool            on_pulse;   // 
-    bool            active;     // идет потребление через счетчик
 
     uint16_t        adc;        // уровень замкнутого входа
     CounterState    state;      // состояние входа
     CounterType     type;       // тип выхода счетчика
     ElectronicInput input;      // счёт импульсов электронного выхода
 
-    explicit CounterB(uint8_t pin, uint8_t apin = 0, uint8_t power = (uint8_t)-1)
-        : _pin(pin), _power(power), _apin(apin), on_time(0), off_time(0), adc(0), state(CounterState::CLOSE), type(CounterType::NAMUR)
+    explicit CounterB(uint8_t pin, uint8_t apin = 0)
+        : _pin(pin), _apin(apin), on_time(0), off_time(0), adc(0), state(CounterState::CLOSE), type(CounterType::NAMUR)
     {
         set_type(type);
     }
 
     void set_type(CounterType new_type)
     {
-        if ((type == CounterType::HALL) && (_power != (uint8_t)-1)) {
-            DDRB &= ~_BV(_power);       // Пин питания датчика возвращаем на вход
-        }
         type = new_type;
-        if ((type == CounterType::HALL) && (_power == (uint8_t)-1))
-        {
-            type = CounterType::NONE;
-        }
         switch (type)
         {
             case CounterType::ELECTRONIC:
@@ -120,23 +114,13 @@ struct CounterB
                 PCMSK |= _BV(_pin);                 // Включем прерывание по фронту
                 input.reset(true);                  // импульс — подъём линии
                 break;
-            case CounterType::DISCRETE:
             case CounterType::NAMUR:
             case CounterType::LEAKAGE:
             case CounterType::LEAKAGE_NC:
                 DDRB &= ~_BV(_pin);                 // Вход
                 PCMSK &= ~_BV(_pin);                // Прерывание по фронту не нужно: опрос раз в 250мс
                 break;
-            case CounterType::HALL:
-                DDRB &= ~_BV(_pin);                 // Вход
-                DDRB |= _BV(_power);                // Пин питания датчика ставим на выход
-                PORTB &= ~_BV(_pin);                // Отключить pull-up
-                PORTB |= _BV(_power);               // Включить питание
-                delayMicroseconds(DELAY_PIN_READY_US); // Задержка на включение датчика
-                state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
-                active = false;
-                break;
-            case CounterType::NONE:
+            default:
                 PCMSK &= ~_BV(_pin);                // Выключенный вход attiny не будит
                 break;
         }
@@ -183,69 +167,6 @@ struct CounterB
         on_time = 10;
         off_time = 0;
         return true;
-    }
-
-    bool hall(CounterEvent event)
-    {
-        PORTB |= _BV(_power);               // Включить питание
-        delayMicroseconds(DELAY_PIN_READY_US); // Задержка на включение датчика
-        CounterState new_state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
-        if (new_state != state) 
-        {
-            state = new_state;
-            if (!active) 
-            {
-                active = true;
-                PCMSK |= _BV(_pin);         // Включем прерывание по фронту
-            }
-        }
-        else if (!active)
-        {
-            PCMSK &= ~_BV(_pin);            // Отключем прерывание по фронту
-            PORTB &= ~_BV(_power);          // Отключить питание
-        }
-        if (state == CounterState::CLOSE)
-        {
-            // Замкнут
-            off_time = 0;
-            if (on_time == 0)
-            {
-                // Начало импульса
-                on_time = 1;
-                adc = aRead();
-                return true;
-            }
-            else
-            {
-                // Продолжение
-                if (on_time < 200)
-                {
-                    // Увеличиваем счетчик времени в замкнутом состоянии
-                    on_time += event == CounterEvent::TIME ? 10 : 1;
-                } 
-                else
-                {
-                    // Через 5 секунд отсутствия импульсов считаем что потребление закончилось
-                    active = false;
-                }
-            }
-        }
-        else
-        {
-            // Разомкнут
-            on_time = 0;
-            // Увеличиваем счетчик времени в разомкнутом состоянии
-            if (off_time < 200)
-            {
-                off_time += event == CounterEvent::TIME ? 10 : 1;
-            }
-            else
-            {
-                // Через 5 секунд отсутствия импульсов считаем что потребление закончилось
-                active = false;
-            }
-        }
-        return false;
     }
 
     // Одно чтение входа: включить pull-up, измерить (ADC для NAMUR), вернуть "замкнуто?"
@@ -332,10 +253,7 @@ struct CounterB
             case CounterType::ELECTRONIC:
             case CounterType::ELECTRONIC_HIGH:
                 return electronic(event);
-            case CounterType::HALL:
-                return hall(event);
             case CounterType::NAMUR:
-            case CounterType::DISCRETE:
                 return discrete(event);
             case CounterType::LEAKAGE:
             case CounterType::LEAKAGE_NC:
@@ -345,7 +263,6 @@ struct CounterB
                 // какой уровень считать тревогой, решает alarm_tick по типу.
                 discrete(event);
                 return false;
-            case CounterType::NONE:
             default:
                 return false;
         }

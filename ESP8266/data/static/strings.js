@@ -52,7 +52,7 @@ const CounterName_PORTABLE_WATER = 5;
 const CounterName_OTHER = 6;
 const CounterName_HEAT_KWH = 7;
 
-// Дискретный (1) и датчик Холла (3) портал не предлагает, см. src/setup.h
+// 1 (дискретный) и 3 (датчик Холла) сняты, числа остаются занятыми
 const CounterType_NAMUR = 0;
 const CounterType_ELECTRONIC = 2;
 const CounterType_ELECTRONIC_HIGH = 4;
@@ -143,7 +143,7 @@ RESOURCES[CounterName_OTHER] = {
 
 // Типы входа для списка "Тип счётчика"
 const COUNTER_TYPES = {};
-COUNTER_TYPES[CounterType_NAMUR] = "Механический";
+COUNTER_TYPES[CounterType_NAMUR] = "Механический (Геркон, Намур)";
 COUNTER_TYPES[CounterType_ELECTRONIC] = "Электронный";
 COUNTER_TYPES[CounterType_ELECTRONIC_HIGH] = "Электронный (+)";
 COUNTER_TYPES[CounterType_LEAKAGE] = "Датчик протечки (замыкание)";

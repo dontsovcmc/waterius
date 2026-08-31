@@ -178,7 +178,7 @@ the LittleFS image, which is nearly full.
 
 ### Attiny85 Source Structure
 - `main.cpp`: Counter logic, sleep management, I2C slave
-- `counter.h`: Pulse detection algorithms (supports dry contact, NAMUR, Hall sensor)
+- `counter.h`: Pulse detection algorithms (mechanical/NAMUR, electronic, leak sensors)
 - `Storage.cpp`: Ring buffer EEPROM storage for counter values
 - `SlaveI2C.cpp`: I2C slave implementation
 

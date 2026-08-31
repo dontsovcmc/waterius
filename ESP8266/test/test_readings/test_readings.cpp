@@ -261,12 +261,12 @@ TEST(CounterTypes, ChangedTypesReachTheSnapshot)
     snapshot.counter_type1 = CounterType::NONE;
 
     AttinyData current;
-    current.counter_type0 = CounterType::DISCRETE;
+    current.counter_type0 = CounterType::ELECTRONIC_HIGH;
     current.counter_type1 = CounterType::ELECTRONIC;
 
     apply_counter_types(snapshot, current);
 
-    EXPECT_EQ(snapshot.counter_type0, CounterType::DISCRETE);
+    EXPECT_EQ(snapshot.counter_type0, CounterType::ELECTRONIC_HIGH);
     EXPECT_EQ(snapshot.counter_type1, CounterType::ELECTRONIC);
 }
 

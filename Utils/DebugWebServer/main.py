@@ -149,16 +149,6 @@ async def input_1_detect():
     return template_response("input_detect.html", 1)
 
 
-@app.get("/input/0/hall_detect.html")
-async def input_0_hall_detect():
-    return template_response("input_hall_detect.html", 0)
-
-
-@app.get("/input/1/hall_detect.html")
-async def input_1_hall_detect():
-    return template_response("input_hall_detect.html", 1)
-
-
 @app.get("/input/0/electro_detect.html")
 async def input_0_electro_detect():
     return template_response("input_electro_detect.html", 0)
@@ -177,16 +167,6 @@ async def input_0_settings():
 @app.get("/input/1/settings.html")
 async def input_1_settings(factor: int | None = None, delta: int | None = None):
     return template_response("input_settings.html", 1)
-
-
-@app.get("/input/0/input_hall_settings.html")
-async def input_0_input_hall_settings():
-    return template_response("input_hall_settings.html", 0)
-
-
-@app.get("/input/1/input_hall_settings.html")
-async def input_1_input_hall_settings(factor: int | None = None, delta: int | None = None):
-    return template_response("input_hall_settings.html", 1)
 
 
 @app.get("/input/0/input_electro_settings.html")
