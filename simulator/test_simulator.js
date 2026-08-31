@@ -145,6 +145,14 @@ function testGenerated() {
     if (sett.mqtt_port !== gen.defines.MQTT_DEFAULT_PORT) problems.push('умолчание mqtt_port не из прошивки');
     if (SimState.fieldLength('waterius_host') !== gen.defines.HOST_LEN) problems.push('длина waterius_host не из прошивки');
 
+    // Пульт выставляет типы входа этим списком, а прошивка их проверяет
+    if (!gen.counter_type_options.length) problems.push('не разобран селектор типа входа');
+    gen.counter_type_options.forEach((option) => {
+        if (!gen.valid_counter_types.includes(option.value)) {
+            problems.push('тип входа ' + option.value + ' есть в селекторе, но прошивка его не признаёт');
+        }
+    });
+
     check('таблицы сняты с исходников прошивки', problems);
 }
 
