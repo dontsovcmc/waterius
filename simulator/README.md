@@ -102,28 +102,28 @@ ELECTRONIC_HIGH и NONE. Через эту функцию проходит `vali
 
 ## Публикация
 
+Симулятор живёт на **https://firmware-simulator.waterius.ru** — публикует
+`.github/workflows/simulator-deploy.yml`: пуш в `dev`, затрагивающий портал или
+симулятор, гоняет проверки, собирает `dist/` и выкладывает на GitHub Pages. Поддомен
+задан переменной `DOMAIN` в начале workflow.
+
 Симулятору нужны две вещи: **корень домена** и **HTTPS**. Корень — потому что страницы
 ссылаются на `/static/…` и `/images/…` абсолютными путями, а область видимости service
 worker ограничена его каталогом. HTTPS — потому что вне `localhost` браузер не даст
 зарегистрировать service worker, без которого не работает ничего.
 
-Публикует `.github/workflows/simulator-deploy.yml`: на пуш в `dev`, затрагивающий
-симулятор или портал, он собирает `dist/` и выкладывает на GitHub Pages. Поддомен задан
-в `DOMAIN` в начале файла.
+Как это настроено — на случай, если понадобится повторить или перенести:
 
-Что нужно сделать один раз, руками:
-
-1. **Settings → Pages → Build and deployment → Source: GitHub Actions.** Пока это не
-   включено, деплой падает с «Pages is not enabled».
-2. **DNS: CNAME-запись** `firmware-simulator` → `dontsovcmc.github.io.` (с точкой на
-   конце, если панель её требует). Обычная запись у регистратора домена waterius.ru.
-3. **Settings → Pages → Custom domain**: `firmware-simulator.waterius.ru`, сохранить.
-   GitHub проверит DNS — если запись ещё не разошлась, покажет ошибку, надо подождать и
-   нажать проверку ещё раз.
-4. Когда GitHub выпустит сертификат (обычно минуты, иногда до часа), включить там же
-   **Enforce HTTPS**.
-5. Запустить публикацию: вкладка Actions → simulator-deploy → **Run workflow**. Дальше
-   она пойдёт сама на каждое изменение портала в `dev`.
+1. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
+2. **DNS: CNAME** `firmware-simulator` → `dontsovcmc.github.io.` У зоны waterius.ru есть
+   wildcard `*.waterius.ru` → `prod-02`, поэтому запись нужна именно явная: она
+   перебивает wildcard.
+3. **Settings → Pages → Custom domain**: `firmware-simulator.waterius.ru`. GitHub
+   проверяет DNS в момент сохранения, так что порядок с шагом 2 не переставить.
+4. Когда GitHub выпустит сертификат (минуты, изредка до часа) — **Enforce HTTPS** там же.
+5. **Разрешить деплой с `dev`:** Settings → Environments → `github-pages` → Deployment
+   branches. По умолчанию окружение пускает только ветку по умолчанию (`master`), а
+   публикуемся мы с `dev`. Симптом — job падает за три секунды, не начав шагов.
 
 Свой nginx подходит не хуже: `root .../simulator/dist;` на поддомене с сертификатом,
 деплой чем удобно. Содержимое `dist/` — обычные файлы, бэкенда нет.
