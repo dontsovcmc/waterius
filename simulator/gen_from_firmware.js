@@ -185,6 +185,24 @@ function fsInfo(dataDir) {
     return { totalBytes: FS_TOTAL, usedBytes: used };
 }
 
+/*
+Список типов входа снимается прямо с селектора портала: подписи в пульте обязаны
+совпадать со страницей, а не быть вторым набором слов про то же самое.
+*/
+function counterTypeOptions() {
+    const html = read(path.join(ESP, 'data/input_setup.html'));
+    const select = html.match(/<select[^>]*id="counter_type"[\s\S]*?<\/select>/);
+    if (!select) return [];
+
+    const options = [];
+    const re = /<option[^>]*value="(\d+)"[^>]*>([^<]+)<\/option>/g;
+    let m;
+    while ((m = re.exec(select[0])) !== null) {
+        options.push({ value: Number(m[1]), text: m[2].trim() });
+    }
+    return options;
+}
+
 function generate() {
     const defines = {};
     const enums = {};
@@ -223,6 +241,7 @@ function generate() {
         params,
         settings,
         valid_counter_types: validCounterTypes(enums),
+        counter_type_options: counterTypeOptions(),
         fs: fsInfo(path.join(ESP, 'data')),
     };
 }
