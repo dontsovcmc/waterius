@@ -21,10 +21,8 @@ var PORTAL_LINKS = [
 ];
 
 var COUNTER_TYPES = [
-    { value: 0, text: 'NAMUR' },
-    { value: 1, text: 'Дискретный' },
+    { value: 0, text: 'Механический' },
     { value: 2, text: 'Электронный' },
-    { value: 3, text: 'Датчик Холла' },
     { value: 4, text: 'Электронный (+)' },
     { value: 5, text: 'Датчик протечки (замыкание)' },
     { value: 6, text: 'Датчик протечки (размыкание)' },

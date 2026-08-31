@@ -187,7 +187,7 @@ TinyDebugSerial mySerial;
 //
 // https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x5.md
 
-static CounterB counter0(4, 2, 3); 	// Вход 1, Blynk: V0, горячая вода PB4 ADC2
+static CounterB counter0(4, 2); 	// Вход 1, Blynk: V0, горячая вода PB4 ADC2
 static CounterB counter1(3, 3); 	// Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
 
 static ESPPowerPin esp(1); // Питание на ESP

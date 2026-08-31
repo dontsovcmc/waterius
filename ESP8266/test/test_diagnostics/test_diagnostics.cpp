@@ -32,8 +32,8 @@ namespace
     AttinyData counting(const uint32_t impulses0, const uint32_t impulses1)
     {
         AttinyData data = {};
-        data.counter_type0 = CounterType::DISCRETE;
-        data.counter_type1 = CounterType::DISCRETE;
+        data.counter_type0 = CounterType::NAMUR;
+        data.counter_type1 = CounterType::NAMUR;
         data.impulses0 = impulses0;
         data.impulses1 = impulses1;
         return data;

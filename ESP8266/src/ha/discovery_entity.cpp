@@ -272,7 +272,6 @@ String build_entity_discovery(const char *mqtt_topic,
         options.add("MECHANIC");
         options.add("ELECTRONIC");
         options.add("ELECTRONIC_HIGH");
-        options.add("HALL");
         options.add("LEAKAGE");
         options.add("LEAKAGE_NC");
         options.add("NOT_USED");
@@ -282,7 +281,6 @@ String build_entity_discovery(const char *mqtt_topic,
         String value_template = String("") + 
             F("{% if value_json.")   + entity_id + F("==0 %} MECHANIC ") +
             F("{% elif value_json.") + entity_id + F("==2 %} ELECTRONIC ") +
-            F("{% elif value_json.") + entity_id + F("==3 %} HALL ") +
             F("{% elif value_json.") + entity_id + F("==4 %} ELECTRONIC_HIGH ") +
             F("{% elif value_json.") + entity_id + F("==5 %} LEAKAGE ") +
             F("{% elif value_json.") + entity_id + F("==6 %} LEAKAGE_NC ") +
@@ -292,7 +290,7 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("val_tpl")] = value_template;
 
         //"command_template": "{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1,  \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %}  {{ values[value] if value in values.keys() else 6 }}",
-        String cmd_tpl = F("{% set values = { \"MECHANIC\":0, \"ELECTRONIC\":2, \"ELECTRONIC_HIGH\":4, \"HALL\":3, \"LEAKAGE\":5, \"LEAKAGE_NC\":6, \"NOT_USED\":255} %} {{ values[value] if value in values.keys() else 255 }}");
+        String cmd_tpl = F("{% set values = { \"MECHANIC\":0, \"ELECTRONIC\":2, \"ELECTRONIC_HIGH\":4, \"LEAKAGE\":5, \"LEAKAGE_NC\":6, \"NOT_USED\":255} %} {{ values[value] if value in values.keys() else 255 }}");
         entity[F("cmd_tpl")] = cmd_tpl;
 
         entity[F("optimistic")] = true; // optimistic
