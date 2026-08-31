@@ -20,14 +20,8 @@ var PORTAL_LINKS = [
     { path: '/reset.html', text: 'Сброс к заводским' },
 ];
 
-var COUNTER_TYPES = [
-    { value: 0, text: 'Механический' },
-    { value: 2, text: 'Электронный' },
-    { value: 4, text: 'Электронный (+)' },
-    { value: 5, text: 'Датчик протечки (замыкание)' },
-    { value: 6, text: 'Датчик протечки (размыкание)' },
-    { value: 255, text: 'Нет входа' },
-];
+/* Типы входа - те же, что в селекторе портала: снимаются с input_setup.html */
+var COUNTER_TYPES = (self.SIM_GENERATED && self.SIM_GENERATED.counter_type_options) || [];
 
 var WL_NAMES = {
     0: 'код 0 (idle)',
