@@ -393,7 +393,8 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
         && sett.wakeups_since_sync > 0)
     {    
         WakeupTune tune = tune_wakeup(now, sett.base_time, sett.last_time_sync, sett.wakeup_per_min,
-                                      sett.period_min_tuned, sett.wakeups_since_sync);
+                                      sett.period_min_tuned, sett.wakeups_since_sync,
+                                      sett.period_min_full);
         LOG_INFO(F("Tune: elapsed_min=") << tune.slept_min 
                  << ", wakeups=" << sett.wakeups_since_sync
                  << ", new_period_min_tuned=" << tune.period_min_tuned);

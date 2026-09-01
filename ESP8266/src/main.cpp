@@ -233,6 +233,10 @@ void loop()
             const bool connected = must_send && wifi_connect(sett);
             status.wifi_connected = !must_send || connected;
 
+            // Нужно и после сеанса: доводку до точки расписания заказываем
+            // только в том сеансе, где её посчитали
+            bool time_synced = false;
+
             if (connected)
             {
                 voltage.update();
@@ -240,7 +244,6 @@ void loop()
 
                 JsonDocument json_data;
                 JsonDocument json_settings_received;
-                bool time_synced = false;
 
                 // Подключаемся и подписываемся на мктт
 #ifndef MQTT_DISABLED
@@ -326,7 +329,23 @@ void loop()
             */
             send_alarm_config(sett);
 
-            const uint16_t period = period_to_attiny(sett.period_min_tuned, sett.wakeup_per_min);
+            /*
+            Доводка до точки расписания (period_min_tuned) - разовая: она
+            зависит от того, куда целились в момент синхронизации. Заказываем
+            её один раз, в том же сеансе, где посчитали, а дальше идёт целый
+            период с поправкой. Иначе доводка повторяется каждым сном до
+            следующей синхронизации: при периоде 15 минут устройство
+            просыпалось 288 раз в сутки вместо 96.
+
+            Нажатие кнопки задаёт расписание заново, поэтому там доводка тоже
+            свежая - update_config пересчитал её в этом же сеансе. Но только
+            если сеанс состоялся: без связи update_config не вызывался, и в
+            period_min_tuned лежит цель прошлого цикла (#380).
+            */
+            const bool catchup = connected && (time_synced || mode == MANUAL_TRANSMIT_MODE);
+
+            const uint16_t period = period_to_attiny(sett.period_min_tuned, sett.period_min_full,
+                                                     catchup, sett.wakeup_per_min);
             LOG_INFO(F("Wakeup period, min (attiny):") << period);
             if (!masterI2C.setWakeUpPeriod(period))
             {
