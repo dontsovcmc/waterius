@@ -4,7 +4,7 @@
 
 WakeupTune tune_wakeup(const time_t now, const time_t base_time, const time_t measured_from,
                        const uint16_t wakeup_per_min, const uint16_t period_min_tuned,
-                       const uint16_t periods_slept)
+                       const uint16_t periods_slept, const uint16_t period_min_full)
 {
     WakeupTune tune;
 
@@ -13,10 +13,17 @@ WakeupTune tune_wakeup(const time_t now, const time_t base_time, const time_t me
     double actual_slept_min = difftime(now, measured_from) / 60.0;
     tune.slept_min = actual_slept_min;
 
-    // За измеренное время устройство просыпалось periods_slept раз, значит
-    // заказано было столько же периодов. Ноль означает, что считать не по
-    // чему — берём один период, это прежнее поведение.
-    const double ordered_min = (double)period_min_tuned * (periods_slept > 0 ? periods_slept : 1);
+    // За измеренное время устройство просыпалось periods_slept раз. Сны в окне
+    // разной длины: первый — доводка до точки расписания (period_min_tuned),
+    // остальные — целый период (period_min_full). Считать всё окно по первому
+    // нельзя: знаменатель разошёлся бы с тем, что заказывали, и поправка
+    // приписала бы attiny дрейф, которого нет.
+    // Ноль в period_min_full означает "целый период ещё не измеряли": тогда
+    // все сны окна шли одним значением, как было до появления доводки.
+    const uint16_t slept = periods_slept > 0 ? periods_slept : 1;
+    const double ordered_min = period_min_full > 0
+        ? (double)period_min_tuned + (double)period_min_full * (slept - 1)
+        : (double)period_min_tuned * slept;
 
     // Поправку можно оценить только по нормально завершившемуся сну.
     // Неположительный сон означает, что часы переставили назад — например
@@ -96,9 +103,20 @@ uint16_t period_after_user_change(const uint16_t wakeup_per_min)
     return wakeup_per_min * 0.9;
 }
 
-uint16_t period_to_attiny(const uint16_t period_min_tuned,
-                          const uint16_t wakeup_per_min)
+uint16_t period_to_attiny(const uint16_t period_min_tuned, const uint16_t period_min_full,
+                          const bool catchup, const uint16_t wakeup_per_min)
 {
+    if (catchup && period_min_tuned > 0)
+    {
+        return period_min_tuned;
+    }
+
+    if (period_min_full > 0)
+    {
+        return period_min_full;
+    }
+
+    // Целый период ещё не измеряли: остаётся то, что есть, — прежнее поведение
     return period_min_tuned > 0 ? period_min_tuned : period_after_user_change(wakeup_per_min);
 }
 
