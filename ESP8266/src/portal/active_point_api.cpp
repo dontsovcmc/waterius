@@ -553,6 +553,26 @@ void save_bool_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsO
 }
 
 /**
+ * @brief Бит маски "кому доклад о тревоге обязан доехать" (#202).
+ *
+ * Через локальную переменную, а не прямо в поле: маска общая на трёх
+ * получателей, а save_bool_param пишет только при успешном разборе — иначе
+ * отвергнутое значение погасило бы бит, вместо того чтобы оставить как было.
+ */
+static void save_confirm_bit(const AsyncWebParameter *p, const uint8_t bit,
+                             JsonObject &errorsObj)
+{
+    uint8_t on = (sett.alarm_confirm & bit) ? 1 : 0;
+
+    save_bool_param(p, on, errorsObj);
+
+    if (on)
+        sett.alarm_confirm |= bit;
+    else
+        sett.alarm_confirm &= ~bit;
+}
+
+/**
  * @brief Адрес MQTT брокера. Снимает схему и путь, отвергает шифрование и порт.
  *
  * Отдельная функция, а не перегрузка save_param: от текстовой она отличалась бы
@@ -851,6 +871,18 @@ void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
     {
         save_bool_param(p, sett.vacation, errorsObj);
     }
+    else if (name == FPSTR(PARAM_CONFIRM_WATERIUS) || name == FPSTR(s_ackw))  // portal || ha
+    {
+        save_confirm_bit(p, CONFIRM_WATERIUS, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_CONFIRM_HTTP) || name == FPSTR(s_ackh))  // portal || ha
+    {
+        save_confirm_bit(p, CONFIRM_HTTP, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_CONFIRM_MQTT) || name == FPSTR(s_ackm))  // portal || ha
+    {
+        save_confirm_bit(p, CONFIRM_MQTT, errorsObj);
+    }
 }
 
 void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
@@ -1050,6 +1082,15 @@ void post_api_save_alarms(AsyncWebServerRequest *request)
     // Галочка приходит всегда: common.js шлёт 0 или 1, а не отсутствие поля
     if (request->hasParam(FPSTR(PARAM_VACATION), true))
         save_bool_param(request->getParam(FPSTR(PARAM_VACATION), true), sett.vacation, errorsObj);
+
+    // Спрятанная галочка не приходит вовсе - бит выключенного отправителя
+    // остаётся как был. Требование к нему всё равно снимается в alarm_delivered
+    if (request->hasParam(FPSTR(PARAM_CONFIRM_WATERIUS), true))
+        save_confirm_bit(request->getParam(FPSTR(PARAM_CONFIRM_WATERIUS), true), CONFIRM_WATERIUS, errorsObj);
+    if (request->hasParam(FPSTR(PARAM_CONFIRM_HTTP), true))
+        save_confirm_bit(request->getParam(FPSTR(PARAM_CONFIRM_HTTP), true), CONFIRM_HTTP, errorsObj);
+    if (request->hasParam(FPSTR(PARAM_CONFIRM_MQTT), true))
+        save_confirm_bit(request->getParam(FPSTR(PARAM_CONFIRM_MQTT), true), CONFIRM_MQTT, errorsObj);
 
     if (errorsObj.size() == 0)
     {

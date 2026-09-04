@@ -289,6 +289,21 @@ test('режим "я уехал" есть на странице тревог', (
     assert.ok(html.includes('%vacation%'), 'состояние галочки не подставляется прошивкой');
 });
 
+test('квитанция о тревоге настраивается на странице тревог', () => {
+    const html = page('alarms.html');
+
+    for (const who of ['waterius', 'http', 'mqtt']) {
+        assert.ok(html.includes('name="confirm_' + who + '"'),
+                  'нет галочки получателя ' + who);
+        assert.ok(html.includes('%confirm_' + who + '%'),
+                  'состояние галочки ' + who + ' не подставляется прошивкой');
+        assert.ok(html.includes('id="ack_' + who + '"'),
+                  'строку получателя ' + who + ' нечем спрятать');
+    }
+    // Без маски страница не знает, кто из отправителей включён
+    assert.ok(html.includes('%send_mask%'), 'маска включённых отправителей не подставляется');
+});
+
 test('в разметке нет маркеров, которых не знает fill_units', () => {
     const known = ['total', 'unit', 'impulses'];
     for (const name of PAGES) {

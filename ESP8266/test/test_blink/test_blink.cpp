@@ -11,7 +11,7 @@
 TEST(BlinkCode, SuccessfulSessionBlinksGreen)
 {
     SessionStatus status;
-    status.cloud = SEND_OK;
+    status.waterius = SEND_OK;
 
     EXPECT_EQ(blink_code(status), ERROR_OK);
 }
@@ -32,7 +32,7 @@ TEST(BlinkCode, ConfigWinsOverEverything)
     SessionStatus status;
     status.config_loaded = false;
     status.wifi_connected = false;
-    status.cloud = SEND_NO_CONNECTION;
+    status.waterius = SEND_NO_CONNECTION;
     status.low_voltage = true;
 
     EXPECT_EQ(blink_code(status), ERROR_CONFIG);
@@ -44,7 +44,7 @@ TEST(BlinkCode, RouterWinsOverCloud)
     // а не следствие
     SessionStatus status;
     status.wifi_connected = false;
-    status.cloud = SEND_NO_CONNECTION;
+    status.waterius = SEND_NO_CONNECTION;
     status.mqtt = SEND_NO_CONNECTION;
 
     EXPECT_EQ(blink_code(status), ERROR_CONNECT_ROUTER);
@@ -53,10 +53,10 @@ TEST(BlinkCode, RouterWinsOverCloud)
 TEST(BlinkCode, CloudAnswerIsDistinctFromNoConnection)
 {
     SessionStatus no_connection;
-    no_connection.cloud = SEND_NO_CONNECTION;
+    no_connection.waterius = SEND_NO_CONNECTION;
 
     SessionStatus bad_answer;
-    bad_answer.cloud = SEND_BAD_ANSWER;
+    bad_answer.waterius = SEND_BAD_ANSWER;
 
     EXPECT_EQ(blink_code(no_connection), ERROR_CONNECT_CLOUD);
     EXPECT_EQ(blink_code(bad_answer), ERROR_CLOUD_ANSWER);
@@ -65,7 +65,7 @@ TEST(BlinkCode, CloudAnswerIsDistinctFromNoConnection)
 TEST(BlinkCode, MqttFailureIsReportedWhenCloudIsFine)
 {
     SessionStatus status;
-    status.cloud = SEND_OK;
+    status.waterius = SEND_OK;
     status.mqtt = SEND_NO_CONNECTION;
 
     EXPECT_EQ(blink_code(status), ERROR_CONNECT_MQTT);
@@ -76,11 +76,11 @@ TEST(BlinkCode, LowVoltageShowsUpOnlyWhenSessionWentThrough)
     // Просевшее питание — не причина отказа, а повод заняться источником.
     // Если сеанс всё же упал, полезнее увидеть, на чём именно
     SessionStatus ok_session;
-    ok_session.cloud = SEND_OK;
+    ok_session.waterius = SEND_OK;
     ok_session.low_voltage = true;
 
     SessionStatus failed_session;
-    failed_session.cloud = SEND_NO_CONNECTION;
+    failed_session.waterius = SEND_NO_CONNECTION;
     failed_session.low_voltage = true;
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
@@ -102,7 +102,7 @@ TEST(BlinkCode, ClassicDoesNotBlinkLowVoltage)
     устройстве: вышла бы одна вспышка почти каждый сеанс.
     */
     SessionStatus status;
-    status.cloud = SEND_OK;
+    status.waterius = SEND_OK;
     status.low_voltage = true;
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_1
@@ -116,10 +116,26 @@ TEST(BlinkCode, SkippedSenderIsNotAFailure)
 {
     // waterius.ru выключен, данные ушли по MQTT — моргать ошибкой не за что
     SessionStatus status;
-    status.cloud = SEND_SKIPPED;
+    status.waterius = SEND_SKIPPED;
     status.mqtt = SEND_OK;
 
     EXPECT_EQ(blink_code(status), ERROR_OK);
+}
+
+TEST(BlinkCode, CloudCodeStillTakesTheWorstOfTwo)
+{
+    /*
+    Облачные получатели лежат в разных полях с тех пор, как настройка
+    "что считать успешной передачей аварии" стала отмечать их поимённо.
+    Вспышка при этом осталась общей: waterius.ru принял, свой сервер
+    ответил не то - показываем отказ, а не успех.
+    */
+    SessionStatus status;
+    status.waterius = SEND_OK;
+    status.http = SEND_BAD_ANSWER;
+
+    EXPECT_EQ(cloud_status(status), SEND_BAD_ANSWER);
+    EXPECT_EQ(blink_code(status), ERROR_CLOUD_ANSWER);
 }
 
 TEST(MergeStatus, WorstResultWins)

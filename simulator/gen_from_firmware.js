@@ -237,6 +237,7 @@ function generate() {
             CounterName: enums.CounterName || {},
             InputColor: enums.InputColor || {},
             ParamError: enums.ParamError || {},
+            AlarmConfirm: enums.AlarmConfirm || {},
         },
         params,
         settings,

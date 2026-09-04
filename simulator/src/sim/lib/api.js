@@ -12,6 +12,7 @@
     function P() { return root.SIM_GENERATED.params; }
     function E() { return root.SIM_GENERATED.enums.ParamError; }
     function C() { return root.SimCore; }
+    function A() { return root.SIM_GENERATED.enums.AlarmConfirm; }
 
     var ERR_ATTINY = '16';
     var ERR_NO_LINK = '7';
@@ -66,6 +67,20 @@
         var result = C().parseBool(p.value);
         if (result.err === E().PARAM_OK) state.sett[field] = result.value;
         else reportParamError(p.name, errors, result.err);
+    }
+
+    /*
+     * Бит маски "кому доклад о тревоге обязан доехать" (#202). Порт
+     * save_confirm_bit(): при отвергнутом значении бит остаётся как был.
+     */
+    function saveConfirmBit(p, state, bit, errors) {
+        var result = C().parseBool(p.value);
+        if (result.err !== E().PARAM_OK) {
+            reportParamError(p.name, errors, result.err);
+            return;
+        }
+        if (result.value) state.sett.alarm_confirm |= bit;
+        else state.sett.alarm_confirm &= ~bit;
     }
 
     /*
@@ -223,6 +238,9 @@
         else if (name === P().PARAM_MQTT_RETAIN) saveBool(p, state, 'mqtt_retain', errors);
         else if (name === P().PARAM_SEND_ON_CONSUMPTION || name === P().s_sc) saveBool(p, state, 'send_on_consumption', errors);
         else if (name === P().PARAM_VACATION || name === P().s_vac) saveBool(p, state, 'vacation', errors);
+        else if (name === P().PARAM_CONFIRM_WATERIUS || name === P().s_ackw) saveConfirmBit(p, state, A().CONFIRM_WATERIUS, errors);
+        else if (name === P().PARAM_CONFIRM_HTTP || name === P().s_ackh) saveConfirmBit(p, state, A().CONFIRM_HTTP, errors);
+        else if (name === P().PARAM_CONFIRM_MQTT || name === P().s_ackm) saveConfirmBit(p, state, A().CONFIRM_MQTT, errors);
     }
 
     function applyNonCheckBoxParameter(p, errors, state) {
@@ -289,6 +307,8 @@
             p.PARAM_WATERIUS_ON, p.PARAM_HTTP_ON, p.PARAM_MQTT_ON, p.PARAM_DHCP_OFF,
             p.PARAM_MQTT_AUTO_DISCOVERY, p.PARAM_MQTT_RETAIN, p.PARAM_SEND_ON_CONSUMPTION,
             p.PARAM_VACATION, p.s_sc, p.s_vac,
+            p.PARAM_CONFIRM_WATERIUS, p.PARAM_CONFIRM_HTTP, p.PARAM_CONFIRM_MQTT,
+            p.s_ackw, p.s_ackh, p.s_ackm,
             p.PARAM_WATERIUS_HOST, p.PARAM_WATERIUS_EMAIL, p.PARAM_HTTP_URL,
             p.PARAM_MQTT_HOST, p.PARAM_MQTT_PORT, p.PARAM_MQTT_LOGIN, p.PARAM_MQTT_PASSWORD,
             p.PARAM_MQTT_TOPIC, p.PARAM_MQTT_DISCOVERY_TOPIC,
@@ -426,6 +446,17 @@
 
         var vacation = findParam(params, P().PARAM_VACATION);
         if (vacation) saveBool(vacation, state, 'vacation', errors);
+
+        // Спрятанной галочки в запросе нет - бит остаётся как был
+        var ack = [
+            [P().PARAM_CONFIRM_WATERIUS, A().CONFIRM_WATERIUS],
+            [P().PARAM_CONFIRM_HTTP, A().CONFIRM_HTTP],
+            [P().PARAM_CONFIRM_MQTT, A().CONFIRM_MQTT]
+        ];
+        ack.forEach(function (pair) {
+            var p = findParam(params, pair[0]);
+            if (p) saveConfirmBit(p, state, pair[1], errors);
+        });
 
         var json = { errors: errors };
         if (!Object.keys(errors).length) json.redirect = '/index.html';

@@ -8,6 +8,11 @@ SendStatus merge_status(const SendStatus a, const SendStatus b)
     return a > b ? a : b;
 }
 
+SendStatus cloud_status(const SessionStatus &status)
+{
+    return merge_status(status.waterius, status.http);
+}
+
 ErrorBlynks blink_code(const SessionStatus &status)
 {
     if (!status.config_loaded)
@@ -16,10 +21,12 @@ ErrorBlynks blink_code(const SessionStatus &status)
     if (!status.wifi_connected)
         return ERROR_CONNECT_ROUTER;
 
-    if (status.cloud == SEND_NO_CONNECTION)
+    const SendStatus cloud = cloud_status(status);
+
+    if (cloud == SEND_NO_CONNECTION)
         return ERROR_CONNECT_CLOUD;
 
-    if (status.cloud == SEND_BAD_ANSWER)
+    if (cloud == SEND_BAD_ANSWER)
         return ERROR_CLOUD_ANSWER;
 
     if (status.mqtt == SEND_NO_CONNECTION || status.mqtt == SEND_BAD_ANSWER)

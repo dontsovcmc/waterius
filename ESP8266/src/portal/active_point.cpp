@@ -244,6 +244,23 @@ String processor_main(const String &var, const uint8_t input)
     else if (var == FPSTR(PARAM_VACATION))
         return template_bool(sett.vacation);
 
+    else if (var == FPSTR(PARAM_CONFIRM_WATERIUS))
+        return template_bool(sett.alarm_confirm & CONFIRM_WATERIUS);
+    else if (var == FPSTR(PARAM_CONFIRM_HTTP))
+        return template_bool(sett.alarm_confirm & CONFIRM_HTTP);
+    else if (var == FPSTR(PARAM_CONFIRM_MQTT))
+        return template_bool(sett.alarm_confirm & CONFIRM_MQTT);
+
+    /*
+    Какие отправители включены. Галочку выключенного прятать обязательно:
+    требование к нему всё равно снимается (core/alarm.h:alarm_delivered), и
+    оставленная галочка обещала бы то, чего не будет.
+    */
+    else if (var == FPSTR(PARAM_SEND_MASK))
+        return String((sett.waterius_on ? CONFIRM_WATERIUS : 0) |
+                      (sett.http_on ? CONFIRM_HTTP : 0) |
+                      (sett.mqtt_on ? CONFIRM_MQTT : 0));
+
     /*
     Можно ли вообще настроить тревоги на входе: нужен известный вес импульса
     и attiny не старее ATTINY_VER_ALARM. Иначе поля прячем - настройка,

@@ -18,9 +18,9 @@ void send_data(const Settings &sett, const AttinyData &data, const CalculatedDat
     if (waterius_status == SEND_OK)
     {
         LOG_INFO(F("HTTP: Send OK"));
-        status.delivered = true;
+        status.delivered_any = true;
     }
-    status.cloud = merge_status(status.cloud, waterius_status);
+    status.waterius = merge_status(status.waterius, waterius_status);
 #endif
 
 #ifndef HTTPS_DISABLED
@@ -28,9 +28,9 @@ void send_data(const Settings &sett, const AttinyData &data, const CalculatedDat
     if (http_status == SEND_OK)
     {
         LOG_INFO(F("HTTP: Send OK"));
-        status.delivered = true;
+        status.delivered_any = true;
     }
-    status.cloud = merge_status(status.cloud, http_status);
+    status.http = merge_status(status.http, http_status);
 #endif
 
 #ifndef MQTT_DISABLED
@@ -40,7 +40,7 @@ void send_data(const Settings &sett, const AttinyData &data, const CalculatedDat
         {
             LOG_INFO(F("MQTT: Send OK"));
             status.mqtt = merge_status(status.mqtt, SEND_OK);
-            status.delivered = true;
+            status.delivered_any = true;
         }
         else
         {

@@ -43,6 +43,8 @@ TEST(SettingsLayout, NewFieldsLiveInTheReservedTail)
     EXPECT_GE(offsetof(Settings, minutes_since_send), 882u);
     EXPECT_GE(offsetof(Settings, send_on_consumption), 882u);
     EXPECT_LT(offsetof(Settings, send_on_consumption), 960u);
+    EXPECT_GE(offsetof(Settings, alarm_confirm), 882u);
+    EXPECT_LT(offsetof(Settings, alarm_confirm), 960u);
 }
 
 TEST(SettingsLayout, RepurposedReservedByteStayedInPlace)
@@ -87,4 +89,18 @@ TEST(SettingsDefaults, IdleModeIsOffAfterUpgrade)
 
     EXPECT_EQ(sett.send_on_consumption, 0);
     EXPECT_EQ(sett.minutes_since_send, 0);
+}
+
+TEST(SettingsDefaults, AlarmConfirmAcceptsAnyRecipient)
+{
+    /*
+    Ноль в резерве означает "достаточно любого получателя" - ровно то, как
+    квитанция о тревоге работала до появления настройки. Иначе обновление
+    прошивки молча ужесточило бы условие и добавило устройству внеплановых
+    сеансов.
+    */
+    Settings sett;
+
+    EXPECT_EQ(sett.alarm_confirm, CONFIRM_ANY);
+    EXPECT_EQ(CONFIRM_ANY, 0);
 }

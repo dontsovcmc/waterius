@@ -78,3 +78,36 @@ bool alarm_configurable(const uint8_t counter_type, const uint16_t factor)
     }
     return true;
 }
+
+bool alarm_delivered(const uint8_t mask, const SessionStatus &status)
+{
+    if (mask == CONFIRM_ANY)
+    {
+        return status.delivered_any;
+    }
+
+    const uint8_t bits[3] = {CONFIRM_WATERIUS, CONFIRM_HTTP, CONFIRM_MQTT};
+    const SendStatus sent[3] = {status.waterius, status.http, status.mqtt};
+
+    bool required = false;   // хоть один обязательный получатель настроен
+    bool all_ok = true;
+
+    for (uint8_t i = 0; i < 3; i++)
+    {
+        if (!(mask & bits[i]) || sent[i] == SEND_SKIPPED)
+        {
+            continue;   // не отмечен или выключен - не в счёт
+        }
+        required = true;
+        if (sent[i] != SEND_OK)
+        {
+            all_ok = false;
+        }
+    }
+
+    if (!required)
+    {
+        return status.delivered_any;   // требовать некого
+    }
+    return all_ok;
+}

@@ -60,6 +60,11 @@ const CounterType_LEAKAGE = 5;
 const CounterType_LEAKAGE_NC = 6;
 const CounterType_NONE = 0xFF;
 
+// Кому доклад о тревоге обязан доехать, ESP8266/src/core/types.h:AlarmConfirm
+const CONFIRM_WATERIUS = 0x01;
+const CONFIRM_HTTP = 0x02;
+const CONFIRM_MQTT = 0x04;
+
 // Спецзначения веса импульса, ESP8266/src/core/types.h
 const AUTO_IMPULSE_FACTOR = 3;
 const AS_COLD_CHANNEL = 7;
@@ -263,7 +268,7 @@ ready приходит от прошивки: тревоги требуют из
 нужен известный вес импульса, а остановку считает сама ЕСП по приросту
 импульсов - она доступна и на старой прошивке attiny, и до настройки веса.
 */
-function fill_alarms(counter0_name, counter1_name, ready0, ready1, stop0, stop1) {
+function fill_alarms(counter0_name, counter1_name, ready0, ready1, stop0, stop1, send_mask) {
     fill_counter0_title(counter0_name, CounterType_NAMUR);
     fill_counter1_title(counter1_name, CounterType_NAMUR);
 
@@ -291,6 +296,35 @@ function fill_alarms(counter0_name, counter1_name, ready0, ready1, stop0, stop1)
         var note = document.getElementById('alarm_none');
         note.textContent = S_ALARM_NOT_READY;
         note.classList.remove('hd');
+    }
+
+    fill_alarm_ack(send_mask);
+}
+
+/*
+Галочки "кому доклад о тревоге обязан доехать": показываем только
+включённых отправителей.
+
+Выключенного прошивка из условия всё равно исключает, иначе тревога не была
+бы доложена никогда - а раз так, галочка на нём обещала бы то, чего не
+будет. Не осталось ни одного - прячем блок целиком.
+*/
+function fill_alarm_ack(send_mask) {
+    var mask = Number(send_mask) || 0;
+    var rows = [
+        [CONFIRM_WATERIUS, 'ack_waterius'],
+        [CONFIRM_HTTP, 'ack_http'],
+        [CONFIRM_MQTT, 'ack_mqtt']
+    ];
+
+    for (var i = 0; i < rows.length; i++) {
+        if (!(mask & rows[i][0])) {
+            document.getElementById(rows[i][1]).classList.add('hd');
+        }
+    }
+
+    if (!mask) {
+        document.getElementById('alarm_ack').classList.add('hd');
     }
 }
 
