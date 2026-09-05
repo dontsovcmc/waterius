@@ -104,17 +104,18 @@ def test_E1_flow_alarm(stand, quiet):
 
 ## Известные дефекты прошивки
 
-Четыре теста помечены `xfail` — они написаны под правильное поведение и станут
+Два теста помечены `xfail` — они написаны под правильное поведение и станут
 зелёными сами, когда дефект починят:
 
 | Тест | Дефект |
 |---|---|
-| `test_E3a_single_pulse_is_not_a_leak` | Один импульс после долгой тишины поднимает ложную протечку, и она не снимается никогда (`Attiny85/src/alarm.h`, `prev_gap` после насыщения `ticks`) |
-| `test_D2b_undelivered_session_keeps_delta` | Точка отсчёта расхода двигается после подключения к Wi-Fi, а не после доставки: посылка не дошла — прирост потерян |
+| `test_E3a_single_pulse_is_not_a_leak` | [#405](https://github.com/dontsovcmc/waterius/issues/405): один импульс после долгой тишины поднимает ложную протечку, и она не снимается никогда (`Attiny85/src/alarm.h`, `prev_gap` после насыщения `ticks`) |
+| `test_D2b_undelivered_session_keeps_delta` | [#407](https://github.com/dontsovcmc/waterius/issues/407): точка отсчёта расхода двигается после подключения к Wi-Fi, а не после доставки: посылка не дошла — прирост потерян |
 
-Ещё три дефекта тесты обходят, а не проверяют: `MQTT: Connecting failed` не
+Ещё три дефекта тесты обходят, а не проверяют. [#408](https://github.com/dontsovcmc/waterius/issues/408): `MQTT: Connecting failed` не
 печатается никогда (`mqtt_connect` возвращает успех после всех неудач), поэтому
-ловим `MQTT: Connect failed with state`; повторная отправка после применения
-настроек не уходит в брокер, потому что `send_mqtt` закрывает соединение
-(`test_G1` следит за строкой `MQTT: Not connected`); снятие retained-команды
-публикуется без флага retain при выключенной настройке `mqtt_retain`.
+ловим `MQTT: Connect failed with state`. [#406](https://github.com/dontsovcmc/waterius/issues/406): повторная отправка после
+применения настроек не уходит в брокер, потому что `send_mqtt` закрывает
+соединение — `test_G1` следит за строкой `MQTT: Not connected`. [#409](https://github.com/dontsovcmc/waterius/issues/409):
+снятие retained-команды публикуется без флага retain при выключенной настройке
+`mqtt_retain`.

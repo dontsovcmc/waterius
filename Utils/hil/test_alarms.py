@@ -76,7 +76,7 @@ def test_E2_flow_alarm_clears(stand: Stand, quiet: None, slow_clock: None) -> No
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(reason='ложная протечка от одного импульса после долгой тишины')
+@pytest.mark.xfail(reason='#405: ложная протечка от одного импульса после долгой тишины')
 def test_E3a_single_pulse_is_not_a_leak(stand: Stand, quiet: None,
                                         slow_clock: None) -> None:
     """
