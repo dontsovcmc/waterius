@@ -216,9 +216,11 @@ textarea {
 .toggle input:checked + label:after{left:18px;}*/
 .toggle.active label:before{background: #1655F5;}
 .toggle.active label:after{left:18px;}
-/* Выключенный получатель: положение переключателя видно, цвет говорит "нельзя" */
-.toggle.off label{color:#C3BDBD;cursor:default;}
+/* Недоступная настройка: видна, но выключена. Само поле гасит input:disabled */
+.off label{color:#C3BDBD;}
+.toggle.off label{cursor:default;}
 .toggle.off label:before{background:#E9E7E7;}
+/* У переключателя положение видно, а цвет говорит "нельзя" */
 .toggle.off.active label:before{background:#C3BDBD;}
 
 .radio{margin-top:20px;}

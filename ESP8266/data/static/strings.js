@@ -158,9 +158,9 @@ COUNTER_TYPES[CounterType_NONE] = "Выключен";
 const S_COUNTER_DISABLED = "Отключён";
 
 /*
-Настраивать нечего: ни один вход не считает импульсы. Порог расхода вдобавок
-требует прошивки attiny 41 или новее, но остановка потребления считается на
-ЕСП и работает на любой - поэтому про версию тут уже не пишем.
+Настраивать нечего: ни один вход не считает импульсы. Про старую attiny тут
+не пишем - у неё своё примечание на странице, и оно про пороги, а не про
+всю страницу.
 */
 const S_ALARM_NOT_READY = "Тревоги недоступны: ни один вход не считает импульсы. " +
     "Сначала настройте счётчики.";
@@ -259,30 +259,51 @@ function alarm_flow_label(counter_name) {
 Страница тревог: два канала сразу, поэтому подписи заполняются по каждому
 отдельно, а не общим fill_units.
 
-ready приходит от прошивки: тревоги требуют известного веса импульса и attiny
-не старее 41. Настройку, которая ничего не делает, лучше не показывать вовсе,
-чем показать неработающей.
+Три признака от прошивки, и у каждого свой ответ пользователю:
+
+  ready  - умеет ли устройство пороги расхода на этом входе. Считает их attiny,
+           нужна прошивка 41 и новее. Не умеет - поля прячем и пишем почему:
+           сделать тут пользователю нечего.
+  factor - задан ли вес импульса. Без него порог не пересчитать, но это
+           поправимо - поля показываем неактивными и зовём настроить счётчик.
+  stop   - остановку потребления считает сама ЕСП по приросту импульсов, ей ни
+           вес, ни версия attiny не нужны. Поэтому прячется отдельно.
+
+Молча спрятанное поле - и есть та жалоба, с которой всё началось: у одного
+входа настройки были, у другого нет, а почему - страница не говорила.
 */
-/*
-Пороги расхода и остановку прячем по отдельности: расход считает attiny и ему
-нужен известный вес импульса, а остановку считает сама ЕСП по приросту
-импульсов - она доступна и на старой прошивке attiny, и до настройки веса.
-*/
-function fill_alarms(counter0_name, counter1_name, ready0, ready1, stop0, stop1, send_mask) {
+function fill_alarms(counter0_name, counter1_name, ready0, ready1,
+                     factor0, factor1, stop0, stop1, send_mask) {
     fill_counter0_title(counter0_name, CounterType_NAMUR);
     fill_counter1_title(counter1_name, CounterType_NAMUR);
 
     var names = [counter0_name, counter1_name];
     var ready = [ready0, ready1];
+    var factor = [factor0, factor1];
     var stop = [stop0, stop1];
+    var old_attiny = false;
 
     document.querySelectorAll('[data-alarm-label]').forEach(function(q) {
         q.textContent = alarm_flow_label(names[Number(q.dataset.alarmLabel)]);
     });
 
     for (var i = 0; i < 2; i++) {
+        var thresholds = document.getElementById('thresholds' + i);
         if (!ready[i]) {
-            document.getElementById('thresholds' + i).classList.add('hd');
+            thresholds.classList.add('hd');
+            /*
+            Вход импульсы считает, а порогов нет - значит дело в attiny: тип
+            входа тут ни при чём, он бы погасил и остановку.
+            */
+            if (stop[i]) {
+                old_attiny = true;
+            }
+        } else if (!factor[i]) {
+            thresholds.classList.add('off');
+            thresholds.querySelectorAll('input').forEach(function(inp) {
+                inp.disabled = true;
+            });
+            document.getElementById('no_factor' + i).classList.remove('hd');
         }
         if (!stop[i]) {
             document.getElementById('stop' + i).classList.add('hd');
@@ -290,6 +311,10 @@ function fill_alarms(counter0_name, counter1_name, ready0, ready1, stop0, stop1,
         if (!ready[i] && !stop[i]) {
             document.getElementById('alarm' + i).classList.add('hd');
         }
+    }
+
+    if (old_attiny) {
+        document.getElementById('alarm_old_attiny').classList.remove('hd');
     }
 
     if (!ready0 && !ready1 && !stop0 && !stop1) {

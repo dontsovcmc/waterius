@@ -282,6 +282,96 @@ test('пороги расхода и остановки прячутся по о
     }
 });
 
+test('страница объясняет, почему порогов расхода нет', () => {
+    /*
+    Молча спрятанное поле - жалоба, с которой всё началось: у одного входа
+    настройки есть, у другого нет, а почему - непонятно. Причин две, и ответы
+    у них разные, поэтому и признака два.
+    */
+    const html = page('alarms.html');
+
+    assert.ok(html.includes('id="alarm_old_attiny"'),
+              'нет примечания про attiny, которая порогов не умеет');
+
+    for (const input of ['0', '1']) {
+        assert.ok(html.includes('%factor_ready' + input + '%'),
+                  'готовность веса импульса на входе ' + input + ' не подставляется');
+        assert.ok(html.includes('id="no_factor' + input + '"'),
+                  'на входе ' + input + ' нечем сказать, что счётчик не настроен');
+        assert.ok(html.includes('href="/input/' + input + '/setup.html"'),
+                  'из примечания на входе ' + input + ' некуда пойти настраивать');
+    }
+});
+
+test('пороги расхода: спрятаны у старой attiny, неактивны без веса импульса', () => {
+    /*
+    Три состояния на канал, и путать их нельзя: старую attiny не исправить
+    (поля прячем и говорим почему), незаданный вес - можно (поля показываем
+    неактивными и зовём настроить).
+    */
+    const ids = ['thresholds0', 'thresholds1', 'stop0', 'stop1', 'alarm0', 'alarm1',
+                 'no_factor0', 'no_factor1', 'alarm_old_attiny', 'alarm_none',
+                 'ack_waterius', 'ack_http', 'ack_mqtt',
+                 'counter0_title', 'counter1_title'];
+
+    function build() {
+        const rows = {};
+        for (const id of ids) {
+            const row = {
+                classes: id.startsWith('no_factor') || id === 'alarm_old_attiny' ? ['hd'] : [],
+                inputs: [{ disabled: false }, { disabled: false }],
+                textContent: '',
+                innerHTML: ''
+            };
+            row.classList = {
+                add: (c) => row.classes.push(c),
+                remove: (c) => { row.classes = row.classes.filter((x) => x !== c); }
+            };
+            row.querySelectorAll = () => row.inputs;
+            row.querySelector = () => row.inputs[0];
+            rows[id] = row;
+        }
+        sandbox.document = {
+            getElementById: (id) => rows[id],
+            querySelectorAll: () => []
+        };
+        return rows;
+    }
+
+    function fill(ready0, ready1, factor0, factor1) {
+        const rows = build();
+        vm.runInContext('fill_alarms(' + [
+            ctx.CounterName_WATER_HOT, ctx.CounterName_WATER_COLD,
+            ready0, ready1, factor0, factor1, 1, 1, 0
+        ].join(', ') + ')', sandbox);
+        return rows;
+    }
+
+    // Старая attiny: порогов нет ни на одном входе, зато сказано почему
+    let rows = fill(0, 0, 1, 1);
+    assert.ok(rows.thresholds0.classes.includes('hd'), 'пороги старой attiny не спрятаны');
+    assert.ok(!rows.alarm_old_attiny.classes.includes('hd'), 'про старую attiny промолчали');
+    assert.ok(rows.no_factor0.classes.includes('hd'), 'обвинили счётчик вместо attiny');
+
+    // Вес импульса не задан на горячем входе (0), холодный настроен
+    rows = fill(1, 1, 0, 1);
+    assert.ok(!rows.thresholds0.classes.includes('hd'), 'поля спрятали вместо того, чтобы погасить');
+    assert.ok(rows.thresholds0.classes.includes('off'), 'поля без веса импульса не погашены');
+    assert.ok(rows.thresholds0.inputs.every((i) => i.disabled), 'поля без веса импульса можно править');
+    assert.ok(!rows.no_factor0.classes.includes('hd'), 'не сказано, что счётчик не настроен');
+    assert.ok(rows.alarm_old_attiny.classes.includes('hd'), 'приплели старую attiny');
+
+    // Соседний вход настроен - его трогать нечем
+    assert.deepStrictEqual(rows.thresholds1.classes, [], 'настроенный вход погашен заодно');
+    assert.ok(rows.no_factor1.classes.includes('hd'), 'настроенный вход обвинён в ненастроенности');
+
+    // Всё настроено: ни одного примечания
+    rows = fill(1, 1, 1, 1);
+    assert.deepStrictEqual(rows.thresholds0.classes, [], 'настроенные пороги погашены');
+    assert.ok(rows.no_factor0.classes.includes('hd'), 'лишнее примечание про счётчик');
+    assert.ok(rows.alarm_old_attiny.classes.includes('hd'), 'лишнее примечание про attiny');
+});
+
 test('режим "я уехал" есть на странице тревог', () => {
     const html = page('alarms.html');
 

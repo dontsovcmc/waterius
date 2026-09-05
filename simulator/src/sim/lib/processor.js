@@ -168,13 +168,17 @@
                               (sett.mqtt_on ? A().CONFIRM_MQTT : 0));
             case P.PARAM_SEND_ON_CONSUMPTION: return templateBool(sett.send_on_consumption);
 
-            /* Можно ли настроить тревоги: нужен вес импульса и attiny не старее 41 */
+            /* Умеет ли устройство пороги: attiny не старее 41 и вход считает импульсы */
             case P.PARAM_ALARM_READY0:
                 return String(attiny.version >= G().defines.ATTINY_VER_ALARM &&
-                              root.SimCore.alarmConfigurable(attiny.counter_type0, sett.factor0) ? 1 : 0);
+                              root.SimCore.countsImpulses(attiny.counter_type0) ? 1 : 0);
             case P.PARAM_ALARM_READY1:
                 return String(attiny.version >= G().defines.ATTINY_VER_ALARM &&
-                              root.SimCore.alarmConfigurable(attiny.counter_type1, sett.factor1) ? 1 : 0);
+                              root.SimCore.countsImpulses(attiny.counter_type1) ? 1 : 0);
+
+            /* Задан ли вес импульса: без него порог не пересчитать в тики */
+            case P.PARAM_FACTOR_READY0: return String(root.SimCore.factorConfigured(sett.factor0) ? 1 : 0);
+            case P.PARAM_FACTOR_READY1: return String(root.SimCore.factorConfigured(sett.factor1) ? 1 : 0);
 
             /* Остановку считает ЕСП: версия attiny ни при чём, лишь бы вход считал импульсы */
             case P.PARAM_STOP_READY0: return String(root.SimCore.countsImpulses(attiny.counter_type0) ? 1 : 0);
@@ -209,6 +213,7 @@
             'PARAM_ALARM_STOP0', 'PARAM_ALARM_STOP1', 'PARAM_VACATION', 'PARAM_SEND_ON_CONSUMPTION',
             'PARAM_CONFIRM_WATERIUS', 'PARAM_CONFIRM_HTTP', 'PARAM_CONFIRM_MQTT', 'PARAM_SEND_MASK',
             'PARAM_ALARM_READY0', 'PARAM_ALARM_READY1', 'PARAM_STOP_READY0', 'PARAM_STOP_READY1',
+            'PARAM_FACTOR_READY0', 'PARAM_FACTOR_READY1',
         ];
         return names.map(function (key) { return P[key]; }).filter(Boolean);
     }

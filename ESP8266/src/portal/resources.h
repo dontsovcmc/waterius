@@ -75,6 +75,8 @@ static const char PARAM_STOP_READY0[] PROGMEM = "stop_ready0";
 static const char PARAM_STOP_READY1[] PROGMEM = "stop_ready1";
 static const char PARAM_ALARM_READY0[] PROGMEM = "alarm_ready0";
 static const char PARAM_ALARM_READY1[] PROGMEM = "alarm_ready1";
+static const char PARAM_FACTOR_READY0[] PROGMEM = "factor_ready0";
+static const char PARAM_FACTOR_READY1[] PROGMEM = "factor_ready1";
 static const char PARAM_ASTERICS[] PROGMEM = "********";
 
 

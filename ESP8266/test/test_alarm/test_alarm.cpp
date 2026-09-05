@@ -92,32 +92,32 @@ TEST(Alarm, OldAttinyHasNoAlarms)
     EXPECT_NE(alarm_bits(flags, INPUT0_RED, ATTINY_VER_ALARM), 0);
 }
 
-TEST(Alarm, ConfigurableNeedsKnownFactor)
+TEST(Alarm, FactorConfiguredRejectsSpecialValues)
 {
-    // До первой настройки вес импульса — спецзначение, пересчитывать не из чего
-    EXPECT_FALSE(alarm_configurable(CounterType::NAMUR, AUTO_IMPULSE_FACTOR));
-    EXPECT_FALSE(alarm_configurable(CounterType::NAMUR, AS_COLD_CHANNEL));
-    EXPECT_FALSE(alarm_configurable(CounterType::NAMUR, 0));
+    /*
+    До первой настройки входа в весе импульса лежит спецзначение из
+    комбобокса. Это обычные маленькие числа: взять их за литры на импульс
+    значило бы посчитать порог, о котором никто не просил.
+    */
+    EXPECT_FALSE(factor_configured(AUTO_IMPULSE_FACTOR));
+    EXPECT_FALSE(factor_configured(AS_COLD_CHANNEL));
+    EXPECT_FALSE(factor_configured(0));
 
-    EXPECT_TRUE(alarm_configurable(CounterType::NAMUR, 10));
-}
-
-TEST(Alarm, ConfigurableForElectricity)
-{
-    // Электричество разрешено: формула другая, но вес импульса известен
-    EXPECT_TRUE(alarm_configurable(CounterType::ELECTRONIC, 1000));
+    EXPECT_TRUE(factor_configured(10));
+    // Электричество тоже: формула другая, но вес известен
+    EXPECT_TRUE(factor_configured(1000));
 }
 
 TEST(Alarm, DisabledInputHasNoAlarms)
 {
-    EXPECT_FALSE(alarm_configurable(CounterType::NONE, 10));
+    EXPECT_EQ(alarm_interval_ticks(false, CounterType::NONE, 600, 10, false), 0);
 }
 
 TEST(Alarm, LeakSensorHasNoFlowThreshold)
 {
     // Датчик протечки не считает импульсы: порог расхода ему не из чего считать
-    EXPECT_FALSE(alarm_configurable(CounterType::LEAKAGE, 10));
-    EXPECT_FALSE(alarm_configurable(CounterType::LEAKAGE_NC, 10));
+    EXPECT_EQ(alarm_interval_ticks(false, CounterType::LEAKAGE, 600, 10, false), 0);
+    EXPECT_EQ(alarm_interval_ticks(false, CounterType::LEAKAGE_NC, 600, 10, false), 0);
 }
 
 // --- режим "я уехал" (#88) ---
@@ -156,6 +156,7 @@ TEST(Vacation, WorksWithoutKnownImpulseWeight)
 
     // А обычный порог без веса импульса по-прежнему не посчитать
     EXPECT_EQ(alarm_interval_ticks(false, CounterType::NAMUR, 600, AUTO_IMPULSE_FACTOR, false), 0);
+    EXPECT_EQ(alarm_interval_ticks(false, CounterType::NAMUR, 600, AS_COLD_CHANNEL, false), 0);
 }
 
 TEST(Vacation, SkipsInputsWithoutImpulses)

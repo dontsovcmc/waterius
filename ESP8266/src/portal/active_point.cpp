@@ -262,20 +262,32 @@ String processor_main(const String &var, const uint8_t input)
                       (sett.mqtt_on ? CONFIRM_MQTT : 0));
 
     /*
-    Можно ли вообще настроить тревоги на входе: нужен известный вес импульса
-    и attiny не старее ATTINY_VER_ALARM. Иначе поля прячем - настройка,
-    которая ничего не делает, хуже её отсутствия.
+    Три признака, и у каждого своя причина - страница объясняет их по-разному.
+
+    alarm_ready: умеет ли устройство пороги расхода на этом входе. Считает их
+    attiny, поэтому нужна прошивка не старее ATTINY_VER_ALARM, а вход должен
+    давать импульсы. Не умеет - поля прячем: тут пользователь бессилен.
     */
     else if (var == FPSTR(PARAM_ALARM_READY0))
         return String(runtime_data.version >= ATTINY_VER_ALARM &&
-                      alarm_configurable(runtime_data.counter_type0, sett.factor0) ? 1 : 0);
+                      counts_impulses(runtime_data.counter_type0) ? 1 : 0);
     else if (var == FPSTR(PARAM_ALARM_READY1))
         return String(runtime_data.version >= ATTINY_VER_ALARM &&
-                      alarm_configurable(runtime_data.counter_type1, sett.factor1) ? 1 : 0);
+                      counts_impulses(runtime_data.counter_type1) ? 1 : 0);
 
     /*
-    Остановку потребления считает ЕСП, а не attiny, поэтому версия прошивки
-    attiny тут ни при чём: достаточно, чтобы вход считал импульсы.
+    factor_ready: задан ли вес импульса. Без него порог не пересчитать в тики
+    (см. core/alarm.h), но это поправимо - поля показываем неактивными и зовём
+    настроить счётчик.
+    */
+    else if (var == FPSTR(PARAM_FACTOR_READY0))
+        return String(factor_configured(sett.factor0) ? 1 : 0);
+    else if (var == FPSTR(PARAM_FACTOR_READY1))
+        return String(factor_configured(sett.factor1) ? 1 : 0);
+
+    /*
+    stop_ready: остановку потребления считает ЕСП, а не attiny, поэтому версия
+    прошивки attiny тут ни при чём: достаточно, чтобы вход считал импульсы.
     */
     else if (var == FPSTR(PARAM_STOP_READY0))
         return String(counts_impulses(runtime_data.counter_type0) ? 1 : 0);
