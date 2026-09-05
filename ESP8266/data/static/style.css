@@ -1,9 +1,8 @@
-*{line-height:1;color:#000;font-weight:400;font-family:Roboto,sans-serif;margin:0;padding:0;border:0;vertical-align:baseline;box-sizing:border-box;outline:0;user-select:none;}
+*{line-height:1;color:#000;font-weight:400;font-family:Roboto,sans-serif;margin:0;padding:0;border:0;vertical-align:baseline;box-sizing:border-box;outline:0;}
 html{height:100%;}
 body{width:100%;min-height:100%;font-size:100%;}
 button,a{cursor:pointer;transition:.5s;text-decoration:none;}
 button,input,select,textarea{border-radius:8px;}
-input,textarea{user-select:text;}
 a.link{color:#1655F5;}
 a.link:hover{color:#F53410;}
 .wrap{
@@ -217,6 +216,10 @@ textarea {
 .toggle input:checked + label:after{left:18px;}*/
 .toggle.active label:before{background: #1655F5;}
 .toggle.active label:after{left:18px;}
+/* Выключенный получатель: положение переключателя видно, цвет говорит "нельзя" */
+.toggle.off label{color:#C3BDBD;cursor:default;}
+.toggle.off label:before{background:#E9E7E7;}
+.toggle.off.active label:before{background:#C3BDBD;}
 
 .radio{margin-top:20px;}
 .radio label{padding-left:44px;display:block;position: relative;line-height:32px;height:32px;font-size:20px;}

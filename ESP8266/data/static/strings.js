@@ -302,12 +302,13 @@ function fill_alarms(counter0_name, counter1_name, ready0, ready1, stop0, stop1,
 }
 
 /*
-Галочки "кому доклад о тревоге обязан доехать": показываем только
-включённых отправителей.
+Галочки "кому доклад о тревоге обязан доехать": выключенный отправитель
+показывается неактивным, а не прячется - иначе список получателей на разных
+устройствах выглядит по-разному и непонятно, куда делась строка.
 
-Выключенного прошивка из условия всё равно исключает, иначе тревога не была
-бы доложена никогда - а раз так, галочка на нём обещала бы то, чего не
-будет. Не осталось ни одного - прячем блок целиком.
+Тронуть выключенного нельзя: прошивка такое требование всё равно снимает,
+иначе тревога не была бы доложена никогда - и галочка на нём обещала бы то,
+чего не будет.
 */
 function fill_alarm_ack(send_mask) {
     var mask = Number(send_mask) || 0;
@@ -318,13 +319,12 @@ function fill_alarm_ack(send_mask) {
     ];
 
     for (var i = 0; i < rows.length; i++) {
-        if (!(mask & rows[i][0])) {
-            document.getElementById(rows[i][1]).classList.add('hd');
+        if (mask & rows[i][0]) {
+            continue;
         }
-    }
-
-    if (!mask) {
-        document.getElementById('alarm_ack').classList.add('hd');
+        var row = document.getElementById(rows[i][1]);
+        row.classList.add('off');
+        row.querySelector('input').disabled = true;
     }
 }
 
