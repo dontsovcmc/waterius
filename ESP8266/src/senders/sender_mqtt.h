@@ -115,13 +115,43 @@ bool send_mqtt(const Settings &sett, JsonDocument &json_data)
     publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
 
     mqtt_client.loop();
+
+    LOG_INFO(F("MQTT: Publish finished. ") << millis() - start_time << F(" milliseconds elapsed"));
+    return true;
+}
+
+/**
+ * @brief Закрывает сеанс с брокером
+ *
+ * Отдельно от send_mqtt намеренно (#406). За один сеанс данные отправляются
+ * дважды, если сервер или Home Assistant прислали настройки: прошивка применяет
+ * их и отправляет ещё раз, чтобы получатели сразу увидели новое состояние.
+ * Пока отписка и disconnect стояли в конце send_mqtt, вторая отправка заставала
+ * закрытое соединение, писала в лог "MQTT: Not connected" и приносила
+ * SEND_NO_CONNECTION - при исправном брокере.
+ *
+ * Теперь соединение живёт столько же, сколько Wi-Fi: открывает его
+ * connect_and_subscribe_mqtt, закрывает эта функция, и обе зовутся из main.cpp.
+ *
+ * @param sett настройки
+ */
+void disconnect_mqtt(const Settings &sett)
+{
+    if (!mqtt_client.connected())
+    {
+        return;
+    }
+
+    String mqtt_topic = sett.mqtt_topic;
+    remove_trailing_slash(mqtt_topic);
+
+    mqtt_client.loop();
     mqtt_unsubscribe(mqtt_client, mqtt_topic);
 
     mqtt_client.loop();
     mqtt_client.disconnect();
 
-    LOG_INFO(F("MQTT: Disconnect. ") << millis() - start_time << F(" milliseconds elapsed"));
-    return true;
+    LOG_INFO(F("MQTT: Disconnect"));
 }
 
 #endif

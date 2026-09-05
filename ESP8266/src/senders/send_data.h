@@ -22,6 +22,7 @@ inline bool has_ota(const JsonDocument &json_settings_received)
 
 #ifndef MQTT_DISABLED
 bool connect_and_subscribe_mqtt(Settings &sett, JsonDocument &json_settings_received);
+void disconnect_mqtt(const Settings &sett);
 #endif
 
 #endif
