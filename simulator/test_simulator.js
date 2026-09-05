@@ -237,11 +237,59 @@ function testWizard() {
     check('мастер настройки проходится целиком', problems);
 }
 
+/* 7. Страница тревог приезжает готовой: что показать, решила прошивка. */
+function testAlarmStates() {
+    const problems = [];
+    const D = globalThis.SIM_GENERATED.defines;
+    const CT = globalThis.SIM_GENERATED.enums.CounterType;
+
+    /*
+    Раньше это разбирал скрипт на onload, и проверить можно было только его.
+    Теперь цепочка целиком: состояние входа -> класс -> разметка.
+    */
+    const cases = [
+        { name: 'выключенный вход', type: CT.NONE, factor: 10, version: D.ATTINY_VER_ALARM,
+          expect: 'no-input' },
+        { name: 'старая attiny', type: CT.NAMUR, factor: 10, version: D.ATTINY_VER_ALARM - 1,
+          expect: 'no-attiny' },
+        { name: 'вес импульса не задан', type: CT.NAMUR, factor: D.AUTO_IMPULSE_FACTOR,
+          version: D.ATTINY_VER_ALARM, expect: 'no-factor' },
+        { name: 'всё настроено', type: CT.NAMUR, factor: 10, version: D.ATTINY_VER_ALARM,
+          expect: '' },
+    ];
+
+    cases.forEach((c) => {
+        const state = SimState.newSession(SimState.defaultState());
+        state.attiny.version = c.version;
+        state.attiny.counter_type1 = c.type;
+        state.sett.factor1 = c.factor;
+
+        const html = SimProcessor.render(read('alarms.html'), state);
+        const m = html.match(/id="alarm1" class="([^"]*)"/);
+        if (!m) {
+            problems.push(c.name + ': у блока канала нет класса состояния');
+            return;
+        }
+        if (m[1] !== c.expect) {
+            problems.push(c.name + ': класс "' + m[1] + '", ожидался "' + c.expect + '"');
+        }
+
+        // Поля порогов неактивны ровно тогда, когда не задан вес импульса
+        const off = /id="alarm_flow1"[^>]*disabled/.test(html);
+        if (off !== (c.expect === 'no-factor')) {
+            problems.push(c.name + ': disabled на пороге ' + (off ? 'лишний' : 'потерян'));
+        }
+    });
+
+    check('страница тревог приезжает в нужном состоянии', problems);
+}
+
 testPlaceholders();
 testRoutes();
 testFormFields();
 testRender();
 testGenerated();
+testAlarmStates();
 testWizard();
 
 console.log(failed ? '\nпровалено проверок: ' + failed : '\nвсе проверки пройдены');

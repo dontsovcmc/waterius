@@ -45,11 +45,29 @@ uint16_t alarm_interval_ticks(const bool vacation, const uint8_t counter_type,
     {
         return UINT16_MAX;
     }
-    if (!alarm_configurable(counter_type, factor))
+    if (!factor_configured(factor))
     {
         return 0;
     }
     return flow_to_interval_ticks(threshold, factor, electricity);
+}
+
+AlarmInputState alarm_input_state(const uint8_t counter_type, const uint16_t factor,
+                                  const uint8_t attiny_version)
+{
+    if (!counts_impulses(counter_type))
+    {
+        return ALARM_INPUT_NO_INPUT;
+    }
+    if (attiny_version < ATTINY_VER_ALARM)
+    {
+        return ALARM_INPUT_NO_ATTINY;
+    }
+    if (!factor_configured(factor))
+    {
+        return ALARM_INPUT_NO_FACTOR;
+    }
+    return ALARM_INPUT_READY;
 }
 
 uint8_t alarm_bits(const uint8_t attiny_flags, const uint8_t input,
@@ -62,21 +80,6 @@ uint8_t alarm_bits(const uint8_t attiny_flags, const uint8_t input,
 
     const uint8_t shift = (input == INPUT0_RED) ? ATTINY_ALARM_SHIFT0 : ATTINY_ALARM_SHIFT1;
     return (attiny_flags >> shift) & ATTINY_ALARM_MASK;
-}
-
-bool alarm_configurable(const uint8_t counter_type, const uint16_t factor)
-{
-    if (counter_type == CounterType::NONE ||
-        counter_type == CounterType::LEAKAGE ||
-        counter_type == CounterType::LEAKAGE_NC)
-    {
-        return false;
-    }
-    if (factor == 0 || factor == AUTO_IMPULSE_FACTOR || factor == AS_COLD_CHANNEL)
-    {
-        return false;
-    }
-    return true;
 }
 
 bool alarm_delivered(const uint8_t mask, const SessionStatus &status)

@@ -238,6 +238,7 @@ function generate() {
             InputColor: enums.InputColor || {},
             ParamError: enums.ParamError || {},
             AlarmConfirm: enums.AlarmConfirm || {},
+            AlarmInputState: enums.AlarmInputState || {},
         },
         params,
         settings,

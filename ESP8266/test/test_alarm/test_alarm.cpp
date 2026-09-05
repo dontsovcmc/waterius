@@ -92,32 +92,74 @@ TEST(Alarm, OldAttinyHasNoAlarms)
     EXPECT_NE(alarm_bits(flags, INPUT0_RED, ATTINY_VER_ALARM), 0);
 }
 
-TEST(Alarm, ConfigurableNeedsKnownFactor)
+TEST(Alarm, FactorConfiguredRejectsSpecialValues)
 {
-    // До первой настройки вес импульса — спецзначение, пересчитывать не из чего
-    EXPECT_FALSE(alarm_configurable(CounterType::NAMUR, AUTO_IMPULSE_FACTOR));
-    EXPECT_FALSE(alarm_configurable(CounterType::NAMUR, AS_COLD_CHANNEL));
-    EXPECT_FALSE(alarm_configurable(CounterType::NAMUR, 0));
+    /*
+    До первой настройки входа в весе импульса лежит спецзначение из
+    комбобокса. Это обычные маленькие числа: взять их за литры на импульс
+    значило бы посчитать порог, о котором никто не просил.
+    */
+    EXPECT_FALSE(factor_configured(AUTO_IMPULSE_FACTOR));
+    EXPECT_FALSE(factor_configured(AS_COLD_CHANNEL));
+    EXPECT_FALSE(factor_configured(0));
 
-    EXPECT_TRUE(alarm_configurable(CounterType::NAMUR, 10));
+    EXPECT_TRUE(factor_configured(10));
+    // Электричество тоже: формула другая, но вес известен
+    EXPECT_TRUE(factor_configured(1000));
 }
 
-TEST(Alarm, ConfigurableForElectricity)
+/*
+Что страница тревог показывает на входе. Причины взаимоисключающие, и врать
+нельзя ни в одну сторону: "счётчик не настроен" на старой attiny отправило бы
+человека настраивать то, что всё равно не заработает.
+*/
+TEST(AlarmInput, NoInputBeatsEverything)
 {
-    // Электричество разрешено: формула другая, но вес импульса известен
-    EXPECT_TRUE(alarm_configurable(CounterType::ELECTRONIC, 1000));
+    // Датчик протечки и выключенный вход импульсов не дают: ни новая attiny,
+    // ни заданный вес тут ничего не меняют
+    EXPECT_EQ(alarm_input_state(CounterType::LEAKAGE, 10, ATTINY_VER_ALARM), ALARM_INPUT_NO_INPUT);
+    EXPECT_EQ(alarm_input_state(CounterType::LEAKAGE_NC, 10, ATTINY_VER_ALARM), ALARM_INPUT_NO_INPUT);
+    EXPECT_EQ(alarm_input_state(CounterType::NONE, 10, ATTINY_VER_ALARM), ALARM_INPUT_NO_INPUT);
+}
+
+TEST(AlarmInput, OldAttinyHidesThresholds)
+{
+    EXPECT_EQ(alarm_input_state(CounterType::NAMUR, 10, ATTINY_VER_ALARM - 1),
+              ALARM_INPUT_NO_ATTINY);
+}
+
+TEST(AlarmInput, UnknownFactorIsFixable)
+{
+    EXPECT_EQ(alarm_input_state(CounterType::NAMUR, AS_COLD_CHANNEL, ATTINY_VER_ALARM),
+              ALARM_INPUT_NO_FACTOR);
+    EXPECT_EQ(alarm_input_state(CounterType::NAMUR, AUTO_IMPULSE_FACTOR, ATTINY_VER_ALARM),
+              ALARM_INPUT_NO_FACTOR);
+}
+
+TEST(AlarmInput, ConfiguredInputIsReady)
+{
+    EXPECT_EQ(alarm_input_state(CounterType::NAMUR, 10, ATTINY_VER_ALARM), ALARM_INPUT_READY);
+    EXPECT_EQ(alarm_input_state(CounterType::ELECTRONIC, 1000, ATTINY_VER_ALARM),
+              ALARM_INPUT_READY);
+}
+
+TEST(AlarmInput, OldAttinyWinsOverUnknownFactor)
+{
+    // Звать настраивать счётчик там, где порогов не будет никогда, - вранье
+    EXPECT_EQ(alarm_input_state(CounterType::NAMUR, AUTO_IMPULSE_FACTOR, ATTINY_VER_ALARM - 1),
+              ALARM_INPUT_NO_ATTINY);
 }
 
 TEST(Alarm, DisabledInputHasNoAlarms)
 {
-    EXPECT_FALSE(alarm_configurable(CounterType::NONE, 10));
+    EXPECT_EQ(alarm_interval_ticks(false, CounterType::NONE, 600, 10, false), 0);
 }
 
 TEST(Alarm, LeakSensorHasNoFlowThreshold)
 {
     // Датчик протечки не считает импульсы: порог расхода ему не из чего считать
-    EXPECT_FALSE(alarm_configurable(CounterType::LEAKAGE, 10));
-    EXPECT_FALSE(alarm_configurable(CounterType::LEAKAGE_NC, 10));
+    EXPECT_EQ(alarm_interval_ticks(false, CounterType::LEAKAGE, 600, 10, false), 0);
+    EXPECT_EQ(alarm_interval_ticks(false, CounterType::LEAKAGE_NC, 600, 10, false), 0);
 }
 
 // --- режим "я уехал" (#88) ---
@@ -156,6 +198,7 @@ TEST(Vacation, WorksWithoutKnownImpulseWeight)
 
     // А обычный порог без веса импульса по-прежнему не посчитать
     EXPECT_EQ(alarm_interval_ticks(false, CounterType::NAMUR, 600, AUTO_IMPULSE_FACTOR, false), 0);
+    EXPECT_EQ(alarm_interval_ticks(false, CounterType::NAMUR, 600, AS_COLD_CHANNEL, false), 0);
 }
 
 TEST(Vacation, SkipsInputsWithoutImpulses)

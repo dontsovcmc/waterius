@@ -54,6 +54,11 @@ UINT16_MAX не выполняется никогда. Значит "расхо�
 работает и на канале, где вес ещё не определён - иначе включённый режим молча
 не сработал бы там, где нужен не меньше.
 
+Обычный порог без веса, наоборот, посчитать нельзя: до первой настройки входа
+там лежит спецзначение (AUTO_IMPULSE_FACTOR или AS_COLD_CHANNEL), и взять его
+за литры на импульс значило бы отдать attiny порог, о котором никто не просил.
+Поэтому factor_configured, а не "ну хоть что-то".
+
 @param counter_type тип входа: у датчика протечки и выключенного входа
        импульсов нет, порогу неоткуда взяться
 @return тиков между импульсами; 0 - тревога выключена
@@ -61,6 +66,27 @@ UINT16_MAX не выполняется никогда. Значит "расхо�
 uint16_t alarm_interval_ticks(const bool vacation, const uint8_t counter_type,
                               const uint16_t threshold, const uint16_t factor,
                               const bool electricity);
+
+/*
+Что страница тревог может показать на входе.
+
+Порядок = приоритет: вход без импульсов не спасёт ни новая attiny, ни
+заданный вес, а на старой attiny звать настраивать счётчик бессмысленно -
+порогов там всё равно не будет.
+
+Состояния взаимоисключающие, поэтому странице хватает одного признака:
+она вешает его классом на блок канала, а показ решает CSS.
+*/
+enum AlarmInputState : uint8_t
+{
+    ALARM_INPUT_READY = 0,   // всё доступно
+    ALARM_INPUT_NO_FACTOR,   // вес импульса не задан: порог не пересчитать в тики
+    ALARM_INPUT_NO_ATTINY,   // attiny старее ATTINY_VER_ALARM: пороги считает она
+    ALARM_INPUT_NO_INPUT     // вход не считает импульсы: тревог нет вовсе
+};
+
+AlarmInputState alarm_input_state(const uint8_t counter_type, const uint16_t factor,
+                                  const uint8_t attiny_version);
 
 /*
 Тревоги одного входа из байта флагов attiny.
@@ -71,18 +97,6 @@ uint16_t alarm_interval_ticks(const bool vacation, const uint8_t counter_type,
 */
 uint8_t alarm_bits(const uint8_t attiny_flags, const uint8_t input,
                    const uint8_t attiny_version);
-
-/*
-Можно ли настроить тревоги на этом входе.
-
-Электричество можно: формула другая, но вес импульса известен. Нельзя, пока
-вес импульса не определён - до первой настройки там стоит спецзначение
-(AUTO_IMPULSE_FACTOR или AS_COLD_CHANNEL), и пересчитывать не из чего.
-
-Датчику протечки порог расхода не нужен вовсе: он не считает импульсы, его
-тревога - само состояние входа.
-*/
-bool alarm_configurable(const uint8_t counter_type, const uint16_t factor);
 
 /*
 Докладывать ли attiny, что тревога доставлена (#202).

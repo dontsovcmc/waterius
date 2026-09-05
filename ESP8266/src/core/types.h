@@ -189,6 +189,18 @@ inline bool counts_impulses(const uint8_t counter_type)
            counter_type != CounterType::LEAKAGE_NC;
 }
 
+/*
+Вес импульса выбран пользователем, а не остался спецзначением из комбобокса
+("Авто", "Как у холодной воды"). До первой настройки входа там лежит именно
+спецзначение, и пересчитывать не из чего.
+*/
+inline bool factor_configured(const uint16_t factor)
+{
+    return factor > 0
+        && factor != AUTO_IMPULSE_FACTOR
+        && factor != AS_COLD_CHANNEL;
+}
+
 
 enum CounterName
 {

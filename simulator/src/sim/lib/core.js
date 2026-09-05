@@ -145,22 +145,24 @@
         return factor;
     }
 
-    /* ---- alarm.cpp ---- */
-
-    function alarmConfigurable(counterType, factor) {
-        var CT = G().enums.CounterType;
-        var D = G().defines;
-        if (counterType === CT.NONE || counterType === CT.LEAKAGE || counterType === CT.LEAKAGE_NC) return false;
-        if (factor === 0 || factor === D.AUTO_IMPULSE_FACTOR || factor === D.AS_COLD_CHANNEL) return false;
-        return true;
-    }
-
-    /* ---- diagnostics.cpp: плашки настройки счётчиков ---- */
+    /* ---- types.h: вес импульса задан, а не остался спецзначением ---- */
 
     function factorConfigured(factor) {
         var D = G().defines;
         return factor > 0 && factor !== D.AUTO_IMPULSE_FACTOR && factor !== D.AS_COLD_CHANNEL;
     }
+
+    /* ---- alarm.cpp: что страница тревог может показать на входе ---- */
+
+    function alarmInputState(counterType, factor, attinyVersion) {
+        var S = G().enums.AlarmInputState;
+        if (!countsImpulses(counterType)) return S.ALARM_INPUT_NO_INPUT;
+        if (attinyVersion < G().defines.ATTINY_VER_ALARM) return S.ALARM_INPUT_NO_ATTINY;
+        if (!factorConfigured(factor)) return S.ALARM_INPUT_NO_FACTOR;
+        return S.ALARM_INPUT_READY;
+    }
+
+    /* ---- diagnostics.cpp: плашки настройки счётчиков ---- */
 
     function consumedImpulses(impulses, start) {
         return impulses > start ? impulses - start : 0;
@@ -247,7 +249,8 @@
         countsImpulses: countsImpulses,
         parseBrokerHost: parseBrokerHost,
         getAutoFactor: getAutoFactor,
-        alarmConfigurable: alarmConfigurable,
+        factorConfigured: factorConfigured,
+        alarmInputState: alarmInputState,
         checkSetup: checkSetup,
         parseWifiChannel: parseWifiChannel,
         parseBssid: parseBssid,

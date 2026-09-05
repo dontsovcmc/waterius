@@ -60,11 +60,6 @@ const CounterType_LEAKAGE = 5;
 const CounterType_LEAKAGE_NC = 6;
 const CounterType_NONE = 0xFF;
 
-// Кому доклад о тревоге обязан доехать, ESP8266/src/core/types.h:AlarmConfirm
-const CONFIRM_WATERIUS = 0x01;
-const CONFIRM_HTTP = 0x02;
-const CONFIRM_MQTT = 0x04;
-
 // Спецзначения веса импульса, ESP8266/src/core/types.h
 const AUTO_IMPULSE_FACTOR = 3;
 const AS_COLD_CHANNEL = 7;
@@ -158,14 +153,6 @@ COUNTER_TYPES[CounterType_NONE] = "Выключен";
 const S_COUNTER_DISABLED = "Отключён";
 
 /*
-Настраивать нечего: ни один вход не считает импульсы. Порог расхода вдобавок
-требует прошивки attiny 41 или новее, но остановка потребления считается на
-ЕСП и работает на любой - поэтому про версию тут уже не пишем.
-*/
-const S_ALARM_NOT_READY = "Тревоги недоступны: ни один вход не считает импульсы. " +
-    "Сначала настройте счётчики.";
-
-/*
 Ресурс по номеру. Неизвестное значение — это "Другой": чужое число может
 прийти из настроек старой прошивки, падать из-за него страница не должна.
 */
@@ -255,79 +242,6 @@ function alarm_flow_label(counter_name) {
         : "Порог расхода, л/ч";
 }
 
-/*
-Страница тревог: два канала сразу, поэтому подписи заполняются по каждому
-отдельно, а не общим fill_units.
-
-ready приходит от прошивки: тревоги требуют известного веса импульса и attiny
-не старее 41. Настройку, которая ничего не делает, лучше не показывать вовсе,
-чем показать неработающей.
-*/
-/*
-Пороги расхода и остановку прячем по отдельности: расход считает attiny и ему
-нужен известный вес импульса, а остановку считает сама ЕСП по приросту
-импульсов - она доступна и на старой прошивке attiny, и до настройки веса.
-*/
-function fill_alarms(counter0_name, counter1_name, ready0, ready1, stop0, stop1, send_mask) {
-    fill_counter0_title(counter0_name, CounterType_NAMUR);
-    fill_counter1_title(counter1_name, CounterType_NAMUR);
-
-    var names = [counter0_name, counter1_name];
-    var ready = [ready0, ready1];
-    var stop = [stop0, stop1];
-
-    document.querySelectorAll('[data-alarm-label]').forEach(function(q) {
-        q.textContent = alarm_flow_label(names[Number(q.dataset.alarmLabel)]);
-    });
-
-    for (var i = 0; i < 2; i++) {
-        if (!ready[i]) {
-            document.getElementById('thresholds' + i).classList.add('hd');
-        }
-        if (!stop[i]) {
-            document.getElementById('stop' + i).classList.add('hd');
-        }
-        if (!ready[i] && !stop[i]) {
-            document.getElementById('alarm' + i).classList.add('hd');
-        }
-    }
-
-    if (!ready0 && !ready1 && !stop0 && !stop1) {
-        var note = document.getElementById('alarm_none');
-        note.textContent = S_ALARM_NOT_READY;
-        note.classList.remove('hd');
-    }
-
-    fill_alarm_ack(send_mask);
-}
-
-/*
-Галочки "кому доклад о тревоге обязан доехать": выключенный отправитель
-показывается неактивным, а не прячется - иначе список получателей на разных
-устройствах выглядит по-разному и непонятно, куда делась строка.
-
-Тронуть выключенного нельзя: прошивка такое требование всё равно снимает,
-иначе тревога не была бы доложена никогда - и галочка на нём обещала бы то,
-чего не будет.
-*/
-function fill_alarm_ack(send_mask) {
-    var mask = Number(send_mask) || 0;
-    var rows = [
-        [CONFIRM_WATERIUS, 'ack_waterius'],
-        [CONFIRM_HTTP, 'ack_http'],
-        [CONFIRM_MQTT, 'ack_mqtt']
-    ];
-
-    for (var i = 0; i < rows.length; i++) {
-        if (mask & rows[i][0]) {
-            continue;
-        }
-        var row = document.getElementById(rows[i][1]);
-        row.classList.add('off');
-        row.querySelector('input').disabled = true;
-    }
-}
-
 // Единица показаний ресурса
 function unit_of(counter_name) {
     return resource(counter_name).unit;
@@ -387,26 +301,31 @@ function effective_factor(counter_name, form_value, api_factor) {
 /*
 Заполняет размерности на странице. В разметке стоят пустые маркеры:
 
-  data-unit="total"    — единица показаний с запятой: ", м³"
-  data-unit="unit"     — единица показаний без запятой: "кВт·ч"
-  data-unit="impulses" — "имп."
+  data-unit="total"      — единица показаний с запятой: ", м³"
+  data-unit="unit"       — единица показаний без запятой: "кВт·ч"
+  data-unit="impulses"   — "имп."
+  data-unit="alarm_flow" — подпись порога расхода целиком
+
+Ресурс обычно один на страницу и приходит аргументом. На странице тревог
+входов два, поэтому маркер может нести свой: data-name="%counter1_name%".
 
 Заодно переписываются подписи вариантов веса импульса.
 */
 function fill_units(counter_name) {
     document.querySelectorAll('[data-unit]').forEach(function(q) {
+        var name = q.dataset.name !== undefined ? q.dataset.name : counter_name;
         switch (q.dataset.unit) {
             case 'total':
-                q.textContent = unit_suffix(counter_name);
+                q.textContent = unit_suffix(name);
                 break;
             case 'unit':
-                q.textContent = unit_of(counter_name);
+                q.textContent = unit_of(name);
                 break;
             case 'impulses':
                 q.textContent = U_IMPULSE;
                 break;
             case 'alarm_flow':
-                q.textContent = alarm_flow_label(counter_name);
+                q.textContent = alarm_flow_label(name);
                 break;
         }
     });

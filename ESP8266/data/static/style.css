@@ -216,10 +216,11 @@ textarea {
 .toggle input:checked + label:after{left:18px;}*/
 .toggle.active label:before{background: #1655F5;}
 .toggle.active label:after{left:18px;}
-/* Выключенный получатель: положение переключателя видно, цвет говорит "нельзя" */
-.toggle.off label{color:#C3BDBD;cursor:default;}
-.toggle.off label:before{background:#E9E7E7;}
-.toggle.off.active label:before{background:#C3BDBD;}
+/* Недоступный переключатель: disabled стоит на input, гасим подпись */
+.toggle input:disabled + label{color:#C3BDBD;cursor:default;}
+.toggle input:disabled + label:before{background:#E9E7E7;}
+/* Положение переключателя видно, а цвет говорит "нельзя" */
+.toggle.active input:disabled + label:before{background:#C3BDBD;}
 
 .radio{margin-top:20px;}
 .radio label{padding-left:44px;display:block;position: relative;line-height:32px;height:32px;font-size:20px;}
@@ -234,6 +235,16 @@ textarea {
 .fr{float:right;}
 .clr{clear: both;}
 .hd{display:none;}
+
+/*
+Состояние входа на странице тревог: прошивка вешает класс на блок канала
+(ESP8266/src/core/alarm.h:AlarmInputState), а показ решает разметка. Поля
+порогов гасит input:disabled, подписи к ним - правило ниже.
+*/
+.no-input-note,.no-attiny-note,.no-factor-note{display:none;}
+.no-input .no-input-note,.no-attiny .no-attiny-note,.no-factor .no-factor-note{display:block;}
+.no-input .thresholds,.no-input .stop,.no-attiny .thresholds{display:none;}
+.no-factor .thresholds label{color:#C3BDBD;}
 .mt10{margin-top:10px;}
 .mt16{margin-top:16px;}
 .mt20{margin-top:20px;}

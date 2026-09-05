@@ -69,12 +69,23 @@ static const char PARAM_VACATION[] PROGMEM = "vacation";
 static const char PARAM_CONFIRM_WATERIUS[] PROGMEM = "confirm_waterius";
 static const char PARAM_CONFIRM_HTTP[] PROGMEM = "confirm_http";
 static const char PARAM_CONFIRM_MQTT[] PROGMEM = "confirm_mqtt";
-/* Какие отправители вообще включены: маска для страницы тревог */
-static const char PARAM_SEND_MASK[] PROGMEM = "send_mask";
-static const char PARAM_STOP_READY0[] PROGMEM = "stop_ready0";
-static const char PARAM_STOP_READY1[] PROGMEM = "stop_ready1";
-static const char PARAM_ALARM_READY0[] PROGMEM = "alarm_ready0";
-static const char PARAM_ALARM_READY1[] PROGMEM = "alarm_ready1";
+/* Выключенный отправитель: галочку видно, но тронуть нельзя */
+static const char PARAM_ACK_OFF_WATERIUS[] PROGMEM = "ack_off_waterius";
+static const char PARAM_ACK_OFF_HTTP[] PROGMEM = "ack_off_http";
+static const char PARAM_ACK_OFF_MQTT[] PROGMEM = "ack_off_mqtt";
+/*
+Состояние входа на странице тревог: класс на блоке канала и disabled на
+полях порогов. Что показывать, решает прошивка - страница приезжает готовой,
+без вспышки лишних полей на onload (core/alarm.h:AlarmInputState).
+*/
+static const char PARAM_ALARM_STATE0[] PROGMEM = "alarm_state0";
+static const char PARAM_ALARM_STATE1[] PROGMEM = "alarm_state1";
+static const char PARAM_THRESHOLDS_OFF0[] PROGMEM = "thresholds_off0";
+static const char PARAM_THRESHOLDS_OFF1[] PROGMEM = "thresholds_off1";
+static const char CLASS_NO_FACTOR[] PROGMEM = "no-factor";
+static const char CLASS_NO_ATTINY[] PROGMEM = "no-attiny";
+static const char CLASS_NO_INPUT[] PROGMEM = "no-input";
+static const char ATTR_DISABLED[] PROGMEM = "disabled";
 static const char PARAM_ASTERICS[] PROGMEM = "********";
 
 
