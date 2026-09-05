@@ -29,7 +29,7 @@ attiny можно считать только по такому времени: 
 по построению.
 */
 extern void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata,
-                          const bool time_synced);
+                          const bool time_synced, const bool reported);
 
 /* Рассчитываем текущие показания */
 extern void calculate_values(Settings &sett, const AttinyData &data, CalculatedData &cdata);

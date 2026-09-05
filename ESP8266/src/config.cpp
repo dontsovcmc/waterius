@@ -320,12 +320,24 @@ void reset_period_min_tuned(Settings &sett)
 
 /* Обновляем значения в конфиге */
 void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata,
-                   const bool time_synced)
+                   const bool time_synced, const bool reported)
 {
     LOG_INFO(F("Updating config..."));
-    // Сохраним текущие значения в памяти.
-    sett.impulses0_previous = data.impulses0;
-    sett.impulses1_previous = data.impulses1;
+
+    /*
+    Точку отсчёта прироста двигаем только если данные доехали (#407): Wi-Fi мог
+    подняться, а посылка не уйти - сервер недоступен, ответил не 200, ключ не
+    тот. Показания это не задевает, они считаются от impulses_start.
+    */
+    if (reported)
+    {
+        sett.impulses0_previous = data.impulses0;
+        sett.impulses1_previous = data.impulses1;
+    }
+    else
+    {
+        LOG_INFO(F("Delta kept: nobody accepted the data"));
+    }
 
     // Значение по умолчанию. Уменьшим с учётом опроса входов.
     if (!sett.period_min_tuned) {

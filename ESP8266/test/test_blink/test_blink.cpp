@@ -167,3 +167,60 @@ TEST(BlinkCode, CodesMatchDocumentedBlinkCounts)
     EXPECT_EQ(ERROR_CONFIG, 5);
     EXPECT_EQ(ERROR_CLOUD_ANSWER, 6);
 }
+
+/*
+Точка отсчёта прироста двигается только если данные доехали (#407).
+
+Раньше она двигалась после подключения к Wi-Fi, и сеанс, в котором сеть
+поднялась, а посылка не ушла, стоил пользователю дельты за период.
+*/
+
+TEST(DataReported, DeliveredMovesTheReference)
+{
+    SessionStatus status;
+    status.waterius = SEND_OK;
+    status.delivered_any = true;
+
+    EXPECT_TRUE(data_reported(status));
+}
+
+TEST(DataReported, OneReceiverIsEnough)
+{
+    // Облако приняло, брокер нет: показания у сервера, повторять их незачем
+    SessionStatus status;
+    status.waterius = SEND_OK;
+    status.mqtt = SEND_NO_CONNECTION;
+    status.delivered_any = true;
+
+    EXPECT_TRUE(data_reported(status));
+}
+
+TEST(DataReported, NobodyAcceptedKeepsTheDelta)
+{
+    // Wi-Fi поднялся, но сервер недоступен - прирост обязан дожить до следующего раза
+    SessionStatus status;
+    status.waterius = SEND_NO_CONNECTION;
+    status.http = SEND_NO_CONNECTION;
+
+    EXPECT_FALSE(data_reported(status));
+}
+
+TEST(DataReported, BadAnswerKeepsTheDelta)
+{
+    // Сервер ответил, но отказался принять: данных у него нет
+    SessionStatus status;
+    status.waterius = SEND_BAD_ANSWER;
+
+    EXPECT_FALSE(data_reported(status));
+}
+
+TEST(DataReported, NoReceiversConfiguredMovesTheReference)
+{
+    /*
+    Все получатели выключены. Копить прирост не для кого, а без сдвига он рос
+    бы до переполнения счётчика.
+    */
+    SessionStatus status;
+
+    EXPECT_TRUE(data_reported(status));
+}
