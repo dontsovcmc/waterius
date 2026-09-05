@@ -185,6 +185,12 @@ input::placeholder{color: #C3BDBD;}
 input:disabled{color: #C3BDBD;}
 .f-row p{margin-top:10px;}
 .form-error, .wifi-error{border-radius: 8px;border:1px solid #F3F6FE;padding:16px;margin-top: 16px;background: linear-gradient(0deg, #F0EBEB, #F0EBEB),linear-gradient(0deg, #F3F6FE, #F3F6FE);}
+/*
+Без текста плашка оставалась пустым прямоугольником: часть кодов состояния
+(WL_IDLE_STATUS, WL_DISCONNECTED) ошибкой не является, и tr() отдаёт для них
+пустую строку.
+*/
+.form-error:empty,.wifi-error:empty{display:none;}
 .error{color:#F53410;}
 
 #wifi-form,
