@@ -152,6 +152,16 @@
         return factor > 0 && factor !== D.AUTO_IMPULSE_FACTOR && factor !== D.AS_COLD_CHANNEL;
     }
 
+    /* ---- alarm.cpp: что страница тревог может показать на входе ---- */
+
+    function alarmInputState(counterType, factor, attinyVersion) {
+        var S = G().enums.AlarmInputState;
+        if (!countsImpulses(counterType)) return S.ALARM_INPUT_NO_INPUT;
+        if (attinyVersion < G().defines.ATTINY_VER_ALARM) return S.ALARM_INPUT_NO_ATTINY;
+        if (!factorConfigured(factor)) return S.ALARM_INPUT_NO_FACTOR;
+        return S.ALARM_INPUT_READY;
+    }
+
     /* ---- diagnostics.cpp: плашки настройки счётчиков ---- */
 
     function consumedImpulses(impulses, start) {
@@ -240,6 +250,7 @@
         parseBrokerHost: parseBrokerHost,
         getAutoFactor: getAutoFactor,
         factorConfigured: factorConfigured,
+        alarmInputState: alarmInputState,
         checkSetup: checkSetup,
         parseWifiChannel: parseWifiChannel,
         parseBssid: parseBssid,

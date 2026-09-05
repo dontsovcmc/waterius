@@ -8,7 +8,7 @@
         <script src="/static/common.js"></script>
         <script src="/static/strings.js"></script>
     </head>
-    <body onload="fill_alarms(%counter0_name%, %counter1_name%, %alarm_ready0%, %alarm_ready1%, %factor_ready0%, %factor_ready1%, %stop_ready0%, %stop_ready1%, %send_mask%);
+    <body onload="fill_counter0_title(%counter0_name%); fill_counter1_title(%counter1_name%); fill_units();
     _init({back: '/index.html', next: '/index.html'});">
         <form onsubmit="formSubmit(event, this, '/api/save_alarms');">
             <div class="wrap">
@@ -26,7 +26,6 @@
                     <main>
                         <h2>Тревоги</h2>
                         <p class="text">Ватериус сообщит об аварии, не дожидаясь очередного сеанса связи.</p>
-                        <p class="note mt16 hd" id="alarm_old_attiny">Пороги расхода умеет attiny 41 и новее. Остановка расхода работает на любой версии.</p>
                         <p class="form-error hd"></p>
 
                         <div class="toggle mt24">
@@ -35,24 +34,26 @@
                         </div>
                         <p class="note">Тревогой становится любой расход воды. Держится до выключения режима.</p>
 
-                        <div id="alarm1">
+                        <div id="alarm1" class="%alarm_state1%">
                             <div class="mt24"><h2><span id="counter1_title"></span></h2></div>
-                            <p class="note hd" id="no_factor1">Счётчик не настроен: задайте вес импульса. <a class="link" href="/input/1/setup.html">Настроить</a></p>
-                            <div id="thresholds1">
+                            <p class="note no-input-note">Вход не считает импульсы: тревоги настраивать нечем. <a class="link" href="/input/1/setup.html">Настроить</a></p>
+                            <p class="note no-attiny-note">Порог расхода умеет attiny 41 и новее. Остановка расхода работает на любой версии.</p>
+                            <p class="note no-factor-note">Счётчик не настроен: задайте вес импульса. <a class="link" href="/input/1/setup.html">Настроить</a></p>
+                            <div class="thresholds">
                             <div class="f-row">
-                                <label for="alarm_flow1"><span data-alarm-label="1"></span></label>
-                                <input pattern="^\d{1,5}$" id="alarm_flow1" name="alarm_flow1" placeholder="0" value="%alarm_flow1%">
+                                <label for="alarm_flow1"><span data-unit="alarm_flow" data-name="%counter1_name%"></span></label>
+                                <input pattern="^\d{1,5}$" id="alarm_flow1" name="alarm_flow1" placeholder="0" value="%alarm_flow1%" %thresholds_off1%>
                                 <p class="note">Прорыв трубы: расход выше порога.</p>
                                 <p class="error hd" id="alarm_flow1-error">Целое число от 0 до 65535</p>
                             </div>
                             <div class="f-row">
                                 <label for="alarm_leak1">Непрерывный расход, мин</label>
-                                <input pattern="^\d{1,5}$" id="alarm_leak1" name="alarm_leak1" placeholder="0" value="%alarm_leak1%">
+                                <input pattern="^\d{1,5}$" id="alarm_leak1" name="alarm_leak1" placeholder="0" value="%alarm_leak1%" %thresholds_off1%>
                                 <p class="note">Протечка: вода не останавливается дольше этого времени.</p>
                                 <p class="error hd" id="alarm_leak1-error">Целое число от 0 до 65535</p>
                             </div>
                             </div>
-                            <div id="stop1" class="f-row">
+                            <div class="stop f-row">
                                 <label for="alarm_stop1">Остановка расхода, ч</label>
                                 <input pattern="^\d{1,4}$" id="alarm_stop1" name="alarm_stop1" placeholder="0" value="%alarm_stop1%">
                                 <p class="note">Замёрзшая труба, оборванный провод: расхода нет дольше этого времени. Не точнее периода пробуждения.</p>
@@ -60,24 +61,26 @@
                             </div>
                         </div>
 
-                        <div id="alarm0">
+                        <div id="alarm0" class="%alarm_state0%">
                             <div class="mt24"><h2><span id="counter0_title"></span></h2></div>
-                            <p class="note hd" id="no_factor0">Счётчик не настроен: задайте вес импульса. <a class="link" href="/input/0/setup.html">Настроить</a></p>
-                            <div id="thresholds0">
+                            <p class="note no-input-note">Вход не считает импульсы: тревоги настраивать нечем. <a class="link" href="/input/0/setup.html">Настроить</a></p>
+                            <p class="note no-attiny-note">Порог расхода умеет attiny 41 и новее. Остановка расхода работает на любой версии.</p>
+                            <p class="note no-factor-note">Счётчик не настроен: задайте вес импульса. <a class="link" href="/input/0/setup.html">Настроить</a></p>
+                            <div class="thresholds">
                             <div class="f-row">
-                                <label for="alarm_flow0"><span data-alarm-label="0"></span></label>
-                                <input pattern="^\d{1,5}$" id="alarm_flow0" name="alarm_flow0" placeholder="0" value="%alarm_flow0%">
+                                <label for="alarm_flow0"><span data-unit="alarm_flow" data-name="%counter0_name%"></span></label>
+                                <input pattern="^\d{1,5}$" id="alarm_flow0" name="alarm_flow0" placeholder="0" value="%alarm_flow0%" %thresholds_off0%>
                                 <p class="note">Прорыв трубы: расход выше порога.</p>
                                 <p class="error hd" id="alarm_flow0-error">Целое число от 0 до 65535</p>
                             </div>
                             <div class="f-row">
                                 <label for="alarm_leak0">Непрерывный расход, мин</label>
-                                <input pattern="^\d{1,5}$" id="alarm_leak0" name="alarm_leak0" placeholder="0" value="%alarm_leak0%">
+                                <input pattern="^\d{1,5}$" id="alarm_leak0" name="alarm_leak0" placeholder="0" value="%alarm_leak0%" %thresholds_off0%>
                                 <p class="note">Протечка: вода не останавливается дольше этого времени.</p>
                                 <p class="error hd" id="alarm_leak0-error">Целое число от 0 до 65535</p>
                             </div>
                             </div>
-                            <div id="stop0" class="f-row">
+                            <div class="stop f-row">
                                 <label for="alarm_stop0">Остановка расхода, ч</label>
                                 <input pattern="^\d{1,4}$" id="alarm_stop0" name="alarm_stop0" placeholder="0" value="%alarm_stop0%">
                                 <p class="note">Замёрзшая труба, оборванный провод: расхода нет дольше этого времени. Не точнее периода пробуждения.</p>
@@ -88,21 +91,20 @@
                         <div id="alarm_ack">
                             <div class="mt24"><h2>Кто получает оповещение</h2></div>
                             <p class="text">Сделаем 5 попыток доставки тревоги в выбранные системы. Отключённые системы выбрать нельзя.</p>
-                            <div class="toggle mt16" id="ack_waterius">
-                                <input type="checkbox" name="confirm_waterius" id="confirm_waterius" onclick="checkboxToggle(this)" %confirm_waterius%>
+                            <div class="toggle mt16">
+                                <input type="checkbox" name="confirm_waterius" id="confirm_waterius" onclick="checkboxToggle(this)" %confirm_waterius% %ack_off_waterius%>
                                 <label for="confirm_waterius">waterius.ru</label>
                             </div>
-                            <div class="toggle mt16" id="ack_http">
-                                <input type="checkbox" name="confirm_http" id="confirm_http" onclick="checkboxToggle(this)" %confirm_http%>
+                            <div class="toggle mt16">
+                                <input type="checkbox" name="confirm_http" id="confirm_http" onclick="checkboxToggle(this)" %confirm_http% %ack_off_http%>
                                 <label for="confirm_http">Свой сервер</label>
                             </div>
-                            <div class="toggle mt16" id="ack_mqtt">
-                                <input type="checkbox" name="confirm_mqtt" id="confirm_mqtt" onclick="checkboxToggle(this)" %confirm_mqtt%>
+                            <div class="toggle mt16">
+                                <input type="checkbox" name="confirm_mqtt" id="confirm_mqtt" onclick="checkboxToggle(this)" %confirm_mqtt% %ack_off_mqtt%>
                                 <label for="confirm_mqtt">MQTT-брокер</label>
                             </div>
                         </div>
 
-                        <p class="note mt16 hd" id="alarm_none"></p>
                     </main>
                     <footer class="btns">
                         <button class="btn" type="submit">Сохранить</button>

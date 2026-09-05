@@ -68,6 +68,27 @@ uint16_t alarm_interval_ticks(const bool vacation, const uint8_t counter_type,
                               const bool electricity);
 
 /*
+Что страница тревог может показать на входе.
+
+Порядок = приоритет: вход без импульсов не спасёт ни новая attiny, ни
+заданный вес, а на старой attiny звать настраивать счётчик бессмысленно -
+порогов там всё равно не будет.
+
+Состояния взаимоисключающие, поэтому странице хватает одного признака:
+она вешает его классом на блок канала, а показ решает CSS.
+*/
+enum AlarmInputState : uint8_t
+{
+    ALARM_INPUT_READY = 0,   // всё доступно
+    ALARM_INPUT_NO_FACTOR,   // вес импульса не задан: порог не пересчитать в тики
+    ALARM_INPUT_NO_ATTINY,   // attiny старее ATTINY_VER_ALARM: пороги считает она
+    ALARM_INPUT_NO_INPUT     // вход не считает импульсы: тревог нет вовсе
+};
+
+AlarmInputState alarm_input_state(const uint8_t counter_type, const uint16_t factor,
+                                  const uint8_t attiny_version);
+
+/*
 Тревоги одного входа из байта флагов attiny.
 
 @param input INPUT0_RED или INPUT1_BLUE

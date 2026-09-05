@@ -52,6 +52,24 @@ uint16_t alarm_interval_ticks(const bool vacation, const uint8_t counter_type,
     return flow_to_interval_ticks(threshold, factor, electricity);
 }
 
+AlarmInputState alarm_input_state(const uint8_t counter_type, const uint16_t factor,
+                                  const uint8_t attiny_version)
+{
+    if (!counts_impulses(counter_type))
+    {
+        return ALARM_INPUT_NO_INPUT;
+    }
+    if (attiny_version < ATTINY_VER_ALARM)
+    {
+        return ALARM_INPUT_NO_ATTINY;
+    }
+    if (!factor_configured(factor))
+    {
+        return ALARM_INPUT_NO_FACTOR;
+    }
+    return ALARM_INPUT_READY;
+}
+
 uint8_t alarm_bits(const uint8_t attiny_flags, const uint8_t input,
                    const uint8_t attiny_version)
 {

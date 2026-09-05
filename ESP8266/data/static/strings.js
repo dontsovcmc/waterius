@@ -60,11 +60,6 @@ const CounterType_LEAKAGE = 5;
 const CounterType_LEAKAGE_NC = 6;
 const CounterType_NONE = 0xFF;
 
-// Кому доклад о тревоге обязан доехать, ESP8266/src/core/types.h:AlarmConfirm
-const CONFIRM_WATERIUS = 0x01;
-const CONFIRM_HTTP = 0x02;
-const CONFIRM_MQTT = 0x04;
-
 // Спецзначения веса импульса, ESP8266/src/core/types.h
 const AUTO_IMPULSE_FACTOR = 3;
 const AS_COLD_CHANNEL = 7;
@@ -158,14 +153,6 @@ COUNTER_TYPES[CounterType_NONE] = "Выключен";
 const S_COUNTER_DISABLED = "Отключён";
 
 /*
-Настраивать нечего: ни один вход не считает импульсы. Про старую attiny тут
-не пишем - у неё своё примечание на странице, и оно про пороги, а не про
-всю страницу.
-*/
-const S_ALARM_NOT_READY = "Тревоги недоступны: ни один вход не считает импульсы. " +
-    "Сначала настройте счётчики.";
-
-/*
 Ресурс по номеру. Неизвестное значение — это "Другой": чужое число может
 прийти из настроек старой прошивки, падать из-за него страница не должна.
 */
@@ -255,104 +242,6 @@ function alarm_flow_label(counter_name) {
         : "Порог расхода, л/ч";
 }
 
-/*
-Страница тревог: два канала сразу, поэтому подписи заполняются по каждому
-отдельно, а не общим fill_units.
-
-Три признака от прошивки, и у каждого свой ответ пользователю:
-
-  ready  - умеет ли устройство пороги расхода на этом входе. Считает их attiny,
-           нужна прошивка 41 и новее. Не умеет - поля прячем и пишем почему:
-           сделать тут пользователю нечего.
-  factor - задан ли вес импульса. Без него порог не пересчитать, но это
-           поправимо - поля показываем неактивными и зовём настроить счётчик.
-  stop   - остановку потребления считает сама ЕСП по приросту импульсов, ей ни
-           вес, ни версия attiny не нужны. Поэтому прячется отдельно.
-
-Молча спрятанное поле - и есть та жалоба, с которой всё началось: у одного
-входа настройки были, у другого нет, а почему - страница не говорила.
-*/
-function fill_alarms(counter0_name, counter1_name, ready0, ready1,
-                     factor0, factor1, stop0, stop1, send_mask) {
-    fill_counter0_title(counter0_name, CounterType_NAMUR);
-    fill_counter1_title(counter1_name, CounterType_NAMUR);
-
-    var names = [counter0_name, counter1_name];
-    var ready = [ready0, ready1];
-    var factor = [factor0, factor1];
-    var stop = [stop0, stop1];
-    var old_attiny = false;
-
-    document.querySelectorAll('[data-alarm-label]').forEach(function(q) {
-        q.textContent = alarm_flow_label(names[Number(q.dataset.alarmLabel)]);
-    });
-
-    for (var i = 0; i < 2; i++) {
-        var thresholds = document.getElementById('thresholds' + i);
-        if (!ready[i]) {
-            thresholds.classList.add('hd');
-            /*
-            Вход импульсы считает, а порогов нет - значит дело в attiny: тип
-            входа тут ни при чём, он бы погасил и остановку.
-            */
-            if (stop[i]) {
-                old_attiny = true;
-            }
-        } else if (!factor[i]) {
-            thresholds.classList.add('off');
-            thresholds.querySelectorAll('input').forEach(function(inp) {
-                inp.disabled = true;
-            });
-            document.getElementById('no_factor' + i).classList.remove('hd');
-        }
-        if (!stop[i]) {
-            document.getElementById('stop' + i).classList.add('hd');
-        }
-        if (!ready[i] && !stop[i]) {
-            document.getElementById('alarm' + i).classList.add('hd');
-        }
-    }
-
-    if (old_attiny) {
-        document.getElementById('alarm_old_attiny').classList.remove('hd');
-    }
-
-    if (!ready0 && !ready1 && !stop0 && !stop1) {
-        var note = document.getElementById('alarm_none');
-        note.textContent = S_ALARM_NOT_READY;
-        note.classList.remove('hd');
-    }
-
-    fill_alarm_ack(send_mask);
-}
-
-/*
-Галочки "кому доклад о тревоге обязан доехать": выключенный отправитель
-показывается неактивным, а не прячется - иначе список получателей на разных
-устройствах выглядит по-разному и непонятно, куда делась строка.
-
-Тронуть выключенного нельзя: прошивка такое требование всё равно снимает,
-иначе тревога не была бы доложена никогда - и галочка на нём обещала бы то,
-чего не будет.
-*/
-function fill_alarm_ack(send_mask) {
-    var mask = Number(send_mask) || 0;
-    var rows = [
-        [CONFIRM_WATERIUS, 'ack_waterius'],
-        [CONFIRM_HTTP, 'ack_http'],
-        [CONFIRM_MQTT, 'ack_mqtt']
-    ];
-
-    for (var i = 0; i < rows.length; i++) {
-        if (mask & rows[i][0]) {
-            continue;
-        }
-        var row = document.getElementById(rows[i][1]);
-        row.classList.add('off');
-        row.querySelector('input').disabled = true;
-    }
-}
-
 // Единица показаний ресурса
 function unit_of(counter_name) {
     return resource(counter_name).unit;
@@ -412,26 +301,31 @@ function effective_factor(counter_name, form_value, api_factor) {
 /*
 Заполняет размерности на странице. В разметке стоят пустые маркеры:
 
-  data-unit="total"    — единица показаний с запятой: ", м³"
-  data-unit="unit"     — единица показаний без запятой: "кВт·ч"
-  data-unit="impulses" — "имп."
+  data-unit="total"      — единица показаний с запятой: ", м³"
+  data-unit="unit"       — единица показаний без запятой: "кВт·ч"
+  data-unit="impulses"   — "имп."
+  data-unit="alarm_flow" — подпись порога расхода целиком
+
+Ресурс обычно один на страницу и приходит аргументом. На странице тревог
+входов два, поэтому маркер может нести свой: data-name="%counter1_name%".
 
 Заодно переписываются подписи вариантов веса импульса.
 */
 function fill_units(counter_name) {
     document.querySelectorAll('[data-unit]').forEach(function(q) {
+        var name = q.dataset.name !== undefined ? q.dataset.name : counter_name;
         switch (q.dataset.unit) {
             case 'total':
-                q.textContent = unit_suffix(counter_name);
+                q.textContent = unit_suffix(name);
                 break;
             case 'unit':
-                q.textContent = unit_of(counter_name);
+                q.textContent = unit_of(name);
                 break;
             case 'impulses':
                 q.textContent = U_IMPULSE;
                 break;
             case 'alarm_flow':
-                q.textContent = alarm_flow_label(counter_name);
+                q.textContent = alarm_flow_label(name);
                 break;
         }
     });

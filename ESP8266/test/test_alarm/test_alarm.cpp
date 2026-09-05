@@ -108,6 +108,48 @@ TEST(Alarm, FactorConfiguredRejectsSpecialValues)
     EXPECT_TRUE(factor_configured(1000));
 }
 
+/*
+Что страница тревог показывает на входе. Причины взаимоисключающие, и врать
+нельзя ни в одну сторону: "счётчик не настроен" на старой attiny отправило бы
+человека настраивать то, что всё равно не заработает.
+*/
+TEST(AlarmInput, NoInputBeatsEverything)
+{
+    // Датчик протечки и выключенный вход импульсов не дают: ни новая attiny,
+    // ни заданный вес тут ничего не меняют
+    EXPECT_EQ(alarm_input_state(CounterType::LEAKAGE, 10, ATTINY_VER_ALARM), ALARM_INPUT_NO_INPUT);
+    EXPECT_EQ(alarm_input_state(CounterType::LEAKAGE_NC, 10, ATTINY_VER_ALARM), ALARM_INPUT_NO_INPUT);
+    EXPECT_EQ(alarm_input_state(CounterType::NONE, 10, ATTINY_VER_ALARM), ALARM_INPUT_NO_INPUT);
+}
+
+TEST(AlarmInput, OldAttinyHidesThresholds)
+{
+    EXPECT_EQ(alarm_input_state(CounterType::NAMUR, 10, ATTINY_VER_ALARM - 1),
+              ALARM_INPUT_NO_ATTINY);
+}
+
+TEST(AlarmInput, UnknownFactorIsFixable)
+{
+    EXPECT_EQ(alarm_input_state(CounterType::NAMUR, AS_COLD_CHANNEL, ATTINY_VER_ALARM),
+              ALARM_INPUT_NO_FACTOR);
+    EXPECT_EQ(alarm_input_state(CounterType::NAMUR, AUTO_IMPULSE_FACTOR, ATTINY_VER_ALARM),
+              ALARM_INPUT_NO_FACTOR);
+}
+
+TEST(AlarmInput, ConfiguredInputIsReady)
+{
+    EXPECT_EQ(alarm_input_state(CounterType::NAMUR, 10, ATTINY_VER_ALARM), ALARM_INPUT_READY);
+    EXPECT_EQ(alarm_input_state(CounterType::ELECTRONIC, 1000, ATTINY_VER_ALARM),
+              ALARM_INPUT_READY);
+}
+
+TEST(AlarmInput, OldAttinyWinsOverUnknownFactor)
+{
+    // Звать настраивать счётчик там, где порогов не будет никогда, - вранье
+    EXPECT_EQ(alarm_input_state(CounterType::NAMUR, AUTO_IMPULSE_FACTOR, ATTINY_VER_ALARM - 1),
+              ALARM_INPUT_NO_ATTINY);
+}
+
 TEST(Alarm, DisabledInputHasNoAlarms)
 {
     EXPECT_EQ(alarm_interval_ticks(false, CounterType::NONE, 600, 10, false), 0);

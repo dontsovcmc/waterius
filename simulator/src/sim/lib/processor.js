@@ -32,6 +32,34 @@
         return value > 0 ? '\'value="1" checked' : '';
     }
 
+    // Порт template_disabled(): ноль значит "выключено и потому недоступно"
+    function templateDisabled(enabled) {
+        return enabled > 0 ? '' : 'disabled';
+    }
+
+    // Что страница тревог может показать на входе, core/alarm.h
+    function S() {
+        return G().enums.AlarmInputState;
+    }
+
+    function alarmState(state, input) {
+        var attiny = state.attiny;
+        var sett = state.sett;
+        return root.SimCore.alarmInputState(input === 0 ? attiny.counter_type0 : attiny.counter_type1,
+                                            input === 0 ? sett.factor0 : sett.factor1,
+                                            attiny.version);
+    }
+
+    // Порт alarm_state_class(): имена классов разбирает style.css
+    function alarmStateClass(value) {
+        switch (value) {
+            case S().ALARM_INPUT_NO_FACTOR: return 'no-factor';
+            case S().ALARM_INPUT_NO_ATTINY: return 'no-attiny';
+            case S().ALARM_INPUT_NO_INPUT: return 'no-input';
+            default: return '';
+        }
+    }
+
     function ip4(value) {
         var v = value >>> 0;
         return [v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >> 24) & 255].join('.');
@@ -162,27 +190,20 @@
             case P.PARAM_CONFIRM_WATERIUS: return templateBool(sett.alarm_confirm & A().CONFIRM_WATERIUS);
             case P.PARAM_CONFIRM_HTTP: return templateBool(sett.alarm_confirm & A().CONFIRM_HTTP);
             case P.PARAM_CONFIRM_MQTT: return templateBool(sett.alarm_confirm & A().CONFIRM_MQTT);
-            case P.PARAM_SEND_MASK:
-                return String((sett.waterius_on ? A().CONFIRM_WATERIUS : 0) |
-                              (sett.http_on ? A().CONFIRM_HTTP : 0) |
-                              (sett.mqtt_on ? A().CONFIRM_MQTT : 0));
             case P.PARAM_SEND_ON_CONSUMPTION: return templateBool(sett.send_on_consumption);
 
-            /* Умеет ли устройство пороги: attiny не старее 41 и вход считает импульсы */
-            case P.PARAM_ALARM_READY0:
-                return String(attiny.version >= G().defines.ATTINY_VER_ALARM &&
-                              root.SimCore.countsImpulses(attiny.counter_type0) ? 1 : 0);
-            case P.PARAM_ALARM_READY1:
-                return String(attiny.version >= G().defines.ATTINY_VER_ALARM &&
-                              root.SimCore.countsImpulses(attiny.counter_type1) ? 1 : 0);
+            /* Выключенный получатель: галочку видно, но тронуть нельзя */
+            case P.PARAM_ACK_OFF_WATERIUS: return templateDisabled(sett.waterius_on);
+            case P.PARAM_ACK_OFF_HTTP: return templateDisabled(sett.http_on);
+            case P.PARAM_ACK_OFF_MQTT: return templateDisabled(sett.mqtt_on);
 
-            /* Задан ли вес импульса: без него порог не пересчитать в тики */
-            case P.PARAM_FACTOR_READY0: return String(root.SimCore.factorConfigured(sett.factor0) ? 1 : 0);
-            case P.PARAM_FACTOR_READY1: return String(root.SimCore.factorConfigured(sett.factor1) ? 1 : 0);
-
-            /* Остановку считает ЕСП: версия attiny ни при чём, лишь бы вход считал импульсы */
-            case P.PARAM_STOP_READY0: return String(root.SimCore.countsImpulses(attiny.counter_type0) ? 1 : 0);
-            case P.PARAM_STOP_READY1: return String(root.SimCore.countsImpulses(attiny.counter_type1) ? 1 : 0);
+            /* Состояние входа одним классом: решает прошивка, показ решает CSS */
+            case P.PARAM_ALARM_STATE0: return alarmStateClass(alarmState(state, 0));
+            case P.PARAM_ALARM_STATE1: return alarmStateClass(alarmState(state, 1));
+            case P.PARAM_THRESHOLDS_OFF0:
+                return templateDisabled(alarmState(state, 0) !== S().ALARM_INPUT_NO_FACTOR);
+            case P.PARAM_THRESHOLDS_OFF1:
+                return templateDisabled(alarmState(state, 1) !== S().ALARM_INPUT_NO_FACTOR);
 
             case P.PARAM_BUILD_DATE_TIME: return G().build_date_time;
             case P.PARAM_FS_SIZE: return String(G().fs.totalBytes);
@@ -211,9 +232,10 @@
             'PARAM_FS_FREE', 'PARAM_WIFI_CONNECT_STATUS',
             'PARAM_ALARM_FLOW0', 'PARAM_ALARM_FLOW1', 'PARAM_ALARM_LEAK0', 'PARAM_ALARM_LEAK1',
             'PARAM_ALARM_STOP0', 'PARAM_ALARM_STOP1', 'PARAM_VACATION', 'PARAM_SEND_ON_CONSUMPTION',
-            'PARAM_CONFIRM_WATERIUS', 'PARAM_CONFIRM_HTTP', 'PARAM_CONFIRM_MQTT', 'PARAM_SEND_MASK',
-            'PARAM_ALARM_READY0', 'PARAM_ALARM_READY1', 'PARAM_STOP_READY0', 'PARAM_STOP_READY1',
-            'PARAM_FACTOR_READY0', 'PARAM_FACTOR_READY1',
+            'PARAM_CONFIRM_WATERIUS', 'PARAM_CONFIRM_HTTP', 'PARAM_CONFIRM_MQTT',
+            'PARAM_ALARM_STATE0', 'PARAM_ALARM_STATE1',
+            'PARAM_THRESHOLDS_OFF0', 'PARAM_THRESHOLDS_OFF1',
+            'PARAM_ACK_OFF_WATERIUS', 'PARAM_ACK_OFF_HTTP', 'PARAM_ACK_OFF_MQTT',
         ];
         return names.map(function (key) { return P[key]; }).filter(Boolean);
     }

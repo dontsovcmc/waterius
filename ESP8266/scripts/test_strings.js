@@ -244,8 +244,8 @@ function page(name) {
 
 test('на странице тревог у каждого поля есть подпись и обработчик', () => {
     /*
-    Страница одна на оба канала, поэтому подписи заполняются не общим
-    fill_units, а маркерами data-alarm-label с номером входа.
+    Страница одна на оба канала, поэтому ресурс едет в самом маркере
+    (data-name), а не аргументом fill_units, как на страницах входов.
     */
     const html = page('alarms.html');
 
@@ -256,120 +256,47 @@ test('на странице тревог у каждого поля есть п�
     }
 
     for (const input of ['0', '1']) {
-        assert.ok(html.includes('data-alarm-label="' + input + '"'),
-                  'у входа ' + input + ' нет подписи порога');
+        assert.ok(html.includes('data-unit="alarm_flow" data-name="%counter' + input + '_name%"'),
+                  'у входа ' + input + ' подпись порога не знает своего ресурса');
+        assert.ok(html.includes('fill_counter' + input + '_title(%counter' + input + '_name%)'),
+                  'заголовок входа ' + input + ' не заполняется');
     }
 
-    assert.ok(html.includes('fill_alarms('), 'страница не зовёт fill_alarms');
+    assert.ok(html.includes('fill_units()'), 'страница не зовёт fill_units');
     assert.ok(html.includes("'/api/save_alarms'"), 'форма шлёт настройки не туда');
 });
 
-test('пороги расхода и остановки прячутся по отдельности', () => {
+test('состояние входа приезжает от прошивки одним классом', () => {
     /*
-    Порог расхода считает attiny, и ему нужен известный вес импульса; остановку
-    считает сама ЕСП по приросту импульсов, поэтому она доступна и на attiny 40.
-    Один общий признак готовности спрятал бы работающую тревогу.
+    Скрипт про это ничего не знает: страница обязана приехать уже правильной,
+    иначе поля успевают отрисоваться и гаснут только на onload. Причин у
+    недоступности три, и у каждой своё примечание внутри своего канала - общее
+    на устройство непонятно к какому входу относить.
     */
     const html = page('alarms.html');
 
     for (const input of ['0', '1']) {
-        assert.ok(html.includes('id="thresholds' + input + '"'),
-                  'у входа ' + input + ' пороги расхода не в своём блоке');
-        assert.ok(html.includes('id="stop' + input + '"'),
-                  'у входа ' + input + ' остановка не в своём блоке');
-        assert.ok(html.includes('%stop_ready' + input + '%'),
-                  'готовность остановки на входе ' + input + ' не подставляется');
+        assert.ok(html.includes('id="alarm' + input + '" class="%alarm_state' + input + '%"'),
+                  'у входа ' + input + ' нет класса состояния');
+        assert.ok(html.includes('%thresholds_off' + input + '%'),
+                  'пороги входа ' + input + ' нечем сделать неактивными');
     }
-});
 
-test('страница объясняет, почему порогов расхода нет', () => {
-    /*
-    Молча спрятанное поле - жалоба, с которой всё началось: у одного входа
-    настройки есть, у другого нет, а почему - непонятно. Причин две, и ответы
-    у них разные, поэтому и признака два.
-    */
-    const html = page('alarms.html');
+    for (const note of ['no-input-note', 'no-attiny-note', 'no-factor-note']) {
+        assert.strictEqual(html.split('class="note ' + note + '"').length - 1, 2,
+                           'примечание ' + note + ' есть не у каждого канала');
+    }
 
-    assert.ok(html.includes('id="alarm_old_attiny"'),
-              'нет примечания про attiny, которая порогов не умеет');
+    for (const block of ['thresholds', 'stop']) {
+        assert.strictEqual(html.split('class="' + block).length - 1, 2,
+                           'блок ' + block + ' есть не у каждого канала');
+    }
 
+    // Ссылка "Настроить" ведёт на настройку своего входа
     for (const input of ['0', '1']) {
-        assert.ok(html.includes('%factor_ready' + input + '%'),
-                  'готовность веса импульса на входе ' + input + ' не подставляется');
-        assert.ok(html.includes('id="no_factor' + input + '"'),
-                  'на входе ' + input + ' нечем сказать, что счётчик не настроен');
         assert.ok(html.includes('href="/input/' + input + '/setup.html"'),
                   'из примечания на входе ' + input + ' некуда пойти настраивать');
     }
-});
-
-test('пороги расхода: спрятаны у старой attiny, неактивны без веса импульса', () => {
-    /*
-    Три состояния на канал, и путать их нельзя: старую attiny не исправить
-    (поля прячем и говорим почему), незаданный вес - можно (поля показываем
-    неактивными и зовём настроить).
-    */
-    const ids = ['thresholds0', 'thresholds1', 'stop0', 'stop1', 'alarm0', 'alarm1',
-                 'no_factor0', 'no_factor1', 'alarm_old_attiny', 'alarm_none',
-                 'ack_waterius', 'ack_http', 'ack_mqtt',
-                 'counter0_title', 'counter1_title'];
-
-    function build() {
-        const rows = {};
-        for (const id of ids) {
-            const row = {
-                classes: id.startsWith('no_factor') || id === 'alarm_old_attiny' ? ['hd'] : [],
-                inputs: [{ disabled: false }, { disabled: false }],
-                textContent: '',
-                innerHTML: ''
-            };
-            row.classList = {
-                add: (c) => row.classes.push(c),
-                remove: (c) => { row.classes = row.classes.filter((x) => x !== c); }
-            };
-            row.querySelectorAll = () => row.inputs;
-            row.querySelector = () => row.inputs[0];
-            rows[id] = row;
-        }
-        sandbox.document = {
-            getElementById: (id) => rows[id],
-            querySelectorAll: () => []
-        };
-        return rows;
-    }
-
-    function fill(ready0, ready1, factor0, factor1) {
-        const rows = build();
-        vm.runInContext('fill_alarms(' + [
-            ctx.CounterName_WATER_HOT, ctx.CounterName_WATER_COLD,
-            ready0, ready1, factor0, factor1, 1, 1, 0
-        ].join(', ') + ')', sandbox);
-        return rows;
-    }
-
-    // Старая attiny: порогов нет ни на одном входе, зато сказано почему
-    let rows = fill(0, 0, 1, 1);
-    assert.ok(rows.thresholds0.classes.includes('hd'), 'пороги старой attiny не спрятаны');
-    assert.ok(!rows.alarm_old_attiny.classes.includes('hd'), 'про старую attiny промолчали');
-    assert.ok(rows.no_factor0.classes.includes('hd'), 'обвинили счётчик вместо attiny');
-
-    // Вес импульса не задан на горячем входе (0), холодный настроен
-    rows = fill(1, 1, 0, 1);
-    assert.ok(!rows.thresholds0.classes.includes('hd'), 'поля спрятали вместо того, чтобы погасить');
-    assert.ok(rows.thresholds0.classes.includes('off'), 'поля без веса импульса не погашены');
-    assert.ok(rows.thresholds0.inputs.every((i) => i.disabled), 'поля без веса импульса можно править');
-    assert.ok(!rows.no_factor0.classes.includes('hd'), 'не сказано, что счётчик не настроен');
-    assert.ok(rows.alarm_old_attiny.classes.includes('hd'), 'приплели старую attiny');
-
-    // Соседний вход настроен - его трогать нечем
-    assert.deepStrictEqual(rows.thresholds1.classes, [], 'настроенный вход погашен заодно');
-    assert.ok(rows.no_factor1.classes.includes('hd'), 'настроенный вход обвинён в ненастроенности');
-
-    // Всё настроено: ни одного примечания
-    rows = fill(1, 1, 1, 1);
-    assert.deepStrictEqual(rows.thresholds0.classes, [], 'настроенные пороги погашены');
-    assert.ok(rows.no_factor0.classes.includes('hd'), 'лишнее примечание про счётчик');
-    assert.ok(rows.alarm_old_attiny.classes.includes('hd'), 'лишнее примечание про attiny');
 });
 
 test('режим "я уехал" есть на странице тревог', () => {
@@ -379,7 +306,7 @@ test('режим "я уехал" есть на странице тревог', (
     assert.ok(html.includes('%vacation%'), 'состояние галочки не подставляется прошивкой');
 });
 
-test('квитанция о тревоге настраивается на странице тревог', () => {
+test('получателей оповещения выбирают на странице тревог', () => {
     const html = page('alarms.html');
 
     for (const who of ['waterius', 'http', 'mqtt']) {
@@ -387,47 +314,18 @@ test('квитанция о тревоге настраивается на ст�
                   'нет галочки получателя ' + who);
         assert.ok(html.includes('%confirm_' + who + '%'),
                   'состояние галочки ' + who + ' не подставляется прошивкой');
-        assert.ok(html.includes('id="ack_' + who + '"'),
-                  'строку получателя ' + who + ' нечем погасить');
+        /*
+        Выключенного получателя не прячем, а гасим: список на разных
+        устройствах должен выглядеть одинаково. Подпись гасит CSS по
+        input:disabled, поэтому одного атрибута хватает на всё.
+        */
+        assert.ok(html.includes('%ack_off_' + who + '%'),
+                  'галочку выключенного получателя ' + who + ' нечем погасить');
     }
-    // Без маски страница не знает, кто из отправителей включён
-    assert.ok(html.includes('%send_mask%'), 'маска включённых отправителей не подставляется');
-});
-
-test('выключенный получатель оповещения гаснет, а не исчезает', () => {
-    /*
-    Спрятанная строка делает список получателей разным на разных
-    устройствах: непонятно, куда она делась и как её вернуть. Тронуть её всё
-    равно нельзя - прошивка требование к выключенному отправителю снимает,
-    и галочка обещала бы то, чего не будет.
-    */
-    const ids = ['ack_waterius', 'ack_http', 'ack_mqtt'];
-    const rows = {};
-    for (const id of ids) {
-        const row = {
-            classes: [],
-            input: { disabled: false },
-            classList: { add: (c) => row.classes.push(c) },
-            querySelector: () => row.input
-        };
-        rows[id] = row;
-    }
-    sandbox.document = { getElementById: (id) => rows[id] };
-
-    // Включён только MQTT
-    vm.runInContext('fill_alarm_ack(' + ctx.CONFIRM_MQTT + ')', sandbox);
-
-    for (const id of ['ack_waterius', 'ack_http']) {
-        assert.ok(rows[id].classes.includes('off'), id + ' не помечен неактивным');
-        assert.ok(!rows[id].classes.includes('hd'), id + ' спрятан со страницы');
-        assert.ok(rows[id].input.disabled, id + ' можно переключить');
-    }
-    assert.deepStrictEqual(rows.ack_mqtt.classes, [], 'включённый получатель погашен');
-    assert.ok(!rows.ack_mqtt.input.disabled, 'включённого получателя нельзя выбрать');
 });
 
 test('в разметке нет маркеров, которых не знает fill_units', () => {
-    const known = ['total', 'unit', 'impulses'];
+    const known = ['total', 'unit', 'impulses', 'alarm_flow'];
     for (const name of PAGES) {
         const html = page(name);
         for (const m of html.matchAll(/data-unit="([^"]*)"/g)) {
@@ -437,13 +335,25 @@ test('в разметке нет маркеров, которых не знае�
 });
 
 test('страницы с размерностями зовут fill_units с типом ресурса', () => {
+    /*
+    Ресурс приходит либо аргументом (один вход на страницу), либо в самом
+    маркере (страница тревог: входов два). Маркер без того и другого останется
+    пустым, и подпись поля пропадёт молча.
+    */
     let pages_with_units = 0;
     for (const name of PAGES) {
         const html = page(name);
         if (!html.includes('data-unit=')) continue;
         pages_with_units++;
-        assert.ok(html.includes('fill_units(%counter_name%)'),
-                  name + ': маркеры есть, а fill_units(%counter_name%) не вызывается');
+
+        if (html.includes('fill_units(%counter_name%)')) continue;
+
+        assert.ok(html.includes('fill_units()'),
+                  name + ': маркеры есть, а fill_units не вызывается');
+        for (const m of html.matchAll(/data-unit="[^"]*"([^>]*)>/g)) {
+            assert.ok(/data-name="/.test(m[1]),
+                      name + ': маркер без data-name, а ресурс не передан аргументом');
+        }
     }
     assert.ok(pages_with_units >= 2, 'страницы с размерностями не найдены');
 });

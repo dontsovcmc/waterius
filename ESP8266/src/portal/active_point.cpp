@@ -80,6 +80,34 @@ String template_bool(const uint8_t value)
 }
 
 /*
+Атрибут disabled для поля, которое настроить нельзя. Ноль значит "выключено
+и потому недоступно", отсюда обратная логика по сравнению с template_bool.
+*/
+String template_disabled(const uint8_t enabled)
+{
+    if (enabled > 0)
+    {
+        return String();
+    }
+    return String(FPSTR(ATTR_DISABLED));
+}
+
+/*
+Класс состояния входа для блока канала. Единственное место, где ядро
+встречается с вёрсткой: имена классов разбирает style.css.
+*/
+String alarm_state_class(const AlarmInputState state)
+{
+    switch (state)
+    {
+        case ALARM_INPUT_NO_FACTOR: return String(FPSTR(CLASS_NO_FACTOR));
+        case ALARM_INPUT_NO_ATTINY: return String(FPSTR(CLASS_NO_ATTINY));
+        case ALARM_INPUT_NO_INPUT: return String(FPSTR(CLASS_NO_INPUT));
+        default: return String();
+    }
+}
+
+/*
  * Т.к. https://github.com/me-no-dev/ESPAsyncWebServer/issues/1249
  */
 String replace_value(const String &var)
@@ -252,47 +280,39 @@ String processor_main(const String &var, const uint8_t input)
         return template_bool(sett.alarm_confirm & CONFIRM_MQTT);
 
     /*
-    Какие отправители включены. Галочку выключенного прятать обязательно:
-    требование к нему всё равно снимается (core/alarm.h:alarm_delivered), и
-    оставленная галочка обещала бы то, чего не будет.
+    Выключенного отправителя показываем неактивным: требование к нему всё
+    равно снимается (core/alarm.h:alarm_delivered), и живая галочка обещала бы
+    то, чего не будет. Подпись гасит CSS по input:disabled.
     */
-    else if (var == FPSTR(PARAM_SEND_MASK))
-        return String((sett.waterius_on ? CONFIRM_WATERIUS : 0) |
-                      (sett.http_on ? CONFIRM_HTTP : 0) |
-                      (sett.mqtt_on ? CONFIRM_MQTT : 0));
+    else if (var == FPSTR(PARAM_ACK_OFF_WATERIUS))
+        return template_disabled(sett.waterius_on);
+    else if (var == FPSTR(PARAM_ACK_OFF_HTTP))
+        return template_disabled(sett.http_on);
+    else if (var == FPSTR(PARAM_ACK_OFF_MQTT))
+        return template_disabled(sett.mqtt_on);
 
     /*
-    Три признака, и у каждого своя причина - страница объясняет их по-разному.
-
-    alarm_ready: умеет ли устройство пороги расхода на этом входе. Считает их
-    attiny, поэтому нужна прошивка не старее ATTINY_VER_ALARM, а вход должен
-    давать импульсы. Не умеет - поля прячем: тут пользователь бессилен.
+    Состояние входа одним классом. Решает прошивка, а не страница: только она
+    знает версию attiny и вес импульса, а страница, разбиравшая это сама,
+    успевала показать поля и гасила их уже на onload.
     */
-    else if (var == FPSTR(PARAM_ALARM_READY0))
-        return String(runtime_data.version >= ATTINY_VER_ALARM &&
-                      counts_impulses(runtime_data.counter_type0) ? 1 : 0);
-    else if (var == FPSTR(PARAM_ALARM_READY1))
-        return String(runtime_data.version >= ATTINY_VER_ALARM &&
-                      counts_impulses(runtime_data.counter_type1) ? 1 : 0);
+    else if (var == FPSTR(PARAM_ALARM_STATE0))
+        return alarm_state_class(alarm_input_state(runtime_data.counter_type0, sett.factor0,
+                                                   runtime_data.version));
+    else if (var == FPSTR(PARAM_ALARM_STATE1))
+        return alarm_state_class(alarm_input_state(runtime_data.counter_type1, sett.factor1,
+                                                   runtime_data.version));
 
     /*
-    factor_ready: задан ли вес импульса. Без него порог не пересчитать в тики
-    (см. core/alarm.h), но это поправимо - поля показываем неактивными и зовём
-    настроить счётчик.
+    Поля порогов без веса импульса: видно, но тронуть нельзя - настройка,
+    которая ничего не делает, хуже её отсутствия.
     */
-    else if (var == FPSTR(PARAM_FACTOR_READY0))
-        return String(factor_configured(sett.factor0) ? 1 : 0);
-    else if (var == FPSTR(PARAM_FACTOR_READY1))
-        return String(factor_configured(sett.factor1) ? 1 : 0);
-
-    /*
-    stop_ready: остановку потребления считает ЕСП, а не attiny, поэтому версия
-    прошивки attiny тут ни при чём: достаточно, чтобы вход считал импульсы.
-    */
-    else if (var == FPSTR(PARAM_STOP_READY0))
-        return String(counts_impulses(runtime_data.counter_type0) ? 1 : 0);
-    else if (var == FPSTR(PARAM_STOP_READY1))
-        return String(counts_impulses(runtime_data.counter_type1) ? 1 : 0);
+    else if (var == FPSTR(PARAM_THRESHOLDS_OFF0))
+        return template_disabled(alarm_input_state(runtime_data.counter_type0, sett.factor0,
+                                                   runtime_data.version) != ALARM_INPUT_NO_FACTOR);
+    else if (var == FPSTR(PARAM_THRESHOLDS_OFF1))
+        return template_disabled(alarm_input_state(runtime_data.counter_type1, sett.factor1,
+                                                   runtime_data.version) != ALARM_INPUT_NO_FACTOR);
 
     else if (var == FPSTR(PARAM_COUNTER_IMG))
     {
