@@ -30,14 +30,14 @@
 
                         <div class="toggle mt24">
                             <input type="checkbox" name="vacation" id="vacation" onclick="checkboxToggle(this)" %vacation%>
-                            <label for="vacation">Я уехал</label>
+                            <label for="vacation">Режим «Я уехал»</label>
                         </div>
                         <p class="note">Тревогой становится любой расход воды. Держится до выключения режима.</p>
 
                         <div id="alarm1" class="%alarm_state1%">
                             <div class="mt24"><h2><span id="counter1_title"></span></h2></div>
                             <p class="note no-input-note">Вход не считает импульсы: тревоги настраивать нечем. <a class="link" href="/input/1/setup.html">Настроить</a></p>
-                            <p class="note no-attiny-note">Порог расхода умеет attiny 41 и новее. Остановка расхода работает на любой версии.</p>
+                            <p class="note no-attiny-note">Порог расхода и Непрерывный расход недоступны в версии attiny ниже 41</p>
                             <p class="note no-factor-note">Счётчик не настроен: задайте вес импульса. <a class="link" href="/input/1/setup.html">Настроить</a></p>
                             <div class="thresholds">
                             <div class="f-row">
@@ -64,7 +64,7 @@
                         <div id="alarm0" class="%alarm_state0%">
                             <div class="mt24"><h2><span id="counter0_title"></span></h2></div>
                             <p class="note no-input-note">Вход не считает импульсы: тревоги настраивать нечем. <a class="link" href="/input/0/setup.html">Настроить</a></p>
-                            <p class="note no-attiny-note">Порог расхода умеет attiny 41 и новее. Остановка расхода работает на любой версии.</p>
+                            <p class="note no-attiny-note">Порог расхода и Непрерывный расход недоступны в версии attiny ниже 41</p>
                             <p class="note no-factor-note">Счётчик не настроен: задайте вес импульса. <a class="link" href="/input/0/setup.html">Настроить</a></p>
                             <div class="thresholds">
                             <div class="f-row">
