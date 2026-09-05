@@ -152,3 +152,23 @@ void publish_simple(PubSubClient &mqtt_client, const String &topic, const String
         LOG_ERROR(F("MQTT: Client not connected."));
     }
 }
+
+/**
+ * @brief Снять удерживаемое сообщение с топика
+ *
+ * Пустая посылка с флагом retain - команда брокеру забыть удерживаемое, поэтому
+ * флаг взведён всегда, независимо от настройки mqtt_retain (#409): она говорит,
+ * как публиковать показания, а это служебная операция протокола.
+ *
+ * @param mqtt_client клиент MQTT
+ * @param topic строка с топиком
+ */
+void clear_retained(PubSubClient &mqtt_client, const String &topic)
+{
+    LOG_INFO(F("MQTT: Remove retain message: ") << topic);
+
+    if (!mqtt_client.publish(topic.c_str(), "", true))
+    {
+        LOG_ERROR(F("MQTT: Publish failed"));
+    }
+}

@@ -23,5 +23,6 @@ extern void publish(PubSubClient &mqtt_client, const String &topic, const String
 extern void publish_big(PubSubClient &mqtt_client, const String &topic, const String &payload);
 extern void publish_simple(PubSubClient &mqtt_client, const String &topic, const String &payload);
 extern void publish_chunked(PubSubClient &mqtt_client, const String &topic, const String &payload, const unsigned int chunk_size=MQTT_CHUNK_SIZE);
+extern void clear_retained(PubSubClient &mqtt_client, const String &topic);
 
 #endif
