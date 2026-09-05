@@ -9,6 +9,11 @@
         return root.SIM_GENERATED;
     }
 
+    // Маска обязательных получателей тревоги, core/types.h:AlarmConfirm
+    function A() {
+        return G().enums.AlarmConfirm;
+    }
+
     var NO_INPUT = 0xFF; // значение input по умолчанию, как в processor_main
 
     // Arduino String(float) печатает два знака после запятой
@@ -152,6 +157,15 @@
             case P.PARAM_ALARM_STOP0: return String(sett.alarm_stop0);
             case P.PARAM_ALARM_STOP1: return String(sett.alarm_stop1);
             case P.PARAM_VACATION: return templateBool(sett.vacation);
+
+            /* Квитанция о тревоге (#202): маска обязательных получателей */
+            case P.PARAM_CONFIRM_WATERIUS: return templateBool(sett.alarm_confirm & A().CONFIRM_WATERIUS);
+            case P.PARAM_CONFIRM_HTTP: return templateBool(sett.alarm_confirm & A().CONFIRM_HTTP);
+            case P.PARAM_CONFIRM_MQTT: return templateBool(sett.alarm_confirm & A().CONFIRM_MQTT);
+            case P.PARAM_SEND_MASK:
+                return String((sett.waterius_on ? A().CONFIRM_WATERIUS : 0) |
+                              (sett.http_on ? A().CONFIRM_HTTP : 0) |
+                              (sett.mqtt_on ? A().CONFIRM_MQTT : 0));
             case P.PARAM_SEND_ON_CONSUMPTION: return templateBool(sett.send_on_consumption);
 
             /* Можно ли настроить тревоги: нужен вес импульса и attiny не старее 41 */
@@ -193,6 +207,7 @@
             'PARAM_FS_FREE', 'PARAM_WIFI_CONNECT_STATUS',
             'PARAM_ALARM_FLOW0', 'PARAM_ALARM_FLOW1', 'PARAM_ALARM_LEAK0', 'PARAM_ALARM_LEAK1',
             'PARAM_ALARM_STOP0', 'PARAM_ALARM_STOP1', 'PARAM_VACATION', 'PARAM_SEND_ON_CONSUMPTION',
+            'PARAM_CONFIRM_WATERIUS', 'PARAM_CONFIRM_HTTP', 'PARAM_CONFIRM_MQTT', 'PARAM_SEND_MASK',
             'PARAM_ALARM_READY0', 'PARAM_ALARM_READY1', 'PARAM_STOP_READY0', 'PARAM_STOP_READY1',
         ];
         return names.map(function (key) { return P[key]; }).filter(Boolean);

@@ -181,3 +181,104 @@ TEST(Vacation, SaturatedThresholdNeverClears)
     }
     EXPECT_LE((uint32_t)UINT16_MAX >> 1, interval);
 }
+
+/*
+Квитанция о доставке тревоги (#202).
+
+Пока квитанции нет, attiny будит ЕСП снова: до ALARM_MAX_TRIES попыток и не
+больше ALARM_MAX_SESSIONS внеплановых сеансов на период пробуждения. Значит
+"доставлено" оплачивается батареей, и решает тут не наблюдение, а настройка
+пользователя.
+*/
+
+// Сеанс, в котором всё, что было настроено, отработало без ошибок
+static SessionStatus session(const SendStatus waterius, const SendStatus http,
+                             const SendStatus mqtt)
+{
+    SessionStatus status;
+    status.waterius = waterius;
+    status.http = http;
+    status.mqtt = mqtt;
+    status.delivered_any = (waterius == SEND_OK || http == SEND_OK || mqtt == SEND_OK);
+    return status;
+}
+
+TEST(AlarmDelivered, MaskZeroKeepsOldBehaviour)
+{
+    // Умолчание: прошитые устройства читают ноль и не должны заметить правки
+    EXPECT_TRUE(alarm_delivered(CONFIRM_ANY, session(SEND_OK, SEND_SKIPPED, SEND_NO_CONNECTION)));
+    EXPECT_TRUE(alarm_delivered(CONFIRM_ANY, session(SEND_BAD_ANSWER, SEND_SKIPPED, SEND_OK)));
+    EXPECT_FALSE(alarm_delivered(CONFIRM_ANY, session(SEND_BAD_ANSWER, SEND_SKIPPED, SEND_NO_CONNECTION)));
+}
+
+TEST(AlarmDelivered, RequiredRecipientMustAccept)
+{
+    /*
+    Ради этого всё и затевалось: авария, доехавшая до облака, но не до
+    домашнего брокера, доложена наполовину. Квитанции нет - attiny попробует
+    ещё раз, не дожидаясь планового сеанса.
+    */
+    const SessionStatus status = session(SEND_OK, SEND_SKIPPED, SEND_NO_CONNECTION);
+
+    EXPECT_TRUE(status.delivered_any);
+    EXPECT_FALSE(alarm_delivered(CONFIRM_MQTT, status));
+    EXPECT_TRUE(alarm_delivered(CONFIRM_WATERIUS, status));
+}
+
+TEST(AlarmDelivered, DisabledRequiredIsDropped)
+{
+    /*
+    Галочку на брокере поставили, а сам брокер потом выключили - в том числе
+    удалённо, из Home Assistant. Требовать доставки некуда, и настаивать
+    нельзя: это пять лишних сеансов на каждом периоде пробуждения, пока
+    пользователь не заметит.
+    */
+    const SessionStatus status = session(SEND_OK, SEND_SKIPPED, SEND_SKIPPED);
+
+    EXPECT_TRUE(alarm_delivered(CONFIRM_MQTT, status));
+    EXPECT_FALSE(alarm_delivered(CONFIRM_MQTT, session(SEND_BAD_ANSWER, SEND_SKIPPED, SEND_SKIPPED)));
+}
+
+TEST(AlarmDelivered, AllRequiredMustAccept)
+{
+    // Отмечены оба, оба настроены: один упал - квитанции нет
+    EXPECT_FALSE(alarm_delivered(CONFIRM_WATERIUS | CONFIRM_MQTT,
+                                 session(SEND_OK, SEND_SKIPPED, SEND_BAD_ANSWER)));
+    EXPECT_FALSE(alarm_delivered(CONFIRM_WATERIUS | CONFIRM_MQTT,
+                                 session(SEND_NO_CONNECTION, SEND_SKIPPED, SEND_OK)));
+    EXPECT_TRUE(alarm_delivered(CONFIRM_WATERIUS | CONFIRM_MQTT,
+                                session(SEND_OK, SEND_BAD_ANSWER, SEND_OK)));
+}
+
+TEST(AlarmDelivered, PartlyDisabledChecksTheRest)
+{
+    // Отмечены свой сервер и MQTT, свой сервер выключен - судим по MQTT
+    const uint8_t mask = CONFIRM_HTTP | CONFIRM_MQTT;
+
+    EXPECT_TRUE(alarm_delivered(mask, session(SEND_SKIPPED, SEND_SKIPPED, SEND_OK)));
+    EXPECT_FALSE(alarm_delivered(mask, session(SEND_OK, SEND_SKIPPED, SEND_NO_CONNECTION)));
+}
+
+TEST(AlarmDelivered, NothingDeliveredIsNotConfirmed)
+{
+    // Молчаливое пробуждение или сеанс без связи: подтверждать нечего
+    const SessionStatus silent;
+
+    EXPECT_FALSE(alarm_delivered(CONFIRM_ANY, silent));
+    EXPECT_FALSE(alarm_delivered(CONFIRM_WATERIUS, silent));
+    EXPECT_FALSE(alarm_delivered(CONFIRM_WATERIUS | CONFIRM_HTTP | CONFIRM_MQTT, silent));
+}
+
+TEST(AlarmDelivered, BrokenSecondCloudDoesNotBlockAny)
+{
+    /*
+    Почему delivered_any нельзя вывести из статусов: waterius.ru принял, свой
+    сервер ответил не то. Слитый облачный статус скажет "плохо", хотя данные
+    уехали - при маске "любой" это доставка.
+    */
+    const SessionStatus status = session(SEND_OK, SEND_BAD_ANSWER, SEND_SKIPPED);
+
+    EXPECT_EQ(cloud_status(status), SEND_BAD_ANSWER);
+    EXPECT_TRUE(alarm_delivered(CONFIRM_ANY, status));
+    EXPECT_FALSE(alarm_delivered(CONFIRM_HTTP, status));
+}

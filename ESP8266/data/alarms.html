@@ -8,7 +8,7 @@
         <script src="/static/common.js"></script>
         <script src="/static/strings.js"></script>
     </head>
-    <body onload="fill_alarms(%counter0_name%, %counter1_name%, %alarm_ready0%, %alarm_ready1%, %stop_ready0%, %stop_ready1%);
+    <body onload="fill_alarms(%counter0_name%, %counter1_name%, %alarm_ready0%, %alarm_ready1%, %stop_ready0%, %stop_ready1%, %send_mask%);
     _init({back: '/index.html', next: '/index.html'});">
         <form onsubmit="formSubmit(event, this, '/api/save_alarms');">
             <div class="wrap">
@@ -80,6 +80,24 @@
                                 <p class="note">Замёрзшая труба, отвалившийся геркон: расхода нет дольше этого времени. Не точнее периода пробуждения.</p>
                                 <p class="error hd" id="alarm_stop0-error">Целое число от 0 до 1092</p>
                             </div>
+                        </div>
+
+                        <div id="alarm_ack">
+                            <h3 class="mt24">Квитанция о тревоге</h3>
+                            <p class="text">Пока о тревоге не доложено, Ватериус выходит на связь снова, не дожидаясь очередной отправки. Отметьте, кто обязан принять доклад. Без отметок хватит любого получателя.</p>
+                            <div class="toggle mt16" id="ack_waterius">
+                                <input type="checkbox" name="confirm_waterius" id="confirm_waterius" onclick="checkboxToggle(this)" %confirm_waterius%>
+                                <label for="confirm_waterius">waterius.ru</label>
+                            </div>
+                            <div class="toggle mt16" id="ack_http">
+                                <input type="checkbox" name="confirm_http" id="confirm_http" onclick="checkboxToggle(this)" %confirm_http%>
+                                <label for="confirm_http">Свой сервер</label>
+                            </div>
+                            <div class="toggle mt16" id="ack_mqtt">
+                                <input type="checkbox" name="confirm_mqtt" id="confirm_mqtt" onclick="checkboxToggle(this)" %confirm_mqtt%>
+                                <label for="confirm_mqtt">MQTT-брокер</label>
+                            </div>
+                            <p class="note">Выключенный получатель из условия выпадает: иначе тревога не была бы доложена никогда.</p>
                         </div>
 
                         <p class="note mt16 hd" id="alarm_none"></p>

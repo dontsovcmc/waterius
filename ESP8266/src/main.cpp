@@ -296,6 +296,9 @@ void loop()
                 Данные дошли - говорим об этом attiny, иначе она будет будить
                 нас снова, пока не исчерпает попытки (#202).
 
+                Что считать "дошли", решает пользователь: alarm_confirm
+                отмечает обязательных получателей. Умолчание - любой.
+
                 В любом режиме, а не только в ALARM_MODE: состояние тревог едет
                 в каждом сеансе, и плановый увозит его не хуже внепланового.
                 Проверять режим здесь значило бы гонять лишний сеанс за уже
@@ -305,7 +308,17 @@ void loop()
                 Обязательно до wifi_shutdown: attiny должна узнать об этом в
                 том же сеансе.
                 */
-                if (status.delivered)
+                const bool confirmed = alarm_delivered(sett.alarm_confirm, status);
+
+                // Без этой строки "почему attiny будит по кругу" не разобрать
+                LOG_INFO(F("Alarm confirm: mask=") << (int)sett.alarm_confirm
+                         << F(" waterius=") << (int)status.waterius
+                         << F(" http=") << (int)status.http
+                         << F(" mqtt=") << (int)status.mqtt
+                         << F(" any=") << (int)status.delivered_any
+                         << F(" -> ") << (int)confirmed);
+
+                if (confirmed)
                 {
                     masterI2C.confirmAlarm();
                 }

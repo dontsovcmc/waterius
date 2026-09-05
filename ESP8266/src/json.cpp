@@ -67,6 +67,15 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     // "был расход, пока вас нет" - порог в обоих случаях один и тот же
     root[F("vac")] = (uint8_t)(sett.vacation ? 1 : 0);
 
+    /*
+    Кому доклад о тревоге обязан доехать (#202). Три поля, а не одно число:
+    в Home Assistant это три отдельных переключателя, каждому нужно своё
+    состояние.
+    */
+    root[F("ackw")] = (uint8_t)(sett.alarm_confirm & CONFIRM_WATERIUS ? 1 : 0);
+    root[F("ackh")] = (uint8_t)(sett.alarm_confirm & CONFIRM_HTTP ? 1 : 0);
+    root[F("ackm")] = (uint8_t)(sett.alarm_confirm & CONFIRM_MQTT ? 1 : 0);
+
     // Сеанс внеплановый, по тревоге, а не по расписанию
     root[F("alarm")] = (uint8_t)(sett.mode == ALARM_MODE ? 1 : 0);
 

@@ -127,6 +127,16 @@ static const char s_alarm_stop[] PROGMEM = "alarm_stop";
 static const char s_alarm_stop_name[] PROGMEM = "Alarm: consumption stopped";
 static const char s_vac[] PROGMEM = "vac";
 static const char s_vac_name[] PROGMEM = "Away mode";
+/*
+Квитанция о тревоге: кому доклад обязан доехать (#202). Имена не
+оканчиваются цифрой - иначе apply_settings.cpp принял бы их за поканальные.
+*/
+static const char s_ackw[] PROGMEM = "ackw";
+static const char s_ackw_name[] PROGMEM = "Alarm ack: waterius.ru";
+static const char s_ackh[] PROGMEM = "ackh";
+static const char s_ackh_name[] PROGMEM = "Alarm ack: own server";
+static const char s_ackm[] PROGMEM = "ackm";
+static const char s_ackm_name[] PROGMEM = "Alarm ack: MQTT";
 static const char s_icon_numeric[] PROGMEM = "mdi:numeric";
 static const char s_cname_name[] PROGMEM = "Resource Type";
 static const char s_cname[] PROGMEM = "cname";
@@ -144,6 +154,7 @@ static const char s_lph[] PROGMEM = "L/h";
 static const char s_watt[] PROGMEM = "W";
 static const char s_hour[] PROGMEM = "h";
 static const char s_icon_home_export[] PROGMEM = "mdi:home-export-outline";
+static const char s_icon_cloud_check[] PROGMEM = "mdi:cloud-check-outline";
 static const char s_icon_water_off[] PROGMEM = "mdi:water-off";
 static const char s_binary_sensor[] PROGMEM = "binary_sensor";
 static const char s_problem[] PROGMEM = "problem";
@@ -178,6 +189,17 @@ static const char *const ENTITY_SEND_ON_CONSUMPTION[MQTT_PARAM_COUNT] PROGMEM =
     {s_switch, s_sc_name, s_sc, "", "", "", s_config, s_icon_water_sync, ""};
 static const char *const ENTITY_VACATION[MQTT_PARAM_COUNT] PROGMEM =
     {s_switch, s_vac_name, s_vac, "", "", "", s_config, s_icon_home_export, ""};               // vac Режим "я уехал" (#88)
+
+/*
+Кому доклад о тревоге обязан доехать (#202). Переключатели, а не один
+select: обязательных получателей может быть несколько сразу.
+*/
+static const char *const ENTITY_ACK_WATERIUS[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_ackw_name, s_ackw, "", "", "", s_config, s_icon_cloud_check, ""};
+static const char *const ENTITY_ACK_HTTP[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_ackh_name, s_ackh, "", "", "", s_config, s_icon_cloud_check, ""};
+static const char *const ENTITY_ACK_MQTT[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_ackm_name, s_ackm, "", "", "", s_config, s_icon_cloud_check, ""};
 
 static const char *const ENTITY_PERIOD_MIN[MQTT_PARAM_COUNT] PROGMEM =  
     {s_number, s_period_min_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50};

@@ -60,6 +60,17 @@ static const char PARAM_ALARM_STOP[] PROGMEM = "alarm_stop";
 static const char PARAM_ALARM_STOP0[] PROGMEM = "alarm_stop0";
 static const char PARAM_ALARM_STOP1[] PROGMEM = "alarm_stop1";
 static const char PARAM_VACATION[] PROGMEM = "vacation";
+
+/*
+Квитанция о тревоге: кому доклад обязан доехать (#202). Имена не
+оканчиваются цифрой - иначе ha/apply_settings.cpp принял бы их за
+поканальные и срезал бы последний символ.
+*/
+static const char PARAM_CONFIRM_WATERIUS[] PROGMEM = "confirm_waterius";
+static const char PARAM_CONFIRM_HTTP[] PROGMEM = "confirm_http";
+static const char PARAM_CONFIRM_MQTT[] PROGMEM = "confirm_mqtt";
+/* Какие отправители вообще включены: маска для страницы тревог */
+static const char PARAM_SEND_MASK[] PROGMEM = "send_mask";
 static const char PARAM_STOP_READY0[] PROGMEM = "stop_ready0";
 static const char PARAM_STOP_READY1[] PROGMEM = "stop_ready1";
 static const char PARAM_ALARM_READY0[] PROGMEM = "alarm_ready0";

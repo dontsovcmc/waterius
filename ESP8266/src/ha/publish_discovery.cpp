@@ -168,6 +168,9 @@ void publish_discovery_general_entities(PubSubClient &mqtt_client,
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_SEND_ON_CONSUMPTION);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_VACATION);
+    publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ACK_WATERIUS);
+    publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ACK_HTTP);
+    publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ACK_MQTT);
     //нужно ли это прям диагностическая информация 
     //publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN_TUNED);
     /* Сенсор с атрибутами  Группа №1 */
