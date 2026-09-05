@@ -298,10 +298,42 @@ test('квитанция о тревоге настраивается на ст�
         assert.ok(html.includes('%confirm_' + who + '%'),
                   'состояние галочки ' + who + ' не подставляется прошивкой');
         assert.ok(html.includes('id="ack_' + who + '"'),
-                  'строку получателя ' + who + ' нечем спрятать');
+                  'строку получателя ' + who + ' нечем погасить');
     }
     // Без маски страница не знает, кто из отправителей включён
     assert.ok(html.includes('%send_mask%'), 'маска включённых отправителей не подставляется');
+});
+
+test('выключенный получатель оповещения гаснет, а не исчезает', () => {
+    /*
+    Спрятанная строка делает список получателей разным на разных
+    устройствах: непонятно, куда она делась и как её вернуть. Тронуть её всё
+    равно нельзя - прошивка требование к выключенному отправителю снимает,
+    и галочка обещала бы то, чего не будет.
+    */
+    const ids = ['ack_waterius', 'ack_http', 'ack_mqtt'];
+    const rows = {};
+    for (const id of ids) {
+        const row = {
+            classes: [],
+            input: { disabled: false },
+            classList: { add: (c) => row.classes.push(c) },
+            querySelector: () => row.input
+        };
+        rows[id] = row;
+    }
+    sandbox.document = { getElementById: (id) => rows[id] };
+
+    // Включён только MQTT
+    vm.runInContext('fill_alarm_ack(' + ctx.CONFIRM_MQTT + ')', sandbox);
+
+    for (const id of ['ack_waterius', 'ack_http']) {
+        assert.ok(rows[id].classes.includes('off'), id + ' не помечен неактивным');
+        assert.ok(!rows[id].classes.includes('hd'), id + ' спрятан со страницы');
+        assert.ok(rows[id].input.disabled, id + ' можно переключить');
+    }
+    assert.deepStrictEqual(rows.ack_mqtt.classes, [], 'включённый получатель погашен');
+    assert.ok(!rows.ack_mqtt.input.disabled, 'включённого получателя нельзя выбрать');
 });
 
 test('в разметке нет маркеров, которых не знает fill_units', () => {
