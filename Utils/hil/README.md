@@ -102,20 +102,20 @@ def test_E1_flow_alarm(stand, quiet):
 звать `/pulse` (выдержка на плате) и откатывается на два запроса, если метода в
 клиенте нет; для ритмичных серий нужен `/pulse_train` на самой плате.
 
-## Известные дефекты прошивки
+## Что стенд нашёл
 
-Два теста помечены `xfail` — они написаны под правильное поведение и станут
-зелёными сами, когда дефект починят:
+Пять дефектов, ради которых он и писался. Все исправлены, и каждый закрыт
+тестом, который на сломанной прошивке падает:
 
-| Тест | Дефект |
-|---|---|
-| `test_E3a_single_pulse_is_not_a_leak` | [#405](https://github.com/dontsovcmc/waterius/issues/405): один импульс после долгой тишины поднимает ложную протечку, и она не снимается никогда (`Attiny85/src/alarm.h`, `prev_gap` после насыщения `ticks`) |
-| `test_D2b_undelivered_session_keeps_delta` | [#407](https://github.com/dontsovcmc/waterius/issues/407): точка отсчёта расхода двигается после подключения к Wi-Fi, а не после доставки: посылка не дошла — прирост потерян |
+| Дефект | Тест | Исправлено в |
+|---|---|---|
+| [#405](https://github.com/dontsovcmc/waterius/issues/405) один импульс после долгой тишины поднимал протечку, и она не снималась никогда | `test_E3a_single_pulse_is_not_a_leak` | attiny 42 |
+| [#406](https://github.com/dontsovcmc/waterius/issues/406) повторная отправка после применения настроек не уходила в брокер | `test_G1_all_three_channels` следит за `MQTT: Not connected` | ЕСП 2.0.47 |
+| [#407](https://github.com/dontsovcmc/waterius/issues/407) прирост терялся, если Wi-Fi поднялся, а посылка не дошла | `test_D2b_undelivered_session_keeps_delta` | ЕСП 2.0.47 |
+| [#408](https://github.com/dontsovcmc/waterius/issues/408) `mqtt_connect` возвращал успех после всех неудач | `test_G5_broker_unreachable` | ЕСП 2.0.47 |
+| [#409](https://github.com/dontsovcmc/waterius/issues/409) снятие retained-команды уходило без флага retain | `test_I7_retain_flag` | ЕСП 2.0.47 |
 
-Ещё три дефекта тесты обходят, а не проверяют. [#408](https://github.com/dontsovcmc/waterius/issues/408): `MQTT: Connecting failed` не
-печатается никогда (`mqtt_connect` возвращает успех после всех неудач), поэтому
-ловим `MQTT: Connect failed with state`. [#406](https://github.com/dontsovcmc/waterius/issues/406): повторная отправка после
-применения настроек не уходит в брокер, потому что `send_mqtt` закрывает
-соединение — `test_G1` следит за строкой `MQTT: Not connected`. [#409](https://github.com/dontsovcmc/waterius/issues/409):
-снятие retained-команды публикуется без флага retain при выключенной настройке
-`mqtt_retain`.
+**Минимальные версии для полного прогона: attiny 42, ЕСП 2.0.47.** На attiny 41
+падает `test_E3a`, на ЕСП 2.0.46 и старше - `test_D2b`, `test_G5` и часть
+проверок MQTT. Это верный результат, а не поломка стенда: прошивка на стенде
+должна быть той, которую собираетесь выпускать.

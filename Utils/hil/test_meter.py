@@ -66,14 +66,12 @@ def test_D2a_missed_session_keeps_consumption(stand: Stand, slow_clock: None) ->
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(reason='#407: точка отсчёта двигается после коннекта, а не после доставки')
 def test_D2b_undelivered_session_keeps_delta(stand: Stand, slow_clock: None) -> None:
     """
     Тот же опыт, но сеть жива, а получатели недоступны.
 
-    Ожидаем то же самое: прирост не должен теряться от того, что посылка не
-    доехала. Сейчас `update_config` сдвигает точку отсчёта сразу после
-    подключения к Wi-Fi, поэтому расход первого периода пропадает.
+    Прирост не теряется от того, что посылка не доехала: точка отсчёта
+    двигается после доставки, а не после подключения к Wi-Fi (#407).
     """
     stand.setup(channel=1, factor=FACTOR, ctype=NAMUR, period_min=120)
     stand.reset_observers()

@@ -122,9 +122,10 @@ def test_G5_broker_unreachable(stand: Stand) -> None:
     """
     Брокер недоступен, облако живо: четыре вспышки.
 
-    Ловим `MQTT: Connect failed with state`, а не `MQTT: Connecting failed`:
-    вторая строка не печатается никогда, потому что mqtt_connect возвращает
-    успех после всех неудачных попыток.
+    Проверяем обе строки. `MQTT: Connect failed with state` печатается на
+    каждой попытке, `MQTT: Connecting failed` - один раз, когда попытки
+    исчерпаны: до #408 эта ветка была недостижима, и сеанс по логу выглядел
+    так, будто подключение удалось.
     """
     stand.reset_observers()
 
@@ -134,4 +135,5 @@ def test_G5_broker_unreachable(stand: Stand) -> None:
 
     session.assert_cause('mqtt')
     assert 'MQTT: Connect failed with state' in session.text
+    assert 'MQTT: Connecting failed' in session.text
     assert session.confirm and session.confirm['waterius'] == SEND_OK
