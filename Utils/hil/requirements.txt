@@ -1,0 +1,6 @@
+pytest>=7.0.0
+requests>=2.32.4
+metf_python_client>=0.3
+loguru
+pyserial>=3.5
+paho-mqtt>=1.6
