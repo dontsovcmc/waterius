@@ -145,7 +145,7 @@ String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ct
             case 1: return F("meter-gas-1.png");
         }
     }
-    //if (name == CounterName::WATER_COLD)
+    // Остальное - холодная вода
     switch (input)
     {
         case 0: 
@@ -517,7 +517,6 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
 
     wifi_set_mode(WIFI_AP_STA);
 
-    // WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
 
     // Канал роутера, к которому подключимся, должен совпадать с каналом точки
     // доступа ЕСП: одно радио на оба режима. Поэтому берём канал из настроек —
@@ -542,7 +541,6 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
 
     LOG_INFO(F("Start DNS server"));
     DNSServer *dns = new DNSServer();
-    // dns->setTTL(3600);   //https://github.com/CDFER/Captive-Portal-ESP32/blob/main/src/main.cpp#L50C11-L50C25
     dns->start(53, "*", WiFi.softAPIP());
 
     LOG_INFO(F("DNS server started"));

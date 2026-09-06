@@ -118,7 +118,6 @@ void wifi_shutdown()
 
 String wifi_phy_mode_title(const WiFiPhyMode_t m)
 {
-    // WiFi.setPhyMode(WIFI_PHY_MODE_11B = 1, WIFI_PHY_MODE_11G = 2, WIFI_PHY_MODE_11N = 3);
     switch (m)
     {
     case WIFI_PHY_MODE_11B:
@@ -168,7 +167,6 @@ bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
 /* Важно: вызывать функцию, после сканирования WiFi сетей */
 void write_ssid_to_file()
 {
-    // LittleFS.remove("/ssid.txt");
     File file = LittleFS.open("/ssid.txt", "w");
     if (!file)
     {
@@ -207,7 +205,6 @@ void write_ssid_to_file()
                 file.printf("is_hidden:%d\n", it->is_hidden);
                 file.printf("freq_offset:%d\n", it->freq_offset);
                 file.printf("freqcal_val:%d\n", it->freqcal_val);
-                // file.printf("freqcal_val:%d\n",it->freqcal_val);        //uint8 *esp_mesh_ie;
                 file.printf("simple_pair:%d\n", it->simple_pair);
                 file.printf("pairwise_cipher:%d\n", it->pairwise_cipher);
                 file.printf("group_cipher:%d\n", it->group_cipher);

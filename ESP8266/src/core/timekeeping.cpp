@@ -97,7 +97,7 @@ bool need_ntp_sync(const time_t last_sync, const uint16_t wakeups_since_sync,
     if (is_valid_time(last_sync))
     {
         // На прогреве синхронизируемся каждое пробуждение, пока не наберётся
-        // пара для измерения поправки. Дальше — раз в неделю.
+        // пара для измерения поправки. Дальше — раз в сутки.
         deadline = sync_count < NTP_WARMUP_SYNCS ? 1 : sync_deadline_wakeups(wakeup_per_min);
     }
     // Время неизвестно — расписание построить не на чем, срок нулевой.

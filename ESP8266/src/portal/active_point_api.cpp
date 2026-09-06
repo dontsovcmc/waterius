@@ -390,7 +390,6 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
             ret[F("factor")] = factor_cold;
             ret[F("impulses")] = runtime_data.impulses1 - data.impulses1;
         }
-        // root[F("elapsed")] = (uint32_t)(SETUP_TIME_SEC - millis() / 1000.0);
     }
     else
     {

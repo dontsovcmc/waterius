@@ -171,8 +171,7 @@ void publish_discovery_general_entities(PubSubClient &mqtt_client,
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ACK_WATERIUS);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ACK_HTTP);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ACK_MQTT);
-    //нужно ли это прям диагностическая информация 
-    //publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN_TUNED);
+    // TODO: нужен ли period_min_tuned в HA как диагностика
     /* Сенсор с атрибутами  Группа №1 */
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_VOLTAGE);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_VOLTAGE_DIFF);

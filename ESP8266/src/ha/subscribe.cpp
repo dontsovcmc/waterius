@@ -69,7 +69,6 @@ void mqtt_callback(Settings &sett, JsonDocument &json_settings_received, PubSubC
 {
     String topic = raw_topic;
     String payload;
-    String zero_payload("");
     payload.reserve(length);
 
     LOG_INFO(F("MQTT: CALLBACK: Message arrived to: ") << topic);
@@ -84,8 +83,7 @@ void mqtt_callback(Settings &sett, JsonDocument &json_settings_received, PubSubC
     ha_fill_json_settings_data(topic, payload, json_settings_received);
 
 
-    LOG_INFO(F("MQTT: Remove retain message: ") << topic);
-    publish(mqtt_client, topic, zero_payload, PUBLISH_MODE_SIMPLE);
+    clear_retained(mqtt_client, topic);
 }
 
 /**
