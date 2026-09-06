@@ -28,12 +28,35 @@ HTTP_PORT = 80
 class Net:
     """Сеть стенда: точка доступа и фильтр трафика Ватериуса."""
 
-    def __init__(self, router: NatRouter, dut_ip: str, broker_port: int = 1883,
-                 receiver_port: int = 8000) -> None:
+    def __init__(self, router: NatRouter, dut_ip: str, dut_mac: str = '',
+                 broker_port: int = 1883, receiver_port: int = 8000) -> None:
         self.router = router
         self.dut_ip = dut_ip
+        self.dut_mac = dut_mac.lower()
         self.broker_port = broker_port
         self.receiver_port = receiver_port
+        self._identity_checked = False
+
+    def verify_dut(self) -> None:
+        """
+        Убедиться, что по dut_ip сидит именно Ватериус, прежде чем резать трафик.
+
+        Правило фильтра, наведённое на чужой или пустой адрес, ничего не режет:
+        посылка уходит, тест падает и обвиняет прошивку в том, что она не
+        доставила данные. Проверяем один раз за сеанс - список клиентов стоит
+        обращения к роутеру.
+        """
+        if self._identity_checked:
+            return
+        assert self.dut_mac, (
+            'в stand.ini не задан [dut] mac: без него адрес за Ватериусом не '
+            'закреплён, и правила фильтра лягут на чужой адрес')
+        clients = self.router.clients()
+        seen = {c['mac']: c['ip'] for c in clients}
+        assert seen.get(self.dut_mac) == self.dut_ip, (
+            f'Ватериуса нет по адресу {self.dut_ip}: роутер видит {clients or "никого"}. '
+            'Проверьте [dut] mac/ip в stand.ini и резервирование адреса')
+        self._identity_checked = True
 
     @contextmanager
     def ap_off(self) -> Iterator[None]:
@@ -45,6 +68,7 @@ class Net:
     @contextmanager
     def internet_down(self) -> Iterator[None]:
         """Wi-Fi живёт, весь исходящий трафик устройства отброшен."""
+        self.verify_dut()
         logger.info('сеть: режем весь трафик устройства')
         with self.router.blocked(self.dut_ip):
             yield
@@ -56,6 +80,7 @@ class Net:
         получателей два - waterius.ru и свой сервер, - а вопрос «кому доклад
         обязан доехать» решается по каждому отдельно.
         """
+        self.verify_dut()
         logger.info('сеть: режем облако, брокер оставляем')
         self.router.block_port(self.dut_ip, HTTPS_PORT)
         self.router.block_port(self.dut_ip, HTTP_PORT)
@@ -68,6 +93,7 @@ class Net:
     @contextmanager
     def mqtt_down(self) -> Iterator[None]:
         """Брокер недоступен, облако живо: зеркало предыдущего сценария."""
+        self.verify_dut()
         logger.info('сеть: режем брокер, облако оставляем')
         with self.router.blocked(self.dut_ip, self.broker_port):
             yield

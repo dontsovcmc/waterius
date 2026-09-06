@@ -41,6 +41,21 @@ CHANNEL_PARAMS = {
     'value': 'ch',
 }
 
+# Состояние, с которого начинается каждый тест. Без него результат зависит от
+# того, что оставил предыдущий: test_I5 выключает квитанцию MQTT, а test_G1
+# ничего не настраивает и требует, чтобы она была включена. Имена - как их
+# печатает прошивка в посылке, чтобы сверять напрямую с ней, а не со своей
+# памятью: настройки меняются и через MQTT, мимо setup().
+BASELINE = {
+    'vac': 0, 'sc': 0,
+    'ackw': 1, 'ackh': 1, 'ackm': 1,
+    'period_min': 120,
+    'ctype0': 0, 'ctype1': 0,
+    'f1': 10,
+    'af0': 0, 'al0': 0, 'as0': 0,
+    'af1': 0, 'al1': 0, 'as1': 0,
+}
+
 GLOBAL_PARAMS = {
     'vacation': 'vac',
     'period_min': 'period_min',
@@ -63,7 +78,9 @@ class Stand:
         self.mqtt = mqtt
         self.log = LogWatcher(api)
         self.dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin)
-        self.net = Net(router, cfg.dut_ip, cfg.broker_port, cfg.receiver_port)
+        self.net = Net(router, cfg.dut_ip, cfg.dut_mac,
+                       cfg.broker_port, cfg.receiver_port)
+        self.last_payload: dict[str, Any] | None = None
 
     # --- жизненный цикл ---
 
@@ -121,6 +138,7 @@ class Stand:
             session.payloads.append(payload)
         if session.payloads:
             session.payload = session.payloads[-1]
+            self.last_payload = session.payload
 
         if self.mqtt:
             session.mqtt = [(m.topic, m.payload, m.retain) for m in self.mqtt.history]
@@ -208,6 +226,25 @@ class Stand:
             else:
                 out[name] = value                 # имя параметра прошивки как есть
         return out
+
+    def ensure_baseline(self) -> None:
+        """
+        Привести устройство к BASELINE перед тестом.
+
+        Сверяемся с последней посылкой - это то, что устройство сообщает о себе
+        само. Совпало всё - сеанса не будет: на живом железе он стоит полторы
+        минуты, и платить их за каждый тест незачем.
+        """
+        payload = self.last_payload
+        if payload is None:
+            diff = dict(BASELINE)
+        else:
+            diff = {name: value for name, value in BASELINE.items()
+                    if name in payload and str(payload[name]) != str(value)}
+        if not diff:
+            return
+        logger.info(f'возврат к базовому состоянию: {diff}')
+        self.setup(**diff)
 
     # --- ожидание чистого состояния ---
 

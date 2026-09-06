@@ -118,8 +118,22 @@ def clean_net(request: pytest.FixtureRequest) -> Iterator[None]:
         device.router.restore(state)
 
 
+@pytest.fixture(autouse=True)
+def device_baseline(request: pytest.FixtureRequest) -> None:
+    """
+    Известное состояние устройства перед каждым тестом стенда.
+
+    Иначе тест наследует настройки соседа: test_I5 оставляет выключенной
+    квитанцию MQTT, а test_G1 ничего не настраивает и требует её включённой -
+    при полном прогоне он падает и обвиняет прошивку.
+    """
+    if 'stand' not in request.keywords or not request.config.getoption('--stand'):
+        return
+    request.getfixturevalue('stand').ensure_baseline()
+
+
 @pytest.fixture
-def quiet(stand: Any) -> Iterator[None]:
+def quiet(stand: Any, device_baseline: None) -> Iterator[None]:
     """
     Для тестов тревог: начинать с состояния, в котором устройство никого не
     будит. Остаток бюджета внеплановых сеансов от предыдущего теста иначе
