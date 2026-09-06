@@ -5,6 +5,7 @@
 Пользовательские инструкции лежат в корне репозитория и здесь не дублируются:
 [Setup.md](../Setup.md) — настройка, [Export.md](../Export.md) — справочник параметров и
 протоколов, [Home_Assistant_setup.md](../Home_Assistant_setup.md) — интеграция с HA,
+[Alarms.md](../Alarms.md) — тревоги глазами пользователя,
 [FAQ.md](../FAQ.md) — разбор жалоб, [Firmware.md](../Firmware.md) — прошивка устройства.
 
 ## Устройство
