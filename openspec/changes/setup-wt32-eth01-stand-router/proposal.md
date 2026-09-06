@@ -19,14 +19,16 @@
   адреса разделов при прошивке (`0x1000` / `0x8000` / `0xf000` / `0x20000` — страница вики
   «WT32-ETH01» называет неверные), и то, что удалённая консоль по проводу включается
   ключевым словом `sta`, а не `eth`.
-- Раздел про управление по Ethernet: `set_router_password`, `remote_console enable`,
-  `remote_console bind ap,sta`, `remote_console port 2323` — это и есть канал, которым
-  пользуется `TcpTransport` в `router.py`.
+- Раздел про управление по Ethernet: веб-интерфейс платы доступен по проводу сразу после
+  прошивки, из него включается удалённая консоль (`set_router_password`,
+  `remote_console enable`, `remote_console bind ap,sta`, порт 2323) — это и есть канал,
+  которым пользуется `TcpTransport` в `router.py`. USB-TTL нужен только для первой прошивки
+  и для восстановления.
 - Раздел про то, что настраивается один раз и живёт в NVS: `set_ap`, `set_ap_channel`,
   `dhcp_reserve` для MAC Ватериуса, `client_stats enable`.
-- В `stand.ini.example` секция `[router]` уже есть; уточняются комментарии к ней — что
-  `port` имеет приоритет над `host` в `router.py::connect`, и что `password` задаётся на
-  плате командой `set_router_password`.
+- В `stand.ini.example` секция `[router]` уже есть; уточняются комментарии к ней — что для
+  стенда заполняется `host` + `password`, а `port` остаётся пустым, иначе `connect()` уведёт
+  управление на USB; пароль — тот, что задан на плате.
 - `Utils/hil/README.md` получает ссылку на новый документ в разделе про сборку стенда.
 - Приёмка: `python Utils/hil/router.py --host <ip> show config` отвечает без Ватериуса, а
   `pytest Utils/hil -k "G3 or G4 or G5" --stand` проходит.
