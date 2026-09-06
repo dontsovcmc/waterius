@@ -53,6 +53,10 @@ ERROR_MARKERS = (
     'Unrecognized command',
     'Command returned non-zero',
     'Invalid arguments',
+    # Разбор аргументов ругается своими словами, и без этих двух строк ошибка
+    # проглатывалась: команда не выполнена, а тест считал, что всё хорошо
+    'missing option',
+    'excess option',
 )
 
 
@@ -231,13 +235,22 @@ class NatRouter:
     def set_tx_power(self, dbm: int) -> None:
         self.cmd(f'set_tx_power {dbm}')
 
-    def dhcp_reserve(self, mac: str, ip: str, name: str = '') -> None:
+    def dhcp_reserve(self, mac: str, ip: str) -> None:
         """
         Закрепить адрес за устройством. Без этого правила фильтра пришлось бы
         переписывать после каждой выдачи адреса.
+
+        Имя устройства прошивка не принимает: форма `-- <имя>` из вики проекта
+        отвергается разбором аргументов (`excess option`).
         """
-        suffix = f' -- {name}' if name else ''
-        self.cmd(f'dhcp_reserve add {mac} {ip}{suffix}')
+        self.cmd(f'dhcp_reserve add {mac} {ip}')
+
+    def dhcp_reservations(self) -> dict[str, str]:
+        """MAC -> адрес, как их печатает `show mappings`."""
+        out = self.show('mappings')
+        return dict(
+            (m.group(1).lower(), m.group(2))
+            for m in re.finditer(r'([0-9a-fA-F:]{17})\s*->\s*(\d+\.\d+\.\d+\.\d+)', out))
 
     def client_stats(self, enabled: bool = True) -> None:
         self.cmd(f'client_stats {"enable" if enabled else "disable"}')

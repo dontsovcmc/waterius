@@ -83,7 +83,7 @@ class Stand:
         # Фиксированный адрес: иначе правила фильтра пришлось бы переписывать
         # после каждой выдачи адреса
         if cfg.dut_mac:
-            router.dhcp_reserve(cfg.dut_mac, cfg.dut_ip, 'waterius')
+            router.dhcp_reserve(cfg.dut_mac, cfg.dut_ip)
         router.client_stats(True)
         return stand
 
