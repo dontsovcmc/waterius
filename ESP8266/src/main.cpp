@@ -285,6 +285,20 @@ void loop()
                     send_data(sett, data, cdata, json_data, json_settings_received, status);
                 }
 
+                /*
+                Сеанс с брокером закрываем здесь, а не внутри отправки: данные
+                уходят дважды, если пришли настройки, и закрытое соединение
+                делало вторую посылку невозможной (#406). Симметрично
+                connect_and_subscribe_mqtt выше. До OTA - там качается прошивка,
+                и держать сокет незачем.
+                */
+#ifndef MQTT_DISABLED
+                if (is_mqtt(sett))
+                {
+                    disconnect_mqtt(sett);
+                }
+#endif
+
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
                 if (has_ota(json_settings_received))
                 {
