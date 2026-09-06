@@ -76,19 +76,22 @@ def test_E2_flow_alarm_clears(stand: Stand, quiet: None, slow_clock: None) -> No
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(reason='#405: ложная протечка от одного импульса после долгой тишины')
 def test_E3a_single_pulse_is_not_a_leak(stand: Stand, quiet: None,
                                         slow_clock: None) -> None:
     """
     Негативный контроль для непрерывного расхода.
 
     Один импульс и тишина - это не протечка. Тест существует потому, что без
-    него проверка ритма зеленеет на сломанной логике: прошивка поднимает
-    ALARM_LEAK и при полном отсутствии расхода, если перед импульсом была
-    достаточно длинная пауза (Attiny85/src/alarm.h, prev_gap).
+    него проверка ритма зеленеет на сломанной логике: пауза перед импульсом не
+    должна запоминаться как ритм, иначе ALARM_LEAK поднимается при полном
+    отсутствии расхода (#405, Attiny85/src/alarm.h, ALARM_MAX_GAP_MIN).
+
+    Требует attiny 42: на 41 тест падает, и это верный результат.
     """
-    stand.setup_alarms(channel=1, factor=FACTOR, alarm_leak=LEAK_MINUTES,
-                       ctype=NAMUR, vacation=0)
+    setup = stand.setup_alarms(channel=1, factor=FACTOR, alarm_leak=LEAK_MINUTES,
+                               ctype=NAMUR, vacation=0)
+    assert (setup.attiny_version or 0) >= 42, (
+        f'нужна attiny 42, на стенде {setup.attiny_version}')
     stand.reset_observers()
 
     stand.dut.pulse(channel=1, count=1)
