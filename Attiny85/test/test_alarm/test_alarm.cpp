@@ -222,6 +222,80 @@ TEST(Alarm, RhythmStartsFromSecondImpulse)
     EXPECT_TRUE(a.state & ALARM_LEAK);
 }
 
+TEST(Alarm, SinglePulseAfterLongSilenceIsNotLeak)
+{
+    /*
+    Issue #405: один импульс после долгой тишины поднимал протечку.
+
+    on_pulse запоминал накопленный ticks как ритм. Если пауза была дольше
+    2 ч 16 мин, в prev_gap оказывалось значение больше 32768, и условие
+    flowing() - (ticks >> 1) <= prev_gap - становилось истинным навсегда:
+    ticks насыщается на 65535, половина от него до prev_gap уже не дотягивалась.
+    Дальше каждая минута тишины прибавляла run_min, и через leak_min минут
+    поднималась тревога, которая не снималась никогда.
+
+    Бытовой случай: вечером водой не пользовались, ночью спустили унитаз - под
+    утро "протечка".
+    */
+    AlarmDetector a;
+    a.configure(0, 60);
+
+    idle(a, 150);  // два с половиной часа без расхода
+    a.on_pulse();  // один импульс
+    idle(a, 90);   // и снова тишина, дольше окна тревоги
+
+    EXPECT_FALSE(a.state & ALARM_LEAK);
+    EXPECT_EQ(a.run_min, 0);
+}
+
+TEST(Alarm, LongGapStartsRhythmAnew)
+{
+    /*
+    Два импульса с промежутком дольше часа - это не ритм, а два отдельных
+    события: считать по ним непрерывный расход не по чему.
+    */
+    AlarmDetector a;
+    a.configure(0, 60);
+
+    a.on_pulse();
+    pulse_after(a, 90);  // граница - ALARM_MAX_GAP_MIN, сейчас час
+    idle(a, 90);
+
+    EXPECT_FALSE(a.state & ALARM_LEAK);
+    EXPECT_EQ(a.prev_gap, 0);
+}
+
+TEST(Alarm, GapUnderLimitIsStillRhythm)
+{
+    /*
+    Граница не должна съесть настоящую медленную протечку: полчаса между
+    импульсами - это ещё ритм. При весе 10 л/имп это 20 л/ч, капающий кран.
+    */
+    AlarmDetector a;
+    a.configure(0, 60);
+
+    steady(a, 30, 5);  // вдвое ниже границы ALARM_MAX_GAP_MIN
+
+    EXPECT_TRUE(a.state & ALARM_LEAK);
+}
+
+TEST(Alarm, LeakClearsAfterLongSilence)
+{
+    /*
+    Поднятая тревога обязана сниматься тишиной. До #405 при длинном prev_gap
+    условие снятия не выполнялось ни при каком молчании.
+    */
+    AlarmDetector a;
+    a.configure(0, 10);
+
+    steady(a, 5, 6);
+    ASSERT_TRUE(a.state & ALARM_LEAK);
+
+    idle(a, 30);
+
+    EXPECT_FALSE(a.state & ALARM_LEAK);
+}
+
 TEST(Alarm, WetAndFlowCoexist)
 {
     /*
