@@ -39,3 +39,15 @@ ErrorBlynks blink_code(const SessionStatus &status)
 
     return ERROR_OK;
 }
+
+bool data_reported(const SessionStatus &status)
+{
+    if (status.delivered_any)
+    {
+        return true;
+    }
+
+    return status.waterius == SEND_SKIPPED
+        && status.http == SEND_SKIPPED
+        && status.mqtt == SEND_SKIPPED;
+}

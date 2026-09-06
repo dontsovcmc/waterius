@@ -340,7 +340,7 @@ void loop()
                 // Все уже отправили,  wifi не нужен - выключаем
                 wifi_shutdown();
 
-                update_config(sett, data, cdata, time_synced);
+                update_config(sett, data, cdata, time_synced, data_reported(status));
             }
             if (!must_send)
             {
