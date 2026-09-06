@@ -332,8 +332,9 @@ ip  = <адрес из dhcp_reserve>
 ```bash
 python Utils/hil/router.py --host <ip> show config
 python Utils/hil/router.py --host <ip> ap off && python Utils/hil/router.py --host <ip> ap on
-python Utils/hil/router.py --host <ip> raw "acl add from_ap TCP <dut_ip> * any 80 deny"
+python Utils/hil/router.py --host <ip> raw "acl from_ap TCP <dut_ip> * any 80 deny"
 python Utils/hil/router.py --host <ip> raw "show acl"
+python Utils/hil/router.py --host <ip> unblock
 
 cd ../..
 python3 -m pytest Utils/hil --stand -k "G3 or G4 or G5" -v
@@ -356,6 +357,7 @@ python3 -m pytest Utils/hil --stand -m "not slow" -v
 | `405` на настройку через `curl` | `/config` отвечает только на GET: параметры идут в строке запроса, а не телом |
 | Веб-интерфейс требует вход, а настроить надо | пароль уже стоит; настраивайте до установки пароля либо снимите его: `factory_reset` |
 | `dhcp_reserve` не создаётся | указано имя через `--`: прошивка отвечает `excess option`, форма из вики не работает |
+| Правило фильтра не появляется | лишнее слово `add`: синтаксис `acl <список> <proto> <src> [<порт>] <dst> [<порт>] <действие>` |
 
 ## Сброс и восстановление
 
