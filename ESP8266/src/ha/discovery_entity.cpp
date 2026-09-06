@@ -117,8 +117,6 @@ String build_entity_discovery(const char *mqtt_topic,
     if (hw_version)
         device[F("hw_version")] = hw_version; // hw_version //hw
 
-    //"connections": [["mac", "02:5b:26:a8:dc:12"]]
-    // device["via_device"] = BSSID;
 
     entity[F("device")] = device; // device //dv
 
@@ -237,8 +235,6 @@ String build_entity_discovery(const char *mqtt_topic,
         options.add("OTHER");
         options.add("HEAT_KWT");
 
-        //"value_template": "{% set values = { \"0\":\"WATER_COLD\", \"1\":\"WATER_HOT\", \"2\":\"ELECTRO\", \"3\":\"GAS\", \"4\":\"HEAT\", \"5\":\"PORTABLE_WATER\", \"6\": \"OTHER\" } %} {{ values[ value_json.cname0 ] if value_json.cname0 in values.keys() else \"6\" }}",
-        //String value_template = String(F("{% set values = { '0':\"WATER_COLD\", '1':\"WATER_HOT\", '2':\"ELECTRO\", '3':\"GAS\", '4':\"HEAT\", '5':\"PORTABLE_WATER\", '6': \"OTHER\" } %} {{ values[ value_json.")) + entity_id + F(" ] if value_json.") + entity_id + F(" in values.keys() else '6' }}");
         String value_template = String("") + 
             F("{% if value_json.")   + entity_id + F("==0 %} WATER_COLD ") +
             F("{% elif value_json.") + entity_id + F("==1 %} WATER_HOT ") +
@@ -276,8 +272,6 @@ String build_entity_discovery(const char *mqtt_topic,
         options.add("LEAKAGE_NC");
         options.add("NOT_USED");
 
-        //"value_template": "{% set values = { \"0\":\"WATER_COLD\", \"1\":\"WATER_HOT\", \"2\":\"ELECTRO\", \"3\":\"GAS\", \"4\":\"HEAT\", \"5\":\"PORTABLE_WATER\", \"6\": \"OTHER\" } %} {{ values[ value_json.cname0 ] if value_json.cname0 in values.keys() else \"6\" }}",
-        //String value_template = String(F("{% set values = { '0':\"WATER_COLD\", '1':\"WATER_HOT\", '2':\"ELECTRO\", '3':\"GAS\", '4':\"HEAT\", '5':\"PORTABLE_WATER\", '6': \"OTHER\" } %} {{ values[ value_json.")) + entity_id + F(" ] if value_json.") + entity_id + F(" in values.keys() else '6' }}");
         String value_template = String("") + 
             F("{% if value_json.")   + entity_id + F("==0 %} MECHANIC ") +
             F("{% elif value_json.") + entity_id + F("==2 %} ELECTRONIC ") +

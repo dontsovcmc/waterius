@@ -14,7 +14,7 @@
 #include "flash_hal.h"
 
 
-// Конвертируем значение переменных компиляции в строк
+// Конвертируем значение переменных компиляции в строку
 #define VALUE_TO_STRING(x) #x
 #define VALUE(x) VALUE_TO_STRING(x)
 #define VAR_NAME_VALUE(var) #var "=" VALUE(var)
@@ -61,9 +61,7 @@ bool init_config(Settings &sett)
     sett.dhcp_off = (uint8_t)false;
     sett.mqtt_retain = (uint8_t)true;
 
-    //можно оптимизировать и загружать из PROGMEM, но ради 2х полей смысла не вижу
-    //static const char WATERIUS_DEFAULT_DOMAIN[] PROGMEM =  "https://cloud.waterius.ru"
-    //strncpy_P(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, HOST_LEN);
+    // Не через PROGMEM: ради двух полей смысла нет
 
     strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, sizeof(WATERIUS_DEFAULT_DOMAIN));
 
@@ -311,7 +309,7 @@ void reset_period_min_tuned(Settings &sett)
 
     // Накопленное измерение относилось к прежнему периоду: и число проспанных
     // периодов, и точка отсчёта времени теперь врут. Начинаем заново, с
-    // прогрева, иначе первая поправка приедет только через неделю.
+    // прогрева, иначе первая поправка приедет только через сутки.
     sett.last_time_sync = 0;
     sett.wakeups_since_sync = 0;
     sett.ntp_sync_count = 0;
@@ -338,9 +336,9 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
     sett.wake_time = millis();
 
     // Ручное пробуждение кнопкой задаёт расписание заново, поэтому заказываем
-    // целый период с поправкой, а не остаток до прежней цели. Раньше в attiny
-    // уходило значение из прошлого цикла, и нажатие промахивалось на часы,
-    // если то пробуждение было не по расписанию (#380).
+    // целый период с поправкой, а не остаток до прежней цели (#380): иначе в
+    // attiny ушло бы значение из прошлого цикла, и нажатие промахнулось бы на
+    // часы, если то пробуждение было не по расписанию.
     //
     // Делается до проверки времени: даже без интернета следующий выход на
     // связь должен случиться через период после нажатия.
@@ -370,14 +368,12 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
 
     time_t now = time(nullptr);
 
-    // Проверяем валидность текущего времени
     if (!is_valid_time(now)) 
     {
         LOG_ERROR(F("Invalid current time!"));
         return;
     }
 
-    // Обновляем базовое время при ручном пробуждении или первом запуске
     if (!is_valid_time(sett.base_time) || sett.mode == MANUAL_TRANSMIT_MODE || sett.mode == SETUP_MODE) 
     {
         sett.base_time = now;
@@ -409,7 +405,6 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
         sett.wakeups_since_sync = 0;
     }
 
-    // Обновляем метку последней активности
     sett.last_send = now;
 }
 

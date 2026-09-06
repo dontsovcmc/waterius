@@ -262,8 +262,8 @@ static const char *const ENTITY_HEAT_GCAL_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM =
     {s_number, s_total_name, s_ch, s_total, s_energy, s_gCal, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
 
 // Тепло, посчитанное в киловатт-часах: единица та же, что у электричества.
-// Раньше здесь стояло "kWt" — такой единицы в HA нет, и сенсор не появлялся,
-// хотя number приезжал (#356). В интерфейсе тип называется "Тепло (кВт)",
+// Именно "kWh": единицы "kWt" в HA нет, с ней сенсор не появляется, хотя
+// number приезжает (#356). В интерфейсе тип называется "Тепло (кВт)",
 // в data/static/strings.js константа тоже названа CounterName_HEAT_KWH.
 static const char *const ENTITY_HEAT_KWT_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
     {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWh, "", "", ""};                 // chN Показания
@@ -273,7 +273,7 @@ static const char *const ENTITY_HEAT_KWT_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM =
 
 /*
 Тип «Другой»: ни класса устройства, ни единицы измерения. Что именно
-считает такой вход, знает только владелец счётчика, а раньше канал уезжал
+считает такой вход, знает только владелец счётчика, иначе канал уехал бы
 в Home Assistant водой в m³ независимо от содержимого (#358).
 
 state_class остаётся: без него HA не ведёт долгосрочную статистику, а

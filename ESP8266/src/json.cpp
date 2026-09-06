@@ -148,12 +148,4 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("ota_error")] = (int)sett.ota_error;
 
     LOG_INFO(F("JSON: Size: ") << measureJson(json_data));
-
-    // JSON size 1.1.16 929 //no mqtt
-    // JSON size 1.1.6 972 //mqtt, max strings
-    // JSON size 1.0.1 727 JSON: Mem usage: 1168  //no mqtt
-    // JSON size 0.11.4: 722 JSON: Mem usage: 1168
-    // JSON size 0.11: 643
-    // JSON size 0.10.6: 439
-    // JSON size 0.10.3: 355
 }
