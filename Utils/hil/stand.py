@@ -15,7 +15,7 @@ retain. MQTT-путь проверяется отдельными тестами
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 from metf_python_client import METFClient
@@ -23,9 +23,10 @@ from metf_python_client import METFClient
 from .config import StandConfig
 from .dut import Dut
 from .logwatch import LogWatcher, Session
-from .mqttwatch import MqttWatch
 from .net import Net
 from .receiver import Receiver
+if TYPE_CHECKING:                     # paho нужен только тестам MQTT, а стенд
+    from .mqttwatch import MqttWatch  # должен подниматься и без брокера
 from .router import NatRouter, connect
 
 # Понятные имена вместо параметров прошивки. Хранятся здесь, а не в тестах,
@@ -70,7 +71,7 @@ class Stand:
     """Фасад над всем железом стенда."""
 
     def __init__(self, cfg: StandConfig, api: METFClient, router: NatRouter,
-                 receiver: Receiver, mqtt: MqttWatch | None) -> None:
+                 receiver: Receiver, mqtt: 'MqttWatch | None') -> None:
         self.cfg = cfg
         self.api = api
         self.router = router
@@ -81,11 +82,14 @@ class Stand:
         self.net = Net(router, cfg.dut_ip, cfg.dut_mac,
                        cfg.broker_port, cfg.receiver_port)
         self.last_payload: dict[str, Any] | None = None
+        self.attiny_version: int | None = None
+        self.esp_version: tuple[int, int, int] | None = None
+        self.dut_mac: str = cfg.dut_mac.lower()
 
     # --- жизненный цикл ---
 
     @classmethod
-    def create(cls, cfg: StandConfig, mqtt: MqttWatch | None = None) -> 'Stand':
+    def create(cls, cfg: StandConfig, mqtt: 'MqttWatch | None' = None) -> 'Stand':
         api = METFClient(cfg.metf_host)
         api.ping()
         api.serial_begin()
@@ -97,10 +101,8 @@ class Stand:
         stand = cls(cfg, api, router, receiver, mqtt)
         stand.dut.init()
 
-        # Фиксированный адрес: иначе правила фильтра пришлось бы переписывать
-        # после каждой выдачи адреса
-        if cfg.dut_mac:
-            router.dhcp_reserve(cfg.dut_mac, cfg.dut_ip)
+        # Адрес закрепляется в identify(), когда MAC уже прочитан из лога:
+        # правила фильтра иначе пришлось бы переписывать после каждой выдачи
         router.client_stats(True)
         return stand
 
@@ -140,6 +142,8 @@ class Stand:
             session.payload = session.payloads[-1]
             self.last_payload = session.payload
 
+        self._remember(session)
+
         if self.mqtt:
             session.mqtt = [(m.topic, m.payload, m.retain) for m in self.mqtt.history]
 
@@ -150,6 +154,42 @@ class Stand:
         assert self.log.expect_no_session(timeout, mode), (
             f'ожидали тишину {timeout:.0f} с (mode={mode}), но сеанс состоялся\n'
             + '\n'.join(self.log.lines[-40:]))
+
+    def _remember(self, session: Session) -> None:
+        """Запомнить то, что устройство рассказало о себе в этом сеансе."""
+        if session.attiny_version is not None:
+            self.attiny_version = session.attiny_version
+        if session.esp_version is not None:
+            self.esp_version = session.esp_version
+        if session.mac and session.mac != self.dut_mac:
+            if self.dut_mac:
+                logger.warning(f'MAC из лога {session.mac} != {self.dut_mac} из stand.ini')
+            self.dut_mac = session.mac
+
+    def identify(self, timeout: float = 180.0) -> None:
+        """
+        Один сеанс в начале прогона: узнать версии и MAC у самого устройства.
+
+        Версии нужны до первого теста - по ним решается, какие тесты вообще
+        имеют смысл на этой прошивке. MAC оттуда же: держать его в stand.ini
+        значит однажды прогнать тесты против чужого адреса и разбираться, почему
+        правила фильтра ничего не режут.
+        """
+        self.reset_observers()
+        self.dut.press_button()
+        session = self.wait_session(timeout=timeout)
+        assert self.attiny_version is not None, (
+            f'в логе нет версии attiny\n{session.text}')
+        logger.info(f'устройство: attiny {self.attiny_version}, '
+                    f'ЕСП {self.version_str}, MAC {self.dut_mac or "неизвестен"}')
+
+        if self.dut_mac:
+            self.router.dhcp_reserve(self.dut_mac, self.cfg.dut_ip)
+            self.net.dut_mac = self.dut_mac
+
+    @property
+    def version_str(self) -> str:
+        return '.'.join(str(x) for x in self.esp_version) if self.esp_version else '?'
 
     # --- настройка устройства ---
 

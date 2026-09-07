@@ -41,6 +41,7 @@ REQUIRED_FIELDS: dict[str, Any] = {
 }
 
 
+@pytest.mark.mqtt          # проверяет все три канала, включая брокер
 def test_G1_all_three_channels(stand: Stand) -> None:
     """Короткое нажатие: показания уходят во все три канала."""
     stand.reset_observers()
@@ -118,6 +119,8 @@ def test_G4_server_unreachable(stand: Stand) -> None:
     assert 'Data sent' not in session.text
 
 
+@pytest.mark.mqtt
+@pytest.mark.requires(esp='2.0.47')       # #408: ветка неудачи была недостижима
 def test_G5_broker_unreachable(stand: Stand) -> None:
     """
     Брокер недоступен, облако живо: четыре вспышки.

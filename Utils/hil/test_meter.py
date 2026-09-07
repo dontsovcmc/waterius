@@ -66,6 +66,7 @@ def test_D2a_missed_session_keeps_consumption(stand: Stand, slow_clock: None) ->
 
 
 @pytest.mark.slow
+@pytest.mark.requires(esp='2.0.47')       # #407: точка отсчёта двигалась после коннекта
 def test_D2b_undelivered_session_keeps_delta(stand: Stand, slow_clock: None) -> None:
     """
     Тот же опыт, но сеть жива, а получатели недоступны.

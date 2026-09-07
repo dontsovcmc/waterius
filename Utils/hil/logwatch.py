@@ -41,6 +41,8 @@ SEND_NO_CONNECTION = 3
 
 RE_MODE = re.compile(r'Startup mode: (\d)')
 RE_ATTINY_VER = re.compile(r'attiny firmware ver: (\d+)')
+RE_ESP_VER = re.compile(r'Firmware ver: (\d+)\.(\d+)\.(\d+)')
+RE_MAC = re.compile(r'MAC Address:\s*((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})')
 RE_IMP0 = re.compile(r'\bimp0:(\d+)')
 RE_IMP1 = re.compile(r'\bimp1:(\d+)')
 RE_ALARM_CONFIG = re.compile(
@@ -80,6 +82,18 @@ class Session:
     def attiny_version(self) -> int | None:
         m = RE_ATTINY_VER.search(self.text)
         return int(m.group(1)) if m else None
+
+    @property
+    def esp_version(self) -> tuple[int, int, int] | None:
+        """Версия прошивки ЕСП кортежем - чтобы сравнивать, а не сличать строки."""
+        m = RE_ESP_VER.search(self.text)
+        return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
+    @property
+    def mac(self) -> str | None:
+        """MAC устройства. Прошивка печатает его в каждом сеансе со связью."""
+        m = RE_MAC.search(self.text)
+        return m.group(1).lower() if m else None
 
     @property
     def impulses(self) -> tuple[int | None, int | None]:

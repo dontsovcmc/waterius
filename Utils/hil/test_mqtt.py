@@ -18,7 +18,7 @@ from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
 
-pytestmark = pytest.mark.stand
+pytestmark = [pytest.mark.stand, pytest.mark.mqtt]
 
 NAMUR = 0
 FACTOR = 10
@@ -35,6 +35,7 @@ def device_name(stand: Stand) -> str:
     return stand.cfg.mqtt_topic.split('/')[-1]
 
 
+@pytest.mark.requires(esp='2.0.47')       # сущности тревог появились в 2.0.47
 def test_I1_discovery_published(stand: Stand) -> None:
     """
     Автодискавери публикуется по кнопке и содержит сущности этого релиза.
@@ -112,6 +113,7 @@ def test_I4_remote_threshold_is_recalculated(stand: Stand) -> None:
         f'порог не пересчитан: {session.alarm_config}')
 
 
+@pytest.mark.requires(esp='2.0.47')       # #409: снятие уходило без флага retain
 def test_I7_retain_flag(stand: Stand) -> None:
     """
     Флаг retain у публикаций.

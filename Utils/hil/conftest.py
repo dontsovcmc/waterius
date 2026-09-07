@@ -38,6 +38,11 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line('markers', 'stand: требует собранного стенда')
     config.addinivalue_line('markers', 'slow: идёт десятки минут')
+    config.addinivalue_line('markers', 'mqtt: нужен брокер (brew install mosquitto)')
+    config.addinivalue_line(
+        'markers',
+        'requires(attiny=N, esp="X.Y.Z"): минимальные версии прошивки для теста; '
+        'без указания версии тест идёт на любой')
 
 
 def pytest_collection_modifyitems(config: pytest.Config,
@@ -61,7 +66,12 @@ def broker(cfg: Any) -> Iterator[Any]:
     """Свой брокер: тесты retain и автодискавери должны начинаться с чистых топиков."""
     from .broker import Mosquitto
     if not Mosquitto.available():
-        pytest.skip('mosquitto не установлен: brew install mosquitto')
+        # Не пропуск: от брокера зависят только тесты с меткой mqtt, а раньше
+        # его отсутствие уводило в пропуск весь стенд - фикстура stand стоит
+        # на этой же цепочке.
+        logger.warning('mosquitto не установлен: тесты MQTT будут пропущены')
+        yield None
+        return
     server = Mosquitto(cfg.broker_port)
     server.start()
     try:
@@ -72,6 +82,9 @@ def broker(cfg: Any) -> Iterator[Any]:
 
 @pytest.fixture(scope='session')
 def mqtt(cfg: Any, broker: Any) -> Iterator[Any]:
+    if broker is None:
+        yield None
+        return
     from .mqttwatch import MqttWatch
     watch = MqttWatch(cfg.broker_host, cfg.broker_port, cfg.mqtt_topic)
     try:
@@ -85,6 +98,7 @@ def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     from .stand import Stand
     device = Stand.create(cfg, mqtt)
     logger.info(f'роутер: {device.router.version()}')
+    device.identify()          # версии и MAC - у самого устройства, до первого теста
     try:
         yield device
     finally:
@@ -118,6 +132,46 @@ def clean_net(request: pytest.FixtureRequest) -> Iterator[None]:
         device.router.restore(state)
 
 
+def _version(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in str(text).split('.'))
+
+
+@pytest.fixture(autouse=True)
+def needs_broker(request: pytest.FixtureRequest) -> None:
+    """Тест с меткой mqtt без брокера пропускается, остальные идут как обычно."""
+    if 'mqtt' not in request.keywords or not request.config.getoption('--stand'):
+        return
+    if request.getfixturevalue('broker') is None:
+        pytest.skip('нужен брокер: brew install mosquitto')
+
+
+@pytest.fixture(autouse=True)
+def firmware_versions(request: pytest.FixtureRequest) -> None:
+    """
+    Пропустить тест, если прошивка на стенде младше требуемой.
+
+    Версии берутся у самого устройства (`Stand.identify`), а не из stand.ini:
+    прошивку на стенде меняют чаще, чем правят конфиг, и рассинхрон означал бы
+    красный прогон вместо честного «этой версии тест не про неё». Тест без
+    маркера идёт на любой версии.
+    """
+    marker = request.node.get_closest_marker('requires')
+    if marker is None or 'stand' not in request.keywords:
+        return
+    if not request.config.getoption('--stand'):
+        return
+
+    stand = request.getfixturevalue('stand')
+    need_attiny = marker.kwargs.get('attiny')
+    if need_attiny is not None and (stand.attiny_version or 0) < need_attiny:
+        pytest.skip(f'нужна attiny {need_attiny}, на стенде {stand.attiny_version}')
+
+    need_esp = marker.kwargs.get('esp')
+    if need_esp is not None:
+        if stand.esp_version is None or stand.esp_version < _version(need_esp):
+            pytest.skip(f'нужна ЕСП {need_esp}, на стенде {stand.version_str}')
+
+
 @pytest.fixture(autouse=True)
 def device_baseline(request: pytest.FixtureRequest) -> None:
     """
@@ -129,6 +183,7 @@ def device_baseline(request: pytest.FixtureRequest) -> None:
     """
     if 'stand' not in request.keywords or not request.config.getoption('--stand'):
         return
+    request.getfixturevalue('firmware_versions')
     request.getfixturevalue('stand').ensure_baseline()
 
 
