@@ -21,7 +21,9 @@ from .logwatch import ALARM_MODE, TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
 
-pytestmark = pytest.mark.stand
+# Тревог до attiny 41 не существует: alarm_bits всегда 0, а send_alarm_config
+# выходит на первой строке - вся группа бессмысленна.
+pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=41)]
 
 # Типы входа, core/types.h
 NAMUR = 0
@@ -76,6 +78,7 @@ def test_E2_flow_alarm_clears(stand: Stand, quiet: None, slow_clock: None) -> No
 
 
 @pytest.mark.slow
+@pytest.mark.requires(attiny=42)          # #405: до неё один импульс поднимал протечку
 def test_E3a_single_pulse_is_not_a_leak(stand: Stand, quiet: None,
                                         slow_clock: None) -> None:
     """
@@ -86,12 +89,9 @@ def test_E3a_single_pulse_is_not_a_leak(stand: Stand, quiet: None,
     должна запоминаться как ритм, иначе ALARM_LEAK поднимается при полном
     отсутствии расхода (#405, Attiny85/src/alarm.h, ALARM_MAX_GAP_MIN).
 
-    Требует attiny 42: на 41 тест падает, и это верный результат.
     """
-    setup = stand.setup_alarms(channel=1, factor=FACTOR, alarm_leak=LEAK_MINUTES,
-                               ctype=NAMUR, vacation=0)
-    assert (setup.attiny_version or 0) >= 42, (
-        f'нужна attiny 42, на стенде {setup.attiny_version}')
+    stand.setup_alarms(channel=1, factor=FACTOR, alarm_leak=LEAK_MINUTES,
+                       ctype=NAMUR, vacation=0)
     stand.reset_observers()
 
     stand.dut.pulse(channel=1, count=1)

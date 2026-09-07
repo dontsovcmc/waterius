@@ -23,7 +23,9 @@ from .logwatch import (ALARM_MODE, SEND_NO_CONNECTION, SEND_OK, SEND_SKIPPED)
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
 
-pytestmark = pytest.mark.stand
+# Вся группа поднимает тревогу, чтобы получить квитанцию: до attiny 41 её нет.
+pytestmark = [pytest.mark.stand, pytest.mark.mqtt,
+              pytest.mark.requires(attiny=41)]
 
 NAMUR = 0
 FACTOR = 10

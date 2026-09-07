@@ -32,7 +32,7 @@ import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Iterator, Protocol
+from typing import Callable, Iterator, Protocol
 
 import serial
 from loguru import logger
@@ -49,10 +49,17 @@ CMD_TIMEOUT = 4.0
 # Смена канала и SSID требуют перезагрузки: точка пропадает на эти секунды.
 RESTART_WAIT = 12.0
 
+# Списки фильтра, как их называет прошивка (`acl` без аргументов)
+ACL_LISTS = ('from_esp', 'to_esp', 'from_ap', 'to_ap')
+
 ERROR_MARKERS = (
     'Unrecognized command',
     'Command returned non-zero',
     'Invalid arguments',
+    # Разбор аргументов ругается своими словами, и без этих двух строк ошибка
+    # проглатывалась: команда не выполнена, а тест считал, что всё хорошо
+    'missing option',
+    'excess option',
 )
 
 
@@ -185,6 +192,20 @@ class NatRouter:
     def show(self, section: str = 'config') -> str:
         return self.cmd(f'show {section}', timeout=6.0)
 
+    def cmd_checked(self, line: str, applied: Callable[[], bool],
+                    what: str) -> None:
+        """
+        Выполнить команду и убедиться по состоянию роутера, что она подействовала.
+
+        Ответ прошивки - свободный текст, и судить по нему об успехе значит
+        держать список всех её формулировок. Один такой промах уже был:
+        `dhcp_reserve` с именем устройства отвечал `excess option`, в список не
+        попадал, и стенд считал адрес закреплённым. Состояние врать не умеет.
+        """
+        self.cmd(line)
+        if not applied():
+            raise RouterError(f'{what}: команда выполнена, а состояние не изменилось\n{line}')
+
     def config(self) -> dict[str, str]:
         """`show config` в словарь. Ключи - как их печатает прошивка."""
         return _parse_kv(self.show('config'))
@@ -219,7 +240,15 @@ class NatRouter:
 
     def ap(self, enabled: bool) -> None:
         """Единственная команда, которая действует сразу, без перезагрузки."""
-        self.cmd('ap enable' if enabled else 'ap disable')
+        self.cmd_checked(
+            'ap enable' if enabled else 'ap disable',
+            lambda: self.ap_enabled() is enabled,
+            'точка доступа')
+
+    def ap_enabled(self) -> bool | None:
+        """Состояние точки по `show status`. None - строки в ответе нет."""
+        m = re.search(r'AP interface:\s*(\w+)', self.show('status'))
+        return None if m is None else m.group(1).lower() == 'enabled'
 
     def set_ap(self, ssid: str, password: str) -> None:
         self.cmd(f'set_ap {ssid} {password}')
@@ -231,51 +260,77 @@ class NatRouter:
     def set_tx_power(self, dbm: int) -> None:
         self.cmd(f'set_tx_power {dbm}')
 
-    def dhcp_reserve(self, mac: str, ip: str, name: str = '') -> None:
+    def dhcp_reserve(self, mac: str, ip: str) -> None:
         """
         Закрепить адрес за устройством. Без этого правила фильтра пришлось бы
         переписывать после каждой выдачи адреса.
+
+        Имя устройства прошивка не принимает: форма `-- <имя>` из вики проекта
+        отвергается разбором аргументов (`excess option`).
         """
-        suffix = f' -- {name}' if name else ''
-        self.cmd(f'dhcp_reserve add {mac} {ip}{suffix}')
+        self.cmd_checked(f'dhcp_reserve add {mac} {ip}',
+                         lambda: self.dhcp_reservations().get(mac.lower()) == ip,
+                         'резервирование адреса')
+
+    def dhcp_reservations(self) -> dict[str, str]:
+        """MAC -> адрес, как их печатает `show mappings`."""
+        out = self.show('mappings')
+        return dict(
+            (m.group(1).lower(), m.group(2))
+            for m in re.finditer(r'([0-9a-fA-F:]{17})\s*->\s*(\d+\.\d+\.\d+\.\d+)', out))
 
     def client_stats(self, enabled: bool = True) -> None:
         self.cmd(f'client_stats {"enable" if enabled else "disable"}')
 
     # --- фильтр ----------------------------------------------------------
 
-    def acl_add(self, rule: str) -> None:
-        self.cmd(f'acl add {rule}')
+    def acl_add(self, acl_list: str, rule: str) -> None:
+        """
+        Завести правило: `acl <список> <proto> <src> [<порт>] <dst> [<порт>]
+        <действие>`. Слова `add` в синтаксисе нет - с ним прошивка молча
+        ничего не делает.
+        """
+        before = len(self.acl_rules(acl_list))
+        self.cmd_checked(f'acl {acl_list} {rule}',
+                         lambda: len(self.acl_rules(acl_list)) > before,
+                         'правило фильтра')
 
     def acl_clear(self) -> None:
-        """
-        Снять все правила. Прошивка удаляет по тому же описанию, которым
-        правило заводилось, поэтому список берём из show acl.
-        """
-        for rule in self.acl_rules():
-            try:
-                self.cmd(f'acl del {rule}')
-            except RouterError:
-                logger.warning(f'правило не снялось: {rule}')
+        """Снять все правила во всех списках."""
+        for acl_list in ACL_LISTS:
+            if self.acl_rules(acl_list):
+                self.cmd_checked(f'acl {acl_list} clear',
+                                 lambda name=acl_list: not self.acl_rules(name),
+                                 f'очистка списка {acl_list}')
 
-    def acl_rules(self) -> list[str]:
-        out = self.show('acl')
-        rules = []
-        for line in out.splitlines():
-            line = line.strip()
-            if line.startswith(('to_esp', 'from_esp', 'to_ap', 'from_ap')):
-                rules.append(line)
+    def acl_rules(self, acl_list: str | None = None) -> list[str]:
+        """
+        Правила из `show acl`. Прошивка печатает их пронумерованными строками
+        внутри блока `ACL: <список>`, а не в том виде, в каком они заводились.
+        """
+        rules: list[str] = []
+        current = None
+        for line in self.show('acl').splitlines():
+            header = re.match(r'ACL:\s*(\w+)', line.strip())
+            if header:
+                current = header.group(1)
+                continue
+            if current is None or (acl_list and current != acl_list):
+                continue
+            body = line.strip()
+            if re.match(r'\d+\s+(IP|TCP|UDP|ICMP)\b', body):
+                rules.append(f'{current} {body}')
         return rules
 
     # --- сценарии --------------------------------------------------------
 
     def block_all(self, ip: str) -> None:
         """Интернета нет, Wi-Fi живёт: тесты G4, F4, D2b."""
-        self.acl_add(f'from_ap IP {ip} * any * deny')
+        self.acl_add('from_ap', f'IP {ip} any deny')
 
     def block_port(self, ip: str, port: int) -> None:
         """Один получатель недоступен, остальные живы: F2, F3, G5."""
-        self.acl_add(f'from_ap TCP {ip} * any {port} deny')
+        self.acl_add('from_ap', f'TCP {ip} * any {port} deny')
 
     @contextmanager
     def ap_off(self) -> Iterator[None]:

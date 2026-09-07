@@ -39,6 +39,9 @@ class StandConfig:
     receiver_host: str
     receiver_port: int
 
+    # AT-плата: HTTP-клиент в сети портала Ватериуса
+    atboard_port: str
+
     # Брокер
     broker_host: str
     broker_port: int
@@ -76,6 +79,7 @@ def load(path: str | os.PathLike[str] | None = None) -> StandConfig:
         dut_ip=get('dut', 'ip', '192.168.4.100'),
         receiver_host=get('receiver', 'host', '192.168.4.2'),
         receiver_port=int(get('receiver', 'port', '8000')),
+        atboard_port=get('atboard', 'port', ''),
         broker_host=get('broker', 'host', '192.168.4.2'),
         broker_port=int(get('broker', 'port', '1883')),
         mqtt_topic=get('broker', 'topic', 'waterius'),
