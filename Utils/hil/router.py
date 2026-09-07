@@ -378,13 +378,22 @@ class NatRouter:
 
     # --- сценарии --------------------------------------------------------
 
+    # Списки названы от лица интерфейса, а не клиента, и это ровно наоборот
+    # тому, что подсказывает имя: трафик, который клиент точки отправляет
+    # наружу, приходит на интерфейс точки, а обработчик входа сверяется со
+    # списком `to_ap` (netif_hooks.c: ap_netif_input_hook -> ACL_TO_AP;
+    # ap_netif_linkoutput_hook -> ACL_FROM_AP). Правило в `from_ap` для адреса
+    # устройства не совпадёт никогда - там источником стоит удалённый узел, а
+    # не Ватериус, и фильтр молча ничего не режет.
+    CLIENT_OUT = 'to_ap'
+
     def block_all(self, ip: str) -> None:
         """Интернета нет, Wi-Fi живёт: тесты G4, F4, D2b."""
-        self.acl_add('from_ap', f'IP {ip} any deny')
+        self.acl_add(self.CLIENT_OUT, f'IP {ip} any deny')
 
     def block_port(self, ip: str, port: int) -> None:
         """Один получатель недоступен, остальные живы: F2, F3, G5."""
-        self.acl_add('from_ap', f'TCP {ip} * any {port} deny')
+        self.acl_add(self.CLIENT_OUT, f'TCP {ip} * any {port} deny')
 
     @contextmanager
     def ap_off(self) -> Iterator[None]:

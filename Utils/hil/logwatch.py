@@ -87,25 +87,36 @@ class Session:
         return '\n'.join(self.lines)
 
     @property
+    def full_text(self) -> str:
+        """
+        Всё пробуждение целиком, вместе с преамбулой.
+
+        Часть фактов о себе прошивка печатает до `Startup mode:` - версии,
+        MAC, настройки и итог загрузки конфига. Утверждения о ходе сеанса
+        пишутся про `text`, а вот эти факты искать надо здесь.
+        """
+        return '\n'.join(self.preamble + self.lines)
+
+    @property
     def mode(self) -> int | None:
         m = RE_MODE.search(self.text)
         return int(m.group(1)) if m else None
 
     @property
     def attiny_version(self) -> int | None:
-        m = RE_ATTINY_VER.search(self.text)
+        m = RE_ATTINY_VER.search(self.full_text)
         return int(m.group(1)) if m else None
 
     @property
     def esp_version(self) -> tuple[int, int, int] | None:
         """Версия прошивки ЕСП кортежем - чтобы сравнивать, а не сличать строки."""
-        m = RE_ESP_VER.search(self.text)
+        m = RE_ESP_VER.search(self.full_text)
         return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
 
     @property
     def mac(self) -> str | None:
         """MAC устройства. Прошивка печатает его в каждом сеансе со связью."""
-        m = RE_MAC.search(self.text)
+        m = RE_MAC.search(self.full_text)
         return m.group(1).lower() if m else None
 
     @property
@@ -219,8 +230,17 @@ class Session:
         Причина вспышек светодиода. Сам код в лог не печатается, поэтому
         восстанавливаем его по входным условиям blink_code (core/blink.cpp).
         Единственное, что так не увидеть, - одна вспышка про просевшее питание.
+
+        Причины `cloud`, `cloud_answer` и `mqtt` читаются из строки
+        `Alarm confirm`, а её печатают с 2.0.47. На младших прошивках нет ни
+        строки, ни самой модели причин, и результат вырождается в `ok` -
+        поэтому тесты, утверждающие эти причины, помечены версией.
         """
-        if 'Config succesfully loaded' not in self.text or 'Attiny not found.' in self.text:
+        # Итог загрузки конфига и связь с attiny печатаются до `Startup mode:`,
+        # то есть в преамбуле: искать их в тексте сеанса - значит объявить
+        # неисправным конфиг в каждом сеансе подряд.
+        if ('Config succesfully loaded' not in self.full_text
+                or 'Attiny not found.' in self.full_text):
             return 'config'          # 5 вспышек
         if not self.wifi_connected:
             return 'router'          # 2 вспышки

@@ -28,17 +28,34 @@ REQUIRED_FIELDS: dict[str, Any] = {
     'imp0': int, 'imp1': int,
     'f0': int, 'f1': int,
     'ctype0': int, 'ctype1': int,
-    'alarm_flow0': bool, 'alarm_flow1': bool,
-    'alarm_leak0': bool, 'alarm_leak1': bool,
-    'alarm_wet0': bool, 'alarm_wet1': bool,
-    'alarm_stop0': bool, 'alarm_stop1': bool,
-    'af0': int, 'af1': int, 'al0': int, 'al1': int, 'as0': int, 'as1': int,
-    'vac': bool, 'sc': bool,
-    'ackw': bool, 'ackh': bool, 'ackm': bool,
     'mode': (1, 2, 3, 4),
     'version': int, 'version_esp': str, 'model': int,
     'voltage': float, 'rssi': int, 'period_min': int,
 }
+
+# Поля, которых на младшей прошивке нет и не должно быть. Требовать их со всех
+# версий - значит красить в красный верное поведение: на 2.0.44 в посылке про
+# тревоги, режим отпуска и маску квитанции нет ни слова, потому что и самих
+# возможностей нет. Версии - по истории json.cpp, а не на глаз.
+FIELDS_SINCE: dict[tuple[int, int, int], dict[str, Any]] = {
+    (2, 0, 47): {
+        'alarm_flow0': bool, 'alarm_flow1': bool,
+        'alarm_leak0': bool, 'alarm_leak1': bool,
+        'alarm_wet0': bool, 'alarm_wet1': bool,
+        'alarm_stop0': bool, 'alarm_stop1': bool,
+        'af0': int, 'af1': int, 'al0': int, 'al1': int, 'as0': int, 'as1': int,
+        'vac': bool, 'sc': bool,
+        'ackw': bool, 'ackh': bool, 'ackm': bool,
+    },
+}
+
+
+def expected_fields(esp_version: tuple[int, int, int] | None) -> dict[str, Any]:
+    fields = dict(REQUIRED_FIELDS)
+    for since, group in FIELDS_SINCE.items():
+        if esp_version is not None and esp_version >= since:
+            fields.update(group)
+    return fields
 
 
 @pytest.mark.mqtt          # проверяет все три канала, включая брокер
@@ -76,10 +93,11 @@ def test_G2_payload_schema(stand: Stand) -> None:
     payload = session.payload
     assert payload is not None
 
-    missing = [name for name in REQUIRED_FIELDS if name not in payload]
+    fields = expected_fields(stand.esp_version)
+    missing = [name for name in fields if name not in payload]
     assert not missing, f'в посылке нет полей: {missing}'
 
-    for name, expected in REQUIRED_FIELDS.items():
+    for name, expected in fields.items():
         value = payload[name]
         if isinstance(expected, tuple):
             assert type(value) is not bool and value in expected, \
@@ -109,8 +127,16 @@ def test_G3_no_network(stand: Stand) -> None:
     assert session.confirm is None
 
 
+@pytest.mark.requires(esp='2.0.47')
 def test_G4_server_unreachable(stand: Stand) -> None:
-    """Сеть есть, сервера нет: три вспышки. Ватериус подключился, но не доставил."""
+    """
+    Сеть есть, сервера нет: три вспышки. Ватериус подключился, но не доставил.
+
+    Требует 2.0.47: причина считается по статусам получателей, а в лог их
+    печатает строка `Alarm confirm`, которой на младших прошивках нет. Там и
+    самой модели причин нет - 2.0.44 мигает единственным кодом, про конфиг
+    (`main.cpp`, `blynk_error(ERROR_CONFIG)`).
+    """
     stand.reset_observers()
 
     with stand.net.internet_down():
