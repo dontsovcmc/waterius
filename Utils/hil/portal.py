@@ -21,9 +21,14 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
+
+from urllib.parse import urlencode
+
+from loguru import logger
 
 from .atboard import AtBoard, AtError, Response
 
@@ -88,6 +93,10 @@ PAGE_SINCE: dict[str, tuple[int, int, int]] = {
 API_URLS = ('/api/main_status', '/api/status/0', '/api/status/1', '/api/networks')
 
 
+class PortalError(Exception):
+    pass
+
+
 @dataclass
 class Result:
     url: str
@@ -116,6 +125,71 @@ def tree_version(root: Path) -> tuple[int, int, int] | None:
     text = (root / 'ESP8266' / 'platformio.ini').read_text(encoding='utf-8')
     m = re.search(r'firmware_version\s*=\s*.*?(\d+)\.(\d+)\.(\d+)', text)
     return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
+
+def _save(board: AtBoard, path: str, host: str, **params: str) -> dict:
+    """
+    Отправить форму портала и убедиться, что прошивка её приняла.
+
+    Параметры уходят строкой запроса: `request->params()` не различает, откуда
+    параметр приехал (`_parseReqHead` разбирает query у любого метода), а
+    кодировать тело вторым способом ради того же результата незачем.
+
+    Ответ - JSON; поле `errors` означает, что настройка не сохранена. Молча
+    проглоченная ошибка здесь дороже всего: устройство останется в чужой сети,
+    а тесты будут падать на пустом приёмнике.
+    """
+    answer = board.post(f'{path}?{urlencode(params)}', host)
+    if answer.status != 200:
+        raise PortalError(f'{path}: код {answer.status}')
+    try:
+        data = json.loads(answer.text)
+    except ValueError as err:
+        raise PortalError(f'{path}: ответ не JSON ({err}): {answer.text[:120]}')
+    if data.get('errors'):
+        raise PortalError(f'{path}: прошивка не приняла настройки: {data["errors"]}')
+    return data
+
+
+def save_wifi(board: AtBoard, ssid: str, password: str, host: str = HOST) -> None:
+    """Сеть, к которой Ватериус будет подключаться в рабочем режиме."""
+    _save(board, '/api/save_connect', host, ssid=ssid, password=password)
+
+
+def save_server(board: AtBoard, url: str, host: str = HOST) -> None:
+    """
+    Свой сервер - приёмник стенда.
+
+    `http_on` обязателен в том же запросе: `http_url` прошивка сохраняет только
+    при включённом флаге (`active_point_api.cpp`, `applySettings` сначала
+    проходит по галочкам, потом по остальным полям).
+    """
+    _save(board, '/api/save', host, http_on='1', http_url=url)
+
+
+def turnoff(board: AtBoard, host: str = HOST) -> None:
+    """
+    Выйти из режима настройки.
+
+    Подключение к сети портал умеет и сам (`/api/start_connect`), но при смене
+    сети ЕСП уводит свою точку на канал новой - и AT-плата теряет ту самую
+    точку, через которую мы наблюдаем. Поэтому подключение оставляем обычному
+    пробуждению: после `turnoff` прошивка перезапускается и выходит на связь
+    уже по новым настройкам.
+    """
+    try:
+        board.get('/api/turnoff', host)
+    except AtError as err:
+        logger.warning(f'портал не ответил на turnoff: {err}')
+
+
+def configure(board: AtBoard, ssid: str, password: str, url: str,
+              host: str = HOST) -> None:
+    """Весь этап настройки: сеть, сервер, выход из портала."""
+    logger.info(f'портал: сеть {ssid}, сервер {url}')
+    save_wifi(board, ssid, password, host)
+    save_server(board, url, host)
+    turnoff(board, host)
 
 
 def asset_urls(data_dir: Path) -> dict[str, Path]:

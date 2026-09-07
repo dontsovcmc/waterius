@@ -55,6 +55,15 @@ RE_HTTP_CODE = re.compile(r'HTTP: Response code: (-?\d+)')
 RE_PERIOD_ATTINY = re.compile(r'Wakeup period, min \(attiny\):(\d+)')
 RE_APPLY = re.compile(r'Apply setting: (\S+)=(\S*)')
 
+# Настройки, напечатанные при загрузке (config.cpp: print_settings). Секции
+# идут заголовками, а `state=` и `host=` внутри них называются одинаково -
+# поэтому разбор идёт с оглядкой на текущую секцию, а не по одной строке.
+RE_SECTION = re.compile(r'--- (\S+) ---')
+SECTION_KEYS = {'Waterius.ru': 'waterius', 'HTTP': 'http', 'MQTT': 'mqtt'}
+RE_STATE = re.compile(r'\bstate=(ON|OFF)\b')
+RE_HOST = re.compile(r'\bhost=(\S*)')
+RE_WIFI_SSID = re.compile(r'\bwifi_ssid=(\S*)')
+
 SESSION_END = 'Going to sleep'
 
 
@@ -63,6 +72,10 @@ class Session:
     """Один сеанс ЕСП: от включения питания attiny до `Going to sleep`."""
 
     lines: list[str] = field(default_factory=list)
+    # Строки до `Startup mode:`: баннер загрузки и напечатанные настройки. Они
+    # относятся к этому же пробуждению, но в сеанс не входят - утверждения
+    # пишутся про сеанс, а не про то, что было до него.
+    preamble: list[str] = field(default_factory=list)
     payload: dict[str, Any] | None = None          # посылка, пойманная приёмником
     payloads: list[dict[str, Any]] = field(default_factory=list)
     mqtt: list[tuple[str, str, bool]] = field(default_factory=list)
@@ -144,6 +157,39 @@ class Session:
             return None
         return {'consumed': int(m.group(1)), 'silence_min': int(m.group(2)),
                 'transmit': int(m.group(3))}
+
+    @property
+    def config(self) -> dict[str, str]:
+        """
+        Настройки устройства, как оно само их напечатало при загрузке.
+
+        Печатаются они до `Startup mode:`, то есть в преамбуле, а не в сеансе.
+
+        Нужны, чтобы стенд мог заметить чужую сеть или чужой сервер до первого
+        теста: спрашивать об этом человека - значит однажды прогнать весь набор
+        против домашнего роутера и разбираться, почему приёмник пуст.
+        """
+        out: dict[str, str] = {}
+        section = ''
+        for line in self.preamble + self.lines:
+            m = RE_SECTION.search(line)
+            if m:
+                section = SECTION_KEYS.get(m.group(1), '')
+                continue
+            ssid = RE_WIFI_SSID.search(line)
+            if ssid:
+                out['wifi_ssid'] = ssid.group(1)
+                continue
+            if not section:
+                continue
+            state = RE_STATE.search(line)
+            if state:
+                out[f'{section}_on'] = '1' if state.group(1) == 'ON' else '0'
+                continue
+            host = RE_HOST.search(line)
+            if host:
+                out[f'{section}_host'] = host.group(1)
+        return out
 
     @property
     def wifi_connected(self) -> bool:
@@ -311,7 +357,8 @@ class LogWatcher:
         if end is None:
             return None
 
-        session = Session(lines=self.lines[start:end + 1])
+        session = Session(lines=self.lines[start:end + 1],
+                          preamble=self.lines[:start])
         del self.lines[:end + 1]
         return session
 

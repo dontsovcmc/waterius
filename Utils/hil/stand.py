@@ -85,6 +85,7 @@ class Stand:
         self.attiny_version: int | None = None
         self.esp_version: tuple[int, int, int] | None = None
         self.dut_mac: str = cfg.dut_mac.lower()
+        self.device_config: dict[str, str] = {}
 
     # --- жизненный цикл ---
 
@@ -161,6 +162,9 @@ class Stand:
             self.attiny_version = session.attiny_version
         if session.esp_version is not None:
             self.esp_version = session.esp_version
+        config = session.config
+        if config:
+            self.device_config = config
         if session.mac and session.mac != self.dut_mac:
             if self.dut_mac:
                 logger.warning(f'MAC из лога {session.mac} != {self.dut_mac} из stand.ini')
@@ -186,6 +190,86 @@ class Stand:
         if self.dut_mac:
             self.router.dhcp_reserve(self.dut_mac, self.cfg.dut_ip)
             self.net.dut_mac = self.dut_mac
+
+    def ensure_network(self, timeout: float = 300.0) -> bool:
+        """
+        Привести устройство в сеть стенда, если оно смотрит в чужую.
+
+        Стенд бесполезен, пока Ватериус живёт в домашней сети: приёмник пуст,
+        правила фильтра режут чужой адрес, а тесты валятся по причинам, к
+        прошивке отношения не имеющим. Проверять это глазами - значит однажды
+        прогнать весь набор впустую, поэтому проверка стоит до первого теста.
+
+        Сверяемся с тем, что устройство напечатало о себе само, а имя сети
+        спрашиваем у точки доступа: держать его третьей копией в stand.ini
+        значит однажды переименовать точку и не заметить.
+
+        Возвращает True, если пришлось настраивать.
+        """
+        want_ssid = self.cfg.ap_ssid or self.router.config().get('ssid', '')
+        want_url = self.cfg.http_url
+        assert want_ssid, 'не удалось узнать имя точки доступа стенда'
+
+        config = self.device_config
+        assert config, ('устройство не напечатало свои настройки: '
+                        'нечего сверять, проверьте лог и уровень логирования')
+        if (config.get('wifi_ssid') == want_ssid
+                and config.get('http_on') == '1'
+                and config.get('http_host') == want_url):
+            logger.info(f'устройство уже в сети стенда: {want_ssid} -> {want_url}')
+            return False
+
+        logger.warning(f'устройство настроено на чужую сеть: '
+                       f'{config.get("wifi_ssid") or "?"} -> '
+                       f'{config.get("http_host") or "нет своего сервера"}')
+        assert self.cfg.atboard_port, (
+            'нужна AT-плата, чтобы настроить устройство через портал: '
+            '[atboard] port в stand.ini. Либо настройте Ватериус вручную на сеть '
+            f'{want_ssid} и сервер {want_url}')
+        assert self.cfg.ap_password, (
+            '[router] ap_password в stand.ini: пароль точки доступа стенда, '
+            'его не прочитать у роутера - show config печатает звёздочки')
+
+        self._setup_via_portal(want_ssid, want_url)
+
+        session = self.wait_session(timeout=timeout)
+        config = session.config
+        assert config.get('wifi_ssid') == want_ssid, (
+            f'после настройки сеть осталась {config.get("wifi_ssid")!r}\n{session.text}')
+        assert config.get('http_host') == want_url, (
+            f'после настройки сервер остался {config.get("http_host")!r}\n{session.text}')
+        assert session.wifi_connected, (
+            f'устройство не подключилось к {want_ssid}\n{session.text}')
+        assert session.payload is not None, (
+            'устройство в сети стенда, но посылка до приёмника не дошла. '
+            f'NAT на точке: {self.router.nat_enabled()}. Клиенты точки видят '
+            'только её саму, если NAT не поднялся - лечится `restart` роутера; '
+            f'приёмник слушает {self.cfg.http_url}\n{session.text}')
+        logger.info(f'устройство переведено в сеть стенда: {want_ssid} -> {want_url}')
+        return True
+
+    def _setup_via_portal(self, ssid: str, url: str) -> None:
+        """Режим настройки, форма портала через AT-плату, выход из режима."""
+        from .atboard import AtBoard
+        from . import portal
+
+        self.log.clear()
+        self.dut.hold_button()
+        ap = None
+        deadline = time.time() + 90
+        while time.time() < deadline and not ap:
+            self.log.poll()
+            ap = portal.find_ap(self.log.lines)
+            if not ap:
+                time.sleep(1)
+        assert ap, 'точка доступа портала не поднялась после длинного нажатия'
+
+        board = AtBoard(self.cfg.atboard_port)
+        try:
+            logger.info(f'AT-плата в сети портала {ap}: {board.join(ap)}')
+            portal.configure(board, ssid, self.cfg.ap_password, url)
+        finally:
+            board.close()
 
     @property
     def version_str(self) -> str:

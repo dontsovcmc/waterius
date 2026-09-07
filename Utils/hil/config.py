@@ -30,6 +30,8 @@ class StandConfig:
     router_port: str
     router_host: str
     router_password: str
+    ap_ssid: str          # пусто - спросим у самой точки доступа
+    ap_password: str      # у роутера не прочитать: show config печатает звёздочки
 
     # Ватериус в сети точки доступа
     dut_mac: str
@@ -75,6 +77,8 @@ def load(path: str | os.PathLike[str] | None = None) -> StandConfig:
         router_port=get('router', 'port', ''),
         router_host=get('router', 'host', ''),
         router_password=get('router', 'password', ''),
+        ap_ssid=get('router', 'ap_ssid', ''),
+        ap_password=get('router', 'ap_password', ''),
         dut_mac=get('dut', 'mac', ''),
         dut_ip=get('dut', 'ip', '192.168.4.100'),
         receiver_host=get('receiver', 'host', '192.168.4.2'),

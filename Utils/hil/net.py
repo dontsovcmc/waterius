@@ -39,23 +39,35 @@ class Net:
 
     def verify_dut(self) -> None:
         """
-        Убедиться, что по dut_ip сидит именно Ватериус, прежде чем резать трафик.
+        Убедиться, что dut_ip закреплён именно за Ватериусом, прежде чем резать
+        трафик.
 
         Правило фильтра, наведённое на чужой или пустой адрес, ничего не режет:
         посылка уходит, тест падает и обвиняет прошивку в том, что она не
-        доставила данные. Проверяем один раз за сеанс - список клиентов стоит
-        обращения к роутеру.
+        доставила данные.
+
+        Проверяется резервирование, а не список подключённых: Ватериус спит
+        почти всё время и в списке клиентов появляется на те полминуты, что
+        длится сеанс, - а правила ставятся заранее. Если он всё-таки в сети,
+        адрес сверяется и по факту.
         """
         if self._identity_checked:
             return
         assert self.dut_mac, (
             'в stand.ini не задан [dut] mac: без него адрес за Ватериусом не '
             'закреплён, и правила фильтра лягут на чужой адрес')
-        clients = self.router.clients()
-        seen = {c['mac']: c['ip'] for c in clients}
-        assert seen.get(self.dut_mac) == self.dut_ip, (
-            f'Ватериуса нет по адресу {self.dut_ip}: роутер видит {clients or "никого"}. '
-            'Проверьте [dut] mac/ip в stand.ini и резервирование адреса')
+
+        reserved = self.router.dhcp_reservations()
+        assert reserved.get(self.dut_mac) == self.dut_ip, (
+            f'адрес {self.dut_ip} не закреплён за {self.dut_mac}: роутер держит '
+            f'{reserved or "ни одного резервирования"}')
+
+        seen = {c['mac']: c['ip'] for c in self.router.clients()}
+        if self.dut_mac in seen:
+            assert seen[self.dut_mac] == self.dut_ip, (
+                f'Ватериус в сети, но с адресом {seen[self.dut_mac]}, а правила '
+                f'ставятся на {self.dut_ip}: выдача прошла до резервирования, '
+                'нужен новый сеанс')
         self._identity_checked = True
 
     @contextmanager
