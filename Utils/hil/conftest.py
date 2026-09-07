@@ -39,6 +39,7 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line('markers', 'stand: требует собранного стенда')
     config.addinivalue_line('markers', 'slow: идёт десятки минут')
     config.addinivalue_line('markers', 'mqtt: нужен брокер (brew install mosquitto)')
+    config.addinivalue_line('markers', 'portal: режим настройки и AT-плата')
     config.addinivalue_line(
         'markers',
         'requires(attiny=N, esp="X.Y.Z"): минимальные версии прошивки для теста; '
@@ -119,7 +120,8 @@ def clean_net(request: pytest.FixtureRequest) -> Iterator[None]:
     Именно после, а не до: упавший тест обязан оставить стенд рабочим, иначе
     следующий упадёт по чужой причине и разбираться придётся с конца.
     """
-    if 'stand' not in request.keywords or not request.config.getoption('--stand'):
+    if ('stand' not in request.keywords or 'portal' in request.keywords
+            or not request.config.getoption('--stand')):
         yield
         return
 
@@ -180,8 +182,12 @@ def device_baseline(request: pytest.FixtureRequest) -> None:
     Иначе тест наследует настройки соседа: test_I5 оставляет выключенной
     квитанцию MQTT, а test_G1 ничего не настраивает и требует её включённой -
     при полном прогоне он падает и обвиняет прошивку.
+
+    Тесты портала исключены: устройство там в режиме настройки, обычного
+    сеанса с посылкой не будет, и приведение к эталону просто не дождётся его.
     """
-    if 'stand' not in request.keywords or not request.config.getoption('--stand'):
+    if ('stand' not in request.keywords or 'portal' in request.keywords
+            or not request.config.getoption('--stand')):
         return
     request.getfixturevalue('firmware_versions')
     request.getfixturevalue('stand').ensure_baseline()
