@@ -118,12 +118,39 @@ class TcpTransport:
     """
 
     def __init__(self, host: str, password: str, port: int = CONSOLE_PORT) -> None:
-        self._sock = socket.create_connection((host, port), timeout=5.0)
+        self._host = host
+        self._password = password
+        self._port = port
+        self._connect()
+
+    def _connect(self) -> None:
+        self._sock = socket.create_connection((self._host, self._port), timeout=5.0)
         self._sock.settimeout(0.2)
         time.sleep(0.3)
-        self._sock.sendall(password.encode() + b'\r\n')
+        self._sock.sendall(self._password.encode() + b'\r\n')
         time.sleep(0.3)
         self.drain()
+
+    def reconnect(self, timeout: float = 60.0) -> None:
+        """
+        Поднять консоль заново после перезагрузки платы.
+
+        Перезагрузка рвёт сокет, и это не ошибка: на проводе тот же restart
+        оставляет порт живым, а по сети консоль умирает вместе с платой.
+        """
+        try:
+            self._sock.close()
+        except OSError:
+            pass
+        deadline = time.time() + timeout
+        while True:
+            try:
+                self._connect()
+                return
+            except OSError:
+                if time.time() > deadline:
+                    raise
+                time.sleep(2.0)
 
     def write_line(self, line: str) -> None:
         self._sock.sendall(line.encode() + b'\r\n')
@@ -148,7 +175,7 @@ class TcpTransport:
         try:
             while self._sock.recv(4096):
                 pass
-        except socket.timeout:
+        except (socket.timeout, OSError):
             pass
 
     def close(self) -> None:
@@ -210,6 +237,26 @@ class NatRouter:
         """`show config` в словарь. Ключи - как их печатает прошивка."""
         return _parse_kv(self.show('config'))
 
+    def nat_enabled(self) -> bool | None:
+        """
+        Транслирует ли точка трафик наружу.
+
+        Отдельная проверка нужна потому, что снаружи это выглядит как исправная
+        сеть: клиент получает адрес, видит саму точку - и не видит больше
+        ничего. `show config` про NAT молчит, состояние печатает только
+        `set_ap_nat` без аргументов.
+        """
+        out = self.cmd('set_ap_nat')
+        if 'NAT: enabled' in out:
+            return True
+        if 'NAT: disabled' in out:
+            return False
+        return None
+
+    def set_nat(self, enabled: bool) -> None:
+        """Включить или выключить трансляцию. Применяется только после restart."""
+        self.cmd(f'set_ap_nat {"on" if enabled else "off"}')
+
     def status(self) -> dict[str, str]:
         return _parse_kv(self.show('status'))
 
@@ -231,9 +278,16 @@ class NatRouter:
         и ресинхронизируемся отдельной командой - иначе ответ на следующую
         команду приедет вперемешку с баннером.
         """
-        self._t.write_line('restart')
+        try:
+            self._t.write_line('restart')
+        except OSError:
+            pass                       # плата успела уйти в перезагрузку
         time.sleep(wait)
-        self._t.drain()
+        reconnect = getattr(self._t, 'reconnect', None)
+        if reconnect is not None:
+            reconnect()                # сетевая консоль умирает вместе с платой
+        else:
+            self._t.drain()
         self.version()
 
     # --- точка доступа ---------------------------------------------------
@@ -334,11 +388,23 @@ class NatRouter:
 
     @contextmanager
     def ap_off(self) -> Iterator[None]:
+        """
+        Погасить точку доступа и поднять обратно - с перезагрузкой платы.
+
+        Перезагрузка здесь не перестраховка, а обход ошибки прошивки: в сборке
+        с проводным аплинком NAT после `ap enable` не возвращается, и клиенты
+        точки видят только её саму. Разбор и патч - router-nat-bug.md.
+
+        Стоит это около 12 секунд (замеряно: консоль отвечает через 5-6 с,
+        клиент выходит наружу через 7-9 с). Без неё следующий тест упал бы,
+        обвинив прошивку Ватериуса в том, что она не доставила посылку.
+        """
         self.ap(False)
         try:
             yield
         finally:
             self.ap(True)
+            self.restart()
 
     @contextmanager
     def blocked(self, ip: str, port: int | None = None) -> Iterator[None]:
@@ -516,6 +582,9 @@ def main() -> None:
     sub.add_parser('unblock', help='снять все правила фильтра')
     p_show = sub.add_parser('show', help='показать состояние')
     p_show.add_argument('section', nargs='?', default='config')
+    p_nat = sub.add_parser('nat', help='NAT точки: без аргумента - состояние')
+    p_nat.add_argument('state', nargs='?', choices=['on', 'off'])
+    sub.add_parser('restart', help='перезагрузить плату')
     p_raw = sub.add_parser('raw', help='отправить команду как есть')
     p_raw.add_argument('line')
 
@@ -537,6 +606,16 @@ def main() -> None:
                 router.block_all(args.ip)
         elif args.action == 'unblock':
             router.acl_clear()
+        elif args.action == 'nat':
+            if args.state is None:
+                print('NAT:', router.nat_enabled())
+            else:
+                # Настройка ложится в NVS, а применяется при старте: без
+                # перезагрузки клиенты по-прежнему не выйдут наружу.
+                router.set_nat(args.state == 'on')
+                router.restart()
+        elif args.action == 'restart':
+            router.restart()
         elif args.action == 'show':
             print(router.show(args.section))
         elif args.action == 'raw':

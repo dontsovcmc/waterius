@@ -100,6 +100,7 @@ def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     device = Stand.create(cfg, mqtt)
     logger.info(f'роутер: {device.router.version()}')
     device.identify()          # версии и MAC - у самого устройства, до первого теста
+    device.ensure_network()    # и сеть: в чужой стенд бесполезен
     try:
         yield device
     finally:

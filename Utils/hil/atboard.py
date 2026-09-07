@@ -184,9 +184,29 @@ class AtBoard:
     # --- HTTP ---
 
     def get(self, path: str, host: str, timeout: float = 30.0) -> Response:
+        return self.request('GET', path, host, timeout=timeout)
+
+    def post(self, path: str, host: str, body: bytes = b'',
+             timeout: float = 30.0) -> Response:
+        """
+        POST без тела: параметры портал принимает и из строки запроса.
+
+        `_parseReqHead` разбирает query у любого метода (WebRequest.cpp:285), а
+        `request->params()` не различает, откуда параметр приехал. Тело нужно
+        было бы кодировать вторым способом ради того же результата.
+        """
+        return self.request('POST', path, host, body=body, timeout=timeout)
+
+    def request(self, method: str, path: str, host: str, body: bytes = b'',
+                timeout: float = 30.0) -> Response:
         self._ensure_passive()
-        request = (f'GET {path} HTTP/1.1\r\nHost: {host}\r\n'
-                   'User-Agent: waterius-hil\r\nConnection: close\r\n\r\n').encode()
+        head = (f'{method} {path} HTTP/1.1\r\nHost: {host}\r\n'
+                'User-Agent: waterius-hil\r\nConnection: close\r\n')
+        if method != 'GET':
+            head += ('Content-Type: application/x-www-form-urlencoded\r\n'
+                     f'Content-Length: {len(body)}\r\n')
+        request = head.encode() + b'\r\n' + body
+
         self._drain()
         self.ser.write(f'AT+CIPSTART="TCP","{host}",80\r\n'.encode())
         answer = self._until((b'OK\r\n', b'ERROR\r\n'), 10).decode('utf-8', 'replace')
