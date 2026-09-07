@@ -66,6 +66,12 @@ RE_WIFI_SSID = re.compile(r'\bwifi_ssid=(\S*)')
 
 SESSION_END = 'Going to sleep'
 
+# Первая строка нового включения ЕСП. Нужна как вторая граница сеанса: сеанс
+# режима настройки заканчивается перезапуском и `Going to sleep` не печатает,
+# поэтому по одной строке засыпания два пробуждения склеивались в одно, а с
+# фильтром по режиму нужный сеанс выбрасывался вместе с чужим.
+RE_BOOT = re.compile(r'\bChipId: ')
+
 
 @dataclass
 class Session:
@@ -383,7 +389,17 @@ class LogWatcher:
         return session
 
     def _find_end(self, start: int) -> int | None:
+        """
+        Конец сеанса: строка засыпания либо начало следующего включения.
+
+        Второй случай - не редкость: из режима настройки прошивка уходит
+        перезапуском (`ESP.restart()` в main.cpp), и строки про сон там не
+        будет никогда.
+        """
         for i in range(start, len(self.lines)):
             if SESSION_END in self.lines[i]:
                 return i
+            if i > start and (RE_BOOT.search(self.lines[i])
+                              or RE_MODE.search(self.lines[i])):
+                return i - 1        # дальше уже следующее пробуждение
         return None

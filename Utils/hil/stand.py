@@ -107,7 +107,7 @@ class Stand:
         api.ping()
         api.serial_begin()
         router = connect(cfg.router_port or None, cfg.router_host or None,
-                         cfg.router_password)
+                         cfg.router_password, cfg.ap_password)
         receiver = Receiver(port=cfg.receiver_port)
         receiver.start()
 

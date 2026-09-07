@@ -189,6 +189,17 @@ class RouterState:
     config: dict[str, str] = field(default_factory=dict)
     acl_rules: list[str] = field(default_factory=list)
 
+    # Имена ключей - те, что печатает `show config` (см. _parse_kv). Раньше
+    # снимок читался по выдуманным `ap_ssid`/`ap_channel`, и восстановление
+    # молча не срабатывало ни разу.
+    @property
+    def ssid(self) -> str:
+        return self.config.get('ssid', '')
+
+    @property
+    def channel(self) -> str:
+        return self.config.get('channel', '')
+
 
 class NatRouter:
     """
@@ -196,8 +207,19 @@ class NatRouter:
     себя: разъехавшийся стенд иначе даёт зелёный тест на неверных настройках.
     """
 
-    def __init__(self, transport: Transport) -> None:
+    def __init__(self, transport: Transport, ap_password: str = '') -> None:
         self._t = transport
+        # Пароль точки доступа неоткуда прочитать: `show config` печатает
+        # звёздочки. Без него нельзя вернуть имя точки после теста, который
+        # его менял, - поэтому он приходит из stand.ini.
+        self.ap_password = ap_password
+
+    def _ap_password(self) -> str:
+        assert self.ap_password, (
+            'нужен [router] ap_password в stand.ini: имя точки восстанавливается '
+            'вместе с паролем, а прочитать его у платы нельзя - show config '
+            'печатает звёздочки')
+        return self.ap_password
 
     # --- основа ----------------------------------------------------------
 
@@ -357,6 +379,29 @@ class NatRouter:
                                  lambda name=acl_list: not self.acl_rules(name),
                                  f'очистка списка {acl_list}')
 
+    def acl_stats(self, acl_list: str) -> dict[str, int]:
+        """
+        Счётчики списка из `show acl`: allowed, denied, no_match.
+
+        По ним видно, что фильтр действительно тронул трафик. Само по себе
+        заведённое правило не значит ничего: с неверным списком оно так же
+        читается и так же ничего не режет.
+        """
+        out: dict[str, int] = {}
+        current = None
+        for line in self.show('acl').splitlines():
+            header = re.match(r'ACL:\s*(\w+)', line.strip())
+            if header:
+                current = header.group(1)
+                continue
+            if current != acl_list:
+                continue
+            m = re.search(r'allowed=(\d+), denied=(\d+), no_match=(\d+)', line)
+            if m:
+                out = {'allowed': int(m.group(1)), 'denied': int(m.group(2)),
+                       'no_match': int(m.group(3))}
+        return out
+
     def acl_rules(self, acl_list: str | None = None) -> list[str]:
         """
         Правила из `show acl`. Прошивка печатает их пронумерованными строками
@@ -428,7 +473,7 @@ class NatRouter:
 
     @contextmanager
     def channel(self, number: int) -> Iterator[None]:
-        was = self.config().get('ap_channel', '0')
+        was = self.config().get('channel', '0')
         self.set_ap_channel(number)
         self.restart()
         try:
@@ -439,15 +484,15 @@ class NatRouter:
 
     @contextmanager
     def ssid(self, name: str, password: str) -> Iterator[None]:
-        cfg = self.config()
-        was_ssid = cfg.get('ap_ssid', '')
-        was_pass = cfg.get('ap_password', '')
+        was = self.config().get('ssid', '')
+        assert was, 'роутер не сообщил имя точки: восстанавливать нечем'
+        restore_password = self._ap_password()
         self.set_ap(name, password)
         self.restart()
         try:
             yield
         finally:
-            self.set_ap(was_ssid, was_pass)
+            self.set_ap(was, restore_password)
             self.restart()
 
     # --- ожидание клиента ------------------------------------------------
@@ -483,15 +528,12 @@ class NatRouter:
         now = self.config()
         need_restart = False
 
-        was_ssid = state.config.get('ap_ssid')
-        was_pass = state.config.get('ap_password')
-        if was_ssid and now.get('ap_ssid') != was_ssid:
-            self.set_ap(was_ssid, was_pass or '')
+        if state.ssid and now.get('ssid') != state.ssid:
+            self.set_ap(state.ssid, self._ap_password())
             need_restart = True
 
-        was_channel = state.config.get('ap_channel')
-        if was_channel and now.get('ap_channel') != was_channel:
-            self.set_ap_channel(int(was_channel))
+        if state.channel and now.get('channel') != state.channel:
+            self.set_ap_channel(int(state.channel))
             need_restart = True
 
         if need_restart:
@@ -562,12 +604,12 @@ def _parse_kv(text: str) -> dict[str, str]:
 
 
 def connect(port: str | None = None, host: str | None = None,
-            password: str = '') -> NatRouter:
+            password: str = '', ap_password: str = '') -> NatRouter:
     """Собрать роутер поверх порта или поверх сетевой консоли."""
     if port:
-        return NatRouter(SerialTransport(port))
+        return NatRouter(SerialTransport(port), ap_password)
     if host:
-        return NatRouter(TcpTransport(host, password))
+        return NatRouter(TcpTransport(host, password), ap_password)
     raise ValueError('нужен --port или --host')
 
 
