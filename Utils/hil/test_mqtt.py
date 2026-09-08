@@ -82,7 +82,7 @@ def test_I3_remote_vacation_reaches_attiny(stand: Stand) -> None:
 
     assert session.applied.get('vac') == '1', f'команда не применена: {session.applied}'
     assert len(session.payloads) >= 2, 'после применения данные должны уйти повторно'
-    assert session.payload['vac'] == 1
+    assert session.payload['vac'] is True
     assert session.alarm_config is not None
     assert session.alarm_config['vacation'] == 1
     assert session.alarm_config['interval1'] == 65535
@@ -151,7 +151,7 @@ def test_I5_remote_mask_change(stand: Stand, quiet: None) -> None:
     stand.mqtt.publish_set('ackm', 1, device=device_name(stand), retain=True)
     stand.dut.press_button()
     applied = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
-    assert applied.payload['ackm'] == 1
+    assert applied.payload['ackm'] is True
 
     stand.reset_observers()
     stand.dut.pulses(channel=1, count=2, gap=3.0)

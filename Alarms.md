@@ -209,7 +209,7 @@ MQTT** — полями посылки:
 | `af0/af1`, `al0/al1`, `as0/as1` | заданные пороги: расход, минуты, часы |
 | `vac` | включён режим «Я уехал» |
 
-Значение 1 — тревога есть, 0 — нет. Полный список полей посылки — в [Export.md](Export.md).
+Значение `true` — тревога есть, `false` — нет. Полный список полей посылки — в [Export.md](Export.md).
 
 **В Home Assistant** после автообнаружения появятся датчики «Alarm: high flow», «Alarm:
 continuous flow», «Alarm: water sensor», «Alarm: consumption stopped» (класс `problem`, у

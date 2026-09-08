@@ -284,11 +284,35 @@ function testAlarmStates() {
     check('страница тревог приезжает в нужном состоянии', problems);
 }
 
+function testParseBool() {
+    const problems = [];
+    const E = globalThis.SIM_GENERATED.enums.ParamError;
+
+    // Контракт прошивочного parse_bool: 0/1 и true/false любым регистром
+    const ok = { '0': 0, '1': 1, 'true': 1, 'false': 0, 'True': 1, 'FALSE': 0, 'TrUe': 1 };
+    Object.keys(ok).forEach((value) => {
+        const result = SimCore.parseBool(value);
+        if (result.err !== E.PARAM_OK || result.value !== ok[value]) {
+            problems.push('"' + value + '": err=' + result.err + ' value=' + result.value +
+                          ', ожидалось ' + ok[value]);
+        }
+    });
+
+    ['2', '-1', 'abc', '', 'tru', 'yes', 'on'].forEach((value) => {
+        if (SimCore.parseBool(value).err !== E.PARAM_ERR_VALUE) {
+            problems.push('"' + value + '" принят, а должен быть отвергнут');
+        }
+    });
+
+    check('флажки разбираются как в прошивке', problems);
+}
+
 testPlaceholders();
 testRoutes();
 testFormFields();
 testRender();
 testGenerated();
+testParseBool();
 testAlarmStates();
 testWizard();
 

@@ -69,8 +69,9 @@ ParamError parse_uint16(const char *value, uint16_t &out, const bool zero_ok = f
 ParamError parse_uint8(const char *value, uint8_t &out, const bool zero_ok);
 
 /*
-Флажок: допустимы только 0 и 1, всё остальное — ошибка. Home Assistant шлёт
-именно "1"/"0" (payload_on/off в ha/discovery_entity.cpp), браузер — тоже.
+Флажок: 0, 1, true, false (регистр не важен), всё остальное — ошибка.
+Строковые булевы нужны, чтобы значение, прочитанное из посылки, можно было
+вернуть обратно настройкой: json.cpp отдаёт флаги как true/false.
 */
 ParamError parse_bool(const char *value, uint8_t &out);
 

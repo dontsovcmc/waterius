@@ -50,7 +50,7 @@ def test_E1_flow_alarm(stand: Stand, quiet: None) -> None:
 
     session = stand.wait_session(timeout=120, mode=ALARM_MODE)
     session.assert_alarm(flow1=1, flow0=0)
-    assert session.payload['alarm'] == 1
+    assert session.payload['alarm'] is True
     assert session.payload['af1'] == FLOW_THRESHOLD
 
 
@@ -240,8 +240,8 @@ def test_E7_consumption_stopped(stand: Stand, slow_clock: None) -> None:
     else:
         pytest.fail(f'остановка расхода не сработала: {idle_before}')
 
-    assert session.payload['alarm_stop1'] == 1
-    assert session.payload['alarm_stop0'] == 0
+    assert session.payload['alarm_stop1'] is True
+    assert session.payload['alarm_stop0'] is False
 
     stand.dut.pulse(channel=1, count=1)
     stand.dut.press_button()

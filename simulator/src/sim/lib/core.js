@@ -71,7 +71,13 @@
         return { err: E().PARAM_OK, value: parsed };
     }
 
+    // Порт parse_bool(): кроме 0 и 1 принимаются true/false любым регистром -
+    // такими флаги уходят в посылке и такими возвращаются настройкой
     function parseBool(value) {
+        if (value === null || value === undefined) return { err: E().PARAM_ERR_VALUE };
+        var word = String(value).toLowerCase();
+        if (word === 'true') return { err: E().PARAM_OK, value: 1 };
+        if (word === 'false') return { err: E().PARAM_OK, value: 0 };
         var parsed = parseLong(value, 0, 1);
         if (parsed === null) return { err: E().PARAM_ERR_VALUE };
         return { err: E().PARAM_OK, value: parsed };
