@@ -270,3 +270,52 @@ def test_принятая_настройка_не_значит_сохранён�
     assert session.applied['mqtt_port'] == '99999', 'принято прошивкой'
     assert 'mqtt_port' not in session.saved, 'но не сохранено: значение отвергнуто'
     assert session.saved['mqtt_host'] == '192.168.50.252'
+
+
+class CountingApi(FakeApi):
+    """METF со счётчиком потерь: `dropped` растёт по заданному списку."""
+
+    def __init__(self, text: str, dropped: list[int]) -> None:
+        super().__init__(text)
+        self._dropped = list(dropped)
+
+    def serial_stat(self) -> dict:
+        value = self._dropped.pop(0) if len(self._dropped) > 1 else self._dropped[0]
+        return {'lines': 0, 'dropped': value, 'baud': 115200,
+                'capacity': 511, 'line_len': 128, 'bytes': 65536}
+
+
+def test_потеря_строк_валит_тест_а_не_прячется() -> None:
+    """
+    Кольцо переполнилось - сеанс собрался, но лог неполон.
+
+    Это тот случай, ради которого счётчик и заводился: без него утверждения
+    делаются по обрезанному логу, и тест зеленеет на дыре в нём.
+    """
+    watcher = LogWatcher(CountingApi(through_ring(SESSION_ALARM), [0, 17]))
+
+    try:
+        watcher.wait_session(timeout=1.0)
+    except AssertionError as err:
+        assert '17' in str(err), err
+    else:
+        raise AssertionError('потерю строк пропустили молча')
+
+
+def test_целый_лог_проверку_проходит() -> None:
+    """Счётчик не вырос - сеанс отдаётся как обычно."""
+    watcher = LogWatcher(CountingApi(through_ring(SESSION_ALARM), [4]))
+    session = watcher.wait_session(timeout=1.0, mode=ALARM_MODE)
+    assert session is not None
+    assert session.alarm_config is not None
+
+
+def test_старый_клиент_не_ломает_ожидание() -> None:
+    """
+    Клиент 0.3 не знает `serial_stat` - проверка выключается, а не падает.
+
+    Иначе обновление прошивки платы стало бы обязательным для любого прогона.
+    """
+    watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM)))
+    session = watcher.wait_session(timeout=1.0, mode=ALARM_MODE)
+    assert session is not None

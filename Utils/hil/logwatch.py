@@ -310,15 +310,20 @@ class LogWatcher:
     """
     Читает UART Ватериуса через плату METF и нарезает поток на сеансы.
 
-    Работает с клиентом 0.3: берём сырой текст (`serial_read`) и склеиваем
-    сами. Как только в METF появится /read/stat, сюда добавится проверка на
-    потерянные строки - молчаливая потеря делает тест ложно-зелёным.
+    Берём сырой текст (`serial_read`) и склеиваем сами: кольцо METF режет
+    длинные строки на куски.
+
+    Полноту лога сверяем со счётчиком потерь платы (`serial_stat`, METF 5 и
+    клиент 0.4). Вытеснение молчаливое: лог приходит короче, а не с ошибкой,
+    поэтому любое утверждение о его содержимом после потери ничего не стоит -
+    отсюда падение теста, а не предупреждение в отчёт.
     """
 
     def __init__(self, api: Any) -> None:
         self.api = api
         self.lines: list[str] = []
         self._tail = ''
+        self._can_stat: bool | None = None      # None - ещё не спрашивали
 
     def poll(self) -> None:
         """Забрать накопленное с платы и склеить разрезанные строки."""
@@ -349,6 +354,56 @@ class LogWatcher:
         self.lines.clear()
         self._tail = ''
 
+    # --- потери лога ---
+
+    def _dropped(self) -> int | None:
+        """
+        Счётчик вытесненных строк с платы; None - счётчика нет.
+
+        METF считает потери с последнего `flush()`, то есть значение
+        накопительное, и смысл имеет только его прирост за окно наблюдения.
+        Клиент 0.3 метода не знает, прошивка младше 5 не отвечает JSON - в обоих
+        случаях проверка выключается один раз, с объяснением в логе.
+        """
+        if self._can_stat is False:
+            return None
+        try:
+            dropped = int(self.api.serial_stat()['dropped'])
+        except AttributeError:
+            logger.warning('metf_python_client 0.3: потери лога не проверяются, '
+                           'нужен 0.4 с serial_stat()')
+            self._can_stat = False
+            return None
+        except Exception as err:                     # прошивка младше 5 или плата молчит
+            logger.warning(f'METF не отдал /read/stat, потери лога не проверяются: {err}')
+            self._can_stat = False
+            return None
+        self._can_stat = True
+        return dropped
+
+    def loss_mark(self) -> int | None:
+        """Снимок счётчика перед ожиданием - опора для `assert_no_loss`."""
+        return self._dropped()
+
+    def assert_no_loss(self, mark: int | None, context: str) -> None:
+        """
+        Убедиться, что за окно наблюдения кольцо METF ничего не выбросило.
+
+        Это причина, по которой тест падает не там, где ломается: из кольца
+        уезжает `Startup mode:`, сеанс не собирается, и виноватым выглядит
+        устройство. Поэтому проверка стоит и на удачном исходе, и на таймауте.
+        """
+        if mark is None:
+            return
+        now = self._dropped()
+        if now is None:
+            return
+        lost = now - mark
+        assert lost <= 0, (
+            f'METF потерял {lost} строк лога за {context}: кольцо переполнилось, '
+            f'и лог неполон - утверждать по нему нечего. Читайте чаще или '
+            f'соберите прошивку платы с большим ASB_BUFFER_BYTES')
+
     def wait_session(self, timeout: float, mode: int | None = None,
                      poll_interval: float = 0.1) -> Session | None:
         """
@@ -356,18 +411,24 @@ class LogWatcher:
         `Going to sleep`: только так видно, что ЕСП дошла до конца, а не была
         обесточена посреди отправки по таймауту attiny.
 
-        Опрашиваем непрерывно: кольцо METF держит около тридцати пяти настоящих
-        строк, а сеанс с автодискавери печатает их сотнями. Один опрос стоит
-        15 мс, так что десять раз в секунду - это не нагрузка, зато кольцо не
-        успевает переполниться между чтениями.
+        Опрашиваем непрерывно: сеанс с автодискавери печатает сотни строк, а
+        кольцо METF хоть и вмещает их (511 строк по 128 символов, полный сеанс -
+        193), но за секунду молчания успевает набрать лишнего. Один опрос стоит
+        15 мс, так что десять раз в секунду - это не нагрузка.
+
+        По краям окна снимаем счётчик потерь: если кольцо всё-таки переполнилось,
+        и «сеанс пришёл», и «сеанса не было» - утверждения ни о чём.
         """
+        mark = self.loss_mark()
         deadline = time.time() + timeout
         while time.time() < deadline:
             self.poll()
             session = self._take_session(mode)
             if session:
+                self.assert_no_loss(mark, 'ожидание сеанса')
                 return session
             time.sleep(poll_interval)
+        self.assert_no_loss(mark, f'ожидание сеанса {timeout:.0f} с')
         return None
 
     def expect_no_session(self, timeout: float, mode: int | None = None,
@@ -376,7 +437,11 @@ class LogWatcher:
         Убедиться, что сеанса не было. С mode - что не было сеанса именно этого
         вида: в тестах квитанции важно, что устройство не будит себя по тревоге,
         а плановые пробуждения при этом идут своим чередом.
+
+        Тишину подтверждаем только по полному логу: потерянные строки - ровно то
+        место, где мог быть пропущенный сеанс.
         """
+        mark = self.loss_mark()
         deadline = time.time() + timeout
         while time.time() < deadline:
             self.poll()
@@ -385,6 +450,7 @@ class LogWatcher:
                 if m and (mode is None or int(m.group(1)) == mode):
                     return False
             time.sleep(poll_interval)
+        self.assert_no_loss(mark, f'ожидание тишины {timeout:.0f} с')
         return True
 
     def _take_session(self, mode: int | None) -> Session | None:
