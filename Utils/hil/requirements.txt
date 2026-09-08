@@ -1,6 +1,6 @@
 pytest>=7.0.0
 requests>=2.32.4
-metf_python_client>=0.3     # с 0.4 доступен serial_stat(): проверка потерь лога
+metf_python_client>=0.4     # serial_stat(): проверка потерь лога, нужна прошивка METF 5
 loguru
 pyserial>=3.5
 paho-mqtt>=2.0
