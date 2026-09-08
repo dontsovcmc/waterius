@@ -73,9 +73,8 @@ def test_I0_readings_reach_broker(stand: Stand) -> None:
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
         f'в брокере нет ничего в {stand.mqtt_root}/, пришло: {stand.mqtt.topics()}')
 
-    # Именно этот топик, а не последний в дереве: при включённом автодискавери
-    # показания идут одним объектом в корень, а следом устройство снимает
-    # удерживаемые сообщения своих же топиков, публикуя в них пустые
+    # Именно этот топик, а не любой в дереве: при включённом автодискавери
+    # показания идут одним объектом в корень
     message = stand.mqtt.last(stand.mqtt_root)
     assert message is not None, (
         'показаний в корневом топике нет, дерево: '
@@ -119,8 +118,6 @@ def test_I1_discovery_base_entities(stand: Stand) -> None:
         f'а устройство ждёт их в {command_topic}')
 
 
-@pytest.mark.xfail(reason='#421: снятие retain возвращается по своей же подписке '
-                          'и затирает разобранное значение', strict=False)
 def test_I4_remote_period_min(stand: Stand, discovery_on: None) -> None:
     """
     Настройка, присланная из Home Assistant, применяется в том же сеансе.
@@ -128,11 +125,6 @@ def test_I4_remote_period_min(stand: Stand, discovery_on: None) -> None:
     Период выбран потому, что он есть в любой прошивке с MQTT и виден в
     посылке: проверяем не «сохранилось в EEPROM», а то, что устройство само
     сообщает о себе после применения.
-
-    Помечен нестрого: дефект #421 - гонка. Устройство снимает retain, получает
-    своё же пустое сообщение обратно и затирает им значение, если успевает до
-    отписки. Успевает не всегда, поэтому тест то красный, то зелёный, и строгий
-    xfail сам стал бы источником ложных падений.
     """
     assert stand.mqtt is not None
     stand.reset_observers()
@@ -239,6 +231,34 @@ def test_I7b_no_retain(stand: Stand) -> None:
         f'показания остались удерживаемыми при mqtt_retain=0: {left}')
 
     stand.setup(mqtt_retain=1)
+
+
+def test_I8_data_topics_are_not_cleared(stand: Stand, discovery_on: None) -> None:
+    """
+    Устройство снимает retain только со своих команд.
+
+    Подписка накрывает всё дерево, показания уходят в него же и с retain,
+    поэтому в следующем сеансе брокер отдаёт устройству его собственные
+    удерживаемые сообщения. Снимать с них retain нельзя: это то, из чего Home
+    Assistant берёт значения сразу после перезапуска, а следующего сеанса у
+    Ватериуса можно ждать сутки (#422).
+
+    Показания кладём в дерево сами: стенд чистит его перед каждым тестом, а
+    устройство не отличает своё прошлогоднее сообщение от чужого - брокер
+    отдаёт ему и то, и другое одинаково.
+    """
+    assert stand.mqtt is not None
+    stand.reset_observers()
+
+    topic = f'{stand.mqtt_root}/f1'          # топик показаний, не команда
+    stand.mqtt.publish_retained(topic, '10')
+
+    stand.dut.press_button()
+    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    left = {m.topic: m.payload for m in stand.mqtt.fetch_retained(stand.mqtt_root)}
+    assert left.get(topic) == '10', (
+        f'показания стёрты из брокера, осталось: {sorted(left)}')
 
 
 def test_I1b_discovery_json_is_valid(stand: Stand) -> None:
