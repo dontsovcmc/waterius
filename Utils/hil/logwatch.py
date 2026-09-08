@@ -459,10 +459,14 @@ class LogWatcher:
             m = RE_MODE.search(line)
             if m:
                 if mode is not None and int(m.group(1)) != mode:
-                    # Не тот сеанс: выбрасываем его целиком, чтобы не мешал
+                    # Не тот сеанс: выбрасываем его целиком, чтобы не мешал.
+                    # В журнал он всё-таки попадает: тест, ждущий сеанса, что
+                    # именно устройство делало вместо него, иначе не расскажет.
                     end = self._find_end(i)
                     if end is None:
                         return None
+                    logger.info(f'пропускаем сеанс mode={m.group(1)}, '
+                                f'ждём mode={mode}')
                     del self.lines[:end + 1]
                     return self._take_session(mode)
                 start = i

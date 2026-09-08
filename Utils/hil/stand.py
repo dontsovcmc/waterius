@@ -164,6 +164,29 @@ class Stand:
         logger.info(f'сеанс: mode={session.mode}, посылок {len(session.payloads)}')
         return session
 
+    def wait_asleep(self, timeout: float = 60.0) -> bool:
+        """
+        Дождаться, пока устройство уснёт: строки `Going to sleep`.
+
+        Одного конца сеанса мало. Из режима настройки прошивка уходит
+        перезапуском, и такой сеанс кончается не сном, а следующим включением -
+        ЕСП после него доигрывает обычный сеанс и только тогда засыпает. Пока
+        она запитана, нажатие кнопки до attiny не доходит, и тест, начавшийся в
+        это время, нажал бы впустую и ждал бы своего сеанса до таймаута.
+
+        Перезапуск с передачей укладывается в десяток секунд; минуты хватает с
+        запасом, а сеанс, не кончившийся за неё, не кончится вовсе - через две
+        минуты attiny снимет питание молча (`WAIT_ESP_MSEC`).
+        """
+        while True:
+            session = self.log.wait_session(timeout)
+            if session is None:
+                logger.warning(f'устройство не уснуло за {timeout:.0f} с')
+                return False
+            logger.info(f'доиграл сеанс mode={session.mode}')
+            if session.complete:
+                return True
+
     def expect_no_session(self, timeout: float, mode: int | None = None) -> None:
         assert self.log.expect_no_session(timeout, mode), (
             f'ожидали тишину {timeout:.0f} с (mode={mode}), но сеанс состоялся\n'
