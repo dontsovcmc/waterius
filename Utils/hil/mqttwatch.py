@@ -146,6 +146,11 @@ class MqttWatch:
         logger.info(f'MQTT -> {topic} = {value}')
         self._client.publish(topic, str(value), retain=retain)
 
+    def publish_retained(self, topic: str, payload: str) -> None:
+        """Положить в брокер удерживаемое сообщение - как это делает устройство."""
+        logger.info(f'MQTT -> {topic} = {payload!r} (retain)')
+        self._client.publish(topic, payload, retain=True)
+
     def clear_retained(self, topic: str) -> None:
         self._client.publish(topic, '', retain=True)
 
