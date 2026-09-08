@@ -28,13 +28,13 @@ REQUIRED_FIELDS: dict[str, Any] = {
     'imp0': int, 'imp1': int,
     'f0': int, 'f1': int,
     'ctype0': int, 'ctype1': int,
-    'alarm_flow0': (0, 1), 'alarm_flow1': (0, 1),
-    'alarm_leak0': (0, 1), 'alarm_leak1': (0, 1),
-    'alarm_wet0': (0, 1), 'alarm_wet1': (0, 1),
-    'alarm_stop0': (0, 1), 'alarm_stop1': (0, 1),
+    'alarm_flow0': bool, 'alarm_flow1': bool,
+    'alarm_leak0': bool, 'alarm_leak1': bool,
+    'alarm_wet0': bool, 'alarm_wet1': bool,
+    'alarm_stop0': bool, 'alarm_stop1': bool,
     'af0': int, 'af1': int, 'al0': int, 'al1': int, 'as0': int, 'as1': int,
-    'vac': (0, 1), 'sc': (0, 1),
-    'ackw': (0, 1), 'ackh': (0, 1), 'ackm': (0, 1),
+    'vac': bool, 'sc': bool,
+    'ackw': bool, 'ackh': bool, 'ackm': bool,
     'mode': (1, 2, 3, 4),
     'version': int, 'version_esp': str, 'model': int,
     'voltage': float, 'rssi': int, 'period_min': int,
@@ -82,11 +82,14 @@ def test_G2_payload_schema(stand: Stand) -> None:
     for name, expected in REQUIRED_FIELDS.items():
         value = payload[name]
         if isinstance(expected, tuple):
-            assert value in expected, f'{name}={value}, допустимо {expected}'
+            assert type(value) is not bool and value in expected, \
+                f'{name}={value!r}, допустимо {expected}'
         elif expected is float:
-            assert isinstance(value, (int, float)), f'{name}={value!r} не число'
+            assert type(value) in (int, float), f'{name}={value!r} не число'
         else:
-            assert isinstance(value, expected), f'{name}={value!r} не {expected.__name__}'
+            # type(), а не isinstance(): bool - подкласс int, и обе проверки
+            # прошли бы для любого из двух форматов флага
+            assert type(value) is expected, f'{name}={value!r} не {expected.__name__}'
 
 
 def test_G3_no_network(stand: Stand) -> None:

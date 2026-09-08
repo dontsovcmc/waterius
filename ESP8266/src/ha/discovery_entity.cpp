@@ -69,8 +69,14 @@ String build_entity_discovery(const char *mqtt_topic,
 
     entity[F("stat_t")] = mqtt_topic; // state_topic
 
+    // Флаги приезжают в JSON булевыми, а Jinja отрендерила бы их как "True":
+    // у переключателей и бинарных сенсоров значение приводится к 1/0
+    const bool flag_entity = strcmp(entity_type, "binary_sensor") == 0 ||
+                             strcmp(entity_type, "switch") == 0;
+
     String value_template;
-    value_template = String("{{ value_json.") + entity_id + String(" | is_defined }}");
+    value_template = String("{{ value_json.") + entity_id +
+                     String(flag_entity ? " | is_defined | int }}" : " | is_defined }}");
     entity[F("val_tpl")] = value_template.c_str();
 
 
@@ -126,12 +132,8 @@ String build_entity_discovery(const char *mqtt_topic,
         entity[F("json_attributes_template")] = json_attributes_template;
     }
 
-    /*
-    Состояния тревог (#202). Значения ровно те, что кладёт в JSON json.cpp:
-    единица и ноль, как у переключателя ниже. Числами, а не true/false, потому
-    что шаблон value_template проходит через Jinja, и булево значение JSON
-    отрендерилось бы как "True" - сущность бы не переключалась.
-    */
+    // Состояния тревог (#202). Значения те же, что у переключателя ниже:
+    // шаблон выше уже привёл булево из посылки к 1/0
     if (strcmp(entity_type, "binary_sensor") == 0)
     {
         // https://www.home-assistant.io/integrations/binary_sensor.mqtt
@@ -145,8 +147,6 @@ String build_entity_discovery(const char *mqtt_topic,
         String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
         entity[F("cmd_t")] = command_topic; // command_topic
 
-        // Значения ровно те, что понимает parse_bool на стороне устройства:
-        // "true"/"false" превратились бы в ноль и молча выключали бы режим
         entity[F("pl_on")] = F("1");    // payload_on
         entity[F("pl_off")] = F("0");   // payload_off
         entity[F("stat_on")] = F("1");  // state_on

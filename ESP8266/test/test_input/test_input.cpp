@@ -316,16 +316,40 @@ TEST(ParseBool, NegativeIsRejected)
     EXPECT_EQ(v, 0);
 }
 
+TEST(ParseBool, StringBoolsAreAccepted)
+{
+    // Флаги уходят в посылке как true/false, и то же значение возвращается
+    // настройкой - через ответ сервера или из Home Assistant
+    uint8_t v = 42;
+
+    EXPECT_EQ(parse_bool("true", v), PARAM_OK);
+    EXPECT_EQ(v, 1);
+
+    EXPECT_EQ(parse_bool("false", v), PARAM_OK);
+    EXPECT_EQ(v, 0);
+
+    EXPECT_EQ(parse_bool("True", v), PARAM_OK);
+    EXPECT_EQ(v, 1);
+
+    EXPECT_EQ(parse_bool("FALSE", v), PARAM_OK);
+    EXPECT_EQ(v, 0);
+
+    EXPECT_EQ(parse_bool("TrUe", v), PARAM_OK);
+    EXPECT_EQ(v, 1);
+}
+
 TEST(ParseBool, GarbageIsRejected)
 {
     // Мусор больше не выключает флажок молча: значение остаётся прежним,
-    // а отправитель получает код ошибки. Home Assistant шлёт "1"/"0",
-    // так что "true" сюда прийти не должно - но если пришло, это ошибка.
+    // а отправитель получает код ошибки.
     uint8_t v = 1;
 
     EXPECT_EQ(parse_bool("abc", v), PARAM_ERR_VALUE);
     EXPECT_EQ(parse_bool("", v), PARAM_ERR_VALUE);
-    EXPECT_EQ(parse_bool("true", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_bool("tru", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_bool("truex", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_bool("yes", v), PARAM_ERR_VALUE);
+    EXPECT_EQ(parse_bool("on", v), PARAM_ERR_VALUE);
     EXPECT_EQ(v, 1);
 }
 

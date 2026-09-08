@@ -133,8 +133,36 @@ ParamError parse_uint8(const char *value, uint8_t &out, const bool zero_ok)
     return PARAM_OK;
 }
 
+// Своё сравнение без учёта регистра: strcasecmp живёт в <strings.h>, а он
+// не входит в набор заголовков ядра
+static bool equals_word(const char *value, const char *word)
+{
+    size_t i = 0;
+    for (; value[i] && word[i]; ++i)
+    {
+        if (tolower((unsigned char)value[i]) != word[i])
+            return false;
+    }
+    return value[i] == 0 && word[i] == 0;
+}
+
 ParamError parse_bool(const char *value, uint8_t &out)
 {
+    if (value == nullptr)
+        return PARAM_ERR_VALUE;
+
+    if (equals_word(value, "true"))
+    {
+        out = 1;
+        return PARAM_OK;
+    }
+
+    if (equals_word(value, "false"))
+    {
+        out = 0;
+        return PARAM_OK;
+    }
+
     long v = 0;
     if (!parse_long(value, 0, 1, v))
         return PARAM_ERR_VALUE;

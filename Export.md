@@ -15,8 +15,26 @@
 
 | Поле | Размерность | Тип | Описание | HTTP | MQTT | С версии | 
 | --- | --- | --- | --- | --- | --- | --- |
+| ackh | - | bool | Тревога обязана доехать до своего сервера (HTTP) | + | + | 2.0.47 |
+| ackm | - | bool | Тревога обязана доехать до MQTT | + | + | 2.0.47 |
+| ackw | - | bool | Тревога обязана доехать до waterius.ru | + | + | 2.0.47 |
 | adc0 | - | uint | Аналоговый уровень входа 0 | + | + | - |
 | adc1 | - | uint | Аналоговый уровень входа 1 | + | + | - |
+| af0 | л/ч | uint | Порог большого расхода, вход 0 (0 — выключен) | + | + | 2.0.47 |
+| af1 | л/ч | uint | Порог большого расхода, вход 1 (0 — выключен) | + | + | 2.0.47 |
+| al0 | минуты | uint | Порог непрерывного расхода, вход 0 (0 — выключен) | + | + | 2.0.47 |
+| al1 | минуты | uint | Порог непрерывного расхода, вход 1 (0 — выключен) | + | + | 2.0.47 |
+| alarm | - | bool | Сеанс внеплановый, по тревоге | + | + | 2.0.47 |
+| alarm_flow0 | - | bool | Большой расход, вход 0 | + | + | 2.0.47 |
+| alarm_flow1 | - | bool | Большой расход, вход 1 | + | + | 2.0.47 |
+| alarm_leak0 | - | bool | Непрерывный расход (протечка), вход 0 | + | + | 2.0.47 |
+| alarm_leak1 | - | bool | Непрерывный расход (протечка), вход 1 | + | + | 2.0.47 |
+| alarm_stop0 | - | bool | Расход остановился, вход 0 | + | + | 2.0.47 |
+| alarm_stop1 | - | bool | Расход остановился, вход 1 | + | + | 2.0.47 |
+| alarm_wet0 | - | bool | Сработал датчик протечки, вход 0 | + | + | 2.0.47 |
+| alarm_wet1 | - | bool | Сработал датчик протечки, вход 1 | + | + | 2.0.47 |
+| as0 | часы | uint | Порог остановки расхода, вход 0 (0 — выключен) | + | + | 2.0.47 |
+| as1 | часы | uint | Порог остановки расхода, вход 1 (0 — выключен) | + | + | 2.0.47 |
 | boot | - | uint | Причина загрузки attiny85 | + | + | - |
 | battery | - | int | % заряда батарейки (фейковый) | + | + | - |
 | ch0 | м3 | float | Показания воды, вход 0 | + | + | - |
@@ -57,19 +75,20 @@
 | resets | шт | uint | Количество перезагрузок | + | + | V5 |
 | router_mac | - | str | MAC адрес производителя роутера (ХХ:ХХ:ХХ:00:00:00) | + | + | - |
 | rssi | dBm | int | Уровень Wi-Fi сигнала | + | + | V8 |
-| sc | 0 или 1 | uint | Выходить на связь только при расходе воды | + | + | 2.0.47 |
+| sc | - | bool | Выходить на связь только при расходе воды | + | + | 2.0.47 |
 | setup_finished | - | int | число успешных подключений к роутеру после настройки | + | + | - |
 | setup_started | - | int | число включений режима настройки | + | + | - |
 | setuptime | мсек | int | Длительность режима настройки | + | + | - |
 | serial0 | - | str | Серийный номер, вход 0 | + | + | - |
 | serial1 | - | str | Серийный номер, вход 1 | + | + | - |
 | timestamp | - | str | Текущая дата и время 2019-11-29T23:29:55+0800 | + | + | - |
+| vac | - | bool | Режим "я уехал" | + | + | 2.0.47 |
 | version | - | int | Версия прошивки attiny85 | + | + | - |
 | version_esp | - | str | Версия прошивки esp | + | + | - |
 | voltage | В | float | Напряжение питания attiny85 | + | + | - |
 | voltage_diff | мВ | int | Просадка напряжения за время подключения Wi-Fi | + | + | - |
 | voltage_calibration | % | uint8 | Калибровка напряжения, только Waterius 2 (по умолчанию 100) | + | + | - |
-| voltage_low | 0 или 1 | int | voltage_diff выше 50мВ  | + | + | - |
+| voltage_low | - | bool | voltage_diff выше 50мВ  | + | + | - |
 | waketime | мсек | int | Время работы ESP при предыдущем включении | + | + | - |
 | wifi_phy_mode | - | str | Текущий режим Wi-Fi | + | + | - |
 | wifi_phy_mode_s | - | str | Режим Wi-Fi из настроек | + | + | - |
@@ -165,7 +184,7 @@ attiny у старых устройств.
 С версии 0.11.0: По умолчанию данные прилетят в виде JSON (при включенном параметре discovery) в топик. (Например: "waterius/12380568/")
 
 ```
-{"delta0":0,"delta1":0,"ch0":338.304,"ch1":535.966,"imp0":79,"imp1":109,"f0":10,"f1":10,"adc0":113,"adc1":114,"serial0":"","serial1":"","ctype0":0,"ctype1":0,"cname0":1,"cname1":0,"data_type0":1,"data_type1":0,"voltage":3.128,"voltage_low":true,"voltage_diff":0.21,"battery":0,"channel":12,"router_mac":"AA:AA:AA:00:00:00","rssi":-70,"mac":"AA:AA:AA:AA:AA:AA","ip":"172.16.64.50","dhcp":true,"version":31,"version_esp":"0.11.9","model":0,"esp_id":8686250,"flash_id":1458400,"freemem":37504,"timestamp":"2023-10-22T17:01:10+0000","waketime":10829,"period_min":1440,"period_min_tuned":1440,"setuptime":91781,"boot":1,"resets":1,"mode":3,"setup_finished":4,"setup_started":5,"ntp_errors":0,"wifi_connect_errors":0,"wifi_connect_attempt":1,"ota_error":0,"key":"AA","email":"AA@ya.ru","mqtt":true,"http":false,"ha":false,"mqtt_retain":true}
+{"delta0":0,"delta1":0,"ch0":338.304,"ch1":535.966,"imp0":79,"imp1":109,"f0":10,"f1":10,"adc0":113,"adc1":114,"serial0":"","serial1":"","ctype0":0,"ctype1":0,"cname0":1,"cname1":0,"data_type0":1,"data_type1":0,"voltage":3.128,"voltage_low":true,"voltage_diff":0.21,"battery":0,"channel":12,"router_mac":"AA:AA:AA:00:00:00","rssi":-70,"mac":"AA:AA:AA:AA:AA:AA","ip":"172.16.64.50","dhcp":true,"version":31,"version_esp":"0.11.9","model":0,"esp_id":8686250,"flash_id":1458400,"freemem":37504,"timestamp":"2023-10-22T17:01:10+0000","waketime":10829,"period_min":1440,"period_min_tuned":1440,"setuptime":91781,"boot":1,"resets":1,"mode":3,"setup_finished":4,"setup_started":5,"ntp_errors":0,"wifi_connect_errors":0,"wifi_connect_attempt":1,"ota_error":0,"key":"AA","email":"AA@ya.ru","mqtt":true,"http":false,"ha":false,"mqtt_retain":true,"alarm":false,"alarm_flow0":false,"alarm_flow1":false,"alarm_leak0":false,"alarm_leak1":false,"alarm_wet0":false,"alarm_wet1":false,"alarm_stop0":false,"alarm_stop1":false,"af0":0,"af1":0,"al0":0,"al1":0,"as0":0,"as1":0,"vac":false,"sc":false,"ackw":true,"ackh":true,"ackm":true}
 ```
 Если параметр discovery выключен или версия прошивки <0.11.0, то данные отправятся в виде отдельных топиков:
 ```
@@ -204,7 +223,7 @@ waterius/12380568/rssi -69
 | ctype0     | <топик из настроек>/ctype0/set     | целое число   | waterius/124121251/ctype0/set     | 0             | >=1.0.2   |
 | ctype1     | <топик из настроек>/ctype1/set     | целое число   | waterius/124121251/ctype1/set     | 0             | >=1.0.2   |
 | voltage_calibration | <топик из настроек>/voltage_calibration/set | целое число (только Waterius 2) | waterius/124121251/voltage_calibration/set | 100 | >=2.0.34 |
-| sc         | <топик из настроек>/sc/set         | 0 или 1       | waterius/124121251/sc/set         | 1             | >=2.0.47  |
+| sc         | <топик из настроек>/sc/set         | 0, 1, true, false | waterius/124121251/sc/set     | 1             | >=2.0.47  |
 
 Примечание: значения ctype0, ctype1 указано выше в разделе ctypeX
 Примечание: значения cname0, cname1 указано выше в разделе cnameX

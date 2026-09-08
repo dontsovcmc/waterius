@@ -67,6 +67,18 @@ GLOBAL_PARAMS = {
 }
 
 
+def same_value(got: Any, want: Any) -> bool:
+    """
+    Одно ли это значение настройки.
+
+    Флаги задаются числом (в прошивку они и уходят как "1"/"0"), а в посылке
+    приезжают булевыми, поэтому сравнение строк дало бы вечное '1' != 'True'.
+    """
+    if isinstance(got, bool) or isinstance(want, bool):
+        return bool(got) == bool(want)
+    return str(got) == str(want)
+
+
 class Stand:
     """Фасад над всем железом стенда."""
 
@@ -312,7 +324,7 @@ class Stand:
 
         for name, value in settings.items():
             got = session.payload.get(name) if session.payload else None
-            assert str(got) == str(value), (
+            assert same_value(got, value), (
                 f'{name}: просили {value}, устройство отдаёт {got}')
 
         return session
@@ -364,7 +376,7 @@ class Stand:
             diff = dict(BASELINE)
         else:
             diff = {name: value for name, value in BASELINE.items()
-                    if name in payload and str(payload[name]) != str(value)}
+                    if name in payload and not same_value(payload[name], value)}
         if not diff:
             return
         logger.info(f'возврат к базовому состоянию: {diff}')
