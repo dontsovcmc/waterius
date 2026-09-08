@@ -19,7 +19,7 @@ import pytest
 from loguru import logger
 
 if TYPE_CHECKING:                       # только для подсказок типов
-    from .broker import Mosquitto
+    from .broker import MqttBroker
     from .mqttwatch import MqttWatch
     from .router import RouterState
     from .stand import Stand
@@ -38,8 +38,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line('markers', 'stand: требует собранного стенда')
     config.addinivalue_line('markers', 'slow: идёт десятки минут')
-    config.addinivalue_line('markers', 'mqtt: нужен брокер (brew install mosquitto)')
+    config.addinivalue_line('markers', 'mqtt: нужен брокер (amqtt из requirements.txt)')
     config.addinivalue_line('markers', 'portal: режим настройки и AT-плата')
+    config.addinivalue_line(
+        'markers',
+        'arm(**settings): доп. настройки для фикстуры тревог; иначе тесту '
+        'пришлось бы платить за второй сеанс на живом железе')
     config.addinivalue_line(
         'markers',
         'requires(attiny=N, esp="X.Y.Z"): минимальные версии прошивки для теста; '
@@ -65,15 +69,15 @@ def cfg(request: pytest.FixtureRequest) -> Any:
 @pytest.fixture(scope='session')
 def broker(cfg: Any) -> Iterator[Any]:
     """Свой брокер: тесты retain и автодискавери должны начинаться с чистых топиков."""
-    from .broker import Mosquitto
-    if not Mosquitto.available():
+    from .broker import MqttBroker
+    if not MqttBroker.available():
         # Не пропуск: от брокера зависят только тесты с меткой mqtt, а раньше
         # его отсутствие уводило в пропуск весь стенд - фикстура stand стоит
         # на этой же цепочке.
-        logger.warning('mosquitto не установлен: тесты MQTT будут пропущены')
+        logger.warning('нет amqtt: тесты MQTT будут пропущены')
         yield None
         return
-    server = Mosquitto(cfg.broker_port)
+    server = MqttBroker(cfg.broker_port, cfg.broker_host)
     server.start()
     try:
         yield server
@@ -101,6 +105,7 @@ def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     logger.info(f'роутер: {device.router.version()}')
     device.identify()          # версии и MAC - у самого устройства, до первого теста
     device.ensure_network()    # и сеть: в чужой стенд бесполезен
+    device.ensure_mqtt()       # и брокер, если он поднялся
     try:
         yield device
     finally:
@@ -145,7 +150,7 @@ def needs_broker(request: pytest.FixtureRequest) -> None:
     if 'mqtt' not in request.keywords or not request.config.getoption('--stand'):
         return
     if request.getfixturevalue('broker') is None:
-        pytest.skip('нужен брокер: brew install mosquitto')
+        pytest.skip('нужен брокер: pip install -r Utils/hil/requirements.txt')
 
 
 @pytest.fixture(autouse=True)
@@ -192,6 +197,59 @@ def device_baseline(request: pytest.FixtureRequest) -> None:
         return
     request.getfixturevalue('firmware_versions')
     request.getfixturevalue('stand').ensure_baseline()
+
+
+@pytest.fixture
+def discovery_on(request: pytest.FixtureRequest) -> None:
+    """
+    Предусловие тестов команд: включённое автодискавери.
+
+    Подписку на `<топик>/#` и сам обработчик команд прошивка заводит только при
+    нём (`senders/sender_mqtt.h`), поэтому без него команда из Home Assistant не
+    доедет вовсе - и тест обвинит устройство в том, чего оно не обещало.
+
+    Состояние читаем в посылке (`ha` - это mqtt плюс автодискавери,
+    `core/routing.cpp`), чтобы не платить сеансом там, где всё и так включено.
+    """
+    if not request.config.getoption('--stand'):
+        return
+    stand = request.getfixturevalue('stand')
+    if not (stand.last_payload or {}).get('ha'):
+        stand.setup(mqtt_auto_discovery=1)
+
+
+@pytest.fixture
+def discovery_off(request: pytest.FixtureRequest) -> None:
+    """
+    Обратное предусловие: автодискавери выключено.
+
+    Тогда показания уходят по топику на поле, а команды не доезжают вовсе -
+    подписки у прошивки нет. Это отдельный режим работы, и проверять его надо
+    отдельными тестами, а не полагаться на то, что осталось от соседа.
+    """
+    if not request.config.getoption('--stand'):
+        return
+    stand = request.getfixturevalue('stand')
+    if (stand.last_payload or {}).get('ha'):
+        stand.setup(mqtt_auto_discovery=0)
+
+
+@pytest.fixture(scope='module')
+def discovery_reset(request: pytest.FixtureRequest) -> Iterator[None]:
+    """
+    Выключить автодискавери, когда группа MQTT отработала.
+
+    Публикация автодискавери - это две с половиной сотни строк лога за сеанс, а
+    кольцо METF держит около тридцати пяти и вытесняет старые молча. Оставленное
+    включённым, оно уносит из лога `Startup mode:` следующих тестов, и те ждут
+    свой сеанс до таймаута, обвиняя устройство.
+    """
+    yield
+    if not request.config.getoption('--stand'):
+        return
+    if request.getfixturevalue('broker') is None:
+        return
+    request.getfixturevalue('stand').setup(mqtt_auto_discovery=0)
 
 
 @pytest.fixture

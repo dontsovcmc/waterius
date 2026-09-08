@@ -54,6 +54,10 @@ RE_IDLE_SEND = re.compile(r'Idle: consumed=([01]), silence_min=(\d+), transmit=(
 RE_HTTP_CODE = re.compile(r'HTTP: Response code: (-?\d+)')
 RE_PERIOD_ATTINY = re.compile(r'Wakeup period, min \(attiny\):(\d+)')
 RE_APPLY = re.compile(r'Apply setting: (\S+)=(\S*)')
+# Значение, прошедшее валидацию и попавшее в настройки. Единственный
+# способ проверить параметр, которого нет в посылке: адрес брокера, порт,
+# включённость получателя.
+RE_SAVED = re.compile(r'Saved: (\S+)=(\S*)')
 
 # Настройки, напечатанные при загрузке (config.cpp: print_settings). Секции
 # идут заголовками, а `state=` и `host=` внутри них называются одинаково -
@@ -62,9 +66,17 @@ RE_SECTION = re.compile(r'--- (\S+) ---')
 SECTION_KEYS = {'Waterius.ru': 'waterius', 'HTTP': 'http', 'MQTT': 'mqtt'}
 RE_STATE = re.compile(r'\bstate=(ON|OFF)\b')
 RE_HOST = re.compile(r'\bhost=(\S*)')
+# У брокера порт печатается той же строкой, что и адрес (config.cpp).
+RE_PORT = re.compile(r'\bport=(\d+)')
 RE_WIFI_SSID = re.compile(r'\bwifi_ssid=(\S*)')
 
 SESSION_END = 'Going to sleep'
+
+# Первая строка нового включения ЕСП. Нужна как вторая граница сеанса: сеанс
+# режима настройки заканчивается перезапуском и `Going to sleep` не печатает,
+# поэтому по одной строке засыпания два пробуждения склеивались в одно, а с
+# фильтром по режиму нужный сеанс выбрасывался вместе с чужим.
+RE_BOOT = re.compile(r'\bChipId: ')
 
 
 @dataclass
@@ -87,25 +99,36 @@ class Session:
         return '\n'.join(self.lines)
 
     @property
+    def full_text(self) -> str:
+        """
+        Всё пробуждение целиком, вместе с преамбулой.
+
+        Часть фактов о себе прошивка печатает до `Startup mode:` - версии,
+        MAC, настройки и итог загрузки конфига. Утверждения о ходе сеанса
+        пишутся про `text`, а вот эти факты искать надо здесь.
+        """
+        return '\n'.join(self.preamble + self.lines)
+
+    @property
     def mode(self) -> int | None:
         m = RE_MODE.search(self.text)
         return int(m.group(1)) if m else None
 
     @property
     def attiny_version(self) -> int | None:
-        m = RE_ATTINY_VER.search(self.text)
+        m = RE_ATTINY_VER.search(self.full_text)
         return int(m.group(1)) if m else None
 
     @property
     def esp_version(self) -> tuple[int, int, int] | None:
         """Версия прошивки ЕСП кортежем - чтобы сравнивать, а не сличать строки."""
-        m = RE_ESP_VER.search(self.text)
+        m = RE_ESP_VER.search(self.full_text)
         return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
 
     @property
     def mac(self) -> str | None:
         """MAC устройства. Прошивка печатает его в каждом сеансе со связью."""
-        m = RE_MAC.search(self.text)
+        m = RE_MAC.search(self.full_text)
         return m.group(1).lower() if m else None
 
     @property
@@ -189,6 +212,9 @@ class Session:
             host = RE_HOST.search(line)
             if host:
                 out[f'{section}_host'] = host.group(1)
+                port = RE_PORT.search(line)
+                if port:
+                    out[f'{section}_port'] = port.group(1)
         return out
 
     @property
@@ -210,6 +236,17 @@ class Session:
         return dict(RE_APPLY.findall(self.text))
 
     @property
+    def saved(self) -> dict[str, str]:
+        """
+        Настройки, которые прошивка приняла и записала.
+
+        Отличается от `applied` тем, что там - полученное, а здесь - выжившее
+        после валидации: отвергнутый параметр печатается ошибкой, и строки
+        `Saved:` для него не будет.
+        """
+        return dict(RE_SAVED.findall(self.text))
+
+    @property
     def complete(self) -> bool:
         return SESSION_END in self.text
 
@@ -219,8 +256,17 @@ class Session:
         Причина вспышек светодиода. Сам код в лог не печатается, поэтому
         восстанавливаем его по входным условиям blink_code (core/blink.cpp).
         Единственное, что так не увидеть, - одна вспышка про просевшее питание.
+
+        Причины `cloud`, `cloud_answer` и `mqtt` читаются из строки
+        `Alarm confirm`, а её печатают с 2.0.47. На младших прошивках нет ни
+        строки, ни самой модели причин, и результат вырождается в `ok` -
+        поэтому тесты, утверждающие эти причины, помечены версией.
         """
-        if 'Config succesfully loaded' not in self.text or 'Attiny not found.' in self.text:
+        # Итог загрузки конфига и связь с attiny печатаются до `Startup mode:`,
+        # то есть в преамбуле: искать их в тексте сеанса - значит объявить
+        # неисправным конфиг в каждом сеансе подряд.
+        if ('Config succesfully loaded' not in self.full_text
+                or 'Attiny not found.' in self.full_text):
             return 'config'          # 5 вспышек
         if not self.wifi_connected:
             return 'router'          # 2 вспышки
@@ -304,11 +350,16 @@ class LogWatcher:
         self._tail = ''
 
     def wait_session(self, timeout: float, mode: int | None = None,
-                     poll_interval: float = 1.0) -> Session | None:
+                     poll_interval: float = 0.1) -> Session | None:
         """
         Дождаться завершённого сеанса. Началом считаем `Startup mode:`, концом -
         `Going to sleep`: только так видно, что ЕСП дошла до конца, а не была
         обесточена посреди отправки по таймауту attiny.
+
+        Опрашиваем непрерывно: кольцо METF держит около тридцати пяти настоящих
+        строк, а сеанс с автодискавери печатает их сотнями. Один опрос стоит
+        15 мс, так что десять раз в секунду - это не нагрузка, зато кольцо не
+        успевает переполниться между чтениями.
         """
         deadline = time.time() + timeout
         while time.time() < deadline:
@@ -320,7 +371,7 @@ class LogWatcher:
         return None
 
     def expect_no_session(self, timeout: float, mode: int | None = None,
-                          poll_interval: float = 2.0) -> bool:
+                          poll_interval: float = 0.5) -> bool:
         """
         Убедиться, что сеанса не было. С mode - что не было сеанса именно этого
         вида: в тестах квитанции важно, что устройство не будит себя по тревоге,
@@ -363,7 +414,17 @@ class LogWatcher:
         return session
 
     def _find_end(self, start: int) -> int | None:
+        """
+        Конец сеанса: строка засыпания либо начало следующего включения.
+
+        Второй случай - не редкость: из режима настройки прошивка уходит
+        перезапуском (`ESP.restart()` в main.cpp), и строки про сон там не
+        будет никогда.
+        """
         for i in range(start, len(self.lines)):
             if SESSION_END in self.lines[i]:
                 return i
+            if i > start and (RE_BOOT.search(self.lines[i])
+                              or RE_MODE.search(self.lines[i])):
+                return i - 1        # дальше уже следующее пробуждение
         return None

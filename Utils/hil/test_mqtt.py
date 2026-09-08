@@ -1,15 +1,24 @@
 """
-Home Assistant и управление извне - блок I ручного плана.
+MQTT: базовый функционал - блок I ручного плана без тревог.
 
-Команда, присланная в топик, применяется в том же сеансе: подписка выполняется
-до отправки данных, поэтому удерживаемое сообщение подхватывается сразу, а
-после применения данные уходят повторно. Значит проверять надо не «в следующей
+Здесь то, что умеет любая прошивка с MQTT: показания уезжают в брокер, дерево
+автодискавери называет топики так же, как их считает стенд, команда из Home
+Assistant применяется в том же сеансе. Всё это проверяется и на 2.0.44.
+
+Тревоги вынесены в `test_mqtt_alarms.py`: им нужны attiny 41 и ЕСП 2.0.47, а
+держать их вместе значит пропускать весь блок из-за прошивки, которой на
+базовую проверку хватает.
+
+Команда применяется в том же сеансе, где получена: подписка выполняется до
+отправки данных, поэтому удерживаемое сообщение подхватывается сразу, а после
+применения данные уходят повторно. Значит проверять надо не «в следующей
 посылке», а именно вторую посылку того же сеанса - иначе тест пройдёт и в
 случае, когда применение отложилось на сутки.
 """
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 import pytest
@@ -18,29 +27,74 @@ from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
 
-pytestmark = [pytest.mark.stand, pytest.mark.mqtt]
+pytestmark = [pytest.mark.stand, pytest.mark.mqtt,
+              pytest.mark.usefixtures('discovery_reset')]
 
-NAMUR = 0
-FACTOR = 10
+# Сущности автодискавери, которые прошивка публикует независимо от тревог
+# (`ha/publish_discovery.cpp`). Тип в топике важен не меньше имени: `number`
+# отличается от `sensor` наличием топика команды.
+BASE_ENTITIES = (
+    ('number', 'period_min'),
+    ('sensor', 'voltage'),
+    ('sensor', 'rssi'),
+    ('sensor', 'ip'),
+    ('sensor', 'model'),
+)
 
-# Сущности, появившиеся в 2.0.47. Без явного списка тест зеленеет на
-# прошлогоднем наборе автодискавери.
-DISCOVERY_SWITCHES = ('vac', 'sc', 'ackw', 'ackh', 'ackm')
-DISCOVERY_NUMBERS = ('af1', 'al1', 'as1')
-DISCOVERY_BINARY = ('alarm_flow1', 'alarm_leak1', 'alarm_stop1')
+# Период на время теста: любое значение, отличное от базового, - лишь бы
+# отличалось. К базовому его вернёт ensure_baseline перед следующим тестом.
+OTHER_PERIOD_MIN = 90
 
 
-def device_name(stand: Stand) -> str:
-    """Имя устройства в топиках берём из настроек, а не угадываем."""
-    return stand.cfg.mqtt_topic.split('/')[-1]
+def config_topic(topics: list[str], entity_type: str, entity_id: str) -> str | None:
+    """Топик автодискавери сущности: `homeassistant/<тип>/<устройство>/<имя>/config`."""
+    tail = f'/{entity_id}/config'
+    return next((t for t in topics
+                 if t.startswith(f'homeassistant/{entity_type}/') and t.endswith(tail)),
+                None)
 
 
-@pytest.mark.requires(esp='2.0.47')       # сущности тревог появились в 2.0.47
-def test_I1_discovery_published(stand: Stand) -> None:
+def test_I0_readings_reach_broker(stand: Stand) -> None:
     """
-    Автодискавери публикуется по кнопке и содержит сущности этого релиза.
+    Показания уезжают в брокер, и это ровно та же посылка, что ушла на сервер.
+
+    Проверка на совпадение, а не на «поля похожи»: `send_data` формирует JSON
+    один раз и отдаёт его всем получателям (`senders/send_data.cpp`), поэтому
+    любое расхождение означает, что путь MQTT собирает данные сам по себе.
     """
-    stand.setup(mqtt_auto_discovery=1, channel=1, ctype=NAMUR, factor=FACTOR)
+    stand.setup(mqtt_auto_discovery=1)       # показания одним объектом в корень
+    assert stand.mqtt is not None
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    assert 'MQTT: Connected.' in session.text, f'брокер недоступен\n{session.text}'
+    assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
+        f'в брокере нет ничего в {stand.mqtt_root}/, пришло: {stand.mqtt.topics()}')
+
+    # Именно этот топик, а не последний в дереве: при включённом автодискавери
+    # показания идут одним объектом в корень, а следом устройство снимает
+    # удерживаемые сообщения своих же топиков, публикуя в них пустые
+    message = stand.mqtt.last(stand.mqtt_root)
+    assert message is not None, (
+        'показаний в корневом топике нет, дерево: '
+        f'{stand.mqtt.topics(stand.mqtt_root)}')
+    assert session.payload is not None, 'приёмник не получил посылку'
+    assert message.json() == session.payload, (
+        'в брокер и на сервер ушли разные данные')
+
+
+def test_I1_discovery_base_entities(stand: Stand) -> None:
+    """
+    Автодискавери публикуется по кнопке и описывает устройство целиком.
+
+    Отдельно - топик команды: стенд шлёт настройки в `<топик>/<сущность>/set`,
+    и это утверждение обязано опираться на то, что объявила сама прошивка.
+    Иначе тесты команд проверяли бы путь, которым Home Assistant не ходит:
+    подписка у прошивки на `<топик>/#`, и лишний сегмент она бы проглотила.
+    """
+    stand.setup(mqtt_auto_discovery=1)
     assert stand.mqtt is not None
     stand.mqtt.drain()
 
@@ -51,76 +105,91 @@ def test_I1_discovery_published(stand: Stand) -> None:
     topics = stand.mqtt.topics('homeassistant/')
     assert topics, 'автодискавери не опубликовано'
 
-    for name in DISCOVERY_SWITCHES:
-        assert any(f'/switch/' in t and f'{name}/config' in t for t in topics), \
-            f'нет переключателя {name}'
-    for name in DISCOVERY_NUMBERS:
-        assert any('/number/' in t and f'{name}/config' in t for t in topics), \
-            f'нет числового поля {name}'
-    for name in DISCOVERY_BINARY:
-        assert any('/binary_sensor/' in t and f'{name}/config' in t for t in topics), \
-            f'нет состояния {name}'
+    for entity_type, entity_id in BASE_ENTITIES:
+        assert config_topic(topics, entity_type, entity_id) is not None, (
+            f'нет сущности {entity_type}/{entity_id}, есть: {topics}')
+
+    topic = config_topic(topics, 'number', 'period_min')
+    assert topic is not None
+    message = stand.mqtt.last(topic)
+    assert message is not None
+    command_topic = message.json().get('cmd_t')
+    assert command_topic == stand.mqtt.command_topic('period_min'), (
+        f"стенд шлёт команды в {stand.mqtt.command_topic('period_min')}, "
+        f'а устройство ждёт их в {command_topic}')
 
 
-def test_I3_remote_vacation_reaches_attiny(stand: Stand) -> None:
+@pytest.mark.xfail(reason='#421: снятие retain возвращается по своей же подписке '
+                          'и затирает разобранное значение', strict=False)
+def test_I4_remote_period_min(stand: Stand, discovery_on: None) -> None:
     """
-    Команда из Home Assistant доезжает до attiny.
+    Настройка, присланная из Home Assistant, применяется в том же сеансе.
 
-    Четыре утверждения, и последнее - главное. Сохранить настройку в EEPROM мало:
-    режим «Я уехал» работает только если подменённый порог уехал в attiny, а это
-    видно исключительно по строке Alarm config.
+    Период выбран потому, что он есть в любой прошивке с MQTT и виден в
+    посылке: проверяем не «сохранилось в EEPROM», а то, что устройство само
+    сообщает о себе после применения.
+
+    Помечен нестрого: дефект #421 - гонка. Устройство снимает retain, получает
+    своё же пустое сообщение обратно и затирает им значение, если успевает до
+    отписки. Успевает не всегда, поэтому тест то красный, то зелёный, и строгий
+    xfail сам стал бы источником ложных падений.
     """
-    stand.setup_alarms(channel=1, factor=FACTOR, alarm_flow=3600, ctype=NAMUR,
-                       vacation=0, mqtt_auto_discovery=1, mqtt_retain=1)
     assert stand.mqtt is not None
-
     stand.reset_observers()
-    stand.mqtt.publish_set('vac', 1, device=device_name(stand), retain=True)
+    stand.mqtt.publish_set('period_min', OTHER_PERIOD_MIN, retain=True)
     stand.dut.press_button()
 
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    assert session.applied.get('vac') == '1', f'команда не применена: {session.applied}'
+    assert session.applied.get('period_min') == str(OTHER_PERIOD_MIN), (
+        f'команда не применена: {session.applied}')
     assert len(session.payloads) >= 2, 'после применения данные должны уйти повторно'
-    assert session.payload['vac'] is True
-    assert session.alarm_config is not None
-    assert session.alarm_config['vacation'] == 1
-    assert session.alarm_config['interval1'] == 65535
-
-    stand.setup(vacation=0)
-
-
-def test_I4_remote_threshold_is_recalculated(stand: Stand) -> None:
-    """
-    Порог, присланный извне, обязан пересчитаться в тики.
-
-    Проверка «значение сохранилось» слабая: она пройдёт и тогда, когда порог
-    лежит в настройках, но в attiny не уехал. 1440 л/ч при весе 10 - это ровно
-    100 тиков по 250 мс.
-    """
-    stand.setup_alarms(channel=1, factor=FACTOR, alarm_flow=3600, ctype=NAMUR,
-                       vacation=0, mqtt_auto_discovery=1, mqtt_retain=1)
-    assert stand.mqtt is not None
-
-    stand.reset_observers()
-    stand.mqtt.publish_set('af1', 1440, device=device_name(stand), retain=True)
-    stand.dut.press_button()
-
-    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
-
-    assert session.payload['af1'] == 1440
-    assert session.alarm_config['interval1'] == 100, (
-        f'порог не пересчитан: {session.alarm_config}')
+    assert session.payload is not None
+    assert session.payload['period_min'] == OTHER_PERIOD_MIN
 
 
 @pytest.mark.requires(esp='2.0.47')       # #409: снятие уходило без флага retain
+def test_I4b_retained_command_is_cleared(stand: Stand,
+                                        discovery_on: None) -> None:
+    """
+    Применив удерживаемую команду, устройство обязано стереть её из брокера.
+
+    Иначе она прилетает каждое пробуждение и переустанавливает настройку -
+    поменять её из портала станет невозможно. Проверять надо при выключенном
+    `mqtt_retain`: до 2.0.47 пустое сообщение уходило с флагом из настроек
+    (`ha/publish.cpp`, publish_simple), то есть при нуле команда оставалась
+    висеть, а при единице всё выглядело исправным.
+    """
+    stand.setup(mqtt_retain=0)
+    assert stand.mqtt is not None
+
+    stand.reset_observers()
+    stand.mqtt.publish_set('period_min', OTHER_PERIOD_MIN, retain=True)
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    assert session.applied.get('period_min') == str(OTHER_PERIOD_MIN), (
+        f'команда не доехала: {session.applied}')
+
+    command_topic = stand.mqtt.command_topic('period_min')
+    left = [m.topic for m in stand.mqtt.fetch_retained(stand.mqtt_root)]
+    assert command_topic not in left, (
+        f'команда осталась в брокере удерживаемой: {left}')
+
+    stand.setup(mqtt_retain=1)
+
+
 def test_I7_retain_flag(stand: Stand) -> None:
     """
     Флаг retain у публикаций.
 
     Перезапускать брокер незачем: сохранятся ли удерживаемые сообщения, зависит
-    от его настроек, а не от прошивки. Проверяем сам флаг в пришедшем сообщении.
+    от его настроек, а не от прошивки. Смотрим сам флаг - глазами нового
+    подписчика, потому что в живой доставке он нулевой у любого брокера
+    (MQTT 3.1.1, 3.3.1.3).
     """
+    # На прошивках до 2.0.47 эта настройка не сохраняется вовсе, но там
+    # `mqtt_retain` и так единица по умолчанию (config.cpp, init_config)
     stand.setup(mqtt_retain=1, mqtt_auto_discovery=1)
     assert stand.mqtt is not None
     stand.mqtt.drain()
@@ -130,32 +199,136 @@ def test_I7_retain_flag(stand: Stand) -> None:
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert 'MQTT: Retain: 1' in session.text
-    message = stand.mqtt.wait_topic(device_name(stand), timeout=30)
-    assert message is not None, 'устройство ничего не опубликовало'
-    assert message.retain, 'сообщение пришло без флага retain'
+    assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, \
+        'устройство ничего не опубликовало'
+
+    retained = stand.mqtt.fetch_retained(stand.mqtt_root)
+    assert retained, f'в брокере не осталось ничего в {stand.mqtt_root}/'
+    assert all(m.retain for m in retained)
+    assert any(m.topic == stand.mqtt_root for m in retained), (
+        f'показаний среди удерживаемых нет: {[m.topic for m in retained]}')
 
 
-def test_I5_remote_mask_change(stand: Stand, quiet: None) -> None:
+@pytest.mark.requires(esp='2.0.47')       # до неё чекбокс retain не сохранялся
+def test_I7b_no_retain(stand: Stand) -> None:
     """
-    Маска квитанции меняется извне.
+    Зеркальный случай: при выключенном retain в брокере ничего не остаётся.
 
-    Правило «выключенный получатель выпадает из условия» живёт в прошивке
-    именно ради этого пути: в Home Assistant отправителя можно выключить уже
-    после того, как галочка поставлена.
+    Без него предыдущий тест доказывает только то, что публикация вообще была:
+    брокер держал бы сообщение и при неверном флаге, если бы его выставлял
+    кто-то другой.
+
+    Требует 2.0.47: до неё `mqtt_retain` не разбирался в applyCheckBoxParameter
+    (`portal/active_point_api.cpp`, коммит cffafb6) - настройка приезжала,
+    печаталась строкой `Apply setting:` и молча пропадала.
     """
-    stand.setup_alarms(channel=1, factor=FACTOR, alarm_flow=3600, ctype=NAMUR,
-                       vacation=0, confirm_mqtt=0)
+    stand.setup(mqtt_retain=0, mqtt_auto_discovery=1)
     assert stand.mqtt is not None
+    stand.mqtt.drain()
 
     stand.reset_observers()
-    stand.mqtt.publish_set('ackm', 1, device=device_name(stand), retain=True)
     stand.dut.press_button()
-    applied = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
-    assert applied.payload['ackm'] is True
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    assert 'MQTT: Retain: 0' in session.text
+    assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, \
+        'устройство ничего не опубликовало'
+
+    left = [m.topic for m in stand.mqtt.fetch_retained(stand.mqtt_root)]
+    assert stand.mqtt_root not in left, (
+        f'показания остались удерживаемыми при mqtt_retain=0: {left}')
+
+    stand.setup(mqtt_retain=1)
+
+
+def test_I1b_discovery_json_is_valid(stand: Stand) -> None:
+    """
+    Каждый объявленный топик автодискавери - разбираемый JSON с обязательными
+    полями. Обрезанная публикация (а данные уходят кусками, `publish_chunked`)
+    иначе видна только в Home Assistant, куда стенд не заглядывает.
+    """
+    stand.setup(mqtt_auto_discovery=1)
+    assert stand.mqtt is not None
+    stand.mqtt.drain()
 
     stand.reset_observers()
-    stand.dut.pulses(channel=1, count=2, gap=3.0)
-    alarm = stand.wait_session(timeout=180)
-    alarm.assert_confirm(mask=4, confirmed=1)
+    stand.dut.press_button()
+    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    stand.setup(confirm_mqtt=0)
+    topics = stand.mqtt.topics('homeassistant/')
+    assert topics, 'автодискавери не опубликовано'
+
+    for topic in topics:
+        message = stand.mqtt.last(topic)
+        assert message is not None
+        try:
+            entity = json.loads(message.payload)
+        except ValueError as error:
+            raise AssertionError(f'{topic}: не JSON ({error}): {message.payload}')
+        assert entity.get('stat_t'), f'{topic}: нет топика состояния'
+        assert entity.get('uniq_id'), f'{topic}: нет уникального идентификатора'
+
+
+def test_I0b_readings_go_to_separate_topics(stand: Stand,
+                                            discovery_off: None) -> None:
+    """
+    Без автодискавери показания уходят по топику на поле.
+
+    Это второй режим публикации (`ha/publish_data.cpp`), и он не следствие
+    первого: там один объект в корень, здесь - значение в топик на каждое поле
+    посылки. Тест на одном из них ничего не говорит о другом.
+    """
+    assert stand.mqtt is not None
+    stand.reset_observers()
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    assert session.payload is not None, 'приёмник не получил посылку'
+    topics = stand.mqtt.topics(stand.mqtt_root)
+    assert topics, f'в брокере пусто, пришло: {stand.mqtt.topics()}'
+
+    # Целые и строки, без плавающей точки: её текстовое представление у
+    # прошивки и у python разное, и тест мигал бы на верных данных
+    for name in ('imp0', 'imp1', 'rssi', 'version_esp', 'period_min'):
+        message = stand.mqtt.last(f'{stand.mqtt_root}/{name}')
+        assert message is not None, f'нет топика {name}, есть: {topics}'
+        assert message.payload == str(session.payload[name]), (
+            f'{name}: в брокере {message.payload!r}, в посылке '
+            f'{session.payload[name]!r}')
+
+    assert stand.mqtt.last(stand.mqtt_root) is None, (
+        'одним объектом в корень публикуют только при включённом автодискавери')
+    assert not stand.mqtt.topics('homeassistant/'), (
+        f'автодискавери выключено, а топики опубликованы: '
+        f'{stand.mqtt.topics("homeassistant/")}')
+
+
+def test_I4c_commands_need_discovery(stand: Stand, discovery_off: None) -> None:
+    """
+    Без автодискавери команда не доезжает - и это не поломка, а устройство.
+
+    Подписку на `<топик>/#` и обработчик команд прошивка заводит только при
+    включённом автодискавери (`senders/sender_mqtt.h`). Тест закрепляет это
+    явно: иначе выключенный где-то в соседнем тесте флаг превращается в
+    загадочное «команда не применена» и обвиняет прошивку не в том.
+    """
+    assert stand.mqtt is not None
+    assert stand.last_payload is not None
+    was = stand.last_payload['period_min']
+
+    stand.reset_observers()
+    stand.mqtt.publish_set('period_min', OTHER_PERIOD_MIN, retain=True)
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    assert session.applied == {}, f'настройки применены: {session.applied}'
+    assert session.payload is not None
+    assert session.payload['period_min'] == was, 'период поменялся без подписки'
+
+    # Главное утверждение - положительное: команду никто не забрал, она так и
+    # лежит в брокере удерживаемой. Отсутствие строк в логе доказывало бы то же
+    # самое, но только пока METF не теряет строки кольца
+    left = [m.topic for m in stand.mqtt.fetch_retained(stand.mqtt_root)]
+    assert stand.mqtt.command_topic('period_min') in left, (
+        f'команда исчезла из брокера, а подписки не было: {left}')
+    assert 'MQTT: Subscribed to' not in session.text

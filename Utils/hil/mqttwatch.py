@@ -7,8 +7,9 @@
 данных, поэтому удерживаемое сообщение подхватывается сразу, а после применения
 данные уходят повторно.
 
-Флаг retain у пришедшего сообщения сохраняем: по нему проверяется настройка
-mqtt_retain, и это честнее, чем перезапускать брокер.
+Флаг retain в живой доставке всегда нулевой - брокер выставляет его только
+тому, кто подписался уже после публикации (MQTT 3.1.1, 3.3.1.3). Поэтому
+настройка mqtt_retain проверяется отдельным подписчиком: `fetch_retained`.
 """
 
 from __future__ import annotations
@@ -38,12 +39,16 @@ class MqttWatch:
     """Подписчик на всё дерево брокера плюс публикация команд."""
 
     def __init__(self, host: str, port: int = 1883, topic: str = 'waterius') -> None:
+        self.host = host
+        self.port = port
         self.topic = topic.rstrip('/')
         self.messages: queue.Queue[Message] = queue.Queue()
         self.history: list[Message] = []
         self._lock = threading.Lock()
 
-        self._client = mqtt.Client(client_id=f'hil-{int(time.time())}')
+        # В paho 2.x конструктор требует версию API обратных вызовов явно.
+        self._client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
+                                   client_id=f'hil-{int(time.time())}')
         self._client.on_message = self._on_message
         self._client.connect(host, port, keepalive=30)
         self._client.subscribe('#')
@@ -57,15 +62,55 @@ class MqttWatch:
 
     # --- ожидание ---
 
-    def wait_topic(self, suffix: str, timeout: float = 60.0) -> Message | None:
-        """Дождаться сообщения, топик которого заканчивается на suffix."""
+    def wait_prefix(self, prefix: str, timeout: float = 60.0) -> Message | None:
+        """
+        Дождаться сообщения из дерева устройства.
+
+        Именно по началу топика, а не по концу: суффикс совпадает и у чужого
+        сообщения, и у автодискавери, который уходит в `homeassistant/`, -
+        проверка «хоть что-то приехало» так зеленела бы всегда.
+        """
         deadline = time.time() + timeout
-        while time.time() < deadline:
+        while True:
             with self._lock:
+                root = prefix.rstrip('/')
                 for message in reversed(self.history):
-                    if message.topic.endswith(suffix):
+                    if message.topic == root or message.topic.startswith(root + '/'):
                         return message
+            if time.time() >= deadline:
+                return None
             time.sleep(0.5)
+
+    def fetch_retained(self, prefix: str, timeout: float = 5.0) -> list[Message]:
+        """
+        Что лежит в брокере удерживаемым - глазами нового подписчика.
+
+        Иначе флаг retain не проверить: тому, кто уже подписан, брокер
+        доставляет сообщение с нулевым флагом, и утверждение `message.retain`
+        падало бы независимо от настройки в прошивке.
+        """
+        root = prefix.rstrip('/')
+        found: list[Message] = []
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
+                             client_id=f'hil-retained-{int(time.time())}')
+        client.on_message = lambda _c, _u, msg: found.append(
+            Message(msg.topic, msg.payload.decode(errors='replace'), bool(msg.retain)))
+        client.connect(self.host, self.port, keepalive=30)
+        # Одного фильтра достаточно: `#` покрывает и сам корень, куда
+        # прошивка кладёт показания одним объектом (MQTT 3.1.1, 4.7.1.2).
+        client.subscribe(f'{root}/#', qos=1)
+        client.loop_start()
+        time.sleep(timeout)
+        client.loop_stop()
+        client.disconnect()
+        return found
+
+    def last(self, topic: str) -> Message | None:
+        """Последнее сообщение в точности этого топика."""
+        with self._lock:
+            for message in reversed(self.history):
+                if message.topic == topic:
+                    return message
         return None
 
     def topics(self, prefix: str = '') -> list[str]:
@@ -80,20 +125,50 @@ class MqttWatch:
 
     # --- команды устройству ---
 
-    def publish_set(self, name: str, value: Any, device: str,
-                    retain: bool = True) -> None:
+    def command_topic(self, name: str) -> str:
+        """
+        Топик команды - тот же, что прошивка объявляет в автодискавери:
+        `cmd_t` собирается как `<топик>/<сущность>/set`
+        (`ha/discovery_entity.cpp`). Лишний сегмент в середине прошивка бы
+        проглотила - она подписана на `<топик>/#`, а имя параметра берёт из
+        предпоследнего сегмента, - и тест прошёл бы мимо настоящего пути HA.
+        """
+        return f'{self.topic}/{name}/set'
+
+    def publish_set(self, name: str, value: Any, retain: bool = True) -> None:
         """
         Прислать настройку так, как это делает Home Assistant.
 
         retain=True по умолчанию: ЕСП живёт секунды и подписывается только на
         время сеанса, обычное сообщение она просто не застанет.
         """
-        topic = f'{self.topic}/{device}/{name}/set'
+        topic = self.command_topic(name)
         logger.info(f'MQTT -> {topic} = {value}')
         self._client.publish(topic, str(value), retain=retain)
 
     def clear_retained(self, topic: str) -> None:
         self._client.publish(topic, '', retain=True)
+
+    def clear_retained_tree(self, prefix: str, timeout: float = 1.0) -> list[str]:
+        """
+        Вычистить удерживаемые сообщения дерева устройства.
+
+        Свои же показания Ватериус публикует с флагом retain, и в следующем
+        сеансе брокер отдаёт их ему обратно - вместе с командой теста. Чем
+        больше накопилось, тем менее предсказуемо, что устройство успеет
+        разобрать, поэтому каждый тест начинается с пустого дерева.
+        """
+        topics = [m.topic for m in self.fetch_retained(prefix, timeout)]
+        for topic in topics:
+            self.clear_retained(topic)
+        if topics:
+            # Пустые сообщения вернутся нам же по подписке на `#`, и вернутся
+            # не мгновенно: без паузы они попадают в историю уже после того,
+            # как её вычистили, и тест принимает нашу уборку за публикацию
+            # устройства
+            time.sleep(0.3)
+            logger.info(f'снято удерживаемых сообщений: {len(topics)}')
+        return topics
 
     def close(self) -> None:
         self._client.loop_stop()

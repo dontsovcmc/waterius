@@ -24,6 +24,12 @@ from .router import NatRouter
 HTTPS_PORT = 443
 HTTP_PORT = 80
 
+# Список, в котором режется исходящий трафик клиента точки. Имя обманчиво:
+# пакет клиента приходит на интерфейс точки, а обработчик входа сверяется с
+# `to_ap` (netif_hooks.c). Здесь оно нужно, чтобы читать счётчики того же
+# списка, в который NatRouter кладёт правила.
+CLIENT_OUT = 'to_ap'
+
 
 class Net:
     """Сеть стенда: точка доступа и фильтр трафика Ватериуса."""
@@ -78,11 +84,30 @@ class Net:
             yield
 
     @contextmanager
+    def _blocking(self, what: str) -> Iterator[None]:
+        """
+        Убедиться, что фильтр не просто завёлся, а действительно резал.
+
+        Заведённое правило не значит ничего: с неверным списком оно так же
+        читается в `show acl` и так же пропускает весь трафик. Именно так
+        сценарии «сервер недоступен» полгода проходили, ничего не проверяя,
+        и падали только тогда, когда до них добралось живое устройство.
+        Поэтому концом сценария считается выросший счётчик отброшенных.
+        """
+        before = self.router.acl_stats(CLIENT_OUT).get('denied', 0)
+        yield
+        after = self.router.acl_stats(CLIENT_OUT).get('denied', 0)
+        assert after > before, (
+            f'{what}: фильтр не отбросил ни одного пакета '
+            f'(denied {before} -> {after}). Правило есть, но трафик идёт мимо: '
+            f'проверьте список ({CLIENT_OUT}) и адрес {self.dut_ip}')
+
+    @contextmanager
     def internet_down(self) -> Iterator[None]:
         """Wi-Fi живёт, весь исходящий трафик устройства отброшен."""
         self.verify_dut()
         logger.info('сеть: режем весь трафик устройства')
-        with self.router.blocked(self.dut_ip):
+        with self.router.blocked(self.dut_ip), self._blocking('internet_down'):
             yield
 
     @contextmanager
@@ -98,7 +123,8 @@ class Net:
         self.router.block_port(self.dut_ip, HTTP_PORT)
         self.router.block_port(self.dut_ip, self.receiver_port)
         try:
-            yield
+            with self._blocking('cloud_down'):
+                yield
         finally:
             self.router.acl_clear()
 
@@ -107,7 +133,8 @@ class Net:
         """Брокер недоступен, облако живо: зеркало предыдущего сценария."""
         self.verify_dut()
         logger.info('сеть: режем брокер, облако оставляем')
-        with self.router.blocked(self.dut_ip, self.broker_port):
+        with self.router.blocked(self.dut_ip, self.broker_port), \
+                self._blocking('mqtt_down'):
             yield
 
     @contextmanager
