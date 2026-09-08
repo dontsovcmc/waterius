@@ -64,6 +64,9 @@ def board(cfg: Any, stand: Any) -> Iterator[AtBoard]:
         except Exception as err:
             logger.warning(f'портал не закрылся командой: {err}')
         device.close()
+        # Пока устройство не уснуло, ЕСП запитана, и нажатие кнопки до attiny
+        # не доходит: соседний тест нажал бы впустую.
+        stand.wait_asleep()
 
 
 @pytest.fixture(scope='module')
