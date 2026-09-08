@@ -7,7 +7,6 @@
 #include "json.h"
 #include "utils.h"
 #include "portal/active_point_api.h"
-#include "core/mqtt_command.h"
 
 
 #define MQTT_MAX_TRIES 5
@@ -24,19 +23,22 @@ extern CalculatedData cdata;
  *
  * @param topic топик вида /period_min/set
  * @param payload данные из топика
- * @return true сообщение было командой,
- * @return false команды не было, трогать топик не надо
+ * @return true пришла команда,
+ * @return false команды не было
  */
 bool ha_fill_json_settings_data(const String &topic, const String &payload, JsonDocument &json_settings_received)
 {
-    size_t name_pos = 0;
-    size_t name_len = 0;
-    if (!parse_mqtt_command(topic.c_str(), payload.length(), &name_pos, &name_len))
+    // Пустое сообщение в топике команды - снятие retain, а не значение:
+    // устройство публикует его само и получает обратно по своей подписке (#421)
+    if (payload.length() == 0 || !topic.endsWith(F("/set")))
     {
         return false;
     }
 
-    String name = topic.substring(name_pos, name_pos + name_len);
+    // извлекаем имя параметра
+    int endslash = topic.lastIndexOf('/');
+    int prevslash = topic.lastIndexOf('/', endslash - 1);
+    String name = topic.substring(prevslash + 1, endslash);
     LOG_INFO(F("MQTT: CALLBACK: Parameter ") << name);
 
     if (name == F("ota"))
@@ -85,6 +87,9 @@ void mqtt_callback(Settings &sett, JsonDocument &json_settings_received, PubSubC
     }
     LOG_INFO(F("MQTT: CALLBACK: Message payload: ") << payload);
 
+    // Снимаем retain только со своих команд: подписка накрывает и топики
+    // показаний, а стирать их нельзя - из них Home Assistant берёт значения
+    // сразу после перезапуска (#422)
     if (ha_fill_json_settings_data(topic, payload, json_settings_received))
     {
         clear_retained(mqtt_client, topic);
