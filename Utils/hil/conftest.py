@@ -19,7 +19,7 @@ import pytest
 from loguru import logger
 
 if TYPE_CHECKING:                       # только для подсказок типов
-    from .broker import Mosquitto
+    from .broker import MqttBroker
     from .mqttwatch import MqttWatch
     from .router import RouterState
     from .stand import Stand
@@ -38,8 +38,12 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line('markers', 'stand: требует собранного стенда')
     config.addinivalue_line('markers', 'slow: идёт десятки минут')
-    config.addinivalue_line('markers', 'mqtt: нужен брокер (brew install mosquitto)')
+    config.addinivalue_line('markers', 'mqtt: нужен брокер (amqtt из requirements.txt)')
     config.addinivalue_line('markers', 'portal: режим настройки и AT-плата')
+    config.addinivalue_line(
+        'markers',
+        'arm(**settings): доп. настройки для фикстуры тревог; иначе тесту '
+        'пришлось бы платить за второй сеанс на живом железе')
     config.addinivalue_line(
         'markers',
         'requires(attiny=N, esp="X.Y.Z"): минимальные версии прошивки для теста; '
@@ -65,15 +69,15 @@ def cfg(request: pytest.FixtureRequest) -> Any:
 @pytest.fixture(scope='session')
 def broker(cfg: Any) -> Iterator[Any]:
     """Свой брокер: тесты retain и автодискавери должны начинаться с чистых топиков."""
-    from .broker import Mosquitto
-    if not Mosquitto.available():
+    from .broker import MqttBroker
+    if not MqttBroker.available():
         # Не пропуск: от брокера зависят только тесты с меткой mqtt, а раньше
         # его отсутствие уводило в пропуск весь стенд - фикстура stand стоит
         # на этой же цепочке.
-        logger.warning('mosquitto не установлен: тесты MQTT будут пропущены')
+        logger.warning('нет amqtt: тесты MQTT будут пропущены')
         yield None
         return
-    server = Mosquitto(cfg.broker_port)
+    server = MqttBroker(cfg.broker_port, cfg.broker_host)
     server.start()
     try:
         yield server
@@ -101,6 +105,7 @@ def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     logger.info(f'роутер: {device.router.version()}')
     device.identify()          # версии и MAC - у самого устройства, до первого теста
     device.ensure_network()    # и сеть: в чужой стенд бесполезен
+    device.ensure_mqtt()       # и брокер, если он поднялся
     try:
         yield device
     finally:
@@ -145,7 +150,7 @@ def needs_broker(request: pytest.FixtureRequest) -> None:
     if 'mqtt' not in request.keywords or not request.config.getoption('--stand'):
         return
     if request.getfixturevalue('broker') is None:
-        pytest.skip('нужен брокер: brew install mosquitto')
+        pytest.skip('нужен брокер: pip install -r Utils/hil/requirements.txt')
 
 
 @pytest.fixture(autouse=True)

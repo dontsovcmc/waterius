@@ -207,3 +207,66 @@ def test_сеанс_по_режиму_не_теряется_из_за_настр
     session = watcher._take_session(TRANSMIT_MODE)
     assert session is not None
     assert session.mode == TRANSMIT_MODE
+
+
+# Настройки печатаются до `Startup mode:`, секциями, и `state=`/`host=` в них
+# называются одинаково. Адрес брокера идёт одной строкой с портом.
+SETTINGS_PRINT = [
+    fw('wifi_ssid=waterius_stand'),
+    fw('--- Waterius.ru ---- '),
+    fw('state=OFF'),
+    fw('host=cloud.waterius.ru key=xxx'),
+    fw('--- HTTP ---- '),
+    fw('state=ON'),
+    fw('host=http://192.168.50.252:8000/data'),
+    fw('--- MQTT ---- '),
+    fw('state=ON'),
+    fw('host=192.168.50.252 port=1883'),
+]
+
+
+def test_настройки_разбираются_по_секциям() -> None:
+    """
+    Адрес брокера и его порт печатаются одной строкой, а `state=` и `host=`
+    внутри секций называются одинаково: без оглядки на секцию сервер и брокер
+    перепутались бы, и стенд настраивал бы устройство впустую.
+    """
+    watcher = LogWatcher(FakeApi(through_ring(SETTINGS_PRINT + SESSION_PLAN)))
+    watcher.poll()
+    session = watcher._take_session(None)
+    assert session is not None
+    config = session.config
+
+    assert config['wifi_ssid'] == 'waterius_stand'
+    assert config['waterius_on'] == '0'
+    assert config['http_on'] == '1'
+    assert config['http_host'] == 'http://192.168.50.252:8000/data'
+    assert config['mqtt_on'] == '1'
+    assert config['mqtt_host'] == '192.168.50.252'
+    assert config['mqtt_port'] == '1883'
+
+
+def test_принятая_настройка_не_значит_сохранённая() -> None:
+    """
+    `Apply setting:` печатается до валидации, `Saved:` - после. Для параметров,
+    которых нет в посылке (адрес брокера, порт, включённость получателя), это
+    единственный способ отличить принятое от применённого.
+    """
+    lines = [
+        fw('Startup mode: 2'),
+        fw('Apply setting: mqtt_on=1'),
+        fw('Saved: mqtt_on=1'),
+        fw('Apply setting: mqtt_host=192.168.50.252'),
+        fw('Saved: mqtt_host=192.168.50.252'),
+        fw('Apply setting: mqtt_port=99999'),
+        fw('Error: mqtt_port out of range', level='ERROR'),
+        fw('Going to sleep'),
+    ]
+    watcher = LogWatcher(FakeApi(through_ring(lines)))
+    watcher.poll()
+    session = watcher._take_session(None)
+    assert session is not None
+
+    assert session.applied['mqtt_port'] == '99999', 'принято прошивкой'
+    assert 'mqtt_port' not in session.saved, 'но не сохранено: значение отвергнуто'
+    assert session.saved['mqtt_host'] == '192.168.50.252'

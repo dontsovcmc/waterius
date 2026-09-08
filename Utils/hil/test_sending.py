@@ -59,6 +59,7 @@ def expected_fields(esp_version: tuple[int, int, int] | None) -> dict[str, Any]:
 
 
 @pytest.mark.mqtt          # проверяет все три канала, включая брокер
+@pytest.mark.requires(esp='2.0.47')       # вердикт читается из строки Alarm confirm
 def test_G1_all_three_channels(stand: Stand) -> None:
     """Короткое нажатие: показания уходят во все три канала."""
     stand.reset_observers()
@@ -75,8 +76,9 @@ def test_G1_all_three_channels(stand: Stand) -> None:
     assert 'MQTT: Not connected' not in session.text
 
     assert stand.mqtt is not None
-    assert stand.mqtt.wait_topic(stand.cfg.mqtt_topic.split('/')[-1], timeout=30) \
-        or stand.mqtt.topics(), 'в брокере нет ни одного топика'
+    assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
+        f'в брокере нет ни одного топика {stand.mqtt_root}/, '
+        f'пришло: {stand.mqtt.topics()}')
 
 
 def test_G2_payload_schema(stand: Stand) -> None:

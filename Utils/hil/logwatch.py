@@ -54,6 +54,10 @@ RE_IDLE_SEND = re.compile(r'Idle: consumed=([01]), silence_min=(\d+), transmit=(
 RE_HTTP_CODE = re.compile(r'HTTP: Response code: (-?\d+)')
 RE_PERIOD_ATTINY = re.compile(r'Wakeup period, min \(attiny\):(\d+)')
 RE_APPLY = re.compile(r'Apply setting: (\S+)=(\S*)')
+# Значение, прошедшее валидацию и попавшее в настройки. Единственный
+# способ проверить параметр, которого нет в посылке: адрес брокера, порт,
+# включённость получателя.
+RE_SAVED = re.compile(r'Saved: (\S+)=(\S*)')
 
 # Настройки, напечатанные при загрузке (config.cpp: print_settings). Секции
 # идут заголовками, а `state=` и `host=` внутри них называются одинаково -
@@ -62,6 +66,8 @@ RE_SECTION = re.compile(r'--- (\S+) ---')
 SECTION_KEYS = {'Waterius.ru': 'waterius', 'HTTP': 'http', 'MQTT': 'mqtt'}
 RE_STATE = re.compile(r'\bstate=(ON|OFF)\b')
 RE_HOST = re.compile(r'\bhost=(\S*)')
+# У брокера порт печатается той же строкой, что и адрес (config.cpp).
+RE_PORT = re.compile(r'\bport=(\d+)')
 RE_WIFI_SSID = re.compile(r'\bwifi_ssid=(\S*)')
 
 SESSION_END = 'Going to sleep'
@@ -206,6 +212,9 @@ class Session:
             host = RE_HOST.search(line)
             if host:
                 out[f'{section}_host'] = host.group(1)
+                port = RE_PORT.search(line)
+                if port:
+                    out[f'{section}_port'] = port.group(1)
         return out
 
     @property
@@ -225,6 +234,17 @@ class Session:
     def applied(self) -> dict[str, str]:
         """Настройки, приехавшие в ответе сервера или по MQTT."""
         return dict(RE_APPLY.findall(self.text))
+
+    @property
+    def saved(self) -> dict[str, str]:
+        """
+        Настройки, которые прошивка приняла и записала.
+
+        Отличается от `applied` тем, что там - полученное, а здесь - выжившее
+        после валидации: отвергнутый параметр печатается ошибкой, и строки
+        `Saved:` для него не будет.
+        """
+        return dict(RE_SAVED.findall(self.text))
 
     @property
     def complete(self) -> bool:

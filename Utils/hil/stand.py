@@ -284,6 +284,73 @@ class Stand:
             board.close()
 
     @property
+    def mqtt_root(self) -> str:
+        """
+        Корневой топик устройства.
+
+        Его задаёт стенд, а не устройство: в лог прошивка топик не печатает
+        (`config.cpp`, print_settings), значит прочитать его неоткуда, а
+        угадывать - значит однажды слушать пустое дерево и списать это на
+        сломанный MQTT.
+        """
+        return self.cfg.mqtt_topic.rstrip('/')
+
+    def ensure_mqtt(self, timeout: float = 300.0) -> bool:
+        """
+        Направить устройство в брокер стенда, если оно публикует не туда.
+
+        Признак «настроено» - не строка в конфиге, а сообщение, пришедшее в наш
+        брокер: адрес может совпадать, а публикации не быть (выключен MQTT,
+        занят чужим брокером, не пускает сеть), и тогда весь блок I падал бы по
+        причине, к прошивке отношения не имеющей.
+
+        Возвращает True, если пришлось настраивать.
+        """
+        if self.mqtt is None:
+            return False
+
+        root = self.mqtt_root
+        message = self.mqtt.wait_prefix(root, timeout=0)
+        if message is not None:
+            logger.info(f'устройство публикует в брокер стенда: {message.topic}')
+            return False
+
+        config = self.device_config
+        logger.warning(
+            f'устройство не публикует в брокер стенда: MQTT '
+            f'{"ON" if config.get("mqtt_on") == "1" else "OFF"}, '
+            f'{config.get("mqtt_host") or "?"}:{config.get("mqtt_port") or "?"}')
+
+        # mqtt_on обязан идти первым: адрес, порт и топик прошивка принимает
+        # только при включённом MQTT (active_point_api.cpp,
+        # applyNonCheckBoxParameter), а параметры применяются в порядке ключей
+        # ответа.
+        self.setup(mqtt_on=1,
+                   mqtt_host=self.cfg.broker_host,
+                   mqtt_port=self.cfg.broker_port,
+                   mqtt_topic=root,
+                   timeout=timeout)
+
+        message = self.mqtt.wait_prefix(root, timeout=30)
+        if message is None:
+            # Повторная посылка в том же сеансе до брокера не доезжает на
+            # прошивках до 2.0.47 (#406), поэтому проверяем следующим сеансом,
+            # где MQTT включён с самого начала.
+            self.reset_observers()
+            self.dut.press_button()
+            session = self.wait_session(timeout=timeout)
+            message = self.mqtt.wait_prefix(root, timeout=30)
+            assert message is not None, (
+                f'устройство не опубликовало ничего в {root}/ на '
+                f'{self.cfg.broker_host}:{self.cfg.broker_port}. '
+                f'Подключение к брокеру: '
+                f'{"есть" if "MQTT: Connected." in session.text else "нет"}\n'
+                f'{session.text}')
+
+        logger.info(f'устройство переведено в брокер стенда: {message.topic}')
+        return True
+
+    @property
     def version_str(self) -> str:
         return '.'.join(str(x) for x in self.esp_version) if self.esp_version else '?'
 
@@ -322,10 +389,22 @@ class Stand:
             'после применения настроек данные должны уйти повторно, '
             f'посылок {len(session.payloads)}')
 
+        payload = session.payload or {}
+        saved = session.saved
         for name, value in settings.items():
-            got = session.payload.get(name) if session.payload else None
-            assert same_value(got, value), (
-                f'{name}: просили {value}, устройство отдаёт {got}')
+            if name in payload:
+                assert same_value(payload[name], value), (
+                    f'{name}: просили {value}, устройство отдаёт {payload[name]}')
+                continue
+            # Адреса, порты и включённость получателей в посылку не попадают
+            # (json.cpp), поэтому для них единственное свидетельство - строка
+            # `Saved:`: её печатают после валидации, а отвергнутый параметр
+            # уходит в ошибку и такой строки не оставляет.
+            assert name in saved, (
+                f'{name} не виден ни в посылке, ни строкой Saved: '
+                f'прошивка его не приняла\n{session.text}')
+            assert saved[name] == str(value), (
+                f'{name}: просили {value}, прошивка сохранила {saved[name]}')
 
         return session
 
