@@ -7,6 +7,7 @@
 #include "json.h"
 #include "utils.h"
 #include "portal/active_point_api.h"
+#include "core/mqtt_command.h"
 
 
 #define MQTT_MAX_TRIES 5
@@ -23,35 +24,39 @@ extern CalculatedData cdata;
  *
  * @param topic топик вида /period_min/set
  * @param payload данные из топика
+ * @return true сообщение было командой,
+ * @return false команды не было, трогать топик не надо
  */
-void ha_fill_json_settings_data(const String &topic, const String &payload, JsonDocument &json_settings_received)
+bool ha_fill_json_settings_data(const String &topic, const String &payload, JsonDocument &json_settings_received)
 {
-    bool updated = false;
-    if (topic.endsWith(F("/set"))) // пришла команда на изменение
+    size_t name_pos = 0;
+    size_t name_len = 0;
+    if (!parse_mqtt_command(topic.c_str(), payload.length(), &name_pos, &name_len))
     {
-        // извлекаем имя параметра
-        int endslash = topic.lastIndexOf('/');
-        int prevslash = topic.lastIndexOf('/', endslash - 1);
-        String name = topic.substring(prevslash + 1, endslash);
-        LOG_INFO(F("MQTT: CALLBACK: Parameter ") << name);
+        return false;
+    }
 
-        if (name == F("ota"))
+    String name = topic.substring(name_pos, name_pos + name_len);
+    LOG_INFO(F("MQTT: CALLBACK: Parameter ") << name);
+
+    if (name == F("ota"))
+    {
+        JsonDocument ota_doc;
+        if (deserializeJson(ota_doc, payload) == DeserializationError::Ok)
         {
-            JsonDocument ota_doc;
-            if (deserializeJson(ota_doc, payload) == DeserializationError::Ok)
-            {
-                json_settings_received[name] = ota_doc.as<JsonObject>();
-            }
-            else
-            {
-                LOG_ERROR(F("MQTT: Failed to parse OTA JSON"));
-            }
+            json_settings_received[name] = ota_doc.as<JsonObject>();
         }
         else
         {
-            json_settings_received[name] = payload;
+            LOG_ERROR(F("MQTT: Failed to parse OTA JSON"));
         }
     }
+    else
+    {
+        json_settings_received[name] = payload;
+    }
+
+    return true;
 }
 
 /**
@@ -80,10 +85,10 @@ void mqtt_callback(Settings &sett, JsonDocument &json_settings_received, PubSubC
     }
     LOG_INFO(F("MQTT: CALLBACK: Message payload: ") << payload);
 
-    ha_fill_json_settings_data(topic, payload, json_settings_received);
-
-
-    clear_retained(mqtt_client, topic);
+    if (ha_fill_json_settings_data(topic, payload, json_settings_received))
+    {
+        clear_retained(mqtt_client, topic);
+    }
 }
 
 /**
