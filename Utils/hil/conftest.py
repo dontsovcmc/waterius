@@ -200,6 +200,59 @@ def device_baseline(request: pytest.FixtureRequest) -> None:
 
 
 @pytest.fixture
+def discovery_on(request: pytest.FixtureRequest) -> None:
+    """
+    Предусловие тестов команд: включённое автодискавери.
+
+    Подписку на `<топик>/#` и сам обработчик команд прошивка заводит только при
+    нём (`senders/sender_mqtt.h`), поэтому без него команда из Home Assistant не
+    доедет вовсе - и тест обвинит устройство в том, чего оно не обещало.
+
+    Состояние читаем в посылке (`ha` - это mqtt плюс автодискавери,
+    `core/routing.cpp`), чтобы не платить сеансом там, где всё и так включено.
+    """
+    if not request.config.getoption('--stand'):
+        return
+    stand = request.getfixturevalue('stand')
+    if not (stand.last_payload or {}).get('ha'):
+        stand.setup(mqtt_auto_discovery=1)
+
+
+@pytest.fixture
+def discovery_off(request: pytest.FixtureRequest) -> None:
+    """
+    Обратное предусловие: автодискавери выключено.
+
+    Тогда показания уходят по топику на поле, а команды не доезжают вовсе -
+    подписки у прошивки нет. Это отдельный режим работы, и проверять его надо
+    отдельными тестами, а не полагаться на то, что осталось от соседа.
+    """
+    if not request.config.getoption('--stand'):
+        return
+    stand = request.getfixturevalue('stand')
+    if (stand.last_payload or {}).get('ha'):
+        stand.setup(mqtt_auto_discovery=0)
+
+
+@pytest.fixture(scope='module')
+def discovery_reset(request: pytest.FixtureRequest) -> Iterator[None]:
+    """
+    Выключить автодискавери, когда группа MQTT отработала.
+
+    Публикация автодискавери - это две с половиной сотни строк лога за сеанс, а
+    кольцо METF держит около тридцати пяти и вытесняет старые молча. Оставленное
+    включённым, оно уносит из лога `Startup mode:` следующих тестов, и те ждут
+    свой сеанс до таймаута, обвиняя устройство.
+    """
+    yield
+    if not request.config.getoption('--stand'):
+        return
+    if request.getfixturevalue('broker') is None:
+        return
+    request.getfixturevalue('stand').setup(mqtt_auto_discovery=0)
+
+
+@pytest.fixture
 def quiet(stand: Any, device_baseline: None) -> Iterator[None]:
     """
     Для тестов тревог: начинать с состояния, в котором устройство никого не

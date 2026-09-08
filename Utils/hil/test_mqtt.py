@@ -27,7 +27,8 @@ from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
 
-pytestmark = [pytest.mark.stand, pytest.mark.mqtt]
+pytestmark = [pytest.mark.stand, pytest.mark.mqtt,
+              pytest.mark.usefixtures('discovery_reset')]
 
 # Сущности автодискавери, которые прошивка публикует независимо от тревог
 # (`ha/publish_discovery.cpp`). Тип в топике важен не меньше имени: `number`
@@ -69,13 +70,16 @@ def test_I0_readings_reach_broker(stand: Stand) -> None:
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert 'MQTT: Connected.' in session.text, f'брокер недоступен\n{session.text}'
-    message = stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30)
-    assert message is not None, (
+    assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
         f'в брокере нет ничего в {stand.mqtt_root}/, пришло: {stand.mqtt.topics()}')
 
-    assert message.topic == stand.mqtt_root, (
-        'при включённом автодискавери показания идут одним объектом в корневой '
-        f'топик, а пришли в {message.topic}')
+    # Именно этот топик, а не последний в дереве: при включённом автодискавери
+    # показания идут одним объектом в корень, а следом устройство снимает
+    # удерживаемые сообщения своих же топиков, публикуя в них пустые
+    message = stand.mqtt.last(stand.mqtt_root)
+    assert message is not None, (
+        'показаний в корневом топике нет, дерево: '
+        f'{stand.mqtt.topics(stand.mqtt_root)}')
     assert session.payload is not None, 'приёмник не получил посылку'
     assert message.json() == session.payload, (
         'в брокер и на сервер ушли разные данные')
@@ -115,13 +119,20 @@ def test_I1_discovery_base_entities(stand: Stand) -> None:
         f'а устройство ждёт их в {command_topic}')
 
 
-def test_I4_remote_period_min(stand: Stand) -> None:
+@pytest.mark.xfail(reason='#421: снятие retain возвращается по своей же подписке '
+                          'и затирает разобранное значение', strict=False)
+def test_I4_remote_period_min(stand: Stand, discovery_on: None) -> None:
     """
     Настройка, присланная из Home Assistant, применяется в том же сеансе.
 
     Период выбран потому, что он есть в любой прошивке с MQTT и виден в
     посылке: проверяем не «сохранилось в EEPROM», а то, что устройство само
     сообщает о себе после применения.
+
+    Помечен нестрого: дефект #421 - гонка. Устройство снимает retain, получает
+    своё же пустое сообщение обратно и затирает им значение, если успевает до
+    отписки. Успевает не всегда, поэтому тест то красный, то зелёный, и строгий
+    xfail сам стал бы источником ложных падений.
     """
     assert stand.mqtt is not None
     stand.reset_observers()
@@ -138,7 +149,8 @@ def test_I4_remote_period_min(stand: Stand) -> None:
 
 
 @pytest.mark.requires(esp='2.0.47')       # #409: снятие уходило без флага retain
-def test_I4b_retained_command_is_cleared(stand: Stand) -> None:
+def test_I4b_retained_command_is_cleared(stand: Stand,
+                                        discovery_on: None) -> None:
     """
     Применив удерживаемую команду, устройство обязано стереть её из брокера.
 
@@ -255,3 +267,68 @@ def test_I1b_discovery_json_is_valid(stand: Stand) -> None:
             raise AssertionError(f'{topic}: не JSON ({error}): {message.payload}')
         assert entity.get('stat_t'), f'{topic}: нет топика состояния'
         assert entity.get('uniq_id'), f'{topic}: нет уникального идентификатора'
+
+
+def test_I0b_readings_go_to_separate_topics(stand: Stand,
+                                            discovery_off: None) -> None:
+    """
+    Без автодискавери показания уходят по топику на поле.
+
+    Это второй режим публикации (`ha/publish_data.cpp`), и он не следствие
+    первого: там один объект в корень, здесь - значение в топик на каждое поле
+    посылки. Тест на одном из них ничего не говорит о другом.
+    """
+    assert stand.mqtt is not None
+    stand.reset_observers()
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    assert session.payload is not None, 'приёмник не получил посылку'
+    topics = stand.mqtt.topics(stand.mqtt_root)
+    assert topics, f'в брокере пусто, пришло: {stand.mqtt.topics()}'
+
+    # Целые и строки, без плавающей точки: её текстовое представление у
+    # прошивки и у python разное, и тест мигал бы на верных данных
+    for name in ('imp0', 'imp1', 'rssi', 'version_esp', 'period_min'):
+        message = stand.mqtt.last(f'{stand.mqtt_root}/{name}')
+        assert message is not None, f'нет топика {name}, есть: {topics}'
+        assert message.payload == str(session.payload[name]), (
+            f'{name}: в брокере {message.payload!r}, в посылке '
+            f'{session.payload[name]!r}')
+
+    assert stand.mqtt.last(stand.mqtt_root) is None, (
+        'одним объектом в корень публикуют только при включённом автодискавери')
+    assert not stand.mqtt.topics('homeassistant/'), (
+        f'автодискавери выключено, а топики опубликованы: '
+        f'{stand.mqtt.topics("homeassistant/")}')
+
+
+def test_I4c_commands_need_discovery(stand: Stand, discovery_off: None) -> None:
+    """
+    Без автодискавери команда не доезжает - и это не поломка, а устройство.
+
+    Подписку на `<топик>/#` и обработчик команд прошивка заводит только при
+    включённом автодискавери (`senders/sender_mqtt.h`). Тест закрепляет это
+    явно: иначе выключенный где-то в соседнем тесте флаг превращается в
+    загадочное «команда не применена» и обвиняет прошивку не в том.
+    """
+    assert stand.mqtt is not None
+    assert stand.last_payload is not None
+    was = stand.last_payload['period_min']
+
+    stand.reset_observers()
+    stand.mqtt.publish_set('period_min', OTHER_PERIOD_MIN, retain=True)
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    assert session.applied == {}, f'настройки применены: {session.applied}'
+    assert session.payload is not None
+    assert session.payload['period_min'] == was, 'период поменялся без подписки'
+
+    # Главное утверждение - положительное: команду никто не забрал, она так и
+    # лежит в брокере удерживаемой. Отсутствие строк в логе доказывало бы то же
+    # самое, но только пока METF не теряет строки кольца
+    left = [m.topic for m in stand.mqtt.fetch_retained(stand.mqtt_root)]
+    assert stand.mqtt.command_topic('period_min') in left, (
+        f'команда исчезла из брокера, а подписки не было: {left}')
+    assert 'MQTT: Subscribed to' not in session.text

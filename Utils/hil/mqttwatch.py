@@ -149,6 +149,27 @@ class MqttWatch:
     def clear_retained(self, topic: str) -> None:
         self._client.publish(topic, '', retain=True)
 
+    def clear_retained_tree(self, prefix: str, timeout: float = 1.0) -> list[str]:
+        """
+        Вычистить удерживаемые сообщения дерева устройства.
+
+        Свои же показания Ватериус публикует с флагом retain, и в следующем
+        сеансе брокер отдаёт их ему обратно - вместе с командой теста. Чем
+        больше накопилось, тем менее предсказуемо, что устройство успеет
+        разобрать, поэтому каждый тест начинается с пустого дерева.
+        """
+        topics = [m.topic for m in self.fetch_retained(prefix, timeout)]
+        for topic in topics:
+            self.clear_retained(topic)
+        if topics:
+            # Пустые сообщения вернутся нам же по подписке на `#`, и вернутся
+            # не мгновенно: без паузы они попадают в историю уже после того,
+            # как её вычистили, и тест принимает нашу уборку за публикацию
+            # устройства
+            time.sleep(0.3)
+            logger.info(f'снято удерживаемых сообщений: {len(topics)}')
+        return topics
+
     def close(self) -> None:
         self._client.loop_stop()
         self._client.disconnect()

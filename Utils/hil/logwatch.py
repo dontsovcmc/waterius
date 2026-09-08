@@ -350,11 +350,16 @@ class LogWatcher:
         self._tail = ''
 
     def wait_session(self, timeout: float, mode: int | None = None,
-                     poll_interval: float = 1.0) -> Session | None:
+                     poll_interval: float = 0.1) -> Session | None:
         """
         Дождаться завершённого сеанса. Началом считаем `Startup mode:`, концом -
         `Going to sleep`: только так видно, что ЕСП дошла до конца, а не была
         обесточена посреди отправки по таймауту attiny.
+
+        Опрашиваем непрерывно: кольцо METF держит около тридцати пяти настоящих
+        строк, а сеанс с автодискавери печатает их сотнями. Один опрос стоит
+        15 мс, так что десять раз в секунду - это не нагрузка, зато кольцо не
+        успевает переполниться между чтениями.
         """
         deadline = time.time() + timeout
         while time.time() < deadline:
@@ -366,7 +371,7 @@ class LogWatcher:
         return None
 
     def expect_no_session(self, timeout: float, mode: int | None = None,
-                          poll_interval: float = 2.0) -> bool:
+                          poll_interval: float = 0.5) -> bool:
         """
         Убедиться, что сеанса не было. С mode - что не было сеанса именно этого
         вида: в тестах квитанции важно, что устройство не будит себя по тревоге,

@@ -128,6 +128,7 @@ class Stand:
         self.log.clear()
         self.receiver.drain()
         if self.mqtt:
+            self.mqtt.clear_retained_tree(self.mqtt_root)
             self.mqtt.drain()
 
     # --- наблюдение ---

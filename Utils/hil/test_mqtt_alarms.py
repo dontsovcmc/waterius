@@ -28,6 +28,7 @@ pytestmark = [
     pytest.mark.stand,
     pytest.mark.mqtt,
     pytest.mark.requires(attiny=41, esp='2.0.47'),
+    pytest.mark.usefixtures('discovery_reset'),
 ]
 
 CHANNEL = 1
@@ -102,7 +103,7 @@ def test_I3_remote_vacation_reaches_attiny(stand: Stand, armed: Session) -> None
     assert session.applied.get('vac') == '1', f'команда не применена: {session.applied}'
     assert len(session.payloads) >= 2, 'после применения данные должны уйти повторно'
     assert session.payload is not None
-    assert session.payload['vac'] == 1
+    assert session.payload['vac'] is True
     assert session.alarm_config is not None
     assert session.alarm_config['vacation'] == 1
     assert session.alarm_config[f'interval{CHANNEL}'] == 65535
@@ -149,7 +150,7 @@ def test_I5_remote_mask_change(stand: Stand, quiet: None, armed: Session) -> Non
     stand.dut.press_button()
     applied = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
     assert applied.payload is not None
-    assert applied.payload['ackm'] == 1
+    assert applied.payload['ackm'] is True
 
     stand.reset_observers()
     stand.dut.pulses(channel=CHANNEL, count=2, gap=3.0)
