@@ -4,8 +4,8 @@
 Проверяется то, на чём блок MQTT стоит целиком: брокер поднимается в процессе
 тестов, команда уходит в тот же топик, который прошивка объявляет Home
 Assistant, а удерживаемое сообщение видно только новому подписчику. Последнее
-неочевидно и стоило теста I7 ложного падения: живая доставка идёт с нулевым
-флагом retain у любого брокера (MQTT 3.1.1, 3.3.1.3).
+неочевидно: живая доставка идёт с нулевым флагом retain у любого брокера
+(MQTT 3.1.1, 3.3.1.3), поэтому флаг проверяется новым подписчиком.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from typing import Iterator
 
 import pytest
 
-from .broker import MqttBroker
+from ..broker import MqttBroker
 
 if not MqttBroker.available():
     pytest.skip('нет amqtt: pip install -r Utils/hil/requirements.txt',
@@ -44,7 +44,7 @@ def broker() -> Iterator[MqttBroker]:
 
 @pytest.fixture
 def watch(broker: MqttBroker) -> Iterator[object]:
-    from .mqttwatch import MqttWatch
+    from ..mqttwatch import MqttWatch
     client = MqttWatch(broker.host, broker.port, TOPIC)
     try:
         yield client

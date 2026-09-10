@@ -1,11 +1,15 @@
 """
 Сетевые сценарии на языке тестов.
 
-Разница между «сети нет» и «сеть есть, а сервера нет» принципиальна: первое даёт
-две вспышки светодиода и ни одной строки Alarm confirm, второе - три вспышки и
-строку со статусами получателей. Ручной план проверял только первое, потому что
-человек может лишь выдернуть роутер. Правила фильтра дают второе, а заодно
-единственный способ проверить маску квитанции: облако молчит, брокер отвечает.
+Три несчастья различаются по-разному, и путать их нельзя: нет роутера - в логе
+нет ни одной строки о доставке; нет облака - строка `Alarm confirm` есть, и в
+ней `waterius=3`; нет своего сервера - та же строка, но `http=3`. Ручной план
+проверял только первое, потому что человек может лишь выдернуть роутер.
+Правила фильтра дают остальные, а заодно единственный способ проверить маску
+квитанции: облако молчит, брокер отвечает.
+
+Облако и свой сервер разводятся по портам: облако - это https на 443, свой
+сервер стенда - порт приёмника. Резать по адресу не нужно.
 
 Все сценарии - контекстные менеджеры с гарантированным возвратом. Тест, упавший
 с выключенной точкой доступа, иначе уронил бы весь прогон: Ватериус просто не
@@ -22,7 +26,6 @@ from loguru import logger
 from .router import NatRouter
 
 HTTPS_PORT = 443
-HTTP_PORT = 80
 
 # Список, в котором режется исходящий трафик клиента точки. Имя обманчиво:
 # пакет клиента приходит на интерфейс точки, а обработчик входа сверяется с
@@ -111,22 +114,33 @@ class Net:
             yield
 
     @contextmanager
-    def cloud_down(self) -> Iterator[None]:
+    def waterius_down(self) -> Iterator[None]:
         """
-        Облако недоступно, брокер жив. Режем и 443, и порт приёмника: облачных
-        получателей два - waterius.ru и свой сервер, - а вопрос «кому доклад
-        обязан доехать» решается по каждому отдельно.
+        Облако waterius.ru недоступно, свой сервер и брокер живы.
+
+        Режем только https: свой сервер стенда слушает обычный http на своём
+        порту, и под правило не попадает. В логе это `waterius=3 http=1`.
         """
         self.verify_dut()
-        logger.info('сеть: режем облако, брокер оставляем')
-        self.router.block_port(self.dut_ip, HTTPS_PORT)
-        self.router.block_port(self.dut_ip, HTTP_PORT)
-        self.router.block_port(self.dut_ip, self.receiver_port)
-        try:
-            with self._blocking('cloud_down'):
-                yield
-        finally:
-            self.router.acl_clear()
+        logger.info('сеть: режем облако waterius.ru, свой сервер оставляем')
+        with self.router.blocked(self.dut_ip, HTTPS_PORT), \
+                self._blocking('waterius_down'):
+            yield
+
+    @contextmanager
+    def own_server_down(self) -> Iterator[None]:
+        """
+        Свой сервер недоступен, облако и брокер живы: зеркало предыдущего.
+
+        Приёмник стенда при этом не получит посылку - это и есть признак, но
+        проверять надо строку лога: пустой приёмник бывает и от оборванной
+        сети, а тут сеть в порядке.
+        """
+        self.verify_dut()
+        logger.info('сеть: режем свой сервер, облако оставляем')
+        with self.router.blocked(self.dut_ip, self.receiver_port), \
+                self._blocking('own_server_down'):
+            yield
 
     @contextmanager
     def mqtt_down(self) -> Iterator[None]:
@@ -136,37 +150,3 @@ class Net:
         with self.router.blocked(self.dut_ip, self.broker_port), \
                 self._blocking('mqtt_down'):
             yield
-
-    @contextmanager
-    def weak_signal(self, dbm: int = 2) -> Iterator[None]:
-        """
-        Слабый сигнал: проверка RSSI в посылке и поведения на границе связи.
-        Прежнюю мощность читаем у роутера, а не помним: она могла быть не
-        заводской.
-        """
-        was = self.router.config().get('tx_power', '78')
-        self.router.set_tx_power(dbm)
-        try:
-            yield
-        finally:
-            self.router.set_tx_power(int(was))
-
-    @contextmanager
-    def channel(self, number: int) -> Iterator[None]:
-        """
-        Сменить канал точки доступа. Работает только на сборке с проводным
-        аплинком: при аплинке по Wi-Fi канал точки задаёт роутер.
-        """
-        logger.info(f'сеть: канал {number}')
-        with self.router.channel(number):
-            yield
-
-    @contextmanager
-    def renamed(self, ssid: str, password: str) -> Iterator[None]:
-        """Сеть с другим именем: устройство не должно к ней подключаться."""
-        logger.info(f'сеть: переименование в {ssid}')
-        with self.router.ssid(ssid, password):
-            yield
-
-    def wait_dut_online(self, mac: str, timeout: float = 120.0) -> bool:
-        return self.router.wait_client(mac, timeout)

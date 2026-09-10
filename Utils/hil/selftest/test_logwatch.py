@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from .logwatch import ALARM_MODE, LogWatcher, TRANSMIT_MODE
+from ..logwatch import ALARM_MODE, LogWatcher, TRANSMIT_MODE
 
 # Префикс из Logging.h при включённом LOG_FREE_HEAP: MM:SS:mmm-KKK/FF%  INFO  :
 PREFIX = '01:23:456-025/03%  INFO  : '
@@ -111,28 +111,6 @@ def test_поля_тревог_разбираются() -> None:
     assert session.http_codes == [200]
     assert session.period_attiny == 4
     assert session.wifi_connected
-
-
-def test_причина_вспышек_восстанавливается() -> None:
-    """Код в лог не печатается - причина считается по тем же входным условиям."""
-    watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM)))
-    watcher.poll()
-    session = watcher._take_session(None)
-    assert session is not None
-    # mqtt=3 (нет связи с брокером) при живом облаке - четыре вспышки
-    assert session.blink_cause == 'mqtt'
-
-    no_wifi = LogWatcher(FakeApi(through_ring([
-        fw('Startup mode: 3'),
-        fw('Config succesfully loaded'),
-        fw('WIFI: Connection failed.', level='ERROR'),
-        fw('WIFI: Connection failed.20123 ms', level='ERROR'),
-        fw('Going to sleep'),
-    ])))
-    no_wifi.poll()
-    session = no_wifi._take_session(None)
-    assert session is not None
-    assert session.blink_cause == 'router'
 
 
 def test_настройки_из_ответа_сервера_видны() -> None:

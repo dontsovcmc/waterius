@@ -33,6 +33,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
                      help='гонять тесты на собранном стенде')
     parser.addoption('--stand-config', default=None,
                      help='путь к stand.ini')
+    parser.addoption('--pcap', action='store_true', default=False,
+                     help='снимать дамп трафика точки доступа к упавшим тестам')
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -40,6 +42,10 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line('markers', 'slow: идёт десятки минут')
     config.addinivalue_line('markers', 'mqtt: нужен брокер (amqtt из requirements.txt)')
     config.addinivalue_line('markers', 'portal: режим настройки и AT-плата')
+    config.addinivalue_line(
+        'markers',
+        'reset: заводской сброс; эталон настроек тесту не выставляют - он его '
+        'и проверяет, а возврат стенда делает сам модуль')
     config.addinivalue_line(
         'markers',
         'arm(**settings): доп. настройки для фикстуры тревог; иначе тесту '
@@ -71,9 +77,9 @@ def broker(cfg: Any) -> Iterator[Any]:
     """Свой брокер: тесты retain и автодискавери должны начинаться с чистых топиков."""
     from .broker import MqttBroker
     if not MqttBroker.available():
-        # Не пропуск: от брокера зависят только тесты с меткой mqtt, а раньше
-        # его отсутствие уводило в пропуск весь стенд - фикстура stand стоит
-        # на этой же цепочке.
+        # Не пропуск: от брокера зависят только тесты с меткой mqtt, а пропуск
+        # здесь увёл бы в пропуск весь стенд - фикстура stand стоит на этой же
+        # цепочке.
         logger.warning('нет amqtt: тесты MQTT будут пропущены')
         yield None
         return
@@ -196,6 +202,10 @@ def device_baseline(request: pytest.FixtureRequest) -> None:
             or not request.config.getoption('--stand')):
         return
     request.getfixturevalue('firmware_versions')
+    if 'reset' in request.keywords:
+        # Блок R проверяет сами умолчания: выставить эталон - значит стереть
+        # предмет проверки. Возврат стенда делает фикстура модуля.
+        return
     request.getfixturevalue('stand').ensure_baseline()
 
 
@@ -263,21 +273,39 @@ def quiet(stand: Any, device_baseline: None) -> Iterator[None]:
     yield
 
 
-@pytest.fixture
-def capture(request: pytest.FixtureRequest, stand: Any,
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
+    """Итог теста - фикстурам: дамп трафика нужен только от упавшего."""
+    outcome = yield
+    setattr(item, f'rep_{call.when}', outcome.get_result())
+
+
+@pytest.fixture(autouse=True)
+def capture(request: pytest.FixtureRequest,
             tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
-    """Дамп трафика к упавшему тесту: по логу видно намерение, по дампу - факт."""
+    """
+    Дамп трафика точки доступа: `pytest --stand --pcap`.
+
+    По логу видно, что прошивка думала, по дампу - что ушло в эфир. Дамп
+    зелёного теста удаляется: смысл он имеет только рядом с падением, а
+    круглосуточный прогон иначе засыпает диск.
+    """
+    if not (request.config.getoption('--pcap') and 'stand' in request.keywords):
+        yield
+        return
+
+    stand = request.getfixturevalue('stand')
     path = tmp_path_factory.mktemp('pcap') / f'{request.node.name}.pcap'
     host = stand.cfg.router_host or stand.cfg.dut_ip.rsplit('.', 1)[0] + '.1'
     with stand.router.capture(host, str(path)):
         yield
-    if path.exists() and path.stat().st_size:
+
+    if not path.exists() or not path.stat().st_size:
+        return
+    failed = any(getattr(request.node, f'rep_{when}', None) is not None
+                 and getattr(request.node, f'rep_{when}').failed
+                 for when in ('setup', 'call'))
+    if failed:
         logger.info(f'дамп трафика: {path}')
-
-
-@pytest.fixture
-def slow_clock() -> Iterator[None]:
-    """Отметка в логе, чтобы в отчёте было видно, сколько шёл долгий тест."""
-    start = time.time()
-    yield
-    logger.info(f'тест занял {time.time() - start:.0f} с')
+    else:
+        path.unlink()
