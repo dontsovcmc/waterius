@@ -1,10 +1,6 @@
 """
-Настройки стенда в одном месте.
-
-Раньше адрес платы был константой в начале каждого скрипта
-(`Utils/tests/METF/test_*.py`, `Utils/waterius2_factory_test/main.py`), и при
-переезде стенда его правили в четырёх файлах. Здесь один ini, который можно
-не держать в репозитории: рядом лежит stand.ini.example.
+Настройки стенда в одном месте: адреса, пины и порты, которые меняются от
+стенда к стенду. Файл `stand.ini` не коммитится, рядом лежит stand.ini.example.
 """
 
 from __future__ import annotations
@@ -21,6 +17,10 @@ DEFAULT_PATH = Path(__file__).with_name('stand.ini')
 class StandConfig:
     # Плата-манипулятор
     metf_host: str
+    # Разрешено ли стенду выдавать на вход уровень, а не только замыкание.
+    # Нужно для типа «Электронный (+)»; провод тот же, но плата начинает
+    # питать линию, поэтому включается отдельно и осознанно.
+    can_drive_high: bool
     button_pin: int
     ch0_pin: int
     ch1_pin: int
@@ -40,6 +40,7 @@ class StandConfig:
     # Приёмник посылок: адрес, который прошит в настройках Ватериуса
     receiver_host: str
     receiver_port: int
+    receiver_tls_port: int    # тот же приёмник по https, для проверки G8
 
     # AT-плата: HTTP-клиент в сети портала Ватериуса
     atboard_port: str
@@ -52,6 +53,14 @@ class StandConfig:
     @property
     def http_url(self) -> str:
         return f'http://{self.receiver_host}:{self.receiver_port}/data'
+
+    @property
+    def https_url(self) -> str:
+        return f'https://{self.receiver_host}:{self.receiver_tls_port}/data'
+
+    def https_file(self, path: str) -> str:
+        """Адрес файла, который раздаёт приёмник по https: образы OTA."""
+        return f'https://{self.receiver_host}:{self.receiver_tls_port}{path}'
 
 
 def load(path: str | os.PathLike[str] | None = None) -> StandConfig:
@@ -70,6 +79,7 @@ def load(path: str | os.PathLike[str] | None = None) -> StandConfig:
 
     return StandConfig(
         metf_host=get('metf', 'host', '192.168.51.250'),
+        can_drive_high=get('metf', 'can_drive_high', '0') == '1',
         button_pin=int(get('metf', 'button_pin', '1')),
         ch0_pin=int(get('metf', 'ch0_pin', '3')),
         ch1_pin=int(get('metf', 'ch1_pin', '2')),
@@ -83,6 +93,7 @@ def load(path: str | os.PathLike[str] | None = None) -> StandConfig:
         dut_ip=get('dut', 'ip', '192.168.4.100'),
         receiver_host=get('receiver', 'host', '192.168.4.2'),
         receiver_port=int(get('receiver', 'port', '8000')),
+        receiver_tls_port=int(get('receiver', 'tls_port', '8443')),
         atboard_port=get('atboard', 'port', ''),
         broker_host=get('broker', 'host', '192.168.4.2'),
         broker_port=int(get('broker', 'port', '1883')),
