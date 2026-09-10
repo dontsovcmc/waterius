@@ -52,10 +52,18 @@ BASELINE = {
     'ackw': 1, 'ackh': 1, 'ackm': 1,
     'period_min': 120,
     'ctype0': 0, 'ctype1': 0,
+    'cname0': 1, 'cname1': 0,      # красный вход - ГВС, синий - ХВС
     'f1': 10,
     'af0': 0, 'al0': 0, 'as0': 0,
     'af1': 0, 'al1': 0, 'as1': 0,
 }
+
+# Чем чинится залипшая тревога: настоящий порог, при котором ветка снятия в
+# attiny достижима. Числа те же, что в тестах блока E.
+NAMUR = 0
+REPAIR_FACTOR = 10
+REPAIR_FLOW = 3600      # л/ч
+REPAIR_LEAK = 2         # минут непрерывного расхода
 
 GLOBAL_PARAMS = {
     'vacation': 'vac',
@@ -73,10 +81,15 @@ def same_value(got: Any, want: Any) -> bool:
 
     Флаги задаются числом (в прошивку они и уходят как "1"/"0"), а в посылке
     приезжают булевыми, поэтому сравнение строк дало бы вечное '1' != 'True'.
+    Числа сравниваем как числа: показания задаются с литрами ("10.000"), а в
+    посылке приезжают числом 10.0.
     """
     if isinstance(got, bool) or isinstance(want, bool):
         return bool(got) == bool(want)
-    return str(got) == str(want)
+    try:
+        return abs(float(got) - float(want)) < 1e-6
+    except (TypeError, ValueError):
+        return str(got) == str(want)
 
 
 class Stand:
@@ -108,7 +121,8 @@ class Stand:
         api.serial_begin()
         router = connect(cfg.router_port or None, cfg.router_host or None,
                          cfg.router_password, cfg.ap_password)
-        receiver = Receiver(port=cfg.receiver_port)
+        receiver = Receiver(port=cfg.receiver_port,
+                            cert_host=cfg.receiver_host)
         receiver.start()
 
         stand = cls(cfg, api, router, receiver, mqtt)
@@ -122,6 +136,18 @@ class Stand:
     def close(self) -> None:
         self.receiver.stop()
         self.router.close()
+
+    @property
+    def ap_ssid(self) -> str:
+        """
+        Имя точки доступа стенда.
+
+        Спрашиваем у самой точки, если не задано в stand.ini: третья копия
+        имени однажды разойдётся с эфиром, и заметить это будет нечем.
+        """
+        ssid = self.cfg.ap_ssid or self.router.config().get('ssid', '')
+        assert ssid, 'не удалось узнать имя точки доступа стенда'
+        return ssid
 
     def reset_observers(self) -> None:
         """Начать наблюдение с чистого листа - вызывается перед каждым тестом."""
@@ -242,9 +268,8 @@ class Stand:
 
         Возвращает True, если пришлось настраивать.
         """
-        want_ssid = self.cfg.ap_ssid or self.router.config().get('ssid', '')
+        want_ssid = self.ap_ssid
         want_url = self.cfg.http_url
-        assert want_ssid, 'не удалось узнать имя точки доступа стенда'
 
         config = self.device_config
         assert config, ('устройство не напечатало свои настройки: '
@@ -357,9 +382,9 @@ class Stand:
 
         message = self.mqtt.wait_prefix(root, timeout=30)
         if message is None:
-            # Повторная посылка в том же сеансе до брокера не доезжает на
-            # прошивках до 2.0.47 (#406), поэтому проверяем следующим сеансом,
-            # где MQTT включён с самого начала.
+            # На прошивках младше 2.0.47 повторная посылка того же сеанса до
+            # брокера не доезжает, поэтому проверяем следующим сеансом, где
+            # MQTT включён с самого начала.
             self.reset_observers()
             self.dut.press_button()
             session = self.wait_session(timeout=timeout)
@@ -466,6 +491,53 @@ class Stand:
                 out[name] = value                 # имя параметра прошивки как есть
         return out
 
+    def clear_alarms(self, timeout: float = 900.0) -> None:
+        """
+        Снять тревогу, поднятую прошлым тестом.
+
+        Обнулить порог мало: с нулевым порогом ветка снятия в attiny
+        недостижима (`Attiny85/src/alarm.h`, on_tick), и тревога остаётся
+        поднятой навсегда. Вместе с ней в следующий тест утекают внеплановые
+        сеансы, и падает он по чужой причине.
+
+        Поэтому каналу возвращается настоящий порог, дожидается сеанс, в
+        котором тревоги уже нет, и только после этого порог снимается. Расхода
+        в это время нет, так что снятие приходит само.
+        """
+        payload = self.last_payload or {}
+        raised = {ch: [name for name in ('alarm_flow', 'alarm_leak')
+                       if payload.get(f'{name}{ch}')]
+                  for ch in (0, 1)}
+        raised = {ch: names for ch, names in raised.items() if names}
+        if not raised:
+            return
+
+        for channel, names in raised.items():
+            logger.warning(f'канал {channel}: тревога прошлого теста ({names}), снимаем')
+            thresholds: dict[str, Any] = {'ctype': NAMUR, 'factor': REPAIR_FACTOR,
+                                          'vacation': 0}
+            if 'alarm_flow' in names:
+                thresholds['alarm_flow'] = REPAIR_FLOW
+            if 'alarm_leak' in names:
+                thresholds['alarm_leak'] = REPAIR_LEAK
+            self.setup_alarms(channel=channel, **thresholds)
+
+            deadline = time.time() + timeout
+            cleared = False
+            while time.time() < deadline and not cleared:
+                try:
+                    session = self.wait_session(timeout=300)
+                except AssertionError:
+                    continue
+                current = session.payload or {}
+                cleared = not any(current.get(f'{name}{channel}') for name in names)
+            if not cleared:
+                raise AssertionError(
+                    f'канал {channel}: тревога не снялась за {timeout / 60:.0f} минут')
+
+            self.setup(channel=channel,
+                       **{name: 0 for name in names})
+
     def ensure_baseline(self) -> None:
         """
         Привести устройство к BASELINE перед тестом.
@@ -473,7 +545,11 @@ class Stand:
         Сверяемся с последней посылкой - это то, что устройство сообщает о себе
         само. Совпало всё - сеанса не будет: на живом железе он стоит полторы
         минуты, и платить их за каждый тест незачем.
+
+        Поднятую тревогу снимаем до этого: BASELINE обнуляет пороги, а с
+        нулевым порогом тревога не снимется уже никогда.
         """
+        self.clear_alarms()
         payload = self.last_payload
         if payload is None:
             diff = dict(BASELINE)
@@ -487,18 +563,29 @@ class Stand:
 
     # --- ожидание чистого состояния ---
 
-    def wait_quiet(self, seconds: float = 300.0) -> None:
+    def wait_quiet(self, seconds: float = 300.0, limit: float = 1800.0) -> None:
         """
         Дождаться, пока устройство перестанет будить себя по тревоге.
 
         Бюджет внеплановых сеансов обнуляется только плановым сеансом, поэтому
         остаток от предыдущего теста утёк бы в следующий и сломал счёт.
+
+        `limit` - общий потолок ожидания. Без него незакрытая тревога держит
+        фикстуру бесконечно: каждый сеанс продлевает срок, и по логу это
+        неотличимо от зависшего стенда.
         """
         logger.info(f'ждём тишины {seconds:.0f} с')
-        deadline = time.time() + seconds
+        started = time.time()
+        deadline = started + seconds
+        sessions = 0
         while time.time() < deadline:
+            if time.time() - started > limit:
+                raise AssertionError(
+                    f'устройство будит себя дольше {limit / 60:.0f} минут '
+                    f'({sessions} сеансов): тревога прошлого теста не снята')
             session = self.log.wait_session(timeout=30.0)
             if session is None:
                 continue
+            sessions += 1
             logger.info(f'в тишине случился сеанс mode={session.mode}, ждём дальше')
             deadline = time.time() + seconds

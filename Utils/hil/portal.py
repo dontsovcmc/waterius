@@ -23,8 +23,11 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Iterator
 
 from urllib.parse import urlencode
 
@@ -212,6 +215,44 @@ def find_ap(lines: list[str]) -> str | None:
         if m:
             return m.group(2)
     return None
+
+
+@contextmanager
+def session(cfg: Any, stand: Any, timeout: float = 90.0) -> Iterator[AtBoard]:
+    """
+    Ватериус в режиме настройки, AT-плата в его сети.
+
+    Выход - командой `/api/turnoff`, а не по таймауту: иначе следующий тест
+    ждал бы десять минут сторожевого таймера портала. Пока устройство не
+    уснуло, ЕСП запитана и нажатие кнопки до attiny не доходит, поэтому
+    выходим только дождавшись сна.
+    """
+    stand.log.clear()
+    stand.dut.hold_button()
+
+    ssid = None
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        stand.log.poll()
+        ssid = find_ap(stand.log.lines)
+        if ssid:
+            break
+        time.sleep(1)
+    if not ssid:
+        raise PortalError('точка доступа портала не поднялась')
+    logger.info(f'портал: {ssid}')
+
+    device = AtBoard(cfg.atboard_port)
+    logger.info(f'адрес AT-платы: {device.join(ssid)}')
+    try:
+        yield device
+    finally:
+        try:
+            device.get('/api/turnoff', HOST)
+        except Exception as err:
+            logger.warning(f'портал не закрылся командой: {err}')
+        device.close()
+        stand.wait_asleep()
 
 
 def unresolved(text: str) -> tuple[str, ...]:

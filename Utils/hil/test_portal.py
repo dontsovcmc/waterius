@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any, Iterator
 
 import pytest
-from loguru import logger
 
 from . import portal as portal_mod
 from .atboard import AtBoard
@@ -31,42 +30,11 @@ DATA = ROOT / 'ESP8266' / 'data'
 
 @pytest.fixture(scope='module')
 def board(cfg: Any, stand: Any) -> Iterator[AtBoard]:
-    """
-    Ватериус в режиме настройки, AT-плата в его сети.
-
-    Выход из режима - через `/api/turnoff`, а не по таймауту: иначе следующий
-    тест ждал бы десять минут сторожевого таймера портала.
-    """
+    """Портал на весь модуль: одна страница едет через AT-плату секунды."""
     if not cfg.atboard_port:
         pytest.skip('нет AT-платы: [atboard] port в stand.ini')
-
-    stand.log.clear()
-    stand.dut.hold_button()
-    ssid = None
-    for _ in range(90):
-        stand.log.poll()
-        ssid = portal_mod.find_ap(stand.log.lines)
-        if ssid:
-            break
-        import time
-        time.sleep(1)
-    if not ssid:
-        pytest.fail('точка доступа портала не поднялась')
-    logger.info(f'портал: {ssid}')
-
-    device = AtBoard(cfg.atboard_port)
-    logger.info(f'адрес AT-платы: {device.join(ssid)}')
-    try:
+    with portal_mod.session(cfg, stand) as device:
         yield device
-    finally:
-        try:
-            device.get('/api/turnoff', portal_mod.HOST)
-        except Exception as err:
-            logger.warning(f'портал не закрылся командой: {err}')
-        device.close()
-        # Пока устройство не уснуло, ЕСП запитана, и нажатие кнопки до attiny
-        # не доходит: соседний тест нажал бы впустую.
-        stand.wait_asleep()
 
 
 @pytest.fixture(scope='module')

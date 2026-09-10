@@ -1,13 +1,13 @@
 """
 MQTT: базовый функционал - блок I ручного плана без тревог.
 
-Здесь то, что умеет любая прошивка с MQTT: показания уезжают в брокер, дерево
-автодискавери называет топики так же, как их считает стенд, команда из Home
-Assistant применяется в том же сеансе. Всё это проверяется и на 2.0.44.
+Проверяется: показания уезжают в брокер, дерево автодискавери называет топики
+так же, как их считает стенд, команда из Home Assistant применяется в том же
+сеансе, флаг retain выставляется по настройке. Всё это умеет любая прошивка с
+MQTT, включая 2.0.44.
 
-Тревоги вынесены в `test_mqtt_alarms.py`: им нужны attiny 41 и ЕСП 2.0.47, а
-держать их вместе значит пропускать весь блок из-за прошивки, которой на
-базовую проверку хватает.
+Пороги и режимы тревог - в `test_mqtt_alarms.py`: им нужны attiny 41 и
+ЕСП 2.0.47, здешним проверкам хватает 2.0.44.
 
 Команда применяется в том же сеансе, где получена: подписка выполняется до
 отправки данных, поэтому удерживаемое сообщение подхватывается сразу, а после
@@ -44,6 +44,16 @@ BASE_ENTITIES = (
 # Период на время теста: любое значение, отличное от базового, - лишь бы
 # отличалось. К базовому его вернёт ensure_baseline перед следующим тестом.
 OTHER_PERIOD_MIN = 90
+
+NAMUR = 0
+LEAKAGE = 5          # CounterType: датчик протечки
+WATER_HOT = 1        # CounterName: то, чем канал 0 настроен по умолчанию
+HEAT_GCAL = 4        # CounterName: тепло в гигакалориях
+HEAT_KWT = 7         # CounterName: то же тепло, но в киловатт-часах
+
+# core/ha_units.h. Единица - не украшение: по ней Home Assistant считает
+# статистику, и перепутанная превращает показания в другие числа
+HEAT_UNITS = {HEAT_GCAL: 'Gcal', HEAT_KWT: 'kWh'}
 
 
 def config_topic(topics: list[str], entity_type: str, entity_id: str) -> str | None:
@@ -140,7 +150,7 @@ def test_I4_remote_period_min(stand: Stand, discovery_on: None) -> None:
     assert session.payload['period_min'] == OTHER_PERIOD_MIN
 
 
-@pytest.mark.requires(esp='2.0.47')       # #409: снятие уходило без флага retain
+@pytest.mark.requires(esp='2.0.47')       # младшие снимают команду без флага retain
 def test_I4b_retained_command_is_cleared(stand: Stand,
                                         discovery_on: None) -> None:
     """
@@ -352,3 +362,65 @@ def test_I4c_commands_need_discovery(stand: Stand, discovery_off: None) -> None:
     assert stand.mqtt.command_topic('period_min') in left, (
         f'команда исчезла из брокера, а подписки не было: {left}')
     assert 'MQTT: Subscribed to' not in session.text
+
+
+def test_I2_leak_sensor_publishes_only_its_state(stand: Stand) -> None:
+    """
+    Датчик протечки - не счётчик: в Home Assistant у него есть тип входа и
+    состояние влаги, и больше ничего.
+
+    Показания, вес импульса, серийный номер и пороги для него бессмысленны:
+    импульсов он не даёт, его тревога - само состояние линии.
+    """
+    stand.setup(channel=0, ctype=LEAKAGE, mqtt_auto_discovery=1)
+    assert stand.mqtt is not None
+    try:
+        stand.mqtt.drain()
+        stand.reset_observers()
+        stand.dut.press_button()
+        stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+        topics = stand.mqtt.topics('homeassistant/')
+        assert topics, 'автодискавери не опубликовано'
+
+        assert config_topic(topics, 'select', 'ctype0') is not None, topics
+        assert config_topic(topics, 'binary_sensor', 'alarm_wet0') is not None, topics
+
+        pointless = ('ch0', 'f0', 'serial0', 'af0', 'al0', 'as0',
+                     'alarm_flow0', 'alarm_leak0', 'alarm_stop0')
+        left = [topic for topic in topics
+                for name in pointless if topic.endswith(f'/{name}/config')]
+        assert not left, f'у датчика протечки объявлено лишнее: {left}'
+
+        # Соседний вход - обычный счётчик, и его сущности на месте: проверка
+        # не про «мало топиков», а про то, что молчит именно этот канал
+        assert config_topic(topics, 'sensor', 'ch1') is not None, topics
+    finally:
+        stand.setup(channel=0, ctype=NAMUR)
+
+
+@pytest.mark.parametrize('resource', sorted(HEAT_UNITS))
+def test_I6_heat_carries_its_own_unit(stand: Stand, resource: int) -> None:
+    """
+    Тепло бывает двух ресурсов, и единица у них разная: гигакалории и
+    киловатт-часы. Берётся она по названию канала, а не по типу входа.
+    """
+    unit = HEAT_UNITS[resource]
+    stand.setup(channel=0, cname=resource, mqtt_auto_discovery=1)
+    assert stand.mqtt is not None
+    try:
+        stand.mqtt.drain()
+        stand.reset_observers()
+        stand.dut.press_button()
+        stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+        topics = stand.mqtt.topics('homeassistant/')
+        topic = config_topic(topics, 'sensor', 'ch0')
+        assert topic is not None, topics
+
+        message = stand.mqtt.last(topic)
+        assert message is not None
+        entity = message.json()
+        assert entity.get('unit_of_meas') == unit, entity
+    finally:
+        stand.setup(channel=0, cname=WATER_HOT)

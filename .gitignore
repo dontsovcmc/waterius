@@ -39,3 +39,7 @@ Release
 .DS_Store
 .claude
 simulator/dist
+
+# Браузерные проверки симулятора
+simulator/node_modules/
+simulator/package-lock.json

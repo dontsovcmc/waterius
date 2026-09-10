@@ -39,6 +39,15 @@ SEND_OK = 1
 SEND_BAD_ANSWER = 2
 SEND_NO_CONNECTION = 3
 
+# Коды ошибок = число вспышек красного светодиода (core/blink.h, ErrorBlynks).
+# Стенд их не считает, а только читает выбранный прошивкой код из лога.
+BLYNK_LOW_VOLTAGE = 1
+BLYNK_ROUTER = 2
+BLYNK_CLOUD = 3          # и облако, и свой сервер: у них общий код
+BLYNK_MQTT = 4
+BLYNK_CONFIG = 5
+BLYNK_CLOUD_ANSWER = 6
+
 RE_MODE = re.compile(r'Startup mode: (\d)')
 RE_ATTINY_VER = re.compile(r'attiny firmware ver: (\d+)')
 RE_ESP_VER = re.compile(r'Firmware ver: (\d+)\.(\d+)\.(\d+)')
@@ -52,6 +61,9 @@ RE_ALARM_CONFIRM = re.compile(
 RE_IDLE_MIN = re.compile(r'Idle min: (\d+)/(\d+), stop: ([01])/([01])')
 RE_IDLE_SEND = re.compile(r'Idle: consumed=([01]), silence_min=(\d+), transmit=([01])')
 RE_HTTP_CODE = re.compile(r'HTTP: Response code: (-?\d+)')
+# Код ошибки, который прошивка собралась моргать (wleds.cpp, blynk_error).
+# Успех не моргается вовсе, поэтому строки в удачном сеансе нет.
+RE_BLYNK = re.compile(r'Blynk: code=(\d+)')
 RE_PERIOD_ATTINY = re.compile(r'Wakeup period, min \(attiny\):(\d+)')
 RE_APPLY = re.compile(r'Apply setting: (\S+)=(\S*)')
 # Значение, прошедшее валидацию и попавшее в настройки. Единственный
@@ -250,38 +262,19 @@ class Session:
     def complete(self) -> bool:
         return SESSION_END in self.text
 
-    @property
-    def blink_cause(self) -> str:
-        """
-        Причина вспышек светодиода. Сам код в лог не печатается, поэтому
-        восстанавливаем его по входным условиям blink_code (core/blink.cpp).
-        Единственное, что так не увидеть, - одна вспышка про просевшее питание.
-
-        Причины `cloud`, `cloud_answer` и `mqtt` читаются из строки
-        `Alarm confirm`, а её печатают с 2.0.47. На младших прошивках нет ни
-        строки, ни самой модели причин, и результат вырождается в `ok` -
-        поэтому тесты, утверждающие эти причины, помечены версией.
-        """
-        # Итог загрузки конфига и связь с attiny печатаются до `Startup mode:`,
-        # то есть в преамбуле: искать их в тексте сеанса - значит объявить
-        # неисправным конфиг в каждом сеансе подряд.
-        if ('Config succesfully loaded' not in self.full_text
-                or 'Attiny not found.' in self.full_text):
-            return 'config'          # 5 вспышек
-        if not self.wifi_connected:
-            return 'router'          # 2 вспышки
-        c = self.confirm
-        if c:
-            cloud = max(c['waterius'], c['http'])
-            if cloud == SEND_NO_CONNECTION:
-                return 'cloud'       # 3 вспышки
-            if cloud == SEND_BAD_ANSWER:
-                return 'cloud_answer'  # 6 вспышек
-            if c['mqtt'] in (SEND_BAD_ANSWER, SEND_NO_CONNECTION):
-                return 'mqtt'        # 4 вспышки
-        return 'ok'
-
     # --- утверждения на языке предметной области ---
+
+    @property
+    def blynk(self) -> int | None:
+        """
+        Код ошибки, который прошивка собралась моргать. None - не моргала.
+
+        Это слово самого устройства, а не наша реконструкция по условиям:
+        восстановленный стендом код согласился бы с ошибкой, если ошибка в
+        самой модели. Число вспышек отсюда не следует - стенд их не видит.
+        """
+        m = RE_BLYNK.search(self.text)
+        return int(m.group(1)) if m else None
 
     def assert_alarm(self, **expected: int) -> None:
         """assert_alarm(flow1=1, flow0=0) - по полям посылки."""
@@ -295,10 +288,6 @@ class Session:
         assert c is not None, f'в сеансе нет строки Alarm confirm\n{self.text}'
         for name, want in expected.items():
             assert c[name] == want, f'{name}: ожидали {want}, получили {c[name]}\n{self.text}'
-
-    def assert_cause(self, cause: str) -> None:
-        got = self.blink_cause
-        assert got == cause, f'причина сеанса: ожидали {cause}, получили {got}\n{self.text}'
 
     def assert_delta(self, channel: int, liters: int) -> None:
         assert self.payload is not None, 'посылки не было'
@@ -429,6 +418,27 @@ class LogWatcher:
                 return session
             time.sleep(poll_interval)
         self.assert_no_loss(mark, f'ожидание сеанса {timeout:.0f} с')
+        return None
+
+    def wait_line(self, text: str, timeout: float,
+                  poll_interval: float = 0.5) -> float | None:
+        """
+        Дождаться строки в логе и вернуть, сколько секунд её ждали.
+
+        Нужно там, где событие не сеанс: портал закрывается по сторожевому
+        таймеру и печатает про это одну строку. Время возвращается потому, что
+        в таких проверках важно не только «случилось», но и «не раньше».
+        """
+        mark = self.loss_mark()
+        started = time.time()
+        deadline = started + timeout
+        while time.time() < deadline:
+            self.poll()
+            if any(text in line for line in self.lines):
+                self.assert_no_loss(mark, f'ожидание строки {text!r}')
+                return time.time() - started
+            time.sleep(poll_interval)
+        self.assert_no_loss(mark, f'ожидание строки {text!r} {timeout:.0f} с')
         return None
 
     def expect_no_session(self, timeout: float, mode: int | None = None,

@@ -97,7 +97,7 @@ bool data_reported(const SessionStatus &status);
 /*
 Общий исход облачных получателей - тот же merge_status, только имена
 подставлены. Нужен ради светодиода: вспышка на waterius.ru и произвольный
-HTTP одна, а статуса теперь два.
+HTTP одна, а статуса два.
 */
 SendStatus cloud_status(const SessionStatus &status);
 

@@ -101,6 +101,10 @@ void blynk_led(uint8_t pin, uint8_t times, uint16_t delay_ms /* 200 */, uint16_t
 
 void blynk_error(enum ErrorBlynks code)
 {
+    // До первой вспышки: на классике светодиод сидит на линии TX, и дальше
+    // UART молчит до restore_serial
+    LOG_INFO(F("Blynk: code=") << (int)code);
+
     if (code == ErrorBlynks::ERROR_OK)
     {
         blynk_led(GREEN_LED_PIN, 1);

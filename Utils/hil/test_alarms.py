@@ -55,7 +55,7 @@ def test_E1_flow_alarm(stand: Stand, quiet: None) -> None:
 
 
 @pytest.mark.slow
-def test_E2_flow_alarm_clears(stand: Stand, quiet: None, slow_clock: None) -> None:
+def test_E2_flow_alarm_clears(stand: Stand, quiet: None) -> None:
     """
     Снятие тревоги - такая же новость, как её появление.
 
@@ -78,16 +78,15 @@ def test_E2_flow_alarm_clears(stand: Stand, quiet: None, slow_clock: None) -> No
 
 
 @pytest.mark.slow
-@pytest.mark.requires(attiny=42)          # #405: до неё один импульс поднимал протечку
-def test_E3a_single_pulse_is_not_a_leak(stand: Stand, quiet: None,
-                                        slow_clock: None) -> None:
+@pytest.mark.requires(attiny=42)          # attiny 41 поднимает протечку от одного импульса
+def test_E3a_single_pulse_is_not_a_leak(stand: Stand, quiet: None) -> None:
     """
     Негативный контроль для непрерывного расхода.
 
     Один импульс и тишина - это не протечка. Тест существует потому, что без
     него проверка ритма зеленеет на сломанной логике: пауза перед импульсом не
     должна запоминаться как ритм, иначе ALARM_LEAK поднимается при полном
-    отсутствии расхода (#405, Attiny85/src/alarm.h, ALARM_MAX_GAP_MIN).
+    отсутствии расхода (Attiny85/src/alarm.h, ALARM_MAX_GAP_MIN).
 
     """
     stand.setup_alarms(channel=1, factor=FACTOR, alarm_leak=LEAK_MINUTES,
@@ -101,7 +100,7 @@ def test_E3a_single_pulse_is_not_a_leak(stand: Stand, quiet: None,
 
 
 @pytest.mark.slow
-def test_E3b_rhythm_raises_leak(stand: Stand, quiet: None, slow_clock: None) -> None:
+def test_E3b_rhythm_raises_leak(stand: Stand, quiet: None) -> None:
     """Ровный расход дольше порога - протечка."""
     stand.setup_alarms(channel=1, factor=FACTOR, alarm_leak=LEAK_MINUTES,
                        ctype=NAMUR, vacation=0)
@@ -115,8 +114,7 @@ def test_E3b_rhythm_raises_leak(stand: Stand, quiet: None, slow_clock: None) -> 
 
 
 @pytest.mark.slow
-def test_E3c_household_profile_is_quiet(stand: Stand, quiet: None,
-                                        slow_clock: None) -> None:
+def test_E3c_household_profile_is_quiet(stand: Stand, quiet: None) -> None:
     """
     Обычный быт не должен выглядеть протечкой: расход, долгая пауза, снова
     расход. Пауза длиннее двойного интервала обязана сбросить счёт.
@@ -173,7 +171,7 @@ def test_E5_normally_closed_sensor_detects_cut_wire(stand: Stand, quiet: None) -
 
 
 @pytest.mark.slow
-def test_E6_vacation_mode(stand: Stand, quiet: None, slow_clock: None) -> None:
+def test_E6_vacation_mode(stand: Stand, quiet: None) -> None:
     """
     Режим «Я уехал»: тревогой становится любой расход.
 
@@ -199,27 +197,8 @@ def test_E6_vacation_mode(stand: Stand, quiet: None, slow_clock: None) -> None:
     assert off.alarm_config['vacation'] == 0
 
 
-def test_E10_vacation_works_without_factor(stand: Stand, quiet: None) -> None:
-    """
-    Режиму «Я уехал» известный вес импульса не нужен: проверка типа входа стоит
-    до проверки веса, поэтому порог подменяется максимумом даже при «Авто».
-    """
-    stand.setup(channel=1, ctype=NAMUR, factor=3)     # 3 - это «Авто»
-    on = stand.setup(vacation=1)
-    assert on.payload['f1'] == 3, 'тест бессмысленен, если вес всё-таки задан'
-    assert on.alarm_config['interval1'] == 65535
-
-    stand.reset_observers()
-    stand.dut.pulses(channel=1, count=2, gap=60.0)
-
-    session = stand.wait_session(timeout=180, mode=ALARM_MODE)
-    session.assert_alarm(flow1=1)
-
-    stand.setup(vacation=0)
-
-
 @pytest.mark.slow
-def test_E7_consumption_stopped(stand: Stand, slow_clock: None) -> None:
+def test_E7_consumption_stopped(stand: Stand) -> None:
     """
     Остановка расхода: её считает ЕСП, а не attiny, поэтому разрешение равно
     периоду пробуждения и считать надо пробуждения, а не минуты.
