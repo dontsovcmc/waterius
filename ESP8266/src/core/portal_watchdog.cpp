@@ -1,14 +1,16 @@
 #include "portal_watchdog.h"
 
-bool portal_deadline_reached(const uint32_t now_ms, const uint32_t started_ms)
+bool portal_watchdog_fired(const uint32_t now_ms, const uint32_t last_feed_ms)
 {
-    return (uint32_t)(now_ms - started_ms) >= PORTAL_DEADLINE_MS;
+    return (uint32_t)(now_ms - last_feed_ms) >= PORTAL_WATCHDOG_MS;
 }
 
-bool portal_watchdog_fired(const uint32_t now_ms, const uint32_t started_ms, const uint32_t last_feed_ms)
+uint32_t portal_idle_seconds_left(const uint32_t now_ms, const uint32_t last_feed_ms)
 {
-    if (portal_deadline_reached(now_ms, started_ms))
-        return true;
+    const uint32_t passed = (uint32_t)(now_ms - last_feed_ms);
 
-    return (uint32_t)(now_ms - last_feed_ms) >= PORTAL_WATCHDOG_MS;
+    if (passed >= PORTAL_WATCHDOG_MS)
+        return 0;
+
+    return (PORTAL_WATCHDOG_MS - passed) / 1000UL;
 }

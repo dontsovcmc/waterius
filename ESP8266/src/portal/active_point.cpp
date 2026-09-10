@@ -60,6 +60,28 @@ void feed_portal_watchdog()
 }
 
 /*
+Сколько порталу осталось жить: секунды до закрытия по бездействию.
+
+Намеренно не кормит сторожевой таймер. Опрос состояния его тоже не кормит
+(#305), и наблюдение за таймером тем более не должно его двигать: иначе
+открытая вкладка держала бы устройство включённым, а проверка «действие
+продлевает окно» стала бы проверкой самой себя.
+
+Секунды, а не миллисекунды: на экране это минуты, а в проверке - разница
+между «окно продлилось» и «нет», которая измеряется десятками секунд.
+*/
+static void get_api_portal_time(AsyncWebServerRequest *request)
+{
+    const uint32_t now = millis();
+
+    char body[32];
+    snprintf(body, sizeof(body), "{\"idle_left\":%lu}",
+             (unsigned long)portal_idle_seconds_left(now, portal_watchdog_feed_ms));
+
+    request->send(200, F("application/json"), body);
+}
+
+/*
 Страница портала. Переход по страницам и есть та активность, ради которой
 задумано продление, поэтому все html идут через одну функцию: обработчик,
 отдающий страницу мимо неё, молча перестал бы продлевать таймер.
@@ -697,6 +719,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     server->on("/api/main_status", HTTP_GET, get_api_main_status);                 // Информационные сообщения на главной странице
     server->on("/api/status/0", HTTP_GET, get_api_status_0);                       // Статус 0-го входа (ХВС)  (из setup_cold_welcome.html)
     server->on("/api/status/1", HTTP_GET, get_api_status_1);                       // Статус 1-го входа (ГВС)  (из setup_cold_welcome.html)
+    server->on("/api/portal_time", HTTP_GET, get_api_portal_time);                 // Сколько осталось до закрытия портала (#305)
     server->on("/api/turnoff", HTTP_GET, get_api_turnoff);                         // Выйти из режима настройки
     server->on("/api/reset", HTTP_POST, post_api_reset);                           // Сброс к заводским настройкам
 
@@ -713,10 +736,9 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     условие выхода считало ерунду - спасало только то, что портал успевает
     стартовать в первую минуту после включения.
     */
-    const uint32_t portal_started_ms = millis();
-    portal_watchdog_feed_ms = portal_started_ms;
+    portal_watchdog_feed_ms = millis();
 
-    while (!exit_portal_flag && !portal_watchdog_fired(millis(), portal_started_ms, portal_watchdog_feed_ms))
+    while (!exit_portal_flag && !portal_watchdog_fired(millis(), portal_watchdog_feed_ms))
     {
         dns->processNextRequest();
         yield();
@@ -734,11 +756,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
         }
     }
 
-    if (portal_deadline_reached(millis(), portal_started_ms))
-    {
-        LOG_ERROR(F("Portal total setup time is over"));
-    }
-    else if (!exit_portal_flag)
+    if (!exit_portal_flag)
     {
         LOG_ERROR(F("Portal is idle, no user activity"));
     }
