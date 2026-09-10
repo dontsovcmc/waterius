@@ -244,8 +244,8 @@ function testAlarmStates() {
     const CT = globalThis.SIM_GENERATED.enums.CounterType;
 
     /*
-    Раньше это разбирал скрипт на onload, и проверить можно было только его.
-    Теперь цепочка целиком: состояние входа -> класс -> разметка.
+    Проверяется цепочка целиком: состояние входа -> класс блока -> разметка.
+    Что видно на экране, решает прошивка, а не скрипт на onload.
     */
     const cases = [
         { name: 'выключенный вход', type: CT.NONE, factor: 10, version: D.ATTINY_VER_ALARM,
