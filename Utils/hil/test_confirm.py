@@ -5,10 +5,9 @@
 
     Alarm confirm: mask=4 waterius=1 http=0 mqtt=3 any=1 -> 0
 
-Утверждать надо её целиком, а не только итог. Первоначальная версия проверяла
-`-> 1`, и это ничего не значило: единица печатается при любой маске и любом
-удачном сеансе, то есть тест был зелёным даже при полностью выключенных
-тревогах. Различить F2 и F3 тоже можно лишь по одному числу: mqtt=3 - брокер
+Утверждается она целиком, а не только итог: `-> 1` печатается при любой маске
+и любом удачном сеансе, то есть по одному итогу тест зелёный и при полностью
+выключенных тревогах. F2 от F3 отличает одно число: mqtt=3 - брокер
 недоступен, mqtt=0 - получатель выключен и из условия выпадает.
 """
 
@@ -51,13 +50,20 @@ def test_F1_any_receiver_is_enough(stand: Stand, quiet: None) -> None:
     session.assert_alarm(flow1=1)
     session.assert_confirm(mask=0, any=1, confirmed=1)
 
-    # Квитанция ушла, значит будить нас больше незачем
+    # Снятие - такая же новость, как появление (E2). Расход гаснет через два
+    # порога после последнего импульса, ещё пока идёт этот самый сеанс, и
+    # ближайшее пробуждение привезёт уже ноль. Требовать тишины, не приняв
+    # этот сеанс, значит требовать от прошивки умолчать о снятии.
+    cleared = stand.wait_session(timeout=600, mode=ALARM_MODE)
+    cleared.assert_alarm(flow1=0)
+    cleared.assert_confirm(mask=0, any=1, confirmed=1)
+
+    # Вот теперь доложено и подтверждено всё - будить нас больше незачем
     stand.expect_no_session(timeout=900, mode=ALARM_MODE)
 
 
 @pytest.mark.slow
-def test_F2_required_receiver_unreachable(stand: Stand, quiet: None,
-                                          slow_clock: None) -> None:
+def test_F2_required_receiver_unreachable(stand: Stand, quiet: None) -> None:
     """
     MQTT отмечен обязательным и недоступен: квитанции нет, attiny будит ЕСП
     снова. Брокер при этом остаётся включённым в настройках - иначе получится
@@ -92,17 +98,26 @@ def test_F3_disabled_receiver_drops_out(stand: Stand, quiet: None) -> None:
     arm_alarms(stand, confirm_mqtt=1, mqtt_on=0)
     stand.reset_observers()
 
-    stand.dut.pulses(channel=1, count=2, gap=3.0)
+    try:
+        stand.dut.pulses(channel=1, count=2, gap=3.0)
 
-    session = stand.wait_session(timeout=120, mode=ALARM_MODE)
-    session.assert_confirm(mask=CONFIRM_MQTT, mqtt=SEND_SKIPPED, any=1, confirmed=1)
-    stand.expect_no_session(timeout=900, mode=ALARM_MODE)
+        session = stand.wait_session(timeout=120, mode=ALARM_MODE)
+        session.assert_confirm(mask=CONFIRM_MQTT, mqtt=SEND_SKIPPED, any=1, confirmed=1)
 
-    stand.setup(mqtt_on=1)
+        # Снятие тревоги приедет отдельным сеансом - см. F1
+        cleared = stand.wait_session(timeout=600, mode=ALARM_MODE)
+        cleared.assert_alarm(flow1=0)
+
+        stand.expect_no_session(timeout=900, mode=ALARM_MODE)
+    finally:
+        # Брокер обязан вернуться даже после падения: в BASELINE его нет, и
+        # выключенным его унаследует весь блок I. Падать будет он, а
+        # разбираться придётся здесь.
+        stand.setup(mqtt_on=1)
 
 
 @pytest.mark.slow
-def test_F4_alarm_session_budget(stand: Stand, quiet: None, slow_clock: None) -> None:
+def test_F4_alarm_session_budget(stand: Stand, quiet: None) -> None:
     """
     Бюджет внеплановых сеансов: не больше пяти на период пробуждения.
 
@@ -130,7 +145,11 @@ def test_F4_alarm_session_budget(stand: Stand, quiet: None, slow_clock: None) ->
     assert len(sessions) == 5, (
         f'ожидали пять внеплановых сеансов, получили {len(sessions)}')
 
+    # Wi-Fi при этом поднимается: правило фильтра режет трафик, а не эфир.
+    # Признак неудачи - не отсутствие связи, а несостоявшаяся доставка.
     for session in sessions:
-        assert not session.wifi_connected, 'сеть должна была быть недоступна'
+        assert session.confirm is not None, f'нет строки Alarm confirm\n{session.text}'
+        assert session.confirm['confirmed'] == 0, (
+            f'квитанция не могла состояться: {session.confirm}')
 
     stand.expect_no_session(timeout=15 * 60, mode=ALARM_MODE)
