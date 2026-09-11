@@ -100,10 +100,11 @@ def test_J1_ota_updates_both_images(stand: Any, cfg: Any,
                     f'{".".join(map(str, want)) if want else "?"} - '
                     'обновлять нечем, вернуть было бы нечем тоже')
 
+    # В посылке напряжение в вольтах (json.cpp: voltage.average() / 1000)
     payload = stand.last_payload or {}
-    voltage = float(payload.get('voltage', 0))
-    if 0 < voltage < OTA_MIN_VOLTAGE_MV:
-        pytest.skip(f'питание {voltage:.0f} мВ ниже {OTA_MIN_VOLTAGE_MV}: '
+    millivolts = float(payload.get('voltage', 0)) * 1000
+    if 0 < millivolts < OTA_MIN_VOLTAGE_MV:
+        pytest.skip(f'питание {millivolts:.0f} мВ ниже {OTA_MIN_VOLTAGE_MV}: '
                     'прошивка откажется обновляться, и правильно сделает')
 
     request_ota(stand, images)
@@ -160,21 +161,28 @@ def test_J3_low_battery_refuses(stand: Any, cfg: Any) -> None:
     На просевших батарейках обновление не начинается: прерванная запись флеша
     оставила бы устройство без прошивки.
 
-    Проверить это можно только на устройстве, которое действительно питается
-    ниже порога: напряжением стенд не управляет.
-    """
-    payload = stand.last_payload or {}
-    voltage = float(payload.get('voltage', 0))
-    if voltage >= OTA_MIN_VOLTAGE_MV:
-        pytest.skip(f'питание {voltage:.0f} мВ выше {OTA_MIN_VOLTAGE_MV} мВ: '
-                    'отказ по батарейкам так не воспроизвести, см. 04_not-tested.md')
+    Своё напряжение прошивка меряет сама, тремя отсчётами перед загрузкой
+    (`ota_update.cpp`), и печатает результат. Поэтому решение «воспроизводится
+    ли отказ» принимается по её строке, а не по полю посылки: это разные
+    измерения, и на питании от USB они расходятся заметно.
 
+    Адрес образа заведомо битый: до записи флеша дело не дойдёт ни при каком
+    исходе проверки питания.
+    """
     stand.receiver.start_tls(cfg.receiver_tls_port)
     ota = {'firmware': {'url': cfg.https_file('/ota/no-such-image.bin'),
                         'md5': '0' * 32, 'size': 1024}}
     request_ota(stand, ota)
 
-    assert stand.log.wait_line('OTA: voltage too low', timeout=180) is not None
+    assert stand.log.wait_line('OTA: start', timeout=180) is not None, (
+        'прошивка не увидела команду обновления')
+
+    if stand.log.wait_line('OTA: voltage too low', timeout=30) is None:
+        stand.log.poll()
+        measured = next((line.split('OTA:')[-1].strip() for line in stand.log.lines
+                         if 'OTA: voltage' in line or 'OTA: USB power' in line), '?')
+        pytest.skip(f'прошивка намерила {measured} - отказ по батарейкам так не '
+                    'воспроизвести, см. 04_not-tested.md')
 
     stand.reset_observers()
     stand.dut.press_button()

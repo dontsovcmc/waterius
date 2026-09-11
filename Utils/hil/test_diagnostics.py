@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from urllib.parse import urlencode
 
 import pytest
 
@@ -33,9 +34,11 @@ NAMUR = 0
 FACTOR_HEAVY = 100
 FACTOR_LIGHT = 10
 
-# 20 импульсов - это и NEIGHBOUR_MIN_IMPULSES для молчащего входа, и 200
-# литров при лёгком весе, то есть COMPARE_MIN_LITERS для сравнения расходов
-IMPULSES = 20
+# Пороги, от которых считается: NEIGHBOUR_MIN_IMPULSES = 20 импульсов у соседа
+# и COMPARE_MIN_LITERS = 200 литров на каждом канале. Ровно двадцать импульсов
+# давали ровно 200 литров на лёгком весе, то есть опыт стоял на самой границе,
+# и одного потерянного импульса хватало, чтобы плашки не было
+IMPULSES = 25
 
 FACTOR_TOO_BIG = '23'
 INPUT_SILENT = '24'
@@ -87,7 +90,9 @@ def test_B3_heavy_factor_is_suspicious(cfg: Any, stand: Any) -> None:
             'подозревать надо тяжёлый канал, а не оба')
 
         # B5: показания введены заново - расход обнулён, плашке неоткуда взяться
-        answer = board.post('/api/save?input=0&ch=11.000', portal_mod.HOST)
+        answer = board.post('/api/save', portal_mod.HOST,
+                            body=urlencode({'input': 0,
+                                            'channel_start': '11.000'}).encode())
         assert answer.status == 200, answer.status
         assert not json.loads(answer.text).get('errors'), answer.text
 

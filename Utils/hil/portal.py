@@ -217,8 +217,20 @@ def find_ap(lines: list[str]) -> str | None:
     return None
 
 
+# Сколько ждать точку доступа после нажатия. От нажатия до строки
+# `AP started` проходит секунд пять: attiny подаёт питание, ЕСП грузится и
+# поднимает точку. Пятнадцати хватает с запасом, а больше ждать бессмысленно -
+# если за это время точки нет, нажатие до attiny не дошло, и ждать надо не
+# дольше, а заново.
+AP_WAIT_S = 15.0
+
+# Сколько всего пытаться. Нажатие не доходит, пока ЕСП запитана, а сеанс без
+# сети живёт до двух минут (WAIT_ESP_MSEC): столько и терпим, нажимая заново.
+PRESS_BUDGET_S = 150.0
+
+
 @contextmanager
-def session(cfg: Any, stand: Any, timeout: float = 90.0) -> Iterator[AtBoard]:
+def session(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> Iterator[AtBoard]:
     """
     Ватериус в режиме настройки, AT-плата в его сети.
 
@@ -228,22 +240,32 @@ def session(cfg: Any, stand: Any, timeout: float = 90.0) -> Iterator[AtBoard]:
     выходим только дождавшись сна.
     """
     stand.log.clear()
-    stand.dut.hold_button()
 
+    # Нажатие доходит до attiny, только когда ЕСП обесточена: если предыдущий
+    # тест ещё доигрывает сеанс, кнопка нажимается впустую. Поэтому короткое
+    # ожидание и новое нажатие, а не одно долгое: в обычном случае портал
+    # поднимается за те же пять секунд.
     ssid = None
     deadline = time.time() + timeout
-    while time.time() < deadline:
-        stand.log.poll()
-        ssid = find_ap(stand.log.lines)
-        if ssid:
-            break
-        time.sleep(1)
+    while time.time() < deadline and not ssid:
+        stand.dut.hold_button()
+        attempt = time.time() + AP_WAIT_S
+        while time.time() < min(attempt, deadline) and not ssid:
+            stand.log.poll()
+            ssid = find_ap(stand.log.lines)
+            if not ssid:
+                time.sleep(0.5)
     if not ssid:
-        raise PortalError('точка доступа портала не поднялась')
+        raise PortalError(
+            f'точка доступа портала не поднялась за {timeout:.0f} с: '
+            'устройство не проснулось или не увидело кнопку')
     logger.info(f'портал: {ssid}')
 
     device = AtBoard(cfg.atboard_port)
     logger.info(f'адрес AT-платы: {device.join(ssid)}')
+    # Имя точки нужно тому, кто её переживёт: на шаге подключения к домашней
+    # сети точка переезжает на канал роутера, и клиента надо возвращать
+    device.portal_ssid = ssid
     try:
         yield device
     finally:

@@ -53,8 +53,14 @@ def board(cfg: Any, stand: Any) -> Iterator[AtBoard]:
 
 
 def save(board: AtBoard, path: str, **params: Any) -> dict[str, str]:
-    """Отправить параметры в портал и вернуть ошибки полей."""
-    answer = board.post(f'{path}?{urlencode(params)}', portal_mod.HOST)
+    """
+    Отправить параметры в портал и вернуть ошибки полей.
+
+    Параметры уходят телом, как их шлёт форма. Строкой запроса нельзя:
+    `/api/save_alarms` читает поля через `hasParam(name, true)`, то есть
+    только из тела, и параметр из строки молча пропадёт вместе с проверкой.
+    """
+    answer = board.post(path, portal_mod.HOST, body=urlencode(params).encode())
     assert answer.status == 200, f'{path}: {answer.status}'
     body = json.loads(answer.text)
     return {name: str(code) for name, code in (body.get('errors') or {}).items()}
