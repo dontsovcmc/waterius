@@ -818,6 +818,20 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
     }
 }
 
+/*
+Значения настроек берутся только из тела запроса.
+
+Так их шлют все формы портала (common.js, formSubmit: POST,
+application/x-www-form-urlencoded), и так же читает пороги тревог
+save_uint16_param, - и так настройку нельзя поменять ссылкой со строкой
+запроса. Служебные признаки маршрута (input, wizard) читаются откуда угодно:
+они ничего не сохраняют.
+*/
+static bool from_form(const AsyncWebParameter *p)
+{
+    return p->isPost();
+}
+
 void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, const uint8_t input)
 {
     const int params = request->params();
@@ -827,7 +841,8 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
     for (int i = 0; i < params; i++)
     {
         const AsyncWebParameter *p = request->getParam(i);
-        applyInputParameter(p, errorsObj, input);
+        if (from_form(p))
+            applyInputParameter(p, errorsObj, input);
     }
 
     store_config(sett);
@@ -1009,13 +1024,15 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
     for (int i = 0; i < params; i++)
     {
         const AsyncWebParameter *p = request->getParam(i);
-        applyCheckBoxParameter(p, errorsObj);
+        if (from_form(p))
+            applyCheckBoxParameter(p, errorsObj);
     }
 
     for (int i = 0; i < params; i++)
     {
         const AsyncWebParameter *p = request->getParam(i);
-        applyNonCheckBoxParameter(p, errorsObj);
+        if (from_form(p))
+            applyNonCheckBoxParameter(p, errorsObj);
     }
 
     store_config(sett);

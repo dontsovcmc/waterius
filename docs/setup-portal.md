@@ -259,6 +259,12 @@ ESPAsyncWebServer. Вся подстановка — `active_point.cpp:processor
 | `POST /api/save_input_type` | `post_api_save_input_type` | Тип входа + выбор следующей страницы |
 | `GET /api/turnoff` | `get_api_turnoff` | Завершить настройку |
 | `POST /api/reset` | `post_api_reset` | Сброс к заводским |
+| `GET /api/portal_time` | `get_api_portal_time` | Сколько секунд осталось до закрытия портала |
+
+**Значения настроек берутся только из тела запроса.** Так их шлют все формы
+(`formSubmit`: POST, `application/x-www-form-urlencoded`), и так настройку
+нельзя поменять ссылкой со строкой запроса. Признаки маршрута — `input`,
+`wizard` — читаются откуда угодно: они ничего не сохраняют.
 
 ### Формат ответа формы
 
