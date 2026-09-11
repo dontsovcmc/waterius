@@ -620,3 +620,78 @@ TEST(AlarmReportTest, ExhaustedBudgetReleasesHold)
     a.set_wet(false);
     EXPECT_FALSE(a.state & ALARM_WET);
 }
+
+/*
+Смена типа входа снимает тревогу датчика протечки.
+
+Иначе её не снять вовсе: замкнутый датчик опрашивается, только пока тип входа
+- датчик, и после переключения на счётчик бит остаётся поднятым до
+перезагрузки attiny.
+*/
+TEST(Alarm, TypeChangeClearsWetSensor)
+{
+    AlarmDetector a;
+
+    a.set_wet(true);
+    ASSERT_TRUE(a.state & ALARM_WET);
+
+    a.on_type_changed();
+
+    EXPECT_EQ(a.state, 0);
+    EXPECT_EQ(a.changed, 1);   // новость: тревоги больше нет
+}
+
+/*
+То же для тревог по расходу: их считают по импульсам, а у датчика протечки
+импульсов не бывает.
+*/
+TEST(Alarm, TypeChangeClearsFlowAlarms)
+{
+    AlarmDetector a;
+    a.configure(TPM, 2);       // порог расхода - минута между импульсами
+
+    steady(a, 3, 4);           // ровный ритм: и большой расход, и протечка
+    ASSERT_TRUE(a.state & ALARM_LEAK);
+
+    a.on_type_changed();
+
+    EXPECT_EQ(a.state, 0);
+    EXPECT_EQ(a.run_min, 0);   // счёт непрерывного расхода начнётся заново
+    EXPECT_EQ(a.prev_gap, 0);  // и ритма прежнего входа больше нет
+}
+
+/*
+Неподтверждённый доклад смену типа не задерживает.
+
+held держит состояние, пока ЕСП не отчиталась о доставке, - но ждать снятия
+после смены типа неоткуда, и тревога зависла бы навсегда.
+*/
+TEST(Alarm, TypeChangeIgnoresHold)
+{
+    AlarmDetector a;
+
+    a.set_wet(true);
+    a.hold(true);
+    a.set_wet(false);
+    ASSERT_TRUE(a.state & ALARM_WET);   // held не дал снять
+
+    a.on_type_changed();
+
+    EXPECT_EQ(a.state, 0);
+}
+
+/*
+Тревог не было - и новости нет.
+
+Тип входа меняют в портале, а пустой changed поднял бы внеплановый сеанс
+сразу после настройки: доложить было бы нечего.
+*/
+TEST(Alarm, TypeChangeWithoutAlarmsIsNotNews)
+{
+    AlarmDetector a;
+
+    a.on_type_changed();
+
+    EXPECT_EQ(a.state, 0);
+    EXPECT_EQ(a.changed, 0);
+}

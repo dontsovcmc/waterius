@@ -180,6 +180,37 @@ def test_E5_normally_closed_sensor_detects_cut_wire(stand: Stand, quiet: None) -
     stand.dut.wet(channel=0, closed=True)
 
 
+@pytest.mark.requires(attiny=43)
+def test_E12_type_change_clears_alarm(stand: Stand, quiet: None) -> None:
+    """
+    Смена типа входа снимает тревогу канала.
+
+    Датчик остаётся замкнутым: снять тревогу ничем другим нельзя. Опрашивается
+    вход, только пока его тип - датчик (`Attiny85/src/main.cpp`, alarm_tick), и
+    до attiny 43 поднятый бит висел бы до перезагрузки.
+
+    Снятие проверяется следующим сеансом, а не тем, в котором сменили тип: ЕСП
+    читает состояние тревог один раз, в начале сеанса, и повторная посылка
+    после применения настроек собирается из того же снимка. attiny поднимет её
+    сам - состояние изменилось, а значит есть о чём доложить.
+    """
+    stand.setup(channel=0, ctype=LEAKAGE)
+    stand.reset_observers()
+
+    try:
+        stand.dut.wet(channel=0, closed=True)
+        alarm = stand.wait_session(timeout=90, mode=ALARM_MODE)
+        alarm.assert_alarm(wet0=1)
+
+        stand.setup(channel=0, ctype=NAMUR)
+
+        stand.reset_observers()
+        cleared = stand.wait_session(timeout=600)
+        cleared.assert_alarm(wet0=0)
+    finally:
+        stand.dut.wet(channel=0, closed=False)
+
+
 @pytest.mark.slow
 def test_E6_vacation_mode(stand: Stand, quiet: None) -> None:
     """

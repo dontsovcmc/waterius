@@ -13,6 +13,7 @@ extern void extendWakeUpPeriod();
 extern bool is_esp_powered_long();
 extern uint8_t alarm_bits();
 extern void set_alarm_config(const uint8_t *data);
+extern void set_counter_types(const uint8_t *data);
 extern void confirm_alarm();
 
 /* Static declaration */
@@ -130,7 +131,7 @@ void SlaveI2C::getCounterTypes()
 
     if (crc == crc_8(data, sizeof(CounterTypes))) 
     {
-        memcpy((void*)&(info.config.types), data, sizeof(CounterTypes));
+        set_counter_types(data);
         saveConfig();
     }
 }
