@@ -42,6 +42,10 @@ def arm_sensor(stand: Stand, **extra: int) -> None:
     """
     Общее предусловие: вход - датчик протечки, контакт разомкнут.
 
+    Маску квитанции тест обязан задать целиком. В эталоне подняты все три бита
+    (BASELINE: ackw, ackh, ackm), и тест, выставивший только свой, получил бы
+    mask=7 вместо ожидаемого.
+
     Тревогу снимает только опрос входа (`Attiny85/src/main.cpp`, alarm_tick), а
     опрашивается вход, лишь пока его тип - датчик. Поэтому контакт отпускается
     здесь же: уйти из теста с замкнутым датчиком значит оставить поднятый бит
@@ -84,7 +88,7 @@ def test_F2_required_receiver_unreachable(stand: Stand, quiet: None) -> None:
     снова. Брокер при этом остаётся включённым в настройках - иначе получится
     совсем другой сценарий, F3.
     """
-    arm_sensor(stand, confirm_mqtt=1)
+    arm_sensor(stand, confirm_waterius=0, confirm_http=0, confirm_mqtt=1)
     stand.reset_observers()
 
     try:
@@ -114,7 +118,8 @@ def test_F3_disabled_receiver_drops_out(stand: Stand, quiet: None) -> None:
     тревога стоила бы полного бюджета внеплановых сеансов. Отличие от F2 - одно
     число: mqtt=0 (пропущен), а не 3 (нет связи).
     """
-    arm_sensor(stand, confirm_mqtt=1, mqtt_on=0)
+    arm_sensor(stand, confirm_waterius=0, confirm_http=0, confirm_mqtt=1,
+               mqtt_on=0)
     stand.reset_observers()
 
     try:

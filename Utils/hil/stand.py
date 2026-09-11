@@ -542,8 +542,11 @@ class Stand:
                 raise AssertionError(
                     f'канал {channel}: тревога {found} не снялась')
 
-            self.setup(channel=channel, **{name: 0 for name in found
-                                           if name != 'alarm_wet'})
+            # У датчика протечки порога нет, обнулять нечего: пустой setup
+            # не дал бы прошивке что применить, а она в ответ - второй посылки
+            thresholds = {name: 0 for name in found if name != 'alarm_wet'}
+            if thresholds:
+                self.setup(channel=channel, **thresholds)
 
     def _start_clearing(self, channel: int, found: list[str],
                         payload: dict[str, Any]) -> None:

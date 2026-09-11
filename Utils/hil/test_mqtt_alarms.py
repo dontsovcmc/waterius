@@ -135,7 +135,8 @@ def test_I4_remote_threshold_is_recalculated(stand: Stand, armed: Session) -> No
         f'порог не пересчитан: {session.alarm_config}')
 
 
-@pytest.mark.arm(confirm_mqtt=0, ctype=LEAKAGE)
+@pytest.mark.arm(confirm_waterius=0, confirm_http=0, confirm_mqtt=0,
+                 ctype=LEAKAGE)
 def test_I5_remote_mask_change(stand: Stand, quiet: None, armed: Session) -> None:
     """
     Маска квитанции меняется извне.
@@ -146,6 +147,9 @@ def test_I5_remote_mask_change(stand: Stand, quiet: None, armed: Session) -> Non
 
     Новость даёт датчик протечки: тревога нужна любая, а эта поднимается за
     секунду и снимается тогда, когда тест отпустит вход.
+
+    Маска задаётся целиком: в эталоне подняты все три бита, и выставив только
+    свой, тест увидел бы mask=7.
     """
     assert stand.mqtt is not None
 
