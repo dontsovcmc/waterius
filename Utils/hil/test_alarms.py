@@ -9,6 +9,11 @@
 Числа взяты с запасом от границ. Порог 3600 л/ч при весе 10 - это 40 тиков по
 250 мс, то есть 10 секунд, а тревога поднимается при зазоре не больше 39 тиков.
 Подавать импульсы с зазором 9,8 с - значит получить мигающий тест; берём 3 с.
+
+Большой расход (E1, E2) и протечка по непрерывному расходу (E3a-E3c) помечены
+`experimental`: функции ещё не устоялись, и по умолчанию эти тесты не идут.
+Гонять их - `pytest --experimental`. Остальное группы это не касается: датчик
+протечки, режим отпуска и остановка потребления проверяются всегда.
 """
 
 from __future__ import annotations
@@ -40,6 +45,7 @@ def raise_flow_alarm(stand: Stand) -> None:
     stand.dut.pulses(channel=1, count=2, gap=3.0)
 
 
+@pytest.mark.experimental
 def test_E1_flow_alarm(stand: Stand, quiet: None) -> None:
     """Расход выше порога поднимает тревогу и будит устройство вне расписания."""
     stand.setup_alarms(channel=1, factor=FACTOR, alarm_flow=FLOW_THRESHOLD,
@@ -55,6 +61,7 @@ def test_E1_flow_alarm(stand: Stand, quiet: None) -> None:
 
 
 @pytest.mark.slow
+@pytest.mark.experimental
 def test_E2_flow_alarm_clears(stand: Stand, quiet: None) -> None:
     """
     Снятие тревоги - такая же новость, как её появление.
@@ -79,6 +86,7 @@ def test_E2_flow_alarm_clears(stand: Stand, quiet: None) -> None:
 
 @pytest.mark.slow
 @pytest.mark.requires(attiny=42)          # attiny 41 поднимает протечку от одного импульса
+@pytest.mark.experimental
 def test_E3a_single_pulse_is_not_a_leak(stand: Stand, quiet: None) -> None:
     """
     Негативный контроль для непрерывного расхода.
@@ -100,6 +108,7 @@ def test_E3a_single_pulse_is_not_a_leak(stand: Stand, quiet: None) -> None:
 
 
 @pytest.mark.slow
+@pytest.mark.experimental
 def test_E3b_rhythm_raises_leak(stand: Stand, quiet: None) -> None:
     """Ровный расход дольше порога - протечка."""
     stand.setup_alarms(channel=1, factor=FACTOR, alarm_leak=LEAK_MINUTES,
@@ -114,6 +123,7 @@ def test_E3b_rhythm_raises_leak(stand: Stand, quiet: None) -> None:
 
 
 @pytest.mark.slow
+@pytest.mark.experimental
 def test_E3c_household_profile_is_quiet(stand: Stand, quiet: None) -> None:
     """
     Обычный быт не должен выглядеть протечкой: расход, долгая пауза, снова

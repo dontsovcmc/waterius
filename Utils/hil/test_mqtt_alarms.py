@@ -33,6 +33,7 @@ pytestmark = [
 
 CHANNEL = 1
 NAMUR = 0
+LEAKAGE = 5                # тип входа «датчик протечки», core/types.h
 FACTOR = 10
 FLOW_THRESHOLD = 3600      # л/ч; при весе 10 это 40 тиков по 250 мс
 
@@ -53,12 +54,12 @@ def armed(request: pytest.FixtureRequest, stand: Stand) -> Session:
     выключенные тревоги. Отдельные настройки теста - маркером `arm`, чтобы это
     стоило того же одного сеанса: на живом железе он идёт полторы минуты.
     """
+    settings = dict(factor=FACTOR, alarm_flow=FLOW_THRESHOLD, ctype=NAMUR,
+                    vacation=0, mqtt_auto_discovery=1, mqtt_retain=1)
     marker = request.node.get_closest_marker('arm')
-    extra = dict(marker.kwargs) if marker is not None else {}
-    return stand.setup_alarms(channel=CHANNEL, factor=FACTOR,
-                              alarm_flow=FLOW_THRESHOLD, ctype=NAMUR,
-                              vacation=0, mqtt_auto_discovery=1,
-                              mqtt_retain=1, **extra)
+    if marker is not None:
+        settings.update(marker.kwargs)          # маркер перебивает умолчание
+    return stand.setup_alarms(channel=CHANNEL, **settings)
 
 
 def test_I1_discovery_alarm_entities(stand: Stand, armed: Session) -> None:
@@ -134,7 +135,7 @@ def test_I4_remote_threshold_is_recalculated(stand: Stand, armed: Session) -> No
         f'порог не пересчитан: {session.alarm_config}')
 
 
-@pytest.mark.arm(confirm_mqtt=0)
+@pytest.mark.arm(confirm_mqtt=0, ctype=LEAKAGE)
 def test_I5_remote_mask_change(stand: Stand, quiet: None, armed: Session) -> None:
     """
     Маска квитанции меняется извне.
@@ -142,6 +143,9 @@ def test_I5_remote_mask_change(stand: Stand, quiet: None, armed: Session) -> Non
     Правило «выключенный получатель выпадает из условия» живёт в прошивке
     именно ради этого пути: в Home Assistant отправителя можно выключить уже
     после того, как галочка поставлена.
+
+    Новость даёт датчик протечки: тревога нужна любая, а эта поднимается за
+    секунду и снимается тогда, когда тест отпустит вход.
     """
     assert stand.mqtt is not None
 
@@ -153,8 +157,15 @@ def test_I5_remote_mask_change(stand: Stand, quiet: None, armed: Session) -> Non
     assert applied.payload['ackm'] is True
 
     stand.reset_observers()
-    stand.dut.pulses(channel=CHANNEL, count=2, gap=3.0)
-    alarm = stand.wait_session(timeout=180)
-    alarm.assert_confirm(mask=4, confirmed=1)
+    try:
+        stand.dut.wet(channel=CHANNEL, closed=True)
+        alarm = stand.wait_session(timeout=180)
+        alarm.assert_alarm(wet1=1)
+        alarm.assert_confirm(mask=4, confirmed=1)
+    finally:
+        # Вход опрашивается, только пока его тип - датчик: уйти с замкнутым
+        # контактом значит оставить поднятый бит следующему тесту, которому
+        # вход вернут в NAMUR и снимать тревогу станет некому.
+        stand.dut.wet(channel=CHANNEL, closed=False)
 
     stand.setup(confirm_mqtt=0)

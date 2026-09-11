@@ -35,6 +35,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
                      help='путь к stand.ini')
     parser.addoption('--pcap', action='store_true', default=False,
                      help='снимать дамп трафика точки доступа к упавшим тестам')
+    parser.addoption('--experimental', action='store_true', default=False,
+                     help='гонять тесты экспериментальных функций прошивки')
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -54,10 +56,21 @@ def pytest_configure(config: pytest.Config) -> None:
         'markers',
         'requires(attiny=N, esp="X.Y.Z"): минимальные версии прошивки для теста; '
         'без указания версии тест идёт на любой')
+    config.addinivalue_line(
+        'markers',
+        'experimental: функция прошивки ещё не устоялась, поведение может '
+        'измениться; по умолчанию пропускается, гоняется с --experimental')
 
 
 def pytest_collection_modifyitems(config: pytest.Config,
                                   items: list[pytest.Item]) -> None:
+    if not config.getoption('--experimental'):
+        skip = pytest.mark.skip(
+            reason='экспериментальная функция: pytest --experimental')
+        for item in items:
+            if 'experimental' in item.keywords:
+                item.add_marker(skip)
+
     if config.getoption('--stand'):
         return
     skip = pytest.mark.skip(reason='нужен стенд: pytest --stand')
