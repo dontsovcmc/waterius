@@ -71,6 +71,10 @@ REPAIR_LEAK = 2         # минут непрерывного расхода
 # только протечке по ритму, она ждёт двойного интервала между импульсами.
 CLEAR_WAITS = (30.0, 120.0, 300.0)
 
+# Сколько ждём первой строки от устройства после нажатия кнопки. ЕСП печатает
+# её через треть секунды; пятнадцать - с запасом на пробуждение attiny.
+DEVICE_ALIVE_S = 15.0
+
 GLOBAL_PARAMS = {
     'vacation': 'vac',
     'period_min': 'period_min',
@@ -238,6 +242,41 @@ class Stand:
                 logger.warning(f'MAC из лога {session.mac} != {self.dut_mac} из stand.ini')
             self.dut_mac = session.mac
 
+    def expect_awake(self, timeout: float = DEVICE_ALIVE_S) -> None:
+        """
+        Убедиться, что Ватериус проснулся, - сразу после нажатия кнопки.
+
+        Отсутствие устройства и спящее устройство по логу неотличимы: между
+        сеансами оно молчит всегда. Отличает их нажатие: после него ЕСП
+        печатает `Startup mode:` через треть секунды. Нажимает вызывающий -
+        своего нажатия здесь нет намеренно, второе подряд ЕСП проглотит, она
+        уже не спит.
+
+        Ждём именно эту строку, а не любую. Ею стенд открывает сеанс, и без
+        неё он не соберёт ни одного, даже когда лог идёт: подключённый к тому
+        же UART программатор рвёт поток, хвосты сеансов доезжают, а начала
+        нет. «Хоть что-то в логе» такую линию считает живой и пропускает
+        дальше - разбираться потом в `identify`, через три минуты и с
+        сообщением «сеанс не пришёл», которое уводит искать не там.
+        """
+        try:
+            self.dut.api.ping()
+        except Exception as err:
+            raise AssertionError(
+                f'плата METF {self.cfg.metf_host} не отвечает: без неё стенду '
+                f'нечем ни жать кнопку, ни читать лог\n{err}') from err
+
+        if self.log.wait_line('Startup mode:', timeout=timeout) is not None:
+            return
+
+        what = ('лог идёт, но начала сеанса в нём нет'
+                if self.log.lines else 'на UART не пришло ни строки')
+        raise AssertionError(
+            f'Ватериус не отзывается: за {timeout:.0f} с после нажатия кнопки '
+            f'{what}. Проверьте, что плата подключена к METF и запитана, и что '
+            f'к её UART не подключён программатор - он рвёт поток, и стенду '
+            f'не из чего собрать сеанс')
+
     def identify(self, timeout: float = 180.0) -> None:
         """
         Один сеанс в начале прогона: узнать версии и MAC у самого устройства.
@@ -249,6 +288,7 @@ class Stand:
         """
         self.reset_observers()
         self.dut.press_button()
+        self.expect_awake()
         session = self.wait_session(timeout=timeout)
         assert self.attiny_version is not None, (
             f'в логе нет версии attiny\n{session.text}')
