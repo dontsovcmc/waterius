@@ -681,6 +681,47 @@ TEST(Alarm, TypeChangeIgnoresHold)
 }
 
 /*
+Первый импульс на новом входе тревоги не поднимает.
+
+Тревога расхода - это утверждение о времени между ДВУМЯ импульсами, а после
+смены типа второго ещё не было. Сравнить не с чем, и любая точка отсчёта,
+взятая от момента настройки, даёт тревогу на пустом месте.
+*/
+TEST(Alarm, FirstPulseAfterTypeChangeIsNotAnAlarm)
+{
+    AlarmDetector a;
+    a.configure(TPM, 0);       // порог расхода - минута между импульсами
+
+    a.on_type_changed();
+    idle(a, 0);
+    for (uint16_t t = 0; t < 20; t++)   // импульс через пять секунд
+        a.on_tick();
+    a.on_pulse();
+
+    EXPECT_FALSE(a.state & ALARM_FLOW);
+}
+
+/*
+Со второго импульса интервал настоящий, и порог снова работает.
+
+Иначе "новая жизнь" превратилась бы в выключенную тревогу: вход, которому
+только что сменили тип, обязан ловить прорыв так же, как любой другой.
+*/
+TEST(Alarm, SecondPulseAfterTypeChangeMeasuresTheInterval)
+{
+    AlarmDetector a;
+    a.configure(TPM, 0);
+
+    a.on_type_changed();
+    a.on_pulse();                       // точка отсчёта
+    for (uint16_t t = 0; t < 20; t++)   // пять секунд - вчетверо чаще порога
+        a.on_tick();
+    a.on_pulse();
+
+    EXPECT_TRUE(a.state & ALARM_FLOW);
+}
+
+/*
 Тревог не было - и новости нет.
 
 Тип входа меняют в портале, а пустой changed поднял бы внеплановый сеанс

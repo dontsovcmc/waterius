@@ -446,15 +446,14 @@ void set_alarm_config(const uint8_t *data)
 */
 void set_counter_types(const uint8_t *data)
 {
-	const CounterTypes *types = (const CounterTypes *)data;
-
-	if (types->type0 != info.config.types.type0)
+	if (data[0] != info.config.types.type0)
 		alarm0.on_type_changed();
 
-	if (types->type1 != info.config.types.type1)
+	if (data[1] != info.config.types.type1)
 		alarm1.on_type_changed();
 
-	info.config.types = *types;
+	info.config.types.type0 = data[0];
+	info.config.types.type1 = data[1];
 }
 
 /*
