@@ -18,6 +18,7 @@ import requests
 from loguru import logger
 
 TIMEOUT = 5.0
+NTP_PROTOCOL = 6        # версия протокола METF, в которой появился /ntp
 
 
 class BoardClock:
@@ -66,12 +67,9 @@ class BoardClock:
 
     def available(self) -> bool:
         """Есть ли на плате сервер времени: он появился в шестой версии протокола."""
-        try:
-            answer = requests.get(f'{self._root}/version', timeout=TIMEOUT)
-            answer.raise_for_status()
-            return int(answer.text.strip()) >= 6
-        except (requests.RequestException, ValueError):
-            return False
+        answer = requests.get(f'{self._root}/version', timeout=TIMEOUT)
+        answer.raise_for_status()
+        return int(answer.text.strip()) >= NTP_PROTOCOL
 
     def _post(self, **params: Any) -> None:
         answer = requests.post(f'{self._root}/ntp', data=params, timeout=TIMEOUT)

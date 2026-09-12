@@ -5,6 +5,11 @@
 прогоном. Поэтому все проверки здесь локальные: что бы ни происходило с
 `ru.pool.ntp.org`, результат теста от этого не зависит.
 
+Источник времени ставится на весь прогон, а не на этот блок
+(`Stand.ensure_clock`): иначе остальные блоки брали бы время из интернета, и
+стенд зависел бы от него молча. Здесь только отклонения от этого порядка -
+сдвинутые часы, уход в пул, перерезанный udp/123, - и каждое возвращается.
+
 Время назначает тест, и назначает заведомо узнаваемым - на час вперёд от
 настоящего. Тогда «устройство взяло время у нас» отличается от «взяло откуда-то
 ещё» одним взглядом на метку в посылке. Вперёд, а не назад: прошивка хранит
@@ -68,24 +73,19 @@ def pool_names(lines: list[str]) -> list[str]:
 @pytest.fixture
 def clock(stand: Stand, device_baseline: None) -> Iterator[Any]:
     """
-    Сервер времени стенда поднят, устройство смотрит на него.
+    Часы стенда сдвинуты на час - на время этого теста.
 
-    После теста часы платы возвращаются к настоящим, а устройство - к пулу по
-    умолчанию: иначе перекос в час и чужой адрес сервера уедут в соседние
-    блоки, где метку времени сверяют с настоящей.
+    Адрес сервера тут не ставится: устройство смотрит на плату с самого начала
+    прогона (`Stand.ensure_clock`). Здесь только сдвиг, и только он и
+    возвращается - настоящее время и отключённое молчание. Сервер остаётся
+    поднятым: он источник времени для всех блоков, а не для этого одного.
     """
-    if not stand.clock.available():
-        pytest.skip('на плате стенда нет сервера времени: нужен METF 6')
-
     stand.clock.start(board_epoch())
-    stand.setup(ntp_server=stand.cfg.metf_host)
     try:
         yield stand.clock
     finally:
         stand.clock.drop(False)
         stand.clock.start(int(time.time()))
-        stand.setup(ntp_server=DEFAULT_NTP_SERVER)
-        stand.clock.stop()
 
 
 def test_N1_manual_server_is_used(stand: Stand, clock: Any) -> None:
@@ -146,16 +146,21 @@ def test_N3_pool_server_is_chosen_at_random(stand: Stand, clock: Any) -> None:
     Резолв при этом может и не удаться: имя прошивка печатает в обоих случаях,
     и проверка от наличия интернета не зависит.
     """
+    # Единственный тест, которому нужен настоящий пул: возвращаем устройство
+    # на него и обязательно уводим обратно - остальные блоки берут время у
+    # платы, и оставить их в интернете значит вернуть зависимость от него
     stand.setup(ntp_server=DEFAULT_NTP_SERVER)
-
-    chosen = []
-    for attempt in range(6):
-        stand.reset_observers()
-        stand.dut.press_button()
-        session = stand.wait_session(timeout=180)
-        names = pool_names(session.lines)
-        assert names, f'сеанс {attempt + 1}: пул не опрашивался\n{session.text}'
-        chosen.append(names[0])
+    try:
+        chosen = []
+        for attempt in range(6):
+            stand.reset_observers()
+            stand.dut.press_button()
+            session = stand.wait_session(timeout=180)
+            names = pool_names(session.lines)
+            assert names, f'сеанс {attempt + 1}: пул не опрашивался\n{session.text}'
+            chosen.append(names[0])
+    finally:
+        stand.setup(ntp_server=stand.cfg.metf_host)
 
     assert all(int(name) < NTP_POOL_SIZE for name in chosen), (
         f'номер сервера вне пула: {chosen}')
