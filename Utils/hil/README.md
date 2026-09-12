@@ -55,10 +55,18 @@ python3 -m pytest Utils/hil --stand -m portal -v  # портал: файлы о�
 python3 -m pytest Utils/hil --stand               # всё, включая часовые
 python3 -m pytest Utils/hil --stand --durations=0 # то же, с временем каждого теста
 python3 -m pytest Utils/hil --stand --pcap -k G4  # с дампом трафика к упавшим
+python3 -m pytest Utils/hil --stand --experimental # и экспериментальные функции
 ```
 
 Без `--stand` тесты железа пропускаются, а `selftest/` проверяется где угодно —
 он не требует ни pyserial, ни paho-mqtt.
+
+Флаг `--experimental` включает тесты функций, поведение которых ещё может
+измениться. Сейчас это большой расход (`E1`, `E2`) и протечка по непрерывному
+расходу (`E3a`—`E3c`). Без флага они пропускаются: падение такого теста ничего
+не говорит о прошивке, пока не решено, как функция должна работать. Датчик
+протечки, режим отпуска и остановка потребления к экспериментальным не
+относятся и идут всегда.
 
 ## Что где лежит
 
@@ -76,13 +84,13 @@ python3 -m pytest Utils/hil --stand --pcap -k G4  # с дампом трафик
 ## Как устроен тест
 
 ```python
-def test_E1_flow_alarm(stand, quiet):
-    stand.setup_alarms(channel=1, factor=10, alarm_flow=3600, ctype=NAMUR)
+def test_E4_leak_sensor_closes(stand, quiet):
+    stand.setup(channel=0, ctype=LEAKAGE)
     stand.reset_observers()
-    stand.dut.pulses(channel=1, count=2, gap=3.0)
+    stand.dut.wet(channel=0, closed=True)
 
-    session = stand.wait_session(timeout=120, mode=ALARM_MODE)
-    session.assert_alarm(flow1=1, flow0=0)
+    session = stand.wait_session(timeout=90, mode=ALARM_MODE)
+    session.assert_alarm(wet0=1)
 ```
 
 Три вещи, которые делают это возможным.

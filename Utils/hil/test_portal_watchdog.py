@@ -82,5 +82,7 @@ def test_K3_action_extends_the_window(portal: AtBoard) -> None:
 
     assert fed > polled, (
         f'страница не продлила окно: было {polled} с, стало {fed} с')
-    assert fed > started, (
+    # Не сравниваем с первым замером: пока идут запросы AT-платы, проходят
+    # секунды, и «не меньше прежнего» здесь означало бы «успели за ноль секунд»
+    assert fed > WATCHDOG_S - 30, (
         f'окно продлилось не до полного: {fed} с при сроке {WATCHDOG_S} с')

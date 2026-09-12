@@ -29,7 +29,7 @@ import pytest
 from loguru import logger
 
 from . import portal as portal_mod
-from .atboard import AtBoard
+from .atboard import AtBoard, AtError
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal, pytest.mark.slow]
 
@@ -54,7 +54,8 @@ def api(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:
 
 
 def save(board: AtBoard, path: str, **params: Any) -> dict[str, str]:
-    answer = board.post(f'{path}?{urlencode(params)}', portal_mod.HOST)
+    """Сохранить форму: поля уходят телом, как их шлёт страница."""
+    answer = board.post(path, portal_mod.HOST, body=urlencode(params).encode())
     assert answer.status == 200, f'{path}: {answer.status}'
     body = json.loads(answer.text or '{}')
     return {name: str(code) for name, code in (body.get('errors') or {}).items()}
@@ -93,22 +94,36 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
     assert any(net['ssid'] == ssid for net in networks), (
         f'сети стенда {ssid} нет в списке: {[n["ssid"] for n in networks]}')
 
-    levels = [net['level'] for net in networks]
-    assert levels == sorted(levels, reverse=True), (
-        f'список не отсортирован по уровню сигнала: {levels}')
+    # Поля, без которых страница не соберёт форму: уровень рисует иконку, пара
+    # канал-BSSID уезжает в скрытые поля и даёт коннект без полного скана.
+    # Сортировка по уровню - дело страницы (common.js, getWifiList), и
+    # проверяет её браузерный тест симулятора
+    for net in networks:
+        assert 1 <= net['level'] <= 4, net
+        assert net['bssid'] and net['wifi_channel'], net
 
     # A4: сеть и пароль
     assert save(board, '/api/save_connect', ssid=ssid,
                 password=cfg.ap_password, wizard='true') == {}
 
-    board.get('/api/start_connect?wizard=true', portal_mod.HOST)
+    # Точка доступа переезжает на канал роутера, и клиент с неё слетает - у
+    # человека это видно как «нет связи с Ватериусом». Возвращаться обязан
+    # сам, поэтому обрыв здесь не ошибка, а часть сценария (K2)
+    try:
+        board.get('/api/start_connect?wizard=true', portal_mod.HOST)
+    except AtError as err:
+        logger.info(f'портал оборвал подключение, так и задумано: {err}')
 
     redirect = None
-    deadline = time.time() + 60
-    while time.time() < deadline:
-        redirect = api(board, '/api/connect_status').get('redirect')
-        if redirect == '/input/1/setup.html':
-            break
+    deadline = time.time() + 120
+    while time.time() < deadline and redirect != '/input/1/setup.html':
+        try:
+            redirect = api(board, '/api/connect_status').get('redirect')
+        except AtError:
+            logger.info('точка переехала на канал роутера, возвращаемся')
+            time.sleep(3)
+            board.join(board.portal_ssid)
+            continue
         time.sleep(2)
     assert redirect == '/input/1/setup.html', (
         f'мастер не увидел подключения к сети: {redirect}')
@@ -136,6 +151,11 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
                 http_url=cfg.http_url, period_min=PERIOD_MIN) == {}
 
     logger.info('мастер пройден, ждём первую посылку')
+
+    # Очередь приёмника чистим прямо перед выходом: в ней лежат посылки,
+    # присланные до мастера, и последняя из них выглядит как результат
+    # настройки, хотя настройки в ней прежние
+    stand.reset_observers()
     board.get('/api/turnoff', portal_mod.HOST)
 
     session = stand.wait_session(timeout=300)

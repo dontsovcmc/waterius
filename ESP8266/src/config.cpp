@@ -12,6 +12,9 @@
 #include "sync_time.h"
 #include "wifi_helpers.h"
 #include "flash_hal.h"
+#include "master_i2c.h"
+
+extern MasterI2C masterI2C;
 
 
 // Конвертируем значение переменных компиляции в строку
@@ -420,9 +423,23 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
     sett.last_send = now;
 }
 
+/*
+Сброс к заводским настройкам.
+
+Настройки возвращаются к объявленным умолчаниям присваиванием всей структуры,
+а не по полю. init_config задаёт только то, что нельзя объявить в структуре -
+вычисляемый топик, ключ, константы сборки, - и по нему одному сброс оставлял
+бы в силе всё остальное: пороги тревог, показания, серийные номера, адрес и
+пароль брокера.
+
+Переживает сброс единственное - уникальный токен: им устройство опознаётся в
+облаке, и потерять его значит потерять привязку к аккаунту.
+
+Типы входов живут в EEPROM attiny, и стереть их отсюда нельзя - только
+командой. С attiny 43 она заодно снимает тревоги канала.
+*/
 void factory_reset(Settings &sett)
 {
-    //Запоминаем уникальный токен, чтобы потом восстановить
     LOG_INFO(F("Save waterius_key=") << sett.waterius_key);
     String waterius_key = sett.waterius_key;
 
@@ -436,6 +453,12 @@ void factory_reset(Settings &sett)
 
     delay(500);
 
+    if (!masterI2C.setCountersType(CounterType::NAMUR, CounterType::NAMUR))
+    {
+        LOG_ERROR(F("Factory reset: attiny input types not reset"));
+    }
+
+    sett = Settings();
     init_config(sett);
     strncpy0(sett.waterius_key, waterius_key.c_str(), WATERIUS_KEY_LEN);
     LOG_INFO(F("Restore waterius_key=") << sett.waterius_key);
