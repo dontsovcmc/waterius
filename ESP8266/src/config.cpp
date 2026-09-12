@@ -436,7 +436,7 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
 облаке, и потерять его значит потерять привязку к аккаунту.
 
 Типы входов живут в EEPROM attiny, и стереть их отсюда нельзя - только
-командой. С attiny 43 она заодно снимает тревоги канала.
+командой. С attiny 42 она заодно снимает тревоги канала.
 */
 void factory_reset(Settings &sett)
 {
