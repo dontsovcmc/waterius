@@ -125,10 +125,27 @@ def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     device.identify()          # версии и MAC - у самого устройства, до первого теста
     device.ensure_network()    # и сеть: в чужой стенд бесполезен
     device.ensure_mqtt()       # и брокер, если он поднялся
+    device.ensure_clock()      # и время: иначе оно приходит из интернета
     try:
         yield device
     finally:
         device.close()
+
+
+@pytest.fixture(autouse=True)
+def armed_clock(request: pytest.FixtureRequest) -> None:
+    """
+    Часы платы на месте перед каждым тестом стенда.
+
+    Плата теряет назначенное время при перезагрузке, и сервер после этого
+    молча выбрасывает запросы - устройство осталось бы без времени, а тест
+    падал бы совсем в другом месте. Проверка стоит одного HTTP-запроса.
+    """
+    if 'stand' not in request.fixturenames:
+        return
+    if not request.config.getoption('--stand'):
+        return
+    request.getfixturevalue('stand').arm_clock()
 
 
 @pytest.fixture(scope='session')

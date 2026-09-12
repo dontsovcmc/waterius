@@ -21,6 +21,7 @@ from loguru import logger
 from metf_python_client import METFClient
 
 from .config import StandConfig
+from .clock import BoardClock
 from .dut import Dut
 from .logwatch import LogWatcher, Session
 from .net import Net
@@ -110,6 +111,9 @@ class Stand:
         self.mqtt = mqtt
         self.log = LogWatcher(api)
         self.dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin)
+        # Время устройству отдаёт та же плата: тесты синхронизации не должны
+        # зависеть ни от интернета, ни от серверов на машине с прогоном
+        self.clock = BoardClock(cfg.metf_host)
         self.net = Net(router, cfg.dut_ip, cfg.dut_mac,
                        cfg.broker_port, cfg.receiver_port)
         self.last_payload: dict[str, Any] | None = None
@@ -349,6 +353,46 @@ class Stand:
         сломанный MQTT.
         """
         return self.cfg.mqtt_topic.rstrip('/')
+
+    def ensure_clock(self, timeout: float = 300.0) -> None:
+        """
+        Дать устройству источник времени на стенде, а не в интернете.
+
+        Иначе время приходит из настоящего пула, и стенд молча зависит от
+        интернета: пропал - и подстройка периода замирает, счётчик неудач
+        растёт, метка в посылке идёт по оценке. Ни один тест от этого не
+        покраснеет, просто проверять будет слегка другое устройство.
+
+        Часы платы ставятся настоящие: сдвиг - приём блока N и только его,
+        во всех остальных метка времени сверяется с реальной.
+
+        Адрес сервера в посылку не попадает (`json.cpp` отдаёт только
+        `ntp_errors`), поэтому в эталон его не положить и сверять при каждом
+        тесте нечем: ставим один раз за прогон, а блок N возвращает своё сам.
+        """
+        assert self.clock.available(), (
+            f'на плате {self.cfg.metf_host} нет сервера времени: нужен METF 6. '
+            f'Прошейте плату - иначе время придёт из интернета, и прогон будет '
+            f'зависеть от него молча')
+
+        self.clock.start(int(time.time()))
+        self.setup(ntp_server=self.cfg.metf_host, timeout=timeout)
+        logger.info(f'источник времени устройства: плата {self.cfg.metf_host}')
+
+    def arm_clock(self) -> None:
+        """
+        Переподнять часы платы, если она их потеряла.
+
+        Часов реального времени у платы нет: перезагрузка или перепрошивка
+        стирают назначенный момент, и сервер начинает молча выбрасывать
+        запросы. Проверка стоит одного HTTP-запроса и ни одного сеанса
+        устройства, поэтому её не жалко делать перед каждым тестом.
+        """
+        if self.clock.stat()['running']:
+            return
+
+        logger.warning('плата потеряла часы, поднимаем заново')
+        self.clock.start(int(time.time()))
 
     def ensure_mqtt(self, timeout: float = 300.0) -> bool:
         """
