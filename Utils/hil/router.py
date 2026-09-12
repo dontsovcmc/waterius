@@ -440,6 +440,10 @@ class NatRouter:
         """Один получатель недоступен, остальные живы: F2, F3, G5."""
         self.acl_add(self.CLIENT_OUT, f'TCP {ip} * any {port} deny')
 
+    def block_udp_port(self, ip: str, port: int) -> None:
+        """То же для UDP: нужен блоку N, там получатель - NTP."""
+        self.acl_add(self.CLIENT_OUT, f'UDP {ip} * any {port} deny')
+
     @contextmanager
     def ap_off(self) -> Iterator[None]:
         """

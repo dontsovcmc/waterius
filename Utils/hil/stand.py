@@ -21,6 +21,7 @@ from loguru import logger
 from metf_python_client import METFClient
 
 from .config import StandConfig
+from .clock import BoardClock
 from .dut import Dut
 from .logwatch import LogWatcher, Session
 from .net import Net
@@ -104,6 +105,9 @@ class Stand:
         self.mqtt = mqtt
         self.log = LogWatcher(api)
         self.dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin)
+        # Время устройству отдаёт та же плата: тесты синхронизации не должны
+        # зависеть ни от интернета, ни от серверов на машине с прогоном
+        self.clock = BoardClock(cfg.metf_host)
         self.net = Net(router, cfg.dut_ip, cfg.dut_mac,
                        cfg.broker_port, cfg.receiver_port)
         self.last_payload: dict[str, Any] | None = None

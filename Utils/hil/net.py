@@ -26,6 +26,7 @@ from loguru import logger
 from .router import NatRouter
 
 HTTPS_PORT = 443
+NTP_PORT = 123
 
 # Список, в котором режется исходящий трафик клиента точки. Имя обманчиво:
 # пакет клиента приходит на интерфейс точки, а обработчик входа сверяется с
@@ -126,6 +127,23 @@ class Net:
         with self.router.blocked(self.dut_ip, HTTPS_PORT), \
                 self._blocking('waterius_down'):
             yield
+
+    @contextmanager
+    def ntp_down(self) -> Iterator[None]:
+        """
+        Время взять неоткуда, остальная сеть жива.
+
+        Молчащего сервера стенда для этого мало: при неудаче своего сервера
+        прошивка идёт в пул, а пул из сети стенда доступен. Режем udp/123
+        целиком - и посылка при этом доходит, иначе проверять было бы нечего.
+        """
+        self.verify_dut()
+        logger.info('сеть: режем udp/123, остальное оставляем')
+        self.router.block_udp_port(self.dut_ip, NTP_PORT)
+        try:
+            yield
+        finally:
+            self.router.acl_clear()
 
     @contextmanager
     def own_server_down(self) -> Iterator[None]:
