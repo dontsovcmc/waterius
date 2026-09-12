@@ -278,11 +278,10 @@ def discovery_reset(request: pytest.FixtureRequest) -> Iterator[None]:
 @pytest.fixture
 def quiet(stand: Any, device_baseline: None) -> Iterator[None]:
     """
-    Для тестов тревог: начинать с состояния, в котором устройство никого не
-    будит. Остаток бюджета внеплановых сеансов от предыдущего теста иначе
-    утечёт в этот и собьёт счёт.
+    Для тестов тревог: начинать с обнулённого бюджета внеплановых сеансов.
+    Остаток от предыдущего теста иначе утечёт в этот и собьёт счёт.
     """
-    stand.wait_quiet(seconds=330)
+    stand.reset_alarm_budget()
     yield
 
 

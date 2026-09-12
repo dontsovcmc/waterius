@@ -37,6 +37,12 @@ SENSOR = 0              # канал с датчиком протечки
 
 CONFIRM_MQTT = 4        # AlarmConfirm, core/types.h
 
+# Сколько наблюдаем тишину, чтобы утверждать «больше не будит». Пауза после
+# сеанса по тревоге - ALARM_HOLD_MIN, пять минут (Attiny85/src/alarm.h), и
+# раньше неё внеплановый сеанс невозможен физически. Берём её плюс сеанс и
+# запас; ждать дольше - платить временем за уже доказанное.
+SILENCE_S = 420.0
+
 
 def arm_sensor(stand: Stand, **extra: int) -> None:
     """
@@ -77,8 +83,11 @@ def test_F1_any_receiver_is_enough(stand: Stand, quiet: None) -> None:
     cleared.assert_alarm(wet0=0)
     cleared.assert_confirm(mask=0, any=1, confirmed=1)
 
-    # Вот теперь доложено и подтверждено всё - будить нас больше незачем
-    stand.expect_no_session(timeout=900, mode=ALARM_MODE)
+    # Вот теперь доложено и подтверждено всё - будить нас больше незачем.
+    # Окно чуть больше ALARM_HOLD_MIN: раньше attiny не проснулся бы в любом
+    # случае, а дольше держать нечего - плановые сеансы идут своим чередом и
+    # под mode не попадают.
+    stand.expect_no_session(timeout=SILENCE_S, mode=ALARM_MODE)
 
 
 @pytest.mark.slow
@@ -134,7 +143,7 @@ def test_F3_disabled_receiver_drops_out(stand: Stand, quiet: None) -> None:
         cleared = stand.wait_session(timeout=600, mode=ALARM_MODE)
         cleared.assert_alarm(wet0=0)
 
-        stand.expect_no_session(timeout=900, mode=ALARM_MODE)
+        stand.expect_no_session(timeout=SILENCE_S, mode=ALARM_MODE)
     finally:
         stand.dut.wet(channel=SENSOR, closed=False)
         # Брокер обязан вернуться даже после падения: в BASELINE его нет, и
@@ -184,4 +193,4 @@ def test_F4_alarm_session_budget(stand: Stand, quiet: None) -> None:
         assert session.confirm['confirmed'] == 0, (
             f'квитанция не могла состояться: {session.confirm}')
 
-    stand.expect_no_session(timeout=15 * 60, mode=ALARM_MODE)
+    stand.expect_no_session(timeout=SILENCE_S, mode=ALARM_MODE)

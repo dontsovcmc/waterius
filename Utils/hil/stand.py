@@ -592,29 +592,30 @@ class Stand:
 
     # --- ожидание чистого состояния ---
 
-    def wait_quiet(self, seconds: float = 300.0, limit: float = 1800.0) -> None:
+    def reset_alarm_budget(self) -> Session:
         """
-        Дождаться, пока устройство перестанет будить себя по тревоге.
+        Обнулить бюджет внеплановых сеансов - кнопкой, а не ожиданием тишины.
 
-        Бюджет внеплановых сеансов обнуляется только плановым сеансом, поэтому
-        остаток от предыдущего теста утёк бы в следующий и сломал счёт.
+        Бюджет (ALARM_MAX_SESSIONS) обнуляет только плановый сеанс, а период на
+        стенде - два часа. Но плановым attiny считает любое пробуждение, у
+        которого нет тревожного повода: `alarm_wake = alarm_pending()`, при
+        чистом состоянии оно ложно, и нажатие кнопки уходит в ветку
+        new_period() (`Attiny85/src/main.cpp`).
 
-        `limit` - общий потолок ожидания. Без него незакрытая тревога держит
-        фикстуру бесконечно: каждый сеанс продлевает срок, и по логу это
-        неотличимо от зависшего стенда.
+        Остаток бюджета от прошлого теста иначе утёк бы в этот и сбил счёт.
+        Сеанс по кнопке стоит двадцати секунд против пяти минут ожидания, и
+        попутно доказывает, что тревог нет - по посылке, а не по отсутствию
+        сеансов.
         """
-        logger.info(f'ждём тишины {seconds:.0f} с')
-        started = time.time()
-        deadline = started + seconds
-        sessions = 0
-        while time.time() < deadline:
-            if time.time() - started > limit:
-                raise AssertionError(
-                    f'устройство будит себя дольше {limit / 60:.0f} минут '
-                    f'({sessions} сеансов): тревога прошлого теста не снята')
-            session = self.log.wait_session(timeout=30.0)
-            if session is None:
-                continue
-            sessions += 1
-            logger.info(f'в тишине случился сеанс mode={session.mode}, ждём дальше')
-            deadline = time.time() + seconds
+        self.reset_observers()
+        self.dut.press_button()
+        session = self.wait_session(timeout=180)
+
+        payload = session.payload or {}
+        raised = [f'{name}{ch}' for ch in (0, 1)
+                  for name in ('alarm_flow', 'alarm_leak', 'alarm_wet')
+                  if payload.get(f'{name}{ch}')]
+        assert not raised, (
+            f'тест начинается с поднятой тревогой {raised}: бюджет внеплановых '
+            f'сеансов утёк бы в него из прошлого\n{session.text}')
+        return session
