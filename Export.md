@@ -20,21 +20,24 @@
 | ackw | - | bool | Тревога обязана доехать до waterius.ru | + | + | 2.0.47 |
 | adc0 | - | uint | Аналоговый уровень входа 0 | + | + | - |
 | adc1 | - | uint | Аналоговый уровень входа 1 | + | + | - |
-| af0 | л/ч | uint | Порог большого расхода, вход 0 (0 — выключен) | + | + | 2.0.47 |
-| af1 | л/ч | uint | Порог большого расхода, вход 1 (0 — выключен) | + | + | 2.0.47 |
-| al0 | минуты | uint | Порог непрерывного расхода, вход 0 (0 — выключен) | + | + | 2.0.47 |
-| al1 | минуты | uint | Порог непрерывного расхода, вход 1 (0 — выключен) | + | + | 2.0.47 |
+| ah0 | часы | uint | Протечка: сколько часов расход не падал ниже `ar0`, вход 0 (0 — выключена) | + | + | 2.0.47 |
+| ah1 | часы | uint | Протечка: сколько часов расход не падал ниже `ar1`, вход 1 (0 — выключена) | + | + | 2.0.47 |
 | alarm | - | bool | Сеанс внеплановый, по тревоге | + | + | 2.0.47 |
-| alarm_flow0 | - | bool | Большой расход, вход 0 | + | + | 2.0.47 |
-| alarm_flow1 | - | bool | Большой расход, вход 1 | + | + | 2.0.47 |
-| alarm_leak0 | - | bool | Непрерывный расход (протечка), вход 0 | + | + | 2.0.47 |
-| alarm_leak1 | - | bool | Непрерывный расход (протечка), вход 1 | + | + | 2.0.47 |
+| alarm_flow0 | - | bool | Много воды сразу, вход 0 | + | + | 2.0.47 |
+| alarm_flow1 | - | bool | Много воды сразу, вход 1 | + | + | 2.0.47 |
+| alarm_leak0 | - | bool | Протечка, вход 0 | + | + | 2.0.47 |
+| alarm_leak1 | - | bool | Протечка, вход 1 | + | + | 2.0.47 |
 | alarm_stop0 | - | bool | Расход остановился, вход 0 | + | + | 2.0.47 |
 | alarm_stop1 | - | bool | Расход остановился, вход 1 | + | + | 2.0.47 |
 | alarm_wet0 | - | bool | Сработал датчик протечки, вход 0 | + | + | 2.0.47 |
 | alarm_wet1 | - | bool | Сработал датчик протечки, вход 1 | + | + | 2.0.47 |
+| ar0 | л/ч | uint | Протечка: какой расход считать нулевым, вход 0 (0 — выключена) | + | + | 2.0.47 |
+| ar1 | л/ч | uint | Протечка: какой расход считать нулевым, вход 1 (0 — выключена) | + | + | 2.0.47 |
+| arst | - | uint | **Команда**: снять тревоги по маске (биты 0-2 — вход 0, 3-5 — вход 1, 63 — все). Принимается, в посылке не приходит | + | + | 2.0.47 |
 | as0 | часы | uint | Порог остановки расхода, вход 0 (0 — выключен) | + | + | 2.0.47 |
 | as1 | часы | uint | Порог остановки расхода, вход 1 (0 — выключен) | + | + | 2.0.47 |
+| av0 | литры | uint | Много воды сразу: литров за 30 минут, вход 0 (0 — выключена) | + | + | 2.0.47 |
+| av1 | литры | uint | Много воды сразу: литров за 30 минут, вход 1 (0 — выключена) | + | + | 2.0.47 |
 | boot | - | uint | Причина загрузки attiny85 | + | + | - |
 | battery | - | int | % заряда батарейки (фейковый) | + | + | - |
 | ch0 | м3 | float | Показания воды, вход 0 | + | + | - |
@@ -184,7 +187,7 @@ attiny у старых устройств.
 С версии 0.11.0: По умолчанию данные прилетят в виде JSON (при включенном параметре discovery) в топик. (Например: "waterius/12380568/")
 
 ```
-{"delta0":0,"delta1":0,"ch0":338.304,"ch1":535.966,"imp0":79,"imp1":109,"f0":10,"f1":10,"adc0":113,"adc1":114,"serial0":"","serial1":"","ctype0":0,"ctype1":0,"cname0":1,"cname1":0,"data_type0":1,"data_type1":0,"voltage":3.128,"voltage_low":true,"voltage_diff":0.21,"battery":0,"channel":12,"router_mac":"AA:AA:AA:00:00:00","rssi":-70,"mac":"AA:AA:AA:AA:AA:AA","ip":"172.16.64.50","dhcp":true,"version":31,"version_esp":"0.11.9","model":0,"esp_id":8686250,"flash_id":1458400,"freemem":37504,"timestamp":"2023-10-22T17:01:10+0000","waketime":10829,"period_min":1440,"period_min_tuned":1440,"setuptime":91781,"boot":1,"resets":1,"mode":3,"setup_finished":4,"setup_started":5,"ntp_errors":0,"wifi_connect_errors":0,"wifi_connect_attempt":1,"ota_error":0,"key":"AA","email":"AA@ya.ru","mqtt":true,"http":false,"ha":false,"mqtt_retain":true,"alarm":false,"alarm_flow0":false,"alarm_flow1":false,"alarm_leak0":false,"alarm_leak1":false,"alarm_wet0":false,"alarm_wet1":false,"alarm_stop0":false,"alarm_stop1":false,"af0":0,"af1":0,"al0":0,"al1":0,"as0":0,"as1":0,"vac":false,"sc":false,"ackw":true,"ackh":true,"ackm":true}
+{"delta0":0,"delta1":0,"ch0":338.304,"ch1":535.966,"imp0":79,"imp1":109,"f0":10,"f1":10,"adc0":113,"adc1":114,"serial0":"","serial1":"","ctype0":0,"ctype1":0,"cname0":1,"cname1":0,"data_type0":1,"data_type1":0,"voltage":3.128,"voltage_low":true,"voltage_diff":0.21,"battery":0,"channel":12,"router_mac":"AA:AA:AA:00:00:00","rssi":-70,"mac":"AA:AA:AA:AA:AA:AA","ip":"172.16.64.50","dhcp":true,"version":31,"version_esp":"0.11.9","model":0,"esp_id":8686250,"flash_id":1458400,"freemem":37504,"timestamp":"2023-10-22T17:01:10+0000","waketime":10829,"period_min":1440,"period_min_tuned":1440,"setuptime":91781,"boot":1,"resets":1,"mode":3,"setup_finished":4,"setup_started":5,"ntp_errors":0,"wifi_connect_errors":0,"wifi_connect_attempt":1,"ota_error":0,"key":"AA","email":"AA@ya.ru","mqtt":true,"http":false,"ha":false,"mqtt_retain":true,"alarm":false,"alarm_flow0":false,"alarm_flow1":false,"alarm_leak0":false,"alarm_leak1":false,"alarm_wet0":false,"alarm_wet1":false,"alarm_stop0":false,"alarm_stop1":false,"av0":0,"av1":0,"ar0":0,"ar1":0,"ah0":0,"ah1":0,"as0":0,"as1":0,"vac":false,"sc":false,"ackw":true,"ackh":true,"ackm":true}
 ```
 Если параметр discovery выключен или версия прошивки <0.11.0, то данные отправятся в виде отдельных топиков:
 ```

@@ -56,10 +56,12 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("alarm_stop1")] = consumption_stopped(sett.idle_min1, sett.alarm_stop1);
 
     // Пороги: сервер должен видеть, с чем сравнивали
-    root[F("af0")] = sett.alarm_flow0;
-    root[F("af1")] = sett.alarm_flow1;
-    root[F("al0")] = sett.alarm_leak0;
-    root[F("al1")] = sett.alarm_leak1;
+    root[F("av0")] = sett.alarm_vol0;
+    root[F("av1")] = sett.alarm_vol1;
+    root[F("ar0")] = sett.alarm_rate0;
+    root[F("ar1")] = sett.alarm_rate1;
+    root[F("ah0")] = sett.alarm_hours0;
+    root[F("ah1")] = sett.alarm_hours1;
     root[F("as0")] = sett.alarm_stop0;
     root[F("as1")] = sett.alarm_stop1;
 

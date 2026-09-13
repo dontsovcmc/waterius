@@ -195,13 +195,18 @@
                     state.attiny['counter_type' + input] = parseInt(p.value, 10) || 0;
                 }
             }
-        } else if (name === P().PARAM_ALARM_FLOW || name === P().s_af) {
-            // Порог расхода: л/ч для объёма, Вт для электричества. 0 - выключено
-            if (input === 0) saveUint16(p, state, 'alarm_flow0', errors, true);
-            else if (input === 1) saveUint16(p, state, 'alarm_flow1', errors, true);
-        } else if (name === P().PARAM_ALARM_LEAK || name === P().s_al) {
-            if (input === 0) saveUint16(p, state, 'alarm_leak0', errors, true);
-            else if (input === 1) saveUint16(p, state, 'alarm_leak1', errors, true);
+        } else if (name === P().PARAM_ALARM_VOL || name === P().s_av) {
+            // Литров за 30 минут. 0 - выключено
+            if (input === 0) saveUint16(p, state, 'alarm_vol0', errors, true);
+            else if (input === 1) saveUint16(p, state, 'alarm_vol1', errors, true);
+        } else if (name === P().PARAM_ALARM_RATE || name === P().s_ar) {
+            // Какой расход считать остановкой воды, л/ч. 0 - выключено
+            if (input === 0) saveUint16(p, state, 'alarm_rate0', errors, true);
+            else if (input === 1) saveUint16(p, state, 'alarm_rate1', errors, true);
+        } else if (name === P().PARAM_ALARM_HOURS || name === P().s_ah) {
+            // Часов, в течение которых расход не падал ниже порога. 0 - выключено
+            if (input === 0) saveUint16(p, state, 'alarm_hours0', errors, true);
+            else if (input === 1) saveUint16(p, state, 'alarm_hours1', errors, true);
         } else if (name === P().PARAM_ALARM_STOP || name === P().s_as) {
             if (input === 0) saveStopParam(p, state, 'alarm_stop0', errors);
             else if (input === 1) saveStopParam(p, state, 'alarm_stop1', errors);
@@ -317,8 +322,11 @@
             p.PARAM_COMPANY, p.PARAM_PLACE,
             p.PARAM_CHANNEL_START, p.s_ch, p.PARAM_SERIAL, p.PARAM_COUNTER_NAME, p.s_cname,
             p.PARAM_COUNTER_TYPE, p.s_ctype, p.PARAM_FACTOR, p.s_f,
-            p.PARAM_ALARM_FLOW, p.PARAM_ALARM_LEAK, p.PARAM_ALARM_STOP, p.s_af, p.s_al, p.s_as,
-            p.PARAM_ALARM_FLOW0, p.PARAM_ALARM_FLOW1, p.PARAM_ALARM_LEAK0, p.PARAM_ALARM_LEAK1,
+            p.PARAM_ALARM_VOL, p.PARAM_ALARM_RATE, p.PARAM_ALARM_HOURS, p.PARAM_ALARM_STOP,
+            p.s_av, p.s_ar, p.s_ah, p.s_as,
+            p.PARAM_ALARM_VOL0, p.PARAM_ALARM_VOL1,
+            p.PARAM_ALARM_RATE0, p.PARAM_ALARM_RATE1,
+            p.PARAM_ALARM_HOURS0, p.PARAM_ALARM_HOURS1,
             p.PARAM_ALARM_STOP0, p.PARAM_ALARM_STOP1,
             // Пара быстрого коннекта разбирается вне общей цепочки, в save_fast_connect
             p.PARAM_WIFI_CHANNEL, p.PARAM_BSSID,
@@ -374,10 +382,46 @@
         return { error: error, input: input, link_text: '5', link: '/input/' + input + '/' + page + '.html' };
     }
 
+    // Маска снятия одной тревоги одного входа, core/types.h:ALARM_RESET_CH
+    function resetMask(bits, input) {
+        return input === 0 ? bits : (bits << G().defines.ALARM_RESET_SHIFT1);
+    }
+
+    function addAlarms(list, state, input) {
+        var D = G().defines;
+        var bits = C().alarmBits(state.attiny.alarm_flags, input, state.attiny.version);
+        var each = [[D.ALARM_FLOW, '27'], [D.ALARM_LEAK, '28'], [D.ALARM_WET, '29']];
+
+        each.forEach(function (pair) {
+            if (!(bits & pair[0])) return;
+            list.push({ error: pair[1], input: input, link_text: '31',
+                        reset: resetMask(pair[0], input) });
+        });
+    }
+
+    // Остановку расхода считает сама ЕСП и гасит первым приростом: снимать нечего
+    function addStopped(list, state, input) {
+        var idle = input === 0 ? state.sett.idle_min0 : state.sett.idle_min1;
+        var threshold = input === 0 ? state.sett.alarm_stop0 : state.sett.alarm_stop1;
+
+        if (C().consumptionStopped(idle, threshold)) {
+            list.push({ error: '30', input: input });
+        }
+    }
+
     function mainStatus(state) {
         var WL = root.SimState.WL;
         var D = G().defines;
         var list = [];
+
+        /*
+        Поднятые тревоги (#202) - первыми: авария важнее ошибок настройки.
+        У каждой своя плашка со своей маской снятия: снимаются они порознь.
+        */
+        addAlarms(list, state, 0);
+        addAlarms(list, state, 1);
+        addStopped(list, state, 0);
+        addStopped(list, state, 1);
 
         if (state.portal.esp_restarted) list.push({ error: '22' }); // #354
 
@@ -430,6 +474,21 @@
      * Пороги тревог (#202): страница одна на оба входа, поэтому параметры
      * именные. Чего нет в запросе, того не трогаем.
      */
+    function applyReset(state, mask) {
+        state.attiny.alarm_flags = C().alarmFlagsAfterReset(state.attiny.alarm_flags, mask);
+    }
+
+    function saveAlarmReset(p, state, errors) {
+        var E = G().enums.ParamError;
+        var parsed = C().parseUint8(p.value, true);
+
+        if (parsed.err !== E.PARAM_OK || parsed.value > G().defines.ALARM_RESET_ALL) {
+            errors[p.name] = String(E.PARAM_ERR_VALUE);
+            return;
+        }
+        applyReset(state, parsed.value);
+    }
+
     function saveAlarms(params, state) {
         var errors = {};
         var optional = function (name, field, saver) {
@@ -437,15 +496,30 @@
             if (p) saver(p, state, field, errors, true);
         };
 
-        optional(P().PARAM_ALARM_FLOW0, 'alarm_flow0', saveUint16);
-        optional(P().PARAM_ALARM_LEAK0, 'alarm_leak0', saveUint16);
-        optional(P().PARAM_ALARM_FLOW1, 'alarm_flow1', saveUint16);
-        optional(P().PARAM_ALARM_LEAK1, 'alarm_leak1', saveUint16);
+        optional(P().PARAM_ALARM_VOL0, 'alarm_vol0', saveUint16);
+        optional(P().PARAM_ALARM_VOL1, 'alarm_vol1', saveUint16);
+        optional(P().PARAM_ALARM_RATE0, 'alarm_rate0', saveUint16);
+        optional(P().PARAM_ALARM_RATE1, 'alarm_rate1', saveUint16);
+        optional(P().PARAM_ALARM_HOURS0, 'alarm_hours0', saveUint16);
+        optional(P().PARAM_ALARM_HOURS1, 'alarm_hours1', saveUint16);
         optional(P().PARAM_ALARM_STOP0, 'alarm_stop0', saveStopParam);
         optional(P().PARAM_ALARM_STOP1, 'alarm_stop1', saveStopParam);
 
+        // Не настройка, а действие: маска гасит биты и тут же забывается
+        var reset = findParam(params, P().PARAM_ALARM_RESET);
+        if (reset) saveAlarmReset(reset, state, errors);
+
         var vacation = findParam(params, P().PARAM_VACATION);
-        if (vacation) saveBool(vacation, state, 'vacation', errors);
+        if (vacation) {
+            var was = state.sett.vacation;
+            saveBool(vacation, state, 'vacation', errors);
+
+            // Выход из режима снимает тревогу, которую режим и поднял
+            if (was && !state.sett.vacation) {
+                var D = G().defines;
+                applyReset(state, D.ALARM_FLOW | (D.ALARM_FLOW << D.ALARM_RESET_SHIFT1));
+            }
+        }
 
         // Спрятанной галочки в запросе нет - бит остаётся как был
         var ack = [

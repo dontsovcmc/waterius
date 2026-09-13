@@ -55,8 +55,29 @@
             <input type="checkbox" id="esp-restarted">
             <label for="esp-restarted">ЕСП перезагрузилась внештатно</label>
         </div>
+        <div class="row">
+            <label class="field">поднятые тревоги, вход 0
+                <select id="alarm-flags0">
+                    <option value="0">нет</option>
+                    <option value="1">много воды сразу</option>
+                    <option value="2">протечка</option>
+                    <option value="4">датчик протечки</option>
+                    <option value="7">все три</option>
+                </select>
+            </label>
+            <label class="field">вход 1
+                <select id="alarm-flags1">
+                    <option value="0">нет</option>
+                    <option value="1">много воды сразу</option>
+                    <option value="2">протечка</option>
+                    <option value="4">датчик протечки</option>
+                    <option value="7">все три</option>
+                </select>
+            </label>
+        </div>
         <p class="note">Без связи страницы входов покажут ошибку 7, а сохранение типа входа — ошибку 16.
-        Версия ниже 41 прячет пороги тревог: их считает attiny. Внештатная перезагрузка даёт плашку на главной.</p>
+        Версия ниже 41 прячет пороги тревог: их считает attiny. Внештатная перезагрузка даёт плашку на главной.
+        Тревога сама не гаснет: поднимите её тут и снимите ссылкой на главной или кнопкой на странице тревог.</p>
     </section>
 
     <section class="card">

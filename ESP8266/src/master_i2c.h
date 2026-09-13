@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "setup.h"
+#include "core/alarm.h"   // AlarmThresholds: пороги едут кадром 'A'
 
 /*
 Номера пинов линии i2c.
@@ -70,8 +71,8 @@ public:
     bool getAttinyData(AttinyData &data);
     bool setWakeUpPeriod(uint16_t per);
     bool setCountersType(const uint8_t type0, const uint8_t type1);
-    bool setAlarmConfig(const uint16_t interval0, const uint16_t leak_min0,
-                        const uint16_t interval1, const uint16_t leak_min1);
+    bool setAlarmConfig(const AlarmThresholds &ch0, const AlarmThresholds &ch1,
+                        const uint8_t reset_mask);
     bool confirmAlarm();
     bool setTransmitMode();
     bool setSetupMode();

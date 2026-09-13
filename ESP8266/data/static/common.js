@@ -383,14 +383,49 @@ function _goto(next = false){
 }
 function mainStatus(){
     ajax('/api/main_status', {}, data => {
-        if(!data.length) return;
+        const box = document.getElementById('mainInfoText');
+        if(!box) return;
         const html = [];
         data.forEach(mess => {
             var error = tr(mess.error, INPUT_PLACE[mess.input]);
             var link_text = tr(mess.link_text);
-            html.push(`<p class="form-error mt24">${error}${mess.link ? `<br><br><a class="link" href="${mess.link}">${link_text}</a>` : ''}</p>`);
+            var action = '';
+            if(mess.reset !== undefined)
+                action = `<br><br><a class="link" href="#" onclick="resetAlarm(event, ${mess.reset}, mainStatus)">${link_text}</a>`;
+            else if(mess.link)
+                action = `<br><br><a class="link" href="${mess.link}">${link_text}</a>`;
+            html.push(`<p class="form-error mt24">${error}${action}</p>`);
         });
-        document.getElementById('mainInfoText').innerHTML = html.join('');
+        // Перерисовываем и пустым списком: после снятия плашка обязана исчезнуть
+        box.innerHTML = html.join('');
+    });
+}
+
+/*
+Снятие тревоги (#202). Тревога сама не гаснет, поэтому ссылка выполняет
+действие, а не ведёт на страницу настроек. Маска уедет в attiny тем же
+запросом: /api/save_alarms шлёт пороги сразу, не дожидаясь конца сеанса.
+*/
+function resetAlarm(event, mask, done){
+    event.preventDefault();
+
+    const data = new URLSearchParams();
+    data.append('alarm_reset', mask);
+
+    ajax('/api/save_alarms', {
+        method: 'POST',
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: data
+    }, () => { if(done) done(); });
+}
+
+// Кнопка "Снять тревоги" на странице тревог: снимает всё разом
+function resetAllAlarms(event){
+    resetAlarm(event, ALARM_RESET_ALL, () => {
+        const box = document.getElementById('alarm_reset_box');
+        if(box) box.classList.add('hd');
     });
 }
 

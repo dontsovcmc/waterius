@@ -50,12 +50,16 @@ static const char PARAM_COUNTER0_TYPE[] PROGMEM = "counter0_type";
 static const char PARAM_COUNTER1_TYPE[] PROGMEM = "counter1_type";
 static const char PARAM_COUNTER_IMG[] PROGMEM = "counter_img";
 static const char PARAM_FACTOR[] PROGMEM = "factor";
-static const char PARAM_ALARM_FLOW[] PROGMEM = "alarm_flow";
-static const char PARAM_ALARM_LEAK[] PROGMEM = "alarm_leak";
-static const char PARAM_ALARM_FLOW0[] PROGMEM = "alarm_flow0";
-static const char PARAM_ALARM_FLOW1[] PROGMEM = "alarm_flow1";
-static const char PARAM_ALARM_LEAK0[] PROGMEM = "alarm_leak0";
-static const char PARAM_ALARM_LEAK1[] PROGMEM = "alarm_leak1";
+static const char PARAM_ALARM_VOL[] PROGMEM = "alarm_vol";
+static const char PARAM_ALARM_RATE[] PROGMEM = "alarm_rate";
+static const char PARAM_ALARM_HOURS[] PROGMEM = "alarm_hours";
+static const char PARAM_ALARM_VOL0[] PROGMEM = "alarm_vol0";
+static const char PARAM_ALARM_VOL1[] PROGMEM = "alarm_vol1";
+static const char PARAM_ALARM_RATE0[] PROGMEM = "alarm_rate0";
+static const char PARAM_ALARM_RATE1[] PROGMEM = "alarm_rate1";
+static const char PARAM_ALARM_HOURS0[] PROGMEM = "alarm_hours0";
+static const char PARAM_ALARM_HOURS1[] PROGMEM = "alarm_hours1";
+static const char PARAM_ALARM_RESET[] PROGMEM = "alarm_reset";
 static const char PARAM_ALARM_STOP[] PROGMEM = "alarm_stop";
 static const char PARAM_ALARM_STOP0[] PROGMEM = "alarm_stop0";
 static const char PARAM_ALARM_STOP1[] PROGMEM = "alarm_stop1";
@@ -78,6 +82,9 @@ static const char PARAM_ACK_OFF_MQTT[] PROGMEM = "ack_off_mqtt";
 полях порогов. Что показывать, решает прошивка - страница приезжает готовой,
 без вспышки лишних полей на onload (core/alarm.h:AlarmInputState).
 */
+/* Блок снятия на странице тревог: прячется, пока ни одна не поднята */
+static const char PARAM_ALARM_RAISED[] PROGMEM = "alarm_raised";
+static const char CLASS_HIDDEN[] PROGMEM = "hd";
 static const char PARAM_ALARM_STATE0[] PROGMEM = "alarm_state0";
 static const char PARAM_ALARM_STATE1[] PROGMEM = "alarm_state1";
 static const char PARAM_THRESHOLDS_OFF0[] PROGMEM = "thresholds_off0";

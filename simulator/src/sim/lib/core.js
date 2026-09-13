@@ -168,6 +168,31 @@
         return S.ALARM_INPUT_READY;
     }
 
+    // Тревоги одного входа из байта флагов attiny
+    function alarmBits(attinyFlags, input, attinyVersion) {
+        var D = G().defines;
+        if (attinyVersion < D.ATTINY_VER_ALARM) return 0;
+        var shift = input === 0 ? D.ATTINY_ALARM_SHIFT0 : D.ATTINY_ALARM_SHIFT1;
+        return (attinyFlags >> shift) & D.ATTINY_ALARM_MASK;
+    }
+
+    /*
+    Байт флагов после снятия маской. Раскладки разные: в маске кадра 'A'
+    каналы лежат вплотную, в флагах - со сдвигом под флаг питания.
+    */
+    function alarmFlagsAfterReset(attinyFlags, resetMask) {
+        var D = G().defines;
+        var ch0 = resetMask & D.ATTINY_ALARM_MASK;
+        var ch1 = (resetMask >> D.ALARM_RESET_SHIFT1) & D.ATTINY_ALARM_MASK;
+        return attinyFlags & ~((ch0 << D.ATTINY_ALARM_SHIFT0) | (ch1 << D.ATTINY_ALARM_SHIFT1)) & 0xFF;
+    }
+
+    // Порт idle.cpp: пора ли объявлять остановку потребления
+    function consumptionStopped(idleMin, stopHours) {
+        if (!stopHours) return false; // тревога выключена
+        return idleMin >= stopHours * 60;
+    }
+
     /* ---- diagnostics.cpp: плашки настройки счётчиков ---- */
 
     function consumedImpulses(impulses, start) {
@@ -257,6 +282,9 @@
         getAutoFactor: getAutoFactor,
         factorConfigured: factorConfigured,
         alarmInputState: alarmInputState,
+        alarmBits: alarmBits,
+        alarmFlagsAfterReset: alarmFlagsAfterReset,
+        consumptionStopped: consumptionStopped,
         checkSetup: checkSetup,
         parseWifiChannel: parseWifiChannel,
         parseBssid: parseBssid,

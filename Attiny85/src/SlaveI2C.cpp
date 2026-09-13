@@ -13,6 +13,7 @@ extern void extendWakeUpPeriod();
 extern bool is_esp_powered_long();
 extern uint8_t alarm_bits();
 extern void set_alarm_config(const uint8_t *data);
+extern void reset_alarms(const uint8_t mask);
 extern void set_counter_types(const uint8_t *data);
 extern void confirm_alarm();
 
@@ -82,16 +83,16 @@ void SlaveI2C::receiveEvent(int howMany)
               // Передаем в attiny для случая нештатной перезагрузки ESP
         setup_mode = SETUP_MODE;
         break;
-    case 'S': // ESP присылает новое значение периода пробуждения
-        getWakeUpPeriod();
-        break;
     case 'E': // ESP продлевает время бодрствования
         extendWakeUp();
         break;
-    case 'C': // ESP присылает новую конфигурацию
+    case 'C': // ESP присылает новую конфигурацию входов
         getCounterTypes();
         break;
-    case 'A': // ESP присылает пороги тревог
+    case 'S': // ESP присылает новое значение периода пробуждения
+        getWakeUpPeriod();
+        break;
+    case 'A': // ESP присылает пороги тревог и маску снятия
         getAlarmConfig();
         break;
     case 'K': // ESP подтверждает, что доложила о тревоге получателю
@@ -100,6 +101,25 @@ void SlaveI2C::receiveEvent(int howMany)
     case 'V': // обновить напряжение
         info.voltage = readVcc();
         break;
+    }
+}
+
+
+
+void SlaveI2C::getCounterTypes()
+{
+    uint8_t data[sizeof(CounterTypes)];
+
+    for (uint8_t i=0; i < sizeof(CounterTypes); i++)
+    {
+        data[i] = Wire.read();
+    }
+    uint8_t crc = Wire.read();
+
+    if (crc == crc_8(data, sizeof(CounterTypes))) 
+    {
+        set_counter_types(data);
+        saveConfig();
     }
 }
 
@@ -119,33 +139,19 @@ void SlaveI2C::getWakeUpPeriod()
     }
 }
 
-void SlaveI2C::getCounterTypes()
-{
-    uint8_t data[sizeof(CounterTypes)];
-
-    for (uint8_t i=0; i < sizeof(CounterTypes); i++)
-    {
-        data[i] = Wire.read();
-    }
-    uint8_t crc = Wire.read();
-
-    if (crc == crc_8(data, sizeof(CounterTypes))) 
-    {
-        set_counter_types(data);
-        saveConfig();
-    }
-}
-
 /*
-Пороги тревог: по два uint16 на канал, старшим байтом вперёд (issue #202).
+Пороги тревог и снятие (issue #202).
 
 Живут в ОЗУ и приезжают в каждом сеансе, как период пробуждения: EEPROM не
 трогаем, иначе конфигурация у прошитых устройств не прошла бы проверку CRC.
-Цена - после замены батареек тревоги молчат до первого сеанса ЕСП.
+
+    0..11  на канал: quantum_ticks, leak_quanta, vol_pulses
+    12     маска снятия: биты 0-2 канал 0, биты 3-5 канал 1
+    13     CRC8
 */
 void SlaveI2C::getAlarmConfig()
 {
-    uint8_t data[8];
+    uint8_t data[13];
 
     for (uint8_t i = 0; i < sizeof(data); i++)
     {
@@ -156,6 +162,7 @@ void SlaveI2C::getAlarmConfig()
     if (crc == crc_8(data, sizeof(data)))
     {
         set_alarm_config(data);
+        reset_alarms(data[12]);
     }
 }
 

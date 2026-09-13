@@ -25,6 +25,7 @@ extern wl_status_t wifi_connect_status;
 extern bool factory_reset_flag;
 extern bool esp_restarted_flag;
 extern void send_alarm_config(const Settings &sett);   // main.cpp
+extern uint8_t alarm_reset_mask;                       // main.cpp
 
 extern AttinyData data;
 extern AttinyData runtime_data;
@@ -266,6 +267,70 @@ static void add_input_problem(JsonArray &array, const __FlashStringHelper *error
 }
 
 /**
+ * @brief Плашка про поднятую тревогу со ссылкой снятия.
+ *
+ * Ссылка не ведёт на страницу, а выполняет действие: тревога сама не гаснет,
+ * и снять её надо там, где человек её увидел. Маска уезжает в attiny
+ * ближайшим кадром 'A'.
+ *
+ * @param error код строки сообщения
+ * @param input номер входа, INPUT0_RED или INPUT1_BLUE
+ * @param bits снимаемая тревога, ALARM_FLOW/LEAK/WET
+ */
+static void add_alarm_raised(JsonArray &array, const __FlashStringHelper *error,
+                             const uint8_t input, const uint8_t bits)
+{
+    JsonObject obj = array.add<JsonObject>();
+    obj["error"] = error;
+    obj["input"] = input;
+    obj["link_text"] = F("31"); // S_ALARM_CLEAR "Снять тревогу"
+    obj["reset"] = ALARM_RESET_CH(bits, input);
+}
+
+/**
+ * @brief Плашки по всем поднятым тревогам входа.
+ *
+ * Своя плашка на каждую тревогу, а не одна общая: снимаются они порознь, и
+ * ссылка обязана знать, что именно снимает.
+ */
+static void add_alarms(JsonArray &array, const uint8_t input)
+{
+    const uint8_t bits = alarm_bits(runtime_data.attiny_flags, input, runtime_data.version);
+
+    if (bits & ALARM_FLOW)
+    {   // S_ALARM_FLOW "Много воды сразу %s..."
+        add_alarm_raised(array, F("27"), input, ALARM_FLOW);
+    }
+    if (bits & ALARM_LEAK)
+    {   // S_ALARM_LEAK "Протечка %s..."
+        add_alarm_raised(array, F("28"), input, ALARM_LEAK);
+    }
+    if (bits & ALARM_WET)
+    {   // S_ALARM_WET "Сработал датчик протечки %s..."
+        add_alarm_raised(array, F("29"), input, ALARM_WET);
+    }
+}
+
+/**
+ * @brief Плашка про остановку расхода.
+ *
+ * Без ссылки: этy тревогу считает сама ЕСП и гасит первым же приростом
+ * импульсов, снимать руками нечего.
+ */
+static void add_consumption_stopped(JsonArray &array, const uint8_t input,
+                                    const uint16_t idle_min, const uint16_t threshold)
+{
+    if (!consumption_stopped(idle_min, threshold))
+    {
+        return;
+    }
+
+    JsonObject obj = array.add<JsonObject>();
+    obj["error"] = F("30"); // S_ALARM_STOP "Расхода нет %s..."
+    obj["input"] = input;
+}
+
+/**
  * @brief Список диагностических сообщений на Главной странице вебсервера
  *
  * @param request запрос
@@ -282,6 +347,15 @@ void get_api_main_status(AsyncWebServerRequest *request)
     портал начался заново, и не понимает, сохранились ли настройки. Признак
     посчитан на старте: сейчас флаг attiny взведён в любом случае.
     */
+    /*
+    Поднятые тревоги (#202) - первыми: авария важнее ошибок настройки и Wi-Fi.
+    Тревога attiny сама не гаснет, поэтому у каждой плашки своя ссылка снятия.
+    */
+    add_alarms(array, INPUT0_RED);
+    add_alarms(array, INPUT1_BLUE);
+    add_consumption_stopped(array, INPUT0_RED, sett.idle_min0, sett.alarm_stop0);
+    add_consumption_stopped(array, INPUT1_BLUE, sett.idle_min1, sett.alarm_stop1);
+
     if (esp_restarted_flag)
     {
         JsonObject obj = array.add<JsonObject>();
@@ -523,6 +597,123 @@ static void save_stop_param(const AsyncWebParameter *p, uint16_t &v, JsonObject 
     }
 }
 
+/*
+Протечка: два поля, одно условие (#202).
+
+"Расход не падал ниже Q л/ч в течение T часов" - это одно предложение, и
+проверять его надо целиком. Порознь числа бессмысленны, а неверная пара
+ломает тревогу молча, в обе стороны:
+
+  - слишком малый Q: длина кванта тишины не влезает в uint16 у attiny;
+  - слишком малое T: одного кванта хватит на тревогу, а один квант означает
+    всего лишь "был хоть один импульс", а не "расход не прекращался".
+
+Ноль в любом из полей выключает тревогу - тогда второе не проверяем.
+*/
+static void save_alarm_leak(AsyncWebServerRequest *request,
+                            const String &rate_name, const String &hours_name,
+                            uint16_t &rate, uint16_t &hours,
+                            const uint16_t factor, JsonObject &errorsObj)
+{
+    const AsyncWebParameter *p_rate = request->hasParam(rate_name, true)
+                                          ? request->getParam(rate_name, true) : nullptr;
+    const AsyncWebParameter *p_hours = request->hasParam(hours_name, true)
+                                           ? request->getParam(hours_name, true) : nullptr;
+
+    uint16_t new_rate = rate;
+    uint16_t new_hours = hours;
+    bool ok = true;
+
+    if (p_rate)
+    {
+        const ParamError err = parse_uint16(p_rate->value().c_str(), new_rate, true);
+        if (err != PARAM_OK)
+        {
+            report_param_error(p_rate, errorsObj, err);
+            ok = false;
+        }
+    }
+
+    if (p_hours)
+    {
+        const ParamError err = parse_uint16(p_hours->value().c_str(), new_hours, true);
+        if (err != PARAM_OK)
+        {
+            report_param_error(p_hours, errorsObj, err);
+            ok = false;
+        }
+    }
+
+    if (!ok)
+    {
+        return;
+    }
+
+    // Ноль - выключено, пару не проверяем
+    if (new_rate && new_hours && factor_configured(factor))
+    {
+        if (p_rate && new_rate < alarm_min_rate(factor))
+        {
+            report_param_error(p_rate, errorsObj, PARAM_ERR_VALUE);
+            return;
+        }
+        if (p_hours && new_hours < alarm_min_hours(new_rate, factor))
+        {
+            report_param_error(p_hours, errorsObj, PARAM_ERR_VALUE);
+            return;
+        }
+    }
+
+    rate = new_rate;
+    hours = new_hours;
+
+    if (p_rate)
+        LOG_INFO(FPSTR(PARAM_SAVED) << p_rate->name() << F("=") << rate);
+    if (p_hours)
+        LOG_INFO(FPSTR(PARAM_SAVED) << p_hours->name() << F("=") << hours);
+}
+
+/*
+Снятие тревог: маска на ближайший кадр 'A' (#202).
+
+Биты 0-2 - FLOW/LEAK/WET канала 0, биты 3-5 - канала 1. Ноль - снимать нечего.
+Сама тревога не снимается никогда: ни по времени, ни по прекращению расхода.
+*/
+static void save_alarm_reset(const AsyncWebParameter *p, JsonObject &errorsObj)
+{
+    uint8_t mask = 0;
+    const ParamError err = parse_uint8(p->value().c_str(), mask, true);
+
+    if (err != PARAM_OK || mask > ALARM_RESET_ALL)
+    {
+        report_param_error(p, errorsObj, err == PARAM_OK ? PARAM_ERR_VALUE : err);
+        return;
+    }
+
+    alarm_reset_mask |= mask;
+    LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << alarm_reset_mask);
+}
+
+/*
+Режим "я уехал" (#88).
+
+Выключение снимает тревогу, которую режим и поднял. Иначе она осталась бы
+висеть после возвращения: порог объёма в режиме подменён одним импульсом, и
+сработать он обязан был. Снимается только ALARM_FLOW обоих каналов - протечка
+и датчик к режиму отношения не имеют.
+*/
+static void save_vacation(const AsyncWebParameter *p, JsonObject &errorsObj)
+{
+    const uint8_t was = sett.vacation;
+
+    save_bool_param(p, sett.vacation, errorsObj);
+
+    if (was && !sett.vacation)
+    {
+        alarm_reset_mask |= ALARM_FLOW | (ALARM_FLOW << ALARM_RESET_SHIFT1);
+    }
+}
+
 void save_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok)
 {
     ParamError err = parse_uint8(p->value().c_str(), v, zero_ok);
@@ -743,29 +934,42 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
         }
 
     }
-    else if (name == FPSTR(PARAM_ALARM_FLOW) || name == FPSTR(s_af)) // portal || ha
+    else if (name == FPSTR(PARAM_ALARM_VOL) || name == FPSTR(s_av)) // portal || ha
     {
-        // Порог расхода: л/ч для объёма, Вт для электричества. 0 - выключено
+        // Литров за 30 минут. 0 - выключено
         switch (input)
         {
             case INPUT0_RED:
-                save_param(p, sett.alarm_flow0, errorsObj, true);
+                save_param(p, sett.alarm_vol0, errorsObj, true);
                 break;
             case INPUT1_BLUE:
-                save_param(p, sett.alarm_flow1, errorsObj, true);
+                save_param(p, sett.alarm_vol1, errorsObj, true);
                 break;
         }
     }
-    else if (name == FPSTR(PARAM_ALARM_LEAK) || name == FPSTR(s_al)) // portal || ha
+    else if (name == FPSTR(PARAM_ALARM_RATE) || name == FPSTR(s_ar)) // portal || ha
     {
-        // Минут непрерывного расхода. 0 - выключено
+        // Какой расход считать остановкой воды, л/ч. 0 - выключено
         switch (input)
         {
             case INPUT0_RED:
-                save_param(p, sett.alarm_leak0, errorsObj, true);
+                save_param(p, sett.alarm_rate0, errorsObj, true);
                 break;
             case INPUT1_BLUE:
-                save_param(p, sett.alarm_leak1, errorsObj, true);
+                save_param(p, sett.alarm_rate1, errorsObj, true);
+                break;
+        }
+    }
+    else if (name == FPSTR(PARAM_ALARM_HOURS) || name == FPSTR(s_ah)) // portal || ha
+    {
+        // Часов, в течение которых расход не падал ниже порога. 0 - выключено
+        switch (input)
+        {
+            case INPUT0_RED:
+                save_param(p, sett.alarm_hours0, errorsObj, true);
+                break;
+            case INPUT1_BLUE:
+                save_param(p, sett.alarm_hours1, errorsObj, true);
                 break;
         }
     }
@@ -883,7 +1087,7 @@ void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
     }
     else if (name == FPSTR(PARAM_VACATION) || name == FPSTR(s_vac))  // portal || ha
     {
-        save_bool_param(p, sett.vacation, errorsObj);
+        save_vacation(p, errorsObj);
     }
     else if (name == FPSTR(PARAM_CONFIRM_WATERIUS) || name == FPSTR(s_ackw))  // portal || ha
     {
@@ -970,7 +1174,12 @@ void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj
         }
     }
 
-    if (name == FPSTR(s_period_min))
+    if (name == FPSTR(PARAM_ALARM_RESET) || name == FPSTR(s_arst))  // portal || ha
+    {
+        // Не настройка, а действие: маска уедет ближайшим кадром 'A'
+        save_alarm_reset(p, errorsObj);
+    }
+    else if (name == FPSTR(s_period_min))
     {
         save_param(p, sett.wakeup_per_min, errorsObj);
         reset_period_min_tuned(sett);
@@ -1085,10 +1294,16 @@ void post_api_save_alarms(AsyncWebServerRequest *request)
     JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
 
-    save_uint16_param(request, FPSTR(PARAM_ALARM_FLOW0), sett.alarm_flow0, errorsObj);
-    save_uint16_param(request, FPSTR(PARAM_ALARM_LEAK0), sett.alarm_leak0, errorsObj);
-    save_uint16_param(request, FPSTR(PARAM_ALARM_FLOW1), sett.alarm_flow1, errorsObj);
-    save_uint16_param(request, FPSTR(PARAM_ALARM_LEAK1), sett.alarm_leak1, errorsObj);
+    save_uint16_param(request, FPSTR(PARAM_ALARM_VOL0), sett.alarm_vol0, errorsObj);
+    save_uint16_param(request, FPSTR(PARAM_ALARM_VOL1), sett.alarm_vol1, errorsObj);
+    save_alarm_leak(request, FPSTR(PARAM_ALARM_RATE0), FPSTR(PARAM_ALARM_HOURS0),
+                    sett.alarm_rate0, sett.alarm_hours0, sett.factor0, errorsObj);
+    save_alarm_leak(request, FPSTR(PARAM_ALARM_RATE1), FPSTR(PARAM_ALARM_HOURS1),
+                    sett.alarm_rate1, sett.alarm_hours1, sett.factor1, errorsObj);
+
+    // Снятие тревог: маска уедет ближайшим кадром 'A'
+    if (request->hasParam(FPSTR(PARAM_ALARM_RESET), true))
+        save_alarm_reset(request->getParam(FPSTR(PARAM_ALARM_RESET), true), errorsObj);
 
     if (request->hasParam(FPSTR(PARAM_ALARM_STOP0), true))
         save_stop_param(request->getParam(FPSTR(PARAM_ALARM_STOP0), true), sett.alarm_stop0, errorsObj);
@@ -1097,7 +1312,7 @@ void post_api_save_alarms(AsyncWebServerRequest *request)
 
     // Галочка приходит всегда: common.js шлёт 0 или 1, а не отсутствие поля
     if (request->hasParam(FPSTR(PARAM_VACATION), true))
-        save_bool_param(request->getParam(FPSTR(PARAM_VACATION), true), sett.vacation, errorsObj);
+        save_vacation(request->getParam(FPSTR(PARAM_VACATION), true), errorsObj);
 
     // Спрятанная галочка не приходит вовсе - бит выключенного отправителя
     // остаётся как был. Требование к нему всё равно снимается в alarm_delivered

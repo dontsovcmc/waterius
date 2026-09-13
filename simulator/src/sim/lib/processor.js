@@ -50,6 +50,13 @@
                                             attiny.version);
     }
 
+    // Есть ли хоть одна поднятая тревога
+    function alarmRaised(state) {
+        var attiny = state.attiny;
+        return root.SimCore.alarmBits(attiny.alarm_flags, 0, attiny.version) ||
+               root.SimCore.alarmBits(attiny.alarm_flags, 1, attiny.version);
+    }
+
     // Порт alarm_state_class(): имена классов разбирает style.css
     function alarmStateClass(value) {
         switch (value) {
@@ -178,10 +185,12 @@
             case P.PARAM_DHCP_OFF: return templateBool(sett.dhcp_off);
 
             /* Пороги тревог (#202): страница одна на оба входа, параметры именные */
-            case P.PARAM_ALARM_FLOW0: return String(sett.alarm_flow0);
-            case P.PARAM_ALARM_FLOW1: return String(sett.alarm_flow1);
-            case P.PARAM_ALARM_LEAK0: return String(sett.alarm_leak0);
-            case P.PARAM_ALARM_LEAK1: return String(sett.alarm_leak1);
+            case P.PARAM_ALARM_VOL0: return String(sett.alarm_vol0);
+            case P.PARAM_ALARM_VOL1: return String(sett.alarm_vol1);
+            case P.PARAM_ALARM_RATE0: return String(sett.alarm_rate0);
+            case P.PARAM_ALARM_RATE1: return String(sett.alarm_rate1);
+            case P.PARAM_ALARM_HOURS0: return String(sett.alarm_hours0);
+            case P.PARAM_ALARM_HOURS1: return String(sett.alarm_hours1);
             case P.PARAM_ALARM_STOP0: return String(sett.alarm_stop0);
             case P.PARAM_ALARM_STOP1: return String(sett.alarm_stop1);
             case P.PARAM_VACATION: return templateBool(sett.vacation);
@@ -198,6 +207,9 @@
             case P.PARAM_ACK_OFF_MQTT: return templateDisabled(sett.mqtt_on);
 
             /* Состояние входа одним классом: решает прошивка, показ решает CSS */
+            // Блок снятия виден, только когда есть что снимать
+            case P.PARAM_ALARM_RAISED:
+                return alarmRaised(state) ? '' : P.CLASS_HIDDEN;
             case P.PARAM_ALARM_STATE0: return alarmStateClass(alarmState(state, 0));
             case P.PARAM_ALARM_STATE1: return alarmStateClass(alarmState(state, 1));
             case P.PARAM_THRESHOLDS_OFF0:
@@ -230,10 +242,11 @@
             'PARAM_PASSWORD', 'PARAM_WIFI_PHY_MODE', 'PARAM_WATERIUS_ON', 'PARAM_HTTP_ON',
             'PARAM_MQTT_ON', 'PARAM_DHCP_OFF', 'PARAM_BUILD_DATE_TIME', 'PARAM_FS_SIZE',
             'PARAM_FS_FREE', 'PARAM_WIFI_CONNECT_STATUS',
-            'PARAM_ALARM_FLOW0', 'PARAM_ALARM_FLOW1', 'PARAM_ALARM_LEAK0', 'PARAM_ALARM_LEAK1',
+            'PARAM_ALARM_VOL0', 'PARAM_ALARM_VOL1', 'PARAM_ALARM_RATE0', 'PARAM_ALARM_RATE1',
+            'PARAM_ALARM_HOURS0', 'PARAM_ALARM_HOURS1',
             'PARAM_ALARM_STOP0', 'PARAM_ALARM_STOP1', 'PARAM_VACATION', 'PARAM_SEND_ON_CONSUMPTION',
             'PARAM_CONFIRM_WATERIUS', 'PARAM_CONFIRM_HTTP', 'PARAM_CONFIRM_MQTT',
-            'PARAM_ALARM_STATE0', 'PARAM_ALARM_STATE1',
+            'PARAM_ALARM_RAISED', 'PARAM_ALARM_STATE0', 'PARAM_ALARM_STATE1',
             'PARAM_THRESHOLDS_OFF0', 'PARAM_THRESHOLDS_OFF1',
             'PARAM_ACK_OFF_WATERIUS', 'PARAM_ACK_OFF_HTTP', 'PARAM_ACK_OFF_MQTT',
         ];

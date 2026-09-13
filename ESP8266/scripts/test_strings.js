@@ -218,17 +218,6 @@ test('типы входа названы для всех значений из �
     }
 });
 
-test('порог расхода подписан по ресурсу канала', () => {
-    /*
-    У электричества вес импульса задан наоборот - импульсами на киловатт-час,
-    - и порог считается по другой формуле. Единица должна об этом говорить,
-    иначе пользователь введёт литры там, где ждут ватты (#202).
-    */
-    assert.ok(ctx.alarm_flow_label(ctx.CounterName_ELECTRO).includes('Вт'));
-    assert.ok(ctx.alarm_flow_label(ctx.CounterName_WATER_COLD).includes('л/ч'));
-    assert.ok(ctx.alarm_flow_label(ctx.CounterName_GAS).includes('л/ч'));
-});
-
 /*
 Договор разметки со скриптом. Полноценного браузера здесь нет, поэтому
 страницы проверяются как текст — но именно на этих стыках уже ломалось:
@@ -244,25 +233,24 @@ function page(name) {
 
 test('на странице тревог у каждого поля есть подпись и обработчик', () => {
     /*
-    Страница одна на оба канала, поэтому ресурс едет в самом маркере
-    (data-name), а не аргументом fill_units, как на страницах входов.
+    Подписи на странице тревог литеральные: речь только о воде, и единицы
+    у всех четырёх полей свои - литры, литры в час, часы. Подставлять их
+    по ресурсу нечем и незачем, поэтому data-unit тут нет.
     */
     const html = page('alarms.html');
 
-    for (const field of ['alarm_flow0', 'alarm_leak0', 'alarm_stop0',
-                         'alarm_flow1', 'alarm_leak1', 'alarm_stop1']) {
+    for (const field of ['alarm_vol0', 'alarm_rate0', 'alarm_hours0', 'alarm_stop0',
+                         'alarm_vol1', 'alarm_rate1', 'alarm_hours1', 'alarm_stop1']) {
         assert.ok(html.includes('name="' + field + '"'), 'нет поля ' + field);
         assert.ok(html.includes('%' + field + '%'), 'поле ' + field + ' не подставляется прошивкой');
+        assert.ok(html.includes('id="' + field + '-error"'), 'у поля ' + field + ' нет сообщения об ошибке');
     }
 
     for (const input of ['0', '1']) {
-        assert.ok(html.includes('data-unit="alarm_flow" data-name="%counter' + input + '_name%"'),
-                  'у входа ' + input + ' подпись порога не знает своего ресурса');
         assert.ok(html.includes('fill_counter' + input + '_title(%counter' + input + '_name%)'),
                   'заголовок входа ' + input + ' не заполняется');
     }
 
-    assert.ok(html.includes('fill_units()'), 'страница не зовёт fill_units');
     assert.ok(html.includes("'/api/save_alarms'"), 'форма шлёт настройки не туда');
 });
 

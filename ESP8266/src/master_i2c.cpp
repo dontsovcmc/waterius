@@ -263,27 +263,42 @@ bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
 }
 
 /*
-Пороги тревог для attiny (issue #202).
+Пороги тревог и снятие для attiny (issue #202).
 
 Уходят в каждом сеансе, как и период пробуждения: у attiny они живут в ОЗУ,
 а EEPROM там занята показаниями и конфигурацией входов.
+
+Маска снятия едет тем же кадром - это одна тема, а не две, и отдельная
+команда стоила бы attiny больше флеша, чем весь этот байт. Маска обязана
+быть одноразовой: выставили в одном сеансе, дальше шлём ноль, иначе тревога
+снималась бы каждый раз заново и новая не поднялась бы никогда.
+
+    0..11  на канал: quantum_ticks, leak_quanta, vol_pulses
+    12     маска снятия: биты 0-2 канал 0, биты 3-5 канал 1
+    13     CRC8
 */
-bool MasterI2C::setAlarmConfig(const uint16_t interval0, const uint16_t leak_min0,
-                               const uint16_t interval1, const uint16_t leak_min1)
+bool MasterI2C::setAlarmConfig(const AlarmThresholds &ch0, const AlarmThresholds &ch1,
+                               const uint8_t reset_mask)
 {
     BusyGuard guard(i2c_busy);
-    uint8_t txBuf[10];
+    uint8_t txBuf[15];
 
     txBuf[0] = 'A';
-    txBuf[1] = (uint8_t)(interval0 >> 8);
-    txBuf[2] = (uint8_t)(interval0);
-    txBuf[3] = (uint8_t)(leak_min0 >> 8);
-    txBuf[4] = (uint8_t)(leak_min0);
-    txBuf[5] = (uint8_t)(interval1 >> 8);
-    txBuf[6] = (uint8_t)(interval1);
-    txBuf[7] = (uint8_t)(leak_min1 >> 8);
-    txBuf[8] = (uint8_t)(leak_min1);
-    txBuf[9] = crc_8(&txBuf[1], 8, INIT_ATTINY_CRC);
+
+    const AlarmThresholds *ch[2] = {&ch0, &ch1};
+    uint8_t i = 1;
+    for (uint8_t c = 0; c < 2; c++)
+    {
+        txBuf[i++] = (uint8_t)(ch[c]->quantum_ticks >> 8);
+        txBuf[i++] = (uint8_t)(ch[c]->quantum_ticks);
+        txBuf[i++] = (uint8_t)(ch[c]->leak_quanta >> 8);
+        txBuf[i++] = (uint8_t)(ch[c]->leak_quanta);
+        txBuf[i++] = (uint8_t)(ch[c]->vol_pulses >> 8);
+        txBuf[i++] = (uint8_t)(ch[c]->vol_pulses);
+    }
+
+    txBuf[13] = reset_mask;
+    txBuf[14] = crc_8(&txBuf[1], 13, INIT_ATTINY_CRC);
 
     return sendData(txBuf, sizeof(txBuf));
 }
