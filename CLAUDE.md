@@ -88,6 +88,11 @@ and esptool paths, fuses, and how success is proven: **[docs/flashing.md](docs/f
 
 Read it when asked to flash; do not re-derive the commands.
 
+There are **two recipes** there — Waterius-2 and Classic. Take one whole and do
+not mix commands between them: attiny has two firmwares as well, and its
+`default_envs` is the Classic one, so `pio run -d Attiny85` without `-e` silently
+builds the wrong model.
+
 ## Architecture
 
 ### Communication Flow
