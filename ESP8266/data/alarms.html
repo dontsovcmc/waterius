@@ -28,6 +28,11 @@
                         <p class="text">Ватериус сообщит об аварии, не дожидаясь очередного сеанса связи.</p>
                         <p class="form-error hd"></p>
 
+                        <div id="alarm_reset_box" class="%alarm_raised%">
+                            <p class="form-error mt24">Есть непогашенная тревога. Сама она не снимется, а пока висит — новая на том же входе не придёт.</p>
+                            <button class="btn btn-red mt16" type="button" onclick="resetAllAlarms(event)">Снять тревоги</button>
+                        </div>
+
                         <div class="toggle mt24">
                             <input type="checkbox" name="vacation" id="vacation" onclick="checkboxToggle(this)" %vacation%>
                             <label for="vacation">Режим «Я уехал»</label>
@@ -37,24 +42,30 @@
                         <div id="alarm1" class="%alarm_state1%">
                             <div class="mt24"><h2><span id="counter1_title"></span></h2></div>
                             <p class="note no-input-note">Вход не считает импульсы: тревоги настраивать нечем. <a class="link" href="/input/1/setup.html">Настроить</a></p>
-                            <p class="note no-attiny-note">Порог расхода и Непрерывный расход недоступны в версии attiny ниже 41</p>
+                            <p class="note no-attiny-note">Тревоги по расходу недоступны в этой версии attiny</p>
                             <p class="note no-factor-note">Счётчик не настроен: задайте вес импульса. <a class="link" href="/input/1/setup.html">Настроить</a></p>
                             <div class="thresholds">
                             <div class="f-row">
-                                <label for="alarm_flow1"><span data-unit="alarm_flow" data-name="%counter1_name%"></span></label>
-                                <input pattern="^\d{1,5}$" id="alarm_flow1" name="alarm_flow1" placeholder="0" value="%alarm_flow1%" %thresholds_off1%>
-                                <p class="note">Прорыв трубы: расход выше порога.</p>
-                                <p class="error hd" id="alarm_flow1-error">Целое число от 0 до 65535</p>
+                                <label for="alarm_vol1">Сообщить, если за 30 минут вылилось больше, л</label>
+                                <input pattern="^\d{1,5}$" id="alarm_vol1" name="alarm_vol1" placeholder="0" value="%alarm_vol1%" %thresholds_off1%>
+                                <p class="note">Забытый кран, срыв шланга, прорыв. Для ориентира: душ около 100 л, ванна около 200 л.</p>
+                                <p class="error hd" id="alarm_vol1-error">Целое число от 0 до 65535</p>
                             </div>
                             <div class="f-row">
-                                <label for="alarm_leak1">Непрерывный расход, мин</label>
-                                <input pattern="^\d{1,5}$" id="alarm_leak1" name="alarm_leak1" placeholder="0" value="%alarm_leak1%" %thresholds_off1%>
-                                <p class="note">Протечка: вода не останавливается дольше этого времени.</p>
-                                <p class="error hd" id="alarm_leak1-error">Целое число от 0 до 65535</p>
+                                <label for="alarm_rate1">Сообщить, если расход не падал ниже, л/ч</label>
+                                <input pattern="^\d{1,5}$" id="alarm_rate1" name="alarm_rate1" placeholder="0" value="%alarm_rate1%" %thresholds_off1%>
+                                <p class="note">Что считать остановкой воды. Слабее 15 л/ч бытовой счётчик не трогается — ставить ниже бессмысленно.</p>
+                                <p class="error hd" id="alarm_rate1-error">Слишком малый порог для этого счётчика</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="alarm_hours1">…в течение, ч</label>
+                                <input pattern="^\d{1,5}$" id="alarm_hours1" name="alarm_hours1" placeholder="0" value="%alarm_hours1%" %thresholds_off1%>
+                                <p class="note">Протечка: бачок, капающий кран, свищ. В половине квартир вода не останавливается и 13 часов подряд.</p>
+                                <p class="error hd" id="alarm_hours1-error">Слишком мало при таком пороге расхода</p>
                             </div>
                             </div>
                             <div class="stop f-row">
-                                <label for="alarm_stop1">Остановка расхода, ч</label>
+                                <label for="alarm_stop1">Сообщить, если расхода не было, ч</label>
                                 <input pattern="^\d{1,4}$" id="alarm_stop1" name="alarm_stop1" placeholder="0" value="%alarm_stop1%">
                                 <p class="note">Замёрзшая труба, оборванный провод: расхода нет дольше этого времени. Не точнее периода пробуждения.</p>
                                 <p class="error hd" id="alarm_stop1-error">Целое число от 0 до 1092</p>
@@ -64,24 +75,30 @@
                         <div id="alarm0" class="%alarm_state0%">
                             <div class="mt24"><h2><span id="counter0_title"></span></h2></div>
                             <p class="note no-input-note">Вход не считает импульсы: тревоги настраивать нечем. <a class="link" href="/input/0/setup.html">Настроить</a></p>
-                            <p class="note no-attiny-note">Порог расхода и Непрерывный расход недоступны в версии attiny ниже 41</p>
+                            <p class="note no-attiny-note">Тревоги по расходу недоступны в этой версии attiny</p>
                             <p class="note no-factor-note">Счётчик не настроен: задайте вес импульса. <a class="link" href="/input/0/setup.html">Настроить</a></p>
                             <div class="thresholds">
                             <div class="f-row">
-                                <label for="alarm_flow0"><span data-unit="alarm_flow" data-name="%counter0_name%"></span></label>
-                                <input pattern="^\d{1,5}$" id="alarm_flow0" name="alarm_flow0" placeholder="0" value="%alarm_flow0%" %thresholds_off0%>
-                                <p class="note">Прорыв трубы: расход выше порога.</p>
-                                <p class="error hd" id="alarm_flow0-error">Целое число от 0 до 65535</p>
+                                <label for="alarm_vol0">Сообщить, если за 30 минут вылилось больше, л</label>
+                                <input pattern="^\d{1,5}$" id="alarm_vol0" name="alarm_vol0" placeholder="0" value="%alarm_vol0%" %thresholds_off0%>
+                                <p class="note">Забытый кран, срыв шланга, прорыв. Для ориентира: душ около 100 л, ванна около 200 л.</p>
+                                <p class="error hd" id="alarm_vol0-error">Целое число от 0 до 65535</p>
                             </div>
                             <div class="f-row">
-                                <label for="alarm_leak0">Непрерывный расход, мин</label>
-                                <input pattern="^\d{1,5}$" id="alarm_leak0" name="alarm_leak0" placeholder="0" value="%alarm_leak0%" %thresholds_off0%>
-                                <p class="note">Протечка: вода не останавливается дольше этого времени.</p>
-                                <p class="error hd" id="alarm_leak0-error">Целое число от 0 до 65535</p>
+                                <label for="alarm_rate0">Сообщить, если расход не падал ниже, л/ч</label>
+                                <input pattern="^\d{1,5}$" id="alarm_rate0" name="alarm_rate0" placeholder="0" value="%alarm_rate0%" %thresholds_off0%>
+                                <p class="note">Что считать остановкой воды. Слабее 15 л/ч бытовой счётчик не трогается — ставить ниже бессмысленно.</p>
+                                <p class="error hd" id="alarm_rate0-error">Слишком малый порог для этого счётчика</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="alarm_hours0">…в течение, ч</label>
+                                <input pattern="^\d{1,5}$" id="alarm_hours0" name="alarm_hours0" placeholder="0" value="%alarm_hours0%" %thresholds_off0%>
+                                <p class="note">Протечка: бачок, капающий кран, свищ. В половине квартир вода не останавливается и 13 часов подряд.</p>
+                                <p class="error hd" id="alarm_hours0-error">Слишком мало при таком пороге расхода</p>
                             </div>
                             </div>
                             <div class="stop f-row">
-                                <label for="alarm_stop0">Остановка расхода, ч</label>
+                                <label for="alarm_stop0">Сообщить, если расхода не было, ч</label>
                                 <input pattern="^\d{1,4}$" id="alarm_stop0" name="alarm_stop0" placeholder="0" value="%alarm_stop0%">
                                 <p class="note">Замёрзшая труба, оборванный провод: расхода нет дольше этого времени. Не точнее периода пробуждения.</p>
                                 <p class="error hd" id="alarm_stop0-error">Целое число от 0 до 1092</p>

@@ -4,57 +4,188 @@
 /*
 Пересчёт порогов тревог и разбор ответа attiny (issue #202).
 
-Пороги пользователь задаёт в литрах в час (в ваттах для электричества), а
-attiny сравнивает тики сторожевого таймера по 250 мс. Пересчёт здесь, потому
-что вес импульса и тип счётчика знает только ЕСП.
+Человек задаёт литры, литры в час и часы. attiny считает тиками по 250 мс и
+квантами тишины: делить там дорого, а веса импульса она не знает. Поэтому
+весь пересчёт здесь, и проверять его надо здесь же.
+
+Ключевое тождество, из которого всё растёт:
+
+    квант = вес импульса / Q
+
+Расход ровно в Q даёт один импульс за квант и потому паузы такой длины не
+оставляет никогда. Значит квант - это не отдельная настройка, а тот же порог
+расхода в других единицах.
 */
 
-TEST(Alarm, WaterThreshold)
+TEST(Volume, LitresToPulses)
 {
-    // 600 л/ч при 10 л/имп — импульс раз в минуту, это 240 тиков
-    EXPECT_EQ(flow_to_interval_ticks(600, 10, false), 240);
-
-    // Тот же расход у счётчика на 100 л/имп — импульс раз в 10 минут
-    EXPECT_EQ(flow_to_interval_ticks(600, 100, false), 2400);
+    EXPECT_EQ(volume_to_pulses(300, 10), 30u);
+    EXPECT_EQ(volume_to_pulses(300, 1), 300u);
 }
 
-TEST(Alarm, ElectricityThreshold)
+TEST(Volume, DisabledIsZero)
 {
-    // 3000 Вт при 1000 имп/кВт*ч — 3000 импульсов в час, это 4,8 тика
-    EXPECT_EQ(flow_to_interval_ticks(3000, 1000, true), 4);
+    EXPECT_EQ(volume_to_pulses(0, 10), 0u);
+    EXPECT_EQ(volume_to_pulses(300, 0), 0u);
 }
 
-TEST(Alarm, DisabledThreshold)
+TEST(Volume, BelowOnePulseStaysArmed)
 {
-    // Ноль — тревога выключена, и это умолчание у прошитых устройств
-    EXPECT_EQ(flow_to_interval_ticks(0, 10, false), 0);
+    // Порог меньше одного импульса: округление вниз дало бы "выключено",
+    // а пользователь просил обратное
+    EXPECT_EQ(volume_to_pulses(5, 10), 1u);
 }
 
-TEST(Alarm, UnknownFactorIsNotDivided)
+TEST(Quantum, RateToTicks)
 {
-    // Вес импульса ноль — делить не на что, тревога выключена
-    EXPECT_EQ(flow_to_interval_ticks(600, 0, false), 0);
-    EXPECT_EQ(flow_to_interval_ticks(3000, 0, true), 0);
+    // 10 л/имп и 10 л/ч - импульс раз в час, то есть 14400 тиков
+    EXPECT_EQ(rate_to_quantum_ticks(10, 10), 14400u);
+    // вдвое больший порог - вдвое короче квант
+    EXPECT_EQ(rate_to_quantum_ticks(20, 10), 7200u);
+    // 1 л/имп при том же пороге - квант вдесятеро короче
+    EXPECT_EQ(rate_to_quantum_ticks(10, 1), 1440u);
 }
 
-TEST(Alarm, TinyThresholdSaturates)
+TEST(Quantum, DisabledIsZero)
 {
-    /*
-    Порог 1 л/ч при 100 л/имп — импульс раз в 100 часов, в uint16 не влезает.
-    Насыщаем, а не обнуляем: ноль означал бы "выключено", то есть обратное
-    тому, что просил пользователь.
-    */
-    EXPECT_EQ(flow_to_interval_ticks(1, 100, false), UINT16_MAX);
+    EXPECT_EQ(rate_to_quantum_ticks(0, 10), 0u);
+    EXPECT_EQ(rate_to_quantum_ticks(10, 0), 0u);
 }
 
-TEST(Alarm, HugeThresholdStaysArmed)
+TEST(Quantum, TooSmallRateSaturates)
 {
-    /*
-    Порог выше, чем счётчик способен выдать: округление вниз дало бы ноль,
-    то есть молча выключенную тревогу.
-    */
-    EXPECT_EQ(flow_to_interval_ticks(60000, 1, false), 1);
-    EXPECT_GT(flow_to_interval_ticks(60000, 60000, true), 0);
+    // Ниже alarm_min_rate квант не влезает в uint16. Портал такое не
+    // пропускает, но чужая настройка не должна ломать детектор
+    EXPECT_EQ(rate_to_quantum_ticks(1, 10), UINT16_MAX);
+}
+
+TEST(Quantum, HugeRateStaysArmed)
+{
+    // Порог выше, чем счётчик способен выдать импульсов: ноль означал бы
+    // "выключено", а просили обратное
+    EXPECT_EQ(rate_to_quantum_ticks(65535, 1), 1u);
+}
+
+TEST(Quanta, HoursToQuanta)
+{
+    // квант час - в сутках 24 кванта
+    EXPECT_EQ(hours_to_quanta(24, 10, 10), 24u);
+    // квант полчаса - тех же суток хватает на 48
+    EXPECT_EQ(hours_to_quanta(24, 20, 10), 48u);
+}
+
+TEST(Quanta, DisabledIsZero)
+{
+    EXPECT_EQ(hours_to_quanta(0, 10, 10), 0u);
+    EXPECT_EQ(hours_to_quanta(24, 0, 10), 0u);
+    EXPECT_EQ(hours_to_quanta(24, 10, 0), 0u);
+}
+
+/*
+Пределы для проверки ввода в портале. Неверная пара "порог расхода - часы"
+ломает тревогу молча, поэтому портал обязан её не принять.
+*/
+TEST(Limits, MinRateFitsQuantumInUint16)
+{
+    const uint16_t q = alarm_min_rate(10);
+    EXPECT_GT(q, 0u);
+    EXPECT_LT(rate_to_quantum_ticks(q, 10), UINT16_MAX);
+    EXPECT_EQ(rate_to_quantum_ticks(q - 1, 10), UINT16_MAX);
+}
+
+TEST(Limits, MinHoursGivesAtLeastTwoQuanta)
+{
+    // При кванте в час двух квантов - это два часа
+    EXPECT_EQ(alarm_min_hours(10, 10), 2u);
+    // При кванте в 20 минут хватает и часа
+    EXPECT_EQ(alarm_min_hours(30, 10), 1u);
+    EXPECT_GE(hours_to_quanta(alarm_min_hours(10, 10), 10, 10), 2u);
+}
+
+/*
+Пороги канала целиком.
+*/
+TEST(Thresholds, ReadyChannel)
+{
+    const AlarmThresholds t = alarm_thresholds(false, CounterType::NAMUR,
+                                               300, 10, 24, 10);
+    EXPECT_EQ(t.vol_pulses, 30u);
+    EXPECT_EQ(t.quantum_ticks, 14400u);
+    EXPECT_EQ(t.leak_quanta, 24u);
+}
+
+TEST(Thresholds, NoImpulsesNoThresholds)
+{
+    for (const uint8_t type : {(uint8_t)CounterType::NONE,
+                               (uint8_t)CounterType::LEAKAGE,
+                               (uint8_t)CounterType::LEAKAGE_NC})
+    {
+        const AlarmThresholds t = alarm_thresholds(false, type, 300, 10, 24, 10);
+        EXPECT_EQ(t.vol_pulses, 0u);
+        EXPECT_EQ(t.quantum_ticks, 0u);
+        EXPECT_EQ(t.leak_quanta, 0u);
+    }
+}
+
+TEST(Thresholds, UnknownFactorIsNotGuessed)
+{
+    // До первой настройки входа в весе лежит спецзначение: взять его за
+    // литры на импульс значило бы отдать attiny порог, о котором не просили
+    for (const uint16_t factor : {(uint16_t)AUTO_IMPULSE_FACTOR,
+                                  (uint16_t)AS_COLD_CHANNEL})
+    {
+        const AlarmThresholds t = alarm_thresholds(false, CounterType::NAMUR,
+                                                   300, 10, 24, factor);
+        EXPECT_EQ(t.vol_pulses, 0u);
+        EXPECT_EQ(t.quantum_ticks, 0u);
+    }
+}
+
+TEST(Thresholds, LeakNeedsBothNumbers)
+{
+    // Порознь порог расхода и часы смысла не имеют
+    EXPECT_EQ(alarm_thresholds(false, CounterType::NAMUR, 0, 10, 0, 10).leak_quanta, 0u);
+    EXPECT_EQ(alarm_thresholds(false, CounterType::NAMUR, 0, 0, 24, 10).leak_quanta, 0u);
+    EXPECT_EQ(alarm_thresholds(false, CounterType::NAMUR, 0, 0, 24, 10).quantum_ticks, 0u);
+}
+
+/*
+Режим "я уехал" (#88): тревогой становится любой расход.
+*/
+TEST(Vacation, AnyPulseIsAlarm)
+{
+    const AlarmThresholds t = alarm_thresholds(true, CounterType::NAMUR,
+                                               300, 10, 24, 10);
+    EXPECT_EQ(t.vol_pulses, 1u);
+}
+
+TEST(Vacation, WorksWithoutKnownImpulseWeight)
+{
+    // Пересчитывать единицы незачем, когда тревогой объявлен любой импульс.
+    // Иначе включённый режим молча не сработал бы там, где нужен не меньше
+    for (const uint16_t factor : {(uint16_t)AUTO_IMPULSE_FACTOR,
+                                  (uint16_t)AS_COLD_CHANNEL})
+    {
+        EXPECT_EQ(alarm_thresholds(true, CounterType::NAMUR, 0, 0, 0, factor).vol_pulses, 1u);
+    }
+}
+
+TEST(Vacation, OverridesDisabledAlarm)
+{
+    EXPECT_EQ(alarm_thresholds(true, CounterType::NAMUR, 0, 0, 0, 10).vol_pulses, 1u);
+}
+
+TEST(Vacation, SkipsInputsWithoutImpulses)
+{
+    EXPECT_EQ(alarm_thresholds(true, CounterType::LEAKAGE, 0, 0, 0, 10).vol_pulses, 0u);
+    EXPECT_EQ(alarm_thresholds(true, CounterType::NONE, 0, 0, 0, 10).vol_pulses, 0u);
+}
+
+TEST(Vacation, OffKeepsUserThresholds)
+{
+    const AlarmThresholds t = alarm_thresholds(false, CounterType::NAMUR,
+                                               300, 10, 24, 10);
+    EXPECT_EQ(t.vol_pulses, 30u);
 }
 
 TEST(Alarm, BitsPerInput)
@@ -92,6 +223,58 @@ TEST(Alarm, OldAttinyHasNoAlarms)
     EXPECT_NE(alarm_bits(flags, INPUT0_RED, ATTINY_VER_ALARM), 0);
 }
 
+/*
+Снятие тревог в снимке флагов (#202).
+
+Маска приезжает в раскладке кадра 'A' - каналы вплотную, - а флаги лежат со
+сдвигом под флаг питания. Перепутанный сдвиг снял бы тревогу не того канала
+и не ту, а заметно это стало бы только на живом устройстве.
+*/
+TEST(AlarmReset, ClearsOnlyMaskedBits)
+{
+    const uint8_t flags = ((ALARM_FLOW | ALARM_LEAK) << ATTINY_ALARM_SHIFT0) |
+                          ((ALARM_FLOW | ALARM_WET) << ATTINY_ALARM_SHIFT1);
+
+    // Снимаем только протечку канала 0
+    const uint8_t left = alarm_flags_after_reset(flags, ALARM_LEAK);
+
+    EXPECT_EQ(alarm_bits(left, INPUT0_RED, ATTINY_VER_ALARM), ALARM_FLOW);
+    EXPECT_EQ(alarm_bits(left, INPUT1_BLUE, ATTINY_VER_ALARM), ALARM_FLOW | ALARM_WET);
+}
+
+TEST(AlarmReset, SecondChannelLivesInItsOwnBits)
+{
+    const uint8_t flags = (ALARM_WET << ATTINY_ALARM_SHIFT0) |
+                          (ALARM_WET << ATTINY_ALARM_SHIFT1);
+
+    const uint8_t left = alarm_flags_after_reset(flags, ALARM_RESET_CH(ALARM_WET, INPUT1_BLUE));
+
+    EXPECT_EQ(alarm_bits(left, INPUT0_RED, ATTINY_VER_ALARM), ALARM_WET);
+    EXPECT_EQ(alarm_bits(left, INPUT1_BLUE, ATTINY_VER_ALARM), 0);
+}
+
+TEST(AlarmReset, AllClearsBothChannels)
+{
+    const uint8_t flags = ATTINY_FLAG_ESP_POWERED_LONG |
+                          (ATTINY_ALARM_MASK << ATTINY_ALARM_SHIFT0) |
+                          (ATTINY_ALARM_MASK << ATTINY_ALARM_SHIFT1);
+
+    const uint8_t left = alarm_flags_after_reset(flags, ALARM_RESET_ALL);
+
+    EXPECT_EQ(alarm_bits(left, INPUT0_RED, ATTINY_VER_ALARM), 0);
+    EXPECT_EQ(alarm_bits(left, INPUT1_BLUE, ATTINY_VER_ALARM), 0);
+
+    // Чужие биты байта маска не трогает
+    EXPECT_EQ(left & ATTINY_FLAG_ESP_POWERED_LONG, ATTINY_FLAG_ESP_POWERED_LONG);
+}
+
+TEST(AlarmReset, EmptyMaskChangesNothing)
+{
+    const uint8_t flags = (ALARM_LEAK << ATTINY_ALARM_SHIFT0);
+
+    EXPECT_EQ(alarm_flags_after_reset(flags, 0), flags);
+}
+
 TEST(Alarm, FactorConfiguredRejectsSpecialValues)
 {
     /*
@@ -107,7 +290,6 @@ TEST(Alarm, FactorConfiguredRejectsSpecialValues)
     // Электричество тоже: формула другая, но вес известен
     EXPECT_TRUE(factor_configured(1000));
 }
-
 /*
 Что страница тревог показывает на входе. Причины взаимоисключающие, и врать
 нельзя ни в одну сторону: "счётчик не настроен" на старой attiny отправило бы
@@ -149,89 +331,12 @@ TEST(AlarmInput, OldAttinyWinsOverUnknownFactor)
     EXPECT_EQ(alarm_input_state(CounterType::NAMUR, AUTO_IMPULSE_FACTOR, ATTINY_VER_ALARM - 1),
               ALARM_INPUT_NO_ATTINY);
 }
-
-TEST(Alarm, DisabledInputHasNoAlarms)
-{
-    EXPECT_EQ(alarm_interval_ticks(false, CounterType::NONE, 600, 10, false), 0);
-}
-
-TEST(Alarm, LeakSensorHasNoFlowThreshold)
-{
-    // Датчик протечки не считает импульсы: порог расхода ему не из чего считать
-    EXPECT_EQ(alarm_interval_ticks(false, CounterType::LEAKAGE, 600, 10, false), 0);
-    EXPECT_EQ(alarm_interval_ticks(false, CounterType::LEAKAGE_NC, 600, 10, false), 0);
-}
-
-// --- режим "я уехал" (#88) ---
-
-TEST(Vacation, OverridesThreshold)
-{
-    // Уехал - тревогой становится любой расход, а не только выше порога
-    EXPECT_EQ(alarm_interval_ticks(true, CounterType::NAMUR, 600, 10, false), UINT16_MAX);
-    EXPECT_EQ(alarm_interval_ticks(true, CounterType::ELECTRONIC, 3000, 1000, true), UINT16_MAX);
-}
-
-TEST(Vacation, OffKeepsUserThreshold)
-{
-    EXPECT_EQ(alarm_interval_ticks(false, CounterType::NAMUR, 600, 10, false),
-              flow_to_interval_ticks(600, 10, false));
-}
-
-TEST(Vacation, OverridesEvenDisabledAlarm)
-{
-    // Порог не задан, но уехал - расход всё равно должен стать тревогой:
-    // иначе режим молча не работал бы на самых частых настройках
-    EXPECT_EQ(alarm_interval_ticks(true, CounterType::NAMUR, 0, 10, false), UINT16_MAX);
-}
-
-TEST(Vacation, WorksWithoutKnownImpulseWeight)
-{
-    /*
-    Вес импульса нужен, чтобы пересчитать литры в час в тики. Режиму отпуска
-    пересчитывать нечего: тревогой объявлен любой импульс. Спецзначение веса
-    (вход ещё не настроен до конца) не должно молча выключать режим.
-    */
-    EXPECT_EQ(alarm_interval_ticks(true, CounterType::NAMUR, 0, AUTO_IMPULSE_FACTOR, false),
-              UINT16_MAX);
-    EXPECT_EQ(alarm_interval_ticks(true, CounterType::NAMUR, 0, AS_COLD_CHANNEL, false),
-              UINT16_MAX);
-
-    // А обычный порог без веса импульса по-прежнему не посчитать
-    EXPECT_EQ(alarm_interval_ticks(false, CounterType::NAMUR, 600, AUTO_IMPULSE_FACTOR, false), 0);
-    EXPECT_EQ(alarm_interval_ticks(false, CounterType::NAMUR, 600, AS_COLD_CHANNEL, false), 0);
-}
-
-TEST(Vacation, SkipsInputsWithoutImpulses)
-{
-    // У датчика протечки и выключенного входа импульсов нет
-    EXPECT_EQ(alarm_interval_ticks(true, CounterType::LEAKAGE, 600, 10, false), 0);
-    EXPECT_EQ(alarm_interval_ticks(true, CounterType::LEAKAGE_NC, 600, 10, false), 0);
-    EXPECT_EQ(alarm_interval_ticks(true, CounterType::NONE, 600, 10, false), 0);
-}
-
-TEST(Vacation, SaturatedThresholdNeverClears)
-{
-    /*
-    attiny снимает тревогу расхода, когда (ticks >> 1) > min_interval. При
-    максимальном пороге это невозможно ни при каком ticks, поэтому "расход
-    был" держится до выключения режима - и оповещение приходит один раз.
-    */
-    const uint16_t interval = alarm_interval_ticks(true, CounterType::NAMUR, 0, 10, false);
-
-    for (uint32_t ticks = 0; ticks <= UINT16_MAX; ticks += 257)
-    {
-        ASSERT_LE(ticks >> 1, interval) << "ticks=" << ticks;
-    }
-    EXPECT_LE((uint32_t)UINT16_MAX >> 1, interval);
-}
-
 /*
 Квитанция о доставке тревоги (#202).
 
-Пока квитанции нет, attiny будит ЕСП снова: до ALARM_MAX_TRIES попыток и не
-больше ALARM_MAX_SESSIONS внеплановых сеансов на период пробуждения. Значит
-"доставлено" оплачивается батареей, и решает тут не наблюдение, а настройка
-пользователя.
+Пока квитанции нет, attiny будит ЕСП снова: до ALARM_MAX_TRIES попыток.
+Значит "доставлено" оплачивается батареей, и решает тут не наблюдение, а
+настройка пользователя.
 */
 
 // Сеанс, в котором всё, что было настроено, отработало без ошибок

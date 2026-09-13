@@ -326,12 +326,12 @@ inline void alarm_tick(CounterEvent ev)
 	alarm0.on_tick();
 	alarm1.on_tick();
 
+	// Минуты нужны только паузе между попытками доставки: детектор считает
+	// в тиках, и собственной меры времени в минутах у него больше нет.
 	if (++alarm_minute_ticks < ALARM_TICKS_PER_MINUTE)
 		return;
 
 	alarm_minute_ticks = 0;
-	alarm0.on_minute();
-	alarm1.on_minute();
 
 	if (alarm_hold_min)
 		alarm_hold_min--;
@@ -431,9 +431,11 @@ uint8_t alarm_bits()
 void set_alarm_config(const uint8_t *data)
 {
 	alarm0.configure((uint16_t)(data[0] << 8) | data[1],
-					 (uint16_t)(data[2] << 8) | data[3]);
-	alarm1.configure((uint16_t)(data[4] << 8) | data[5],
-					 (uint16_t)(data[6] << 8) | data[7]);
+					 (uint16_t)(data[2] << 8) | data[3],
+					 (uint16_t)(data[4] << 8) | data[5]);
+	alarm1.configure((uint16_t)(data[6] << 8) | data[7],
+					 (uint16_t)(data[8] << 8) | data[9],
+					 (uint16_t)(data[10] << 8) | data[11]);
 }
 
 /*
@@ -447,13 +449,26 @@ void set_alarm_config(const uint8_t *data)
 void set_counter_types(const uint8_t *data)
 {
 	if (data[0] != info.config.types.type0)
-		alarm0.on_type_changed();
+		alarm0.reset(ALARM_MASK);
 
 	if (data[1] != info.config.types.type1)
-		alarm1.on_type_changed();
+		alarm1.reset(ALARM_MASK);
 
 	info.config.types.type0 = data[0];
 	info.config.types.type1 = data[1];
+}
+
+/*
+Снять тревоги по маске от ЕСП: биты 0-2 - FLOW/LEAK/WET канала 0, биты 3-5 -
+канала 1. Ноль - снимать нечего, и это обычное состояние кадра.
+*/
+void reset_alarms(const uint8_t mask)
+{
+	if (!mask)
+		return;
+
+	alarm0.reset(mask & ALARM_MASK);
+	alarm1.reset((mask >> 3) & ALARM_MASK);
 }
 
 /*
@@ -475,7 +490,7 @@ void confirm_alarm()
 */
 inline bool alarm_pending()
 {
-	return alarm_hold_min == 0 && alarm_report.budget_left() &&
+	return alarm_hold_min == 0 &&
 		   (alarm_report.pending || alarm0.changed || alarm1.changed);
 }
 
@@ -613,6 +628,12 @@ void loop()
 		if (button.press == ButtonPressType::SHORT)
 		{
 			LOG(F("Manual transmit wake up"));
+
+			// Сама тревога не гаснет, гасит человек. Нажал - значит увидел:
+			// снимаем сразу, а не после подтверждения доставки, иначе в
+			// шкафу пришлось бы ждать конца сеанса
+			reset_alarms(ALARM_MASK | (ALARM_MASK << 3));
+
 			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
 		}
 		else if (alarm_wake)
@@ -648,11 +669,6 @@ void loop()
 		alarm0.changed = 0;
 		alarm1.changed = 0;
 	}
-	// Пока ЕСП не подтвердит доставку, состояние не снимаем: иначе тревога
-	// успела бы погаснуть до чтения байта флагов
-	alarm0.hold(alarm_report.pending);
-	alarm1.hold(alarm_report.pending);
-
 	esp.power(true);
 
 	LOG(F("ESP turn on"));
@@ -681,34 +697,8 @@ void loop()
 	}
 
 	/*
-	Бюджет внеплановых сеансов. Плановый сеанс увёз текущее состояние, значит
-	счёт начинается заново; внеплановый - потрачен.
-	*/
-	if (alarm_wake)
-	{
-		alarm_report.spend();
-	}
-	else
-	{
-		alarm_report.new_period();
-	}
-
-	/*
-	Состояние держим, пока доклад не подтверждён: между попытками тревога иначе
-	успела бы погаснуть, и на сервер уехало бы "всё хорошо".
-
-	Но только пока мы действительно собираемся доложить. Исчерпали бюджет -
-	ближайший сеанс будет плановым, и держать до него нечего: за это время
-	датчик успеет высохнуть, и увезти надо правду, а не застывшую тревогу.
-	*/
-	const bool waiting = alarm_report.pending && alarm_report.budget_left();
-	alarm0.hold(waiting);
-	alarm1.hold(waiting);
-
-	/*
-	Пауза после внепланового сеанса - и до следующей попытки, и просто чтобы
-	дребезжащий датчик протечки не поднимал ЕСП по кругу. Без неё связка
-	"намок - высох - намок" будила бы устройство на каждом переходе.
+	Пауза после внепланового сеанса - интервал до следующей попытки доставки.
+	Держать состояние между попытками не нужно: само оно не снимается.
 	*/
 	if (alarm_report.pending || alarm_wake)
 	{

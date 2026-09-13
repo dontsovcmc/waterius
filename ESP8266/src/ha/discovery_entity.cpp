@@ -67,17 +67,24 @@ String build_entity_discovery(const char *mqtt_topic,
     String default_entity_id = String(entity_type) + "." + unique_id;
     entity[F("def_ent_id")] = default_entity_id.c_str(); // default_entity_id
 
-    entity[F("stat_t")] = mqtt_topic; // state_topic
+    // У кнопки состояния нет вовсе, и лишние ключи Home Assistant не принимает:
+    // схема button.mqtt их отвергает, а сущность просто не появляется
+    const bool stateless = strcmp(entity_type, "button") == 0;
 
-    // Флаги приезжают в JSON булевыми, а Jinja отрендерила бы их как "True":
-    // у переключателей и бинарных сенсоров значение приводится к 1/0
-    const bool flag_entity = strcmp(entity_type, "binary_sensor") == 0 ||
-                             strcmp(entity_type, "switch") == 0;
+    if (!stateless)
+    {
+        entity[F("stat_t")] = mqtt_topic; // state_topic
 
-    String value_template;
-    value_template = String("{{ value_json.") + entity_id +
-                     String(flag_entity ? " | is_defined | int }}" : " | is_defined }}");
-    entity[F("val_tpl")] = value_template.c_str();
+        // Флаги приезжают в JSON булевыми, а Jinja отрендерила бы их как "True":
+        // у переключателей и бинарных сенсоров значение приводится к 1/0
+        const bool flag_entity = strcmp(entity_type, "binary_sensor") == 0 ||
+                                 strcmp(entity_type, "switch") == 0;
+
+        String value_template;
+        value_template = String("{{ value_json.") + entity_id +
+                         String(flag_entity ? " | is_defined | int }}" : " | is_defined }}");
+        entity[F("val_tpl")] = value_template.c_str();
+    }
 
 
     if (state_class && state_class[0])
@@ -139,6 +146,22 @@ String build_entity_discovery(const char *mqtt_topic,
         // https://www.home-assistant.io/integrations/binary_sensor.mqtt
         entity[F("pl_on")] = F("1");  // payload_on
         entity[F("pl_off")] = F("0"); // payload_off
+    }
+
+    /*
+    Снятие тревог (#202). Нажатие шлёт маску всех шести тревог: разбираться,
+    какая из них поднята, в Home Assistant негде - состояния у кнопки нет.
+    Точечное снятие делается плашками на главной странице портала.
+    */
+    if (strcmp(entity_type, "button") == 0)
+    {
+        // https://www.home-assistant.io/integrations/button.mqtt
+        String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
+        entity[F("cmd_t")] = command_topic; // command_topic
+        entity[F("pl_prs")] = String(ALARM_RESET_ALL); // payload_press
+
+        entity[F("retain")] = false; // действие, а не состояние: retain тут вреден
+        entity[F("qos")] = 1;
     }
 
     if (strcmp(entity_type, "switch") == 0)

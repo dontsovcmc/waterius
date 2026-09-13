@@ -163,6 +163,21 @@ function drawWifi() {
     }
 }
 
+/*
+Тревоги живут одним байтом в раскладке Header.flags: биты 1-3 канал 0,
+4-6 канал 1. Пульт показывает их двумя списками, по каналу на каждый.
+*/
+function alarmShift(input) {
+    return input === 0 ? 1 : 4;
+}
+
+function fillAlarmFlags(state) {
+    [0, 1].forEach(function (input) {
+        var box = el('alarm-flags' + input);
+        if (box) box.value = String((state.attiny.alarm_flags >> alarmShift(input)) & 0x07);
+    });
+}
+
 function draw() {
     if (!state) return;
     drawLinks();
@@ -170,6 +185,7 @@ function draw() {
     drawWifi();
 
     fill('attiny-version', state.attiny.version);
+    fillAlarmFlags(state);
     fill('attiny-voltage', state.attiny.voltage);
     el('attiny-link').checked = state.attiny.link;
     el('esp-restarted').checked = state.portal.esp_restarted;
@@ -186,6 +202,17 @@ function bind() {
     });
 
     el('refresh').addEventListener('click', function () { fetch('/sim-api/refresh'); });
+
+    [0, 1].forEach(function (input) {
+        var box = el('alarm-flags' + input);
+        if (!box) return;
+        box.addEventListener('change', function (event) {
+            var shift = alarmShift(input);
+            var flags = (state.attiny.alarm_flags & ~(0x07 << shift)) |
+                        (Number(event.target.value) << shift);
+            send({ type: 'patch', state: { attiny: { alarm_flags: flags & 0xFF } } });
+        });
+    });
 
     el('attiny-version').addEventListener('change', function (event) {
         send({ type: 'patch', state: { attiny: { version: Number(event.target.value) } } });

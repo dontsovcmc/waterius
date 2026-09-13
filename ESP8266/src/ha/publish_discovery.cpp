@@ -168,6 +168,7 @@ void publish_discovery_general_entities(PubSubClient &mqtt_client,
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_PERIOD_MIN);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_SEND_ON_CONSUMPTION);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_VACATION);
+    publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ALARM_RESET);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ACK_WATERIUS);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ACK_HTTP);
     publish_discovery_entity(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_ACK_MQTT);
@@ -307,10 +308,10 @@ void publish_discovery_channel_entities(PubSubClient &mqtt_client,
     они по разным формулам, и единица должна об этом говорить.
     */
     publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac,
-                                     channel_name == CounterName::ELECTRO ? ENTITY_CHANNEL_ALARM_POWER_CFG
-                                                                          : ENTITY_CHANNEL_ALARM_FLOW_CFG,
+                                     ENTITY_CHANNEL_ALARM_VOL_CFG,
                                      "", channel, channel_name);
-    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_LEAK_CFG, "", channel, channel_name);
+    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_RATE_CFG, "", channel, channel_name);
+    publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_HOURS_CFG, "", channel, channel_name);
     publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_STOP_CFG, "", channel, channel_name);
     publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_FLOW, "", channel, channel_name);
     publish_discovery_entity_channel(mqtt_client, topic, discovery_topic, device_id, device_mac, ENTITY_CHANNEL_ALARM_LEAK, "", channel, channel_name);

@@ -22,8 +22,8 @@ protected:
     static void requestEvent();
     static void newCommand();
     static void receiveEvent(int howMany);
-    static void getWakeUpPeriod();
     static void getCounterTypes();
+    static void getWakeUpPeriod();
     static void getAlarmConfig();
     static void extendWakeUp();
 

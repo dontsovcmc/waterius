@@ -25,6 +25,18 @@
 
 MasterI2C masterI2C;     // Для общения с Attiny85 по i2c
 AttinyData data;         // Данные от Attiny85 при включении
+/*
+Снятие тревог: маска на ближайший кадр 'A' (#202).
+
+Живёт вне Settings и вне runtime_data сознательно. В Settings ей не место -
+это не настройка, а разовое действие, и запись во флеш ради него лишняя.
+В runtime_data нельзя - её перетирает копия данных от attiny в начале сеанса.
+
+Ставят маску портал, команда с сервера и команда MQTT; гасит её
+send_alarm_config, как только кадр уехал.
+*/
+uint8_t alarm_reset_mask = 0;
+
 AttinyData runtime_data; // Копия данных от Attiny85. Обновляются в webportal на странице детектирования и ввода значений счётчиков.
 Settings sett;           // Настройки соединения и предыдущие показания из EEPROM
 CalculatedData cdata;    // вычисляемые данные
@@ -53,24 +65,33 @@ void send_alarm_config(const Settings &sett)
         return; // старая attiny тревог не умеет
     }
 
-    const bool electro0 = sett.counter0_name == CounterName::ELECTRO;
-    const bool electro1 = sett.counter1_name == CounterName::ELECTRO;
-
     const bool vacation = sett.vacation != 0;
 
-    const uint16_t interval0 = alarm_interval_ticks(vacation, runtime_data.counter_type0,
-                                                   sett.alarm_flow0, sett.factor0, electro0);
-    const uint16_t interval1 = alarm_interval_ticks(vacation, runtime_data.counter_type1,
-                                                   sett.alarm_flow1, sett.factor1, electro1);
+    const AlarmThresholds ch0 = alarm_thresholds(vacation, runtime_data.counter_type0,
+                                                 sett.alarm_vol0, sett.alarm_rate0,
+                                                 sett.alarm_hours0, sett.factor0);
+    const AlarmThresholds ch1 = alarm_thresholds(vacation, runtime_data.counter_type1,
+                                                 sett.alarm_vol1, sett.alarm_rate1,
+                                                 sett.alarm_hours1, sett.factor1);
 
-    LOG_INFO(F("Alarm config: interval0=") << interval0 << F(" leak0=") << sett.alarm_leak0
-             << F(" interval1=") << interval1 << F(" leak1=") << sett.alarm_leak1
-             << F(" vacation=") << vacation);
+    LOG_INFO(F("Alarm config: quantum0=") << ch0.quantum_ticks
+             << F(" quanta0=") << ch0.leak_quanta << F(" vol0=") << ch0.vol_pulses
+             << F(" quantum1=") << ch1.quantum_ticks
+             << F(" quanta1=") << ch1.leak_quanta << F(" vol1=") << ch1.vol_pulses
+             << F(" vacation=") << vacation
+             << F(" reset=") << alarm_reset_mask);
 
-    if (!masterI2C.setAlarmConfig(interval0, sett.alarm_leak0, interval1, sett.alarm_leak1))
+    if (!masterI2C.setAlarmConfig(ch0, ch1, alarm_reset_mask))
     {
         LOG_ERROR(F("Alarm config wasn't set"));
+        return;
     }
+
+    // Снимок от attiny обновится только в следующем сеансе, а плашка в
+    // портале обязана погаснуть сразу после нажатия
+    runtime_data.attiny_flags = alarm_flags_after_reset(runtime_data.attiny_flags,
+                                                        alarm_reset_mask);
+    alarm_reset_mask = 0;
 }
 
 /*

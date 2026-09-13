@@ -1,55 +1,112 @@
 #include "core/alarm.h"
 
-uint16_t flow_to_interval_ticks(const uint16_t threshold, const uint16_t factor,
-                                const bool electricity)
+uint16_t volume_to_pulses(const uint16_t litres, const uint16_t factor)
 {
-    if (threshold == 0 || factor == 0)
+    if (litres == 0 || factor == 0)
     {
         return 0; // тревога выключена
     }
 
-    uint32_t ticks;
-    if (electricity)
+    const uint16_t pulses = litres / factor;
+
+    // Порог меньше одного импульса: округление вниз дало бы ноль, то есть
+    // "выключено", а пользователь просил обратное
+    return pulses ? pulses : 1;
+}
+
+uint16_t rate_to_quantum_ticks(const uint16_t rate, const uint16_t factor)
+{
+    if (rate == 0 || factor == 0)
     {
-        ticks = ALARM_TICKS_PER_HOUR * 1000UL / ((uint32_t)threshold * factor);
+        return 0; // тревога выключена
     }
-    else
-    {
-        ticks = ALARM_TICKS_PER_HOUR * factor / threshold;
-    }
+
+    const uint32_t ticks = ALARM_TICKS_PER_HOUR * factor / rate;
 
     if (ticks > UINT16_MAX)
     {
-        // Порог ниже представимого: тревога на любой расход. Честнее, чем
-        // молча отбросить настройку пользователя
+        // Порог ниже представимого. Портал такое не пропускает
+        // (alarm_min_rate), здесь - страховка от чужой настройки
         return UINT16_MAX;
     }
-    if (ticks == 0)
-    {
-        // Порог выше, чем счётчик способен выдать импульсов: округление вниз
-        // дало бы ноль, то есть "выключено", а пользователь просил обратное
-        return 1;
-    }
-    return (uint16_t)ticks;
+    return ticks ? (uint16_t)ticks : 1;
 }
 
-uint16_t alarm_interval_ticks(const bool vacation, const uint8_t counter_type,
-                              const uint16_t threshold, const uint16_t factor,
-                              const bool electricity)
+uint16_t hours_to_quanta(const uint16_t hours, const uint16_t rate,
+                         const uint16_t factor)
 {
-    if (!counts_impulses(counter_type))
+    if (hours == 0 || rate == 0 || factor == 0)
     {
-        return 0;
+        return 0; // тревога выключена
     }
-    if (vacation)
+
+    // квантов = часы / длина кванта в часах = часы * Q / вес
+    const uint32_t quanta = (uint32_t)hours * rate / factor;
+
+    if (quanta > UINT16_MAX)
     {
         return UINT16_MAX;
     }
-    if (!factor_configured(factor))
+    return quanta ? (uint16_t)quanta : 1;
+}
+
+uint16_t alarm_min_rate(const uint16_t factor)
+{
+    if (factor == 0)
     {
         return 0;
     }
-    return flow_to_interval_ticks(threshold, factor, electricity);
+
+    // наименьшее Q, при котором 14400 * вес / Q ещё влезает в uint16
+    const uint32_t q = (ALARM_TICKS_PER_HOUR * factor + UINT16_MAX - 1) / UINT16_MAX;
+    return q ? (uint16_t)q : 1;
+}
+
+uint16_t alarm_min_hours(const uint16_t rate, const uint16_t factor)
+{
+    if (rate == 0 || factor == 0)
+    {
+        return 0;
+    }
+
+    // наименьшее T, при котором квантов набирается хотя бы два
+    const uint32_t h = (2UL * factor + rate - 1) / rate;
+    return h ? (uint16_t)h : 1;
+}
+
+AlarmThresholds alarm_thresholds(const bool vacation, const uint8_t counter_type,
+                                 const uint16_t vol, const uint16_t rate,
+                                 const uint16_t hours, const uint16_t factor)
+{
+    AlarmThresholds t = {0, 0, 0};
+
+    if (!counts_impulses(counter_type))
+    {
+        return t;
+    }
+
+    if (vacation)
+    {
+        t.vol_pulses = 1; // любой импульс - тревога
+        return t;
+    }
+
+    if (!factor_configured(factor))
+    {
+        return t;
+    }
+
+    t.vol_pulses = volume_to_pulses(vol, factor);
+    t.quantum_ticks = rate_to_quantum_ticks(rate, factor);
+    t.leak_quanta = hours_to_quanta(hours, rate, factor);
+
+    // Без кванта протечки не существует: считать нечего
+    if (t.quantum_ticks == 0)
+    {
+        t.leak_quanta = 0;
+    }
+
+    return t;
 }
 
 AlarmInputState alarm_input_state(const uint8_t counter_type, const uint16_t factor,
@@ -80,6 +137,15 @@ uint8_t alarm_bits(const uint8_t attiny_flags, const uint8_t input,
 
     const uint8_t shift = (input == INPUT0_RED) ? ATTINY_ALARM_SHIFT0 : ATTINY_ALARM_SHIFT1;
     return (attiny_flags >> shift) & ATTINY_ALARM_MASK;
+}
+
+uint8_t alarm_flags_after_reset(const uint8_t attiny_flags, const uint8_t reset_mask)
+{
+    const uint8_t ch0 = reset_mask & ATTINY_ALARM_MASK;
+    const uint8_t ch1 = (reset_mask >> ALARM_RESET_SHIFT1) & ATTINY_ALARM_MASK;
+
+    return attiny_flags & (uint8_t)~((ch0 << ATTINY_ALARM_SHIFT0) |
+                                     (ch1 << ATTINY_ALARM_SHIFT1));
 }
 
 bool alarm_delivered(const uint8_t mask, const SessionStatus &status)

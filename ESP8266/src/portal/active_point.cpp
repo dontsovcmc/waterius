@@ -272,14 +272,18 @@ String processor_main(const String &var, const uint8_t input)
     Пороги тревог (#202). Страница одна на оба входа, поэтому параметры
     именные, а не по номеру входа.
     */
-    else if (var == FPSTR(PARAM_ALARM_FLOW0))
-        return String(sett.alarm_flow0);
-    else if (var == FPSTR(PARAM_ALARM_FLOW1))
-        return String(sett.alarm_flow1);
-    else if (var == FPSTR(PARAM_ALARM_LEAK0))
-        return String(sett.alarm_leak0);
-    else if (var == FPSTR(PARAM_ALARM_LEAK1))
-        return String(sett.alarm_leak1);
+    else if (var == FPSTR(PARAM_ALARM_VOL0))
+        return String(sett.alarm_vol0);
+    else if (var == FPSTR(PARAM_ALARM_VOL1))
+        return String(sett.alarm_vol1);
+    else if (var == FPSTR(PARAM_ALARM_RATE0))
+        return String(sett.alarm_rate0);
+    else if (var == FPSTR(PARAM_ALARM_RATE1))
+        return String(sett.alarm_rate1);
+    else if (var == FPSTR(PARAM_ALARM_HOURS0))
+        return String(sett.alarm_hours0);
+    else if (var == FPSTR(PARAM_ALARM_HOURS1))
+        return String(sett.alarm_hours1);
     else if (var == FPSTR(PARAM_ALARM_STOP0))
         return String(sett.alarm_stop0);
     else if (var == FPSTR(PARAM_ALARM_STOP1))
@@ -311,6 +315,17 @@ String processor_main(const String &var, const uint8_t input)
     знает версию attiny и вес импульса, а страница, разбиравшая это сама,
     успевала показать поля и гасила их уже на onload.
     */
+    /*
+    Блок снятия виден только когда есть что снимать: кнопка без тревоги
+    выглядит как настройка, которую надо понять.
+    */
+    else if (var == FPSTR(PARAM_ALARM_RAISED))
+    {
+        const uint8_t raised = alarm_bits(runtime_data.attiny_flags, INPUT0_RED, runtime_data.version) |
+                               alarm_bits(runtime_data.attiny_flags, INPUT1_BLUE, runtime_data.version);
+        return raised ? String() : String(FPSTR(CLASS_HIDDEN));
+    }
+
     else if (var == FPSTR(PARAM_ALARM_STATE0))
         return alarm_state_class(alarm_input_state(runtime_data.counter_type0, sett.factor0,
                                                    runtime_data.version));

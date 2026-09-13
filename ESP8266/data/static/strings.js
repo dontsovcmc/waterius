@@ -231,17 +231,6 @@ function format_number(value) {
     return s.replace(".", DECIMAL_POINT);
 }
 
-/*
-Подпись и единица порога расхода (#202). У электричества это мощность в
-ваттах: там вес импульса задан наоборот, импульсами на киловатт-час, и
-считается порог по другой формуле.
-*/
-function alarm_flow_label(counter_name) {
-    return Number(counter_name) == CounterName_ELECTRO
-        ? "Порог мощности, Вт"
-        : "Порог расхода, л/ч";
-}
-
 // Единица показаний ресурса
 function unit_of(counter_name) {
     return resource(counter_name).unit;
@@ -304,10 +293,9 @@ function effective_factor(counter_name, form_value, api_factor) {
   data-unit="total"      — единица показаний с запятой: ", м³"
   data-unit="unit"       — единица показаний без запятой: "кВт·ч"
   data-unit="impulses"   — "имп."
-  data-unit="alarm_flow" — подпись порога расхода целиком
 
-Ресурс обычно один на страницу и приходит аргументом. На странице тревог
-входов два, поэтому маркер может нести свой: data-name="%counter1_name%".
+Ресурс обычно один на страницу и приходит аргументом. Маркер может нести
+свой: data-name="%counter1_name%".
 
 Заодно переписываются подписи вариантов веса импульса.
 */
@@ -323,9 +311,6 @@ function fill_units(counter_name) {
                 break;
             case 'impulses':
                 q.textContent = U_IMPULSE;
-                break;
-            case 'alarm_flow':
-                q.textContent = alarm_flow_label(name);
                 break;
         }
     });
@@ -378,6 +363,14 @@ const S_FACTOR_TOO_BIG = 23;
 const S_INPUT_SILENT = 24;
 const S_LOST_LINK_TITLE = 25;
 const S_RETRY = 26;
+const S_ALARM_FLOW = 27;
+const S_ALARM_LEAK = 28;
+const S_ALARM_WET = 29;
+const S_ALARM_STOP = 30;
+const S_ALARM_CLEAR = 31;
+
+// Маска всех шести тревог обоих каналов, core/types.h:ALARM_RESET_ALL
+const ALARM_RESET_ALL = 63;
 
 
 /*
@@ -418,6 +411,11 @@ function tr_text(id) {
         case S_INPUT_SILENT: return "Счётчик %s не насчитал ни одного импульса. Проверьте подключение и тип входа.";
         case S_LOST_LINK_TITLE: return "Нет связи с Ватериусом";
         case S_RETRY: return "Повторить";
+        case S_ALARM_FLOW: return "Много воды сразу %s: за полчаса вылилось больше порога. Проверьте краны и шланги.";
+        case S_ALARM_LEAK: return "Протечка %s: расход не опускался до нуля дольше заданного времени. Проверьте бачок унитаза и краны.";
+        case S_ALARM_WET: return "Сработал датчик протечки %s: вода на полу.";
+        case S_ALARM_STOP: return "Расхода нет %s дольше заданного времени. Проверьте, не перекрыта ли вода и на месте ли провод счётчика. Снимется сама при первом расходе.";
+        case S_ALARM_CLEAR: return "Снять тревогу";
         default:
             return "Незвестный id строки: " + String(id);
     }

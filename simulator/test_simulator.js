@@ -275,13 +275,90 @@ function testAlarmStates() {
         }
 
         // Поля порогов неактивны ровно тогда, когда не задан вес импульса
-        const off = /id="alarm_flow1"[^>]*disabled/.test(html);
+        const off = /id="alarm_vol1"[^>]*disabled/.test(html);
         if (off !== (c.expect === 'no-factor')) {
             problems.push(c.name + ': disabled на пороге ' + (off ? 'лишний' : 'потерян'));
         }
     });
 
     check('страница тревог приезжает в нужном состоянии', problems);
+}
+
+/*
+Снятие тревог (#202). Тревога сама не гаснет, поэтому проверяется вся цепочка:
+поднятая тревога -> плашка со своей маской -> запрос снятия -> плашки нет.
+*/
+function testAlarmReset() {
+    const problems = [];
+    const D = globalThis.SIM_GENERATED.defines;
+
+    function raised(state) {
+        // Тревоги на обоих входах: много воды на нулевом, датчик на первом
+        state.attiny.alarm_flags = (D.ALARM_FLOW << D.ATTINY_ALARM_SHIFT0) |
+                                   (D.ALARM_WET << D.ATTINY_ALARM_SHIFT1);
+    }
+
+    function statusOf(state) {
+        return SimApi.handle('/api/main_status', 'GET', [], state, 0).json;
+    }
+
+    let state = SimState.newSession(SimState.defaultState());
+    raised(state);
+
+    const list = statusOf(state);
+    const alarms = list.filter((m) => m.reset !== undefined);
+
+    if (alarms.length !== 2) {
+        problems.push('плашек со снятием ' + alarms.length + ', ожидалось 2');
+    }
+    // У каждой своя маска: канал 1 лежит выше на ALARM_RESET_SHIFT1
+    const masks = alarms.map((m) => m.reset).sort((a, b) => a - b);
+    const want = [D.ALARM_FLOW, D.ALARM_WET << D.ALARM_RESET_SHIFT1].sort((a, b) => a - b);
+    if (String(masks) !== String(want)) {
+        problems.push('маски снятия ' + masks + ', ожидались ' + want);
+    }
+
+    // Снимаем одну - вторая остаётся
+    SimApi.handle('/api/save_alarms', 'POST',
+                  [{ name: 'alarm_reset', value: String(D.ALARM_FLOW) }], state, 0);
+    const left = statusOf(state).filter((m) => m.reset !== undefined);
+    if (left.length !== 1 || left[0].reset !== (D.ALARM_WET << D.ALARM_RESET_SHIFT1)) {
+        problems.push('после снятия одной осталось ' + JSON.stringify(left));
+    }
+
+    // Снимаем всё
+    SimApi.handle('/api/save_alarms', 'POST',
+                  [{ name: 'alarm_reset', value: String(D.ALARM_RESET_ALL) }], state, 0);
+    if (statusOf(state).some((m) => m.reset !== undefined)) {
+        problems.push('маска ALARM_RESET_ALL сняла не всё');
+    }
+
+    // Блок снятия на странице тревог виден ровно тогда, когда есть что снимать
+    if (!/id="alarm_reset_box" class=""/.test(SimProcessor.render(read('alarms.html'), (() => {
+        const s2 = SimState.newSession(SimState.defaultState());
+        raised(s2);
+        return s2;
+    })()))) {
+        problems.push('при поднятой тревоге блок снятия спрятан');
+    }
+    if (!/id="alarm_reset_box" class="hd"/.test(SimProcessor.render(read('alarms.html'), state))) {
+        problems.push('без тревоги блок снятия виден');
+    }
+
+    // Выход из режима "Я уехал" снимает тревогу, которую режим и поднял
+    state = SimState.newSession(SimState.defaultState());
+    state.sett.vacation = 1;
+    state.attiny.alarm_flags = (D.ALARM_FLOW << D.ATTINY_ALARM_SHIFT0) |
+                               (D.ALARM_LEAK << D.ATTINY_ALARM_SHIFT0);
+    SimApi.handle('/api/save_alarms', 'POST',
+                  [{ name: 'vacation', value: '0' }], state, 0);
+
+    const after = SimCore.alarmBits(state.attiny.alarm_flags, 0, state.attiny.version);
+    if (after !== D.ALARM_LEAK) {
+        problems.push('выход из отпуска оставил биты ' + after + ', ожидался только ALARM_LEAK');
+    }
+
+    check('тревоги снимаются и только по маске', problems);
 }
 
 function testParseBool() {
@@ -314,6 +391,7 @@ testRender();
 testGenerated();
 testParseBool();
 testAlarmStates();
+testAlarmReset();
 testWizard();
 
 console.log(failed ? '\nпровалено проверок: ' + failed : '\nвсе проверки пройдены');
