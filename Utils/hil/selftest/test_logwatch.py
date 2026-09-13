@@ -9,7 +9,10 @@
 
 from __future__ import annotations
 
-from ..logwatch import ALARM_MODE, LogWatcher, TRANSMIT_MODE
+import time
+
+from ..logwatch import (ALARM_MODE, LogWatcher, TRANSMIT_MODE, WAKE_NO_ATTINY,
+                        WAKE_SESSION, WAKE_SILENT, WAKE_STUCK)
 
 # Префикс из Logging.h при включённом LOG_FREE_HEAP: MM:SS:mmm-KKK/FF%  INFO  :
 PREFIX = '01:23:456-025/03%  INFO  : '
@@ -299,3 +302,82 @@ def test_старый_клиент_не_ломает_ожидание() -> None:
     watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM)))
     session = watcher.wait_session(timeout=1.0, mode=ALARM_MODE)
     assert session is not None
+
+
+# Нажатие кнопки на стенде 13.09.2026: ЕСП прошита и жива, attiny на i2c не
+# отвечает. Первые строки - обрывки загрузки, как их принял METF.
+WAKE_NO_ATTINY_LOG = [
+    'n',
+    '========',
+    '00:00:067-041/00%  INFO  : Build: Sep 13 2026 13:44:07',
+    '00:00:068-041/00%  INFO  : IRAM free: 42376 bytes',
+    '00:00:069-041/00%  INFO  : DRAM free: 42376 bytes',
+    '00:00:074-041/00%  INFO  : ChipId: 682eba',
+    '00:00:078-041/00%  INFO  : FlashChipId: 164020',
+    '00:00:082-041/00%  INFO  : ESP firmware ver: 2.0.47',
+    '00:00:087-041/00%  ERROR : end error:2',
+    '00:00:090-041/00%  ERROR : Attiny not found.',
+    '00:00:094-041/00%  INFO  : Blynk: code=5',
+]
+
+
+def test_живая_есп_без_attiny_называется_сразу() -> None:
+    """
+    `Startup mode:` печатается только после ответа attiny. Пока стенд ждал
+    одну эту строку, живая ЕСП без attiny выглядела отсутствием устройства,
+    и выяснялось это по таймауту.
+    """
+    watcher = LogWatcher(FakeApi(through_ring(WAKE_NO_ATTINY_LOG)))
+    started = time.time()
+    wake = watcher.wait_wake(timeout=2.0)
+
+    assert time.time() - started < 1.0, 'решение - по строке, а не по таймауту'
+    assert wake.state == WAKE_NO_ATTINY
+    assert wake.esp_version == '2.0.47'
+    assert wake.build == 'Sep 13 2026 13:44:07'
+    assert wake.errors == ['end error:2', 'Attiny not found.']
+    assert wake.blynk == 5
+    message = wake.describe('кнопки')
+    assert 'ЕСП жива' in message and 'attiny не отвечает' in message, message
+    assert 'end error:2' in message and '2.0.47' in message, message
+
+
+def test_молчание_отличается_от_живой_есп() -> None:
+    wake = LogWatcher(FakeApi('')).wait_wake(timeout=0.3)
+    assert wake.state == WAKE_SILENT
+    message = wake.describe('кнопки')
+    assert 'ни одной строки' in message and 'ни байта' in message, message
+
+
+def test_начало_сеанса_принимается_сразу() -> None:
+    watcher = LogWatcher(FakeApi(through_ring(BOOT + SESSION_PLAN)))
+    started = time.time()
+    wake = watcher.wait_wake(timeout=2.0)
+    assert wake.state == WAKE_SESSION
+    assert time.time() - started < 1.0
+    assert watcher._take_session(None) is not None, 'стартовый лог не съеден'
+
+
+def test_лог_без_начала_сеанса_не_молчание() -> None:
+    """Строки идут, но ни сеанса, ни ошибки attiny: показываем, что пришло."""
+    wake = LogWatcher(FakeApi(through_ring(BOOT))).wait_wake(timeout=0.3)
+    assert wake.state == WAKE_STUCK
+    message = wake.describe('кнопки')
+    assert 'Startup mode' in message and 'ESP firmware ver: 2.0.44' in message, message
+
+
+def test_отказ_показывает_всё_прочитанное() -> None:
+    """
+    Вердикт без лога заставляет гадать. Недописанная строка в список строк не
+    попадает, поэтому показывается сырьё целиком - кусок без перевода строки
+    тоже.
+    """
+    wake = LogWatcher(FakeApi('n')).wait_wake(timeout=0.3)
+    assert wake.state == WAKE_SILENT
+    message = wake.describe('кнопки')
+    assert "1 байт" in message and "'n'" in message, message
+
+    wake = LogWatcher(FakeApi(through_ring(WAKE_NO_ATTINY_LOG))).wait_wake(timeout=2.0)
+    message = wake.describe('кнопки')
+    for line in WAKE_NO_ATTINY_LOG:
+        assert line in message, f'нет строки {line!r}:\n{message}'
