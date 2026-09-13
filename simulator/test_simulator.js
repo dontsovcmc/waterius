@@ -361,6 +361,33 @@ function testAlarmReset() {
     check('тревоги снимаются и только по маске', problems);
 }
 
+/*
+Пульт поднимает тревоги по именам констант прошивки, а не по числам в разметке.
+Переименуй define - и биты молча станут NaN: галочки будут щёлкать, тревога не
+поднимется. Тест ловит это без браузера.
+*/
+function testPultAlarmBits() {
+    const problems = [];
+    const D = globalThis.SIM_GENERATED.defines;
+    const pult = fs.readFileSync(path.join(__dirname, 'src/sim/pult.js'), 'utf8');
+    const index = fs.readFileSync(path.join(__dirname, 'src/index.html'), 'utf8');
+
+    const used = new Set();
+    [/name: '([A-Z_][A-Z_0-9]*)'/g, /defines\(\)\[?\.?([A-Z_][A-Z_0-9]*)/g, /\bd\.([A-Z_][A-Z_0-9]*)/g]
+        .forEach((re) => { for (const m of pult.matchAll(re)) used.add(m[1]); });
+
+    if (!used.size) problems.push('в пульте не нашлось ни одной константы прошивки');
+    used.forEach((name) => {
+        if (D[name] === undefined) problems.push('пульт берёт ' + name + ', а в прошивке такого нет');
+    });
+
+    if (!/id="alarm-flags"/.test(index)) {
+        problems.push('в разметке пульта нет контейнера alarm-flags');
+    }
+
+    check('пульт поднимает тревоги битами прошивки', problems);
+}
+
 function testParseBool() {
     const problems = [];
     const E = globalThis.SIM_GENERATED.enums.ParamError;
@@ -392,6 +419,7 @@ testGenerated();
 testParseBool();
 testAlarmStates();
 testAlarmReset();
+testPultAlarmBits();
 testWizard();
 
 console.log(failed ? '\nпровалено проверок: ' + failed : '\nвсе проверки пройдены');

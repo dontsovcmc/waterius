@@ -164,18 +164,81 @@ function drawWifi() {
 }
 
 /*
-Тревоги живут одним байтом в раскладке Header.flags: биты 1-3 канал 0,
-4-6 канал 1. Пульт показывает их двумя списками, по каналу на каждый.
+Тревоги живут одним байтом в раскладке Header.flags: по три бита на канал со
+сдвигом под флаг питания. Пульт даёт по галочке на бит, а не список готовых
+наборов: тревоги складываются, и две плашки на главной с раздельным снятием
+иначе не проверить.
+
+Биты берутся из прошивки (gen_from_firmware.js), в разметке их нет.
 */
-function alarmShift(input) {
-    return input === 0 ? 1 : 4;
+var ALARM_BITS = [
+    { name: 'ALARM_FLOW', text: 'много воды сразу' },
+    { name: 'ALARM_LEAK', text: 'протечка' },
+    { name: 'ALARM_WET', text: 'датчик протечки' },
+];
+
+function defines() {
+    return (self.SIM_GENERATED && self.SIM_GENERATED.defines) || {};
 }
 
-function fillAlarmFlags(state) {
+function alarmShift(input) {
+    var d = defines();
+    return input === 0 ? d.ATTINY_ALARM_SHIFT0 : d.ATTINY_ALARM_SHIFT1;
+}
+
+function alarmBoxId(input, bit) {
+    return 'alarm' + input + '-' + bit.name;
+}
+
+function drawAlarmFlags() {
+    var box = el('alarm-flags');
+    if (!box.childElementCount) {
+        [0, 1].forEach(function (input) {
+            var block = document.createElement('div');
+            block.className = 'alarm-block';
+            block.innerHTML =
+                '<h3><span class="circle' + (input === 0 ? ' hot' : '') + '"></span>Вход ' + input +
+                (input === 0 ? ' (красный)' : ' (синий)') + '</h3>' +
+                ALARM_BITS.map(function (bit) {
+                    var id = alarmBoxId(input, bit);
+                    return '<div class="toggle"><input type="checkbox" id="' + id + '">' +
+                           '<label for="' + id + '">' + bit.text + '</label></div>';
+                }).join('');
+            box.appendChild(block);
+        });
+
+        box.querySelectorAll('input[type=checkbox]').forEach(function (item) {
+            item.addEventListener('change', sendAlarmFlags);
+        });
+    }
+
     [0, 1].forEach(function (input) {
-        var box = el('alarm-flags' + input);
-        if (box) box.value = String((state.attiny.alarm_flags >> alarmShift(input)) & 0x07);
+        var raised = (state.attiny.alarm_flags >> alarmShift(input)) & defines().ATTINY_ALARM_MASK;
+        ALARM_BITS.forEach(function (bit) {
+            el(alarmBoxId(input, bit)).checked = (raised & defines()[bit.name]) !== 0;
+        });
     });
+}
+
+/*
+Байт собирается из галочек целиком, но чужие биты сохраняются: в этом же
+байте едет флаг питания, и затирать его пульту нечего.
+*/
+function sendAlarmFlags() {
+    var mask = 0;
+    var raised = 0;
+
+    [0, 1].forEach(function (input) {
+        mask |= defines().ATTINY_ALARM_MASK << alarmShift(input);
+        ALARM_BITS.forEach(function (bit) {
+            if (el(alarmBoxId(input, bit)).checked) {
+                raised |= defines()[bit.name] << alarmShift(input);
+            }
+        });
+    });
+
+    var flags = (state.attiny.alarm_flags & ~mask) | raised;
+    send({ type: 'patch', state: { attiny: { alarm_flags: flags & 0xFF } } });
 }
 
 function draw() {
@@ -185,7 +248,7 @@ function draw() {
     drawWifi();
 
     fill('attiny-version', state.attiny.version);
-    fillAlarmFlags(state);
+    drawAlarmFlags();
     fill('attiny-voltage', state.attiny.voltage);
     el('attiny-link').checked = state.attiny.link;
     el('esp-restarted').checked = state.portal.esp_restarted;
@@ -202,17 +265,6 @@ function bind() {
     });
 
     el('refresh').addEventListener('click', function () { fetch('/sim-api/refresh'); });
-
-    [0, 1].forEach(function (input) {
-        var box = el('alarm-flags' + input);
-        if (!box) return;
-        box.addEventListener('change', function (event) {
-            var shift = alarmShift(input);
-            var flags = (state.attiny.alarm_flags & ~(0x07 << shift)) |
-                        (Number(event.target.value) << shift);
-            send({ type: 'patch', state: { attiny: { alarm_flags: flags & 0xFF } } });
-        });
-    });
 
     el('attiny-version').addEventListener('change', function (event) {
         send({ type: 'patch', state: { attiny: { version: Number(event.target.value) } } });

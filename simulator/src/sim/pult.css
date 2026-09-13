@@ -131,6 +131,9 @@ textarea {
 .toggle input:checked + label:before { background: var(--accent); }
 .toggle input:checked + label:after { left: 18px; }
 
+/* тревоги: по блоку на канал, по галочке на бит */
+.alarm-block { flex: 1 1 200px; align-self: flex-start; }
+
 /* входы */
 .input-block { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; }
 .input-block:first-child { border-top: 0; padding-top: 0; margin-top: 0; }

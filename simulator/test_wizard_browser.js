@@ -152,6 +152,7 @@ async function run() {
             { timeout: 15000 });
 
         await wizard(page, origin);
+        await alarms(page, origin);
         await placeholders(page, origin);
         check('на страницах мастера нет ошибок в скриптах', crashes);
     } finally {
@@ -217,6 +218,49 @@ async function wizard(page, origin) {
         { timeout: 15000 });
 
     check('мастер проходится кликами в браузере', problems);
+}
+
+/*
+Тревоги на пульте: галочка на бит. Проверяется то, чего не видно без DOM -
+что галочки вообще нарисовались, что биты складываются, а не заменяют друг
+друга, и что портал после этого показывает блок снятия.
+*/
+async function alarms(page, origin) {
+    const problems = [];
+
+    await page.goto(origin + '/', { waitUntil: 'load' });
+    // сам input спрятан стилем переключателя, кликается подпись
+    await page.waitForSelector('#alarm-flags input[type=checkbox]', { state: 'attached', timeout: 10000 });
+
+    const boxes = await page.locator('#alarm-flags input[type=checkbox]').count();
+    if (boxes !== 6) problems.push('галочек тревог ' + boxes + ', ожидалось 6 (три бита на канал)');
+
+    // Две тревоги на одном канале: набор, которого старый список не давал
+    await page.click('label[for="alarm0-ALARM_FLOW"]');
+    await page.click('label[for="alarm0-ALARM_WET"]');
+    await page.click('label[for="alarm1-ALARM_LEAK"]');
+
+    const state = await page.evaluate(() => fetch('/sim-api/state').then((r) => r.json()));
+    const D = require('./gen_from_firmware.js')().defines;
+    const want = (D.ALARM_FLOW << D.ATTINY_ALARM_SHIFT0) | (D.ALARM_WET << D.ATTINY_ALARM_SHIFT0) |
+                 (D.ALARM_LEAK << D.ATTINY_ALARM_SHIFT1);
+    if (state.attiny.alarm_flags !== want) {
+        problems.push('байт тревог ' + state.attiny.alarm_flags + ', ожидался ' + want);
+    }
+
+    await page.goto(origin + '/alarms.html', { waitUntil: 'networkidle' });
+    if (await page.locator('#alarm_reset_box.hd').count()) {
+        problems.push('тревоги подняты, а блок снятия на странице тревог спрятан');
+    }
+
+    await page.goto(origin + '/', { waitUntil: 'load' });
+    // сам input спрятан стилем переключателя, кликается подпись
+    await page.waitForSelector('#alarm-flags input[type=checkbox]', { state: 'attached', timeout: 10000 });
+    if (!(await page.isChecked('#alarm0-ALARM_WET'))) {
+        problems.push('пульт не показал поднятую тревогу после перезагрузки страницы');
+    }
+
+    check('тревоги поднимаются галочками и доезжают до портала', problems);
 }
 
 async function placeholders(page, origin) {

@@ -7,15 +7,30 @@
  */
 'use strict';
 
-importScripts(
+/*
+Штамп сборки: build.sh подставляет сюда хэш образа и библиотек, локально
+остаётся 'dev'.
+
+Без него симулятор разъезжается. Браузер обновляет воркер, только если
+изменились байты самого sw.js, а библиотеки ниже живут в его кэше скриптов и
+переезжают вместе с ним. Правка в processor.js байты sw.js не меняет - и у
+того, кто заходил раньше, новые страницы образа начинает обслуживать логика
+прошлой сборки. Молча: неизвестное имя подстановки - пустая строка.
+
+Поэтому штамп едет и в sw.js (меняет его байты), и в ?v= у каждой библиотеки
+(меняет URL, чтобы не достали из HTTP-кэша).
+*/
+var BUILD = 'dev';
+
+importScripts.apply(null, [
     './sim/generated.js',
     './sim/lib/state.js',
     './sim/lib/core.js',
     './sim/lib/processor.js',
     './sim/lib/api.js',
     './sim/lib/router.js',
-    './sim/lib/store.js'
-);
+    './sim/lib/store.js',
+].map(function (file) { return file + '?v=' + BUILD; }));
 
 var FW = '/fw/';
 var CHANNEL = 'waterius-sim';
