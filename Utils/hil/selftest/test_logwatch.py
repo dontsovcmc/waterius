@@ -51,7 +51,8 @@ SESSION_ALARM = [
     fw('Config succesfully loaded'),
     fw('WIFI: Connected.'),
     fw('HTTP: Response code: 200'),
-    fw('Alarm config: interval0=0 leak0=0 interval1=40 leak1=120 vacation=0'),
+    fw('Alarm config: quantum0=0 quanta0=0 vol0=0'
+       ' quantum1=3600 quanta1=4 vol1=5 vacation=0 reset=8'),
     fw('Alarm confirm: mask=4 waterius=1 http=0 mqtt=3 any=1 -> 0'),
     fw('Idle min: 0/0, stop: 0/0'),
     fw('Wakeup period, min (attiny):4'),
@@ -104,8 +105,9 @@ def test_поля_тревог_разбираются() -> None:
 
     assert session.attiny_version == 41
     assert session.impulses[1] == 1234
-    assert session.alarm_config == {'interval0': 0, 'leak0': 0, 'interval1': 40,
-                                    'leak1': 120, 'vacation': 0}
+    assert session.alarm_config == {'quantum0': 0, 'quanta0': 0, 'vol0': 0,
+                                    'quantum1': 3600, 'quanta1': 4, 'vol1': 5,
+                                    'vacation': 0, 'reset': 8}
     assert session.confirm == {'mask': 4, 'waterius': 1, 'http': 0, 'mqtt': 3,
                                'any': 1, 'confirmed': 0}
     assert session.http_codes == [200]

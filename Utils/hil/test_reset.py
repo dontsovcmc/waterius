@@ -41,7 +41,7 @@ NAMUR = 0
 AUTO_IMPULSE_FACTOR = 3     # core/types.h
 AS_COLD_CHANNEL = 7         # core/types.h
 DEFAULT_WAKEUP_PERIOD_MIN = 1440
-VACATION_INTERVAL = 65535   # UINT16_MAX: тревогой становится любой расход
+VACATION_PULSES = 1         # в отпуске порог объёма - один импульс
 
 
 def _wait_portal(stand: Any, timeout: float = 90.0) -> str:
@@ -144,16 +144,16 @@ def _restore(stand: Any, before: dict) -> None:
     if bool((stand.last_payload or {}).get('ha')) != was_ha:
         stand.setup(mqtt_auto_discovery=int(was_ha))
 
+    # Тревога отпуска сама не гаснет: снимает её кнопка, она же и привозит
+    # посылку, по которой видно результат.
     payload = stand.last_payload or {}
     if payload.get('alarm_flow0') or payload.get('alarm_flow1'):
         logger.info('снимаем тревогу, поднятую в режиме отпуска')
-        stand.setup_alarms(channel=1, factor=10, alarm_flow=3600,
-                           ctype=NAMUR, vacation=0)
         stand.reset_observers()
+        stand.dut.press_button()
         cleared = stand.wait_session(timeout=600)
         assert cleared.payload['alarm_flow1'] is False, (
             f'тревога отпуска не снялась\n{cleared.text}')
-        stand.setup(channel=1, alarm_flow=0)
 
 
 def test_R1_token_survives_reset(after_reset: dict) -> None:
@@ -190,8 +190,9 @@ def test_R2_settings_return_to_defaults(after_reset: dict) -> None:
         'ch0_start': 0, 'ch1_start': 0,  # показания
         'serial0': '', 'serial1': '',
         'company': '', 'place': '',
-        'af0': 0, 'af1': 0,             # пороги тревог
-        'al0': 0, 'al1': 0,
+        'av0': 0, 'av1': 0,             # пороги тревог
+        'ar0': 0, 'ar1': 0,
+        'ah0': 0, 'ah1': 0,
         'as0': 0, 'as1': 0,
         'vac': False, 'sc': False,
         'ackw': False, 'ackh': False,   # маска квитанции - CONFIRM_ANY
@@ -210,8 +211,8 @@ def test_E10_vacation_works_without_factor(after_reset: dict, stand: Any) -> Non
     Режиму «Я уехал» известный вес импульса не нужен.
 
     Обычный порог без веса посчитать нельзя - литры на импульс взять неоткуда,
-    и alarm_interval_ticks вернёт ноль, то есть «выключено». Отпуску считать
-    нечего: тревогой объявлен любой импульс, и порог подменяется максимумом.
+    и пересчёт вернёт ноль, то есть «выключено». Отпуску считать нечего:
+    тревогой объявлен любой импульс, и порог объёма подменяется единицей.
     Поэтому проверка типа входа и vacation стоит до проверки веса, и тест
     следит именно за этим порядком.
     """
@@ -221,7 +222,7 @@ def test_E10_vacation_works_without_factor(after_reset: dict, stand: Any) -> Non
     stand.setup(channel=1, ctype=NAMUR)
     on = stand.setup(vacation=1)
     assert on.payload['f1'] == AUTO_IMPULSE_FACTOR, 'вес не должен был появиться'
-    assert on.alarm_config['interval1'] == VACATION_INTERVAL, (
+    assert on.alarm_config['vol1'] == VACATION_PULSES, (
         f'порог отпуска не уехал в attiny: {on.alarm_config}\n{on.text}')
 
     stand.reset_observers()

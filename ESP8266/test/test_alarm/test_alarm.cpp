@@ -82,6 +82,38 @@ TEST(Quanta, DisabledIsZero)
 }
 
 /*
+Обещание, данное пользователю: «расход не падал ниже Q в течение T часов».
+
+Из него растёт вся арифметика, и проверять его надо не по частям, а целиком:
+квант в тиках, умноженный на число квантов, обязан давать ровно те самые часы.
+Оба деления округляются вниз, поэтому тревога может прийти чуть раньше
+обещанного - но никогда позже. Опоздание было бы враньём интерфейса, и поймать
+его можно только этим тождеством: по отдельности обе функции выглядят верными.
+*/
+TEST(Quanta, LeakTimeIsNeverLaterThanPromised)
+{
+    struct Case { uint16_t factor; uint16_t rate; uint16_t hours; };
+    const Case cases[] = {
+        {10, 40, 1}, {10, 100, 6}, {10, 600, 24}, {1, 40, 1},
+        {50, 150, 12}, {100, 300, 24}, {10, 15, 8}, {5, 37, 3},
+    };
+
+    for (const Case &c : cases)
+    {
+        const uint32_t quantum = rate_to_quantum_ticks(c.rate, c.factor);
+        const uint32_t quanta = hours_to_quanta(c.hours, c.rate, c.factor);
+        const uint32_t promised = (uint32_t)c.hours * ALARM_TICKS_PER_HOUR;
+
+        EXPECT_LE(quantum * quanta, promised)
+            << "вес " << c.factor << " порог " << c.rate << " часы " << c.hours;
+
+        // Округление вниз съедает меньше кванта с каждого множителя
+        EXPECT_GT(quantum * quanta + quantum + quanta, promised)
+            << "вес " << c.factor << " порог " << c.rate << " часы " << c.hours;
+    }
+}
+
+/*
 Пределы для проверки ввода в портале. Неверная пара "порог расхода - часы"
 ломает тревогу молча, поэтому портал обязан её не принять.
 */

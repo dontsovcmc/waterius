@@ -55,7 +55,9 @@ RE_MAC = re.compile(r'MAC Address:\s*((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})')
 RE_IMP0 = re.compile(r'\bimp0:(\d+)')
 RE_IMP1 = re.compile(r'\bimp1:(\d+)')
 RE_ALARM_CONFIG = re.compile(
-    r'Alarm config: interval0=(\d+) leak0=(\d+) interval1=(\d+) leak1=(\d+) vacation=([01])')
+    r'Alarm config: quantum0=(\d+) quanta0=(\d+) vol0=(\d+)'
+    r' quantum1=(\d+) quanta1=(\d+) vol1=(\d+)'
+    r' vacation=([01]) reset=(\d+)')
 RE_ALARM_CONFIRM = re.compile(
     r'Alarm confirm: mask=(\d+) waterius=(\d) http=(\d) mqtt=(\d) any=([01]) -> ([01])')
 RE_IDLE_MIN = re.compile(r'Idle min: (\d+)/(\d+), stop: ([01])/([01])')
@@ -155,13 +157,20 @@ class Session:
         """
         Пороги, уехавшие в ОЗУ attiny. Отсутствие строки означает, что тревоги
         настроить не удалось (старая attiny) - без неё вся группа E бессмысленна.
+
+        Печатается уже в единицах attiny: длина кванта тишины в тиках по 250мс,
+        сколько таких квантов подряд считать протечкой и сколько импульсов за
+        полчаса считать прорывом. Человеческие л/ч и часы сюда не доезжают -
+        пересчёт остаётся в ЕСП, и стенд проверяет то, что реально уехало.
         """
         m = RE_ALARM_CONFIG.search(self.text)
         if not m:
             return None
-        return {'interval0': int(m.group(1)), 'leak0': int(m.group(2)),
-                'interval1': int(m.group(3)), 'leak1': int(m.group(4)),
-                'vacation': int(m.group(5))}
+        return {'quantum0': int(m.group(1)), 'quanta0': int(m.group(2)),
+                'vol0': int(m.group(3)),
+                'quantum1': int(m.group(4)), 'quanta1': int(m.group(5)),
+                'vol1': int(m.group(6)),
+                'vacation': int(m.group(7)), 'reset': int(m.group(8))}
 
     @property
     def confirm(self) -> dict[str, int] | None:

@@ -34,8 +34,9 @@ from .router import NatRouter, connect
 # чтобы при переименовании параметра правка была одна.
 CHANNEL_PARAMS = {
     'factor': 'f',
-    'alarm_flow': 'af',
-    'alarm_leak': 'al',
+    'alarm_vol': 'av',
+    'alarm_rate': 'ar',
+    'alarm_hours': 'ah',
     'alarm_stop': 'as',
     'ctype': 'ctype',
     'serial': 'serial',
@@ -55,22 +56,16 @@ BASELINE = {
     'ctype0': 0, 'ctype1': 0,
     'cname0': 1, 'cname1': 0,      # красный вход - ГВС, синий - ХВС
     'f1': 10,
-    'af0': 0, 'al0': 0, 'as0': 0,
-    'af1': 0, 'al1': 0, 'as1': 0,
+    'av0': 0, 'ar0': 0, 'ah0': 0, 'as0': 0,
+    'av1': 0, 'ar1': 0, 'ah1': 0, 'as1': 0,
 }
 
-# Чем чинится залипшая тревога: настоящий порог, при котором ветка снятия в
-# attiny достижима. Числа те же, что в тестах блока E.
-NAMUR = 0
 LEAKAGE_NC = 6          # нормально-замкнутый датчик, core/types.h
-REPAIR_FACTOR = 10
-REPAIR_FLOW = 3600      # л/ч
-REPAIR_LEAK = 2         # минут непрерывного расхода
 
-# Сколько ждём снятия перед очередным опросом кнопкой. Первый заход короткий:
-# датчик протечки снимается за 750 мс, расход - за 20 с. Длинные паузы нужны
-# только протечке по ритму, она ждёт двойного интервала между импульсами.
-CLEAR_WAITS = (30.0, 120.0, 300.0)
+# Сколько раз пробуем снять тревогу кнопкой. Одного нажатия достаточно, второе
+# нужно на случай потерянного сеанса - лучше лишние двадцать секунд, чем
+# упавший на чужой тревоге следующий тест.
+CLEAR_TRIES = 3
 
 # Сколько ждём первой строки от устройства после нажатия кнопки. ЕСП печатает
 # её через треть секунды; пятнадцать - с запасом на пробуждение attiny.
@@ -500,13 +495,20 @@ class Stand:
         """
         Применить настройки и дождаться подтверждения.
 
-        stand.setup(channel=1, factor=10, alarm_flow=3600)
+        stand.setup(channel=1, factor=10, alarm_vol=50)
 
         Настройки уезжают в теле ответа приёмника, прошивка их применяет и тут
         же отправляет данные повторно. Проверяем по двум признакам: строка
         `Apply setting:` в логе и новые значения во второй посылке. Без второй
         проверки тест поверил бы, что настройка применилась, хотя её отвергла
         валидация.
+
+        Сеанс заказывается кнопкой, а она снимает все тревоги attiny
+        (`Attiny85/src/main.cpp`, ButtonPressType::SHORT). Поэтому тест,
+        проверяющий снятие чем-то другим - маской, сменой типа входа,
+        выключением отпуска, - обязан звать setup с wake=False и ждать
+        планового сеанса: иначе он проверит собственное нажатие и будет зелёным
+        при любой прошивке.
         """
         settings = self._translate(channel, params)
         logger.info(f'настройка: {settings}')
@@ -562,9 +564,16 @@ class Stand:
             'в логе нет строки Alarm config - пороги не уехали в attiny '
             f'(версия attiny {session.attiny_version})\n{session.text}')
 
-        if 'alarm_flow' in params and params['alarm_flow']:
-            key = f'interval{channel}'
-            assert config[key] > 0, f'{key} нулевой при заданном пороге: {config}'
+        # Порог, заданный в человеческих единицах, обязан доехать числом для
+        # attiny. Проверка не формальная: пересчёт делится на вес импульса, и
+        # при незаданном весе даёт ноль - то есть выключенную тревогу.
+        checks = (('alarm_vol', f'vol{channel}'),
+                  ('alarm_rate', f'quantum{channel}'),
+                  ('alarm_hours', f'quanta{channel}'))
+        for name, key in checks:
+            if params.get(name):
+                assert config[key] > 0, (
+                    f'{key} нулевой при заданном {name}={params[name]}: {config}')
 
         return session
 
@@ -585,23 +594,18 @@ class Stand:
         """
         Снять тревогу, поднятую прошлым тестом.
 
-        Три тревоги снимаются тремя разными способами, и способ выбирается по
-        типу входа из последней посылки:
+        Ни одна тревога attiny не гаснет сама - ни по времени, ни по
+        прекращению расхода (`Attiny85/src/alarm.h`). Поэтому способ снятия
+        ровно один и общий для всех трёх: короткое нажатие кнопки, которое
+        снимает обе маски разом (`Attiny85/src/main.cpp`, ButtonPressType::SHORT).
 
-        - датчик протечки - отпустить вход (нормально-замкнутому, наоборот,
-          замкнуть). Опрашивается вход, только пока его тип - датчик, поэтому
-          сделать это надо до возврата типа в NAMUR: иначе снимать тревогу
-          станет некому (`Attiny85/src/main.cpp`, alarm_tick);
-        - большой расход - вернуть каналу настоящий порог. Ветка снятия в
-          attiny начинается с проверки `min_interval`, и при нулевом пороге
-          недостижима (`Attiny85/src/alarm.h`, on_tick);
-        - протечка по ритму - просто тишина на линии, порога не спрашивает.
+        Исключение - датчик протечки: `set_wet` поднимает тревогу заново на
+        ближайшем же тике, пока вход замкнут. Значит вход надо отпустить до
+        нажатия, и сделать это, пока тип входа ещё датчик: опрашивается он
+        только в этом типе (`alarm_tick`).
 
-        Состояние читается кнопкой, а не ожиданием. Внеплановые сеансы у attiny
-        по бюджету (ALARM_MAX_SESSIONS), и как только он исчерпан, устройство
-        молчит до планового пробуждения - на стенде это два часа. Кнопка даёт
-        сеанс сразу и заодно возвращает бюджет: при исчерпанном бюджете
-        alarm_pending() ложно, и attiny засчитывает пробуждение как плановое.
+        Состояние читается кнопкой, а не ожиданием: сеанс по ней приходит сразу
+        и привозит посылку, по которой видно, снялось ли.
         """
         payload = self.last_payload or {}
         names = ('alarm_flow', 'alarm_leak', 'alarm_wet')
@@ -611,44 +615,26 @@ class Stand:
         if not raised:
             return
 
+        logger.warning(f'тревоги прошлого теста: {raised}, снимаем кнопкой')
+
         for channel, found in raised.items():
-            logger.warning(f'канал {channel}: тревога прошлого теста ({found}), снимаем')
-            self._start_clearing(channel, found, payload)
+            if 'alarm_wet' in found:
+                # У нормально-замкнутого датчика спокойное состояние - замкнутый
+                # контакт, у обычного - разомкнутый.
+                ctype = payload.get(f'ctype{channel}')
+                self.dut.wet(channel=channel, closed=(ctype == LEAKAGE_NC))
 
-            for wait in CLEAR_WAITS:
-                time.sleep(wait)
-                self.reset_observers()
-                self.dut.press_button()
-                current = self.wait_session(timeout=180).payload or {}
-                if not any(current.get(f'{name}{channel}') for name in found):
-                    break
-            else:
-                raise AssertionError(
-                    f'канал {channel}: тревога {found} не снялась')
+        left: list[str] = []
+        for _ in range(CLEAR_TRIES):
+            self.reset_observers()
+            self.dut.press_button()
+            current = self.wait_session(timeout=180).payload or {}
+            left = [f'{name}{ch}' for ch, found in raised.items()
+                    for name in found if current.get(f'{name}{ch}')]
+            if not left:
+                return
 
-            # У датчика протечки порога нет, обнулять нечего: пустой setup
-            # не дал бы прошивке что применить, а она в ответ - второй посылки
-            thresholds = {name: 0 for name in found if name != 'alarm_wet'}
-            if thresholds:
-                self.setup(channel=channel, **thresholds)
-
-    def _start_clearing(self, channel: int, found: list[str],
-                        payload: dict[str, Any]) -> None:
-        """Привести канал в состояние, в котором attiny тревогу снимет."""
-        if 'alarm_wet' in found:
-            # У нормально-замкнутого датчика спокойное состояние - замкнутый
-            # контакт, у обычного - разомкнутый.
-            ctype = payload.get(f'ctype{channel}')
-            self.dut.wet(channel=channel, closed=(ctype == LEAKAGE_NC))
-
-        thresholds: dict[str, Any] = {}
-        if 'alarm_flow' in found:
-            thresholds['alarm_flow'] = REPAIR_FLOW
-        if 'alarm_leak' in found:
-            thresholds['alarm_leak'] = REPAIR_LEAK
-        if thresholds:
-            self.setup_alarms(channel=channel, ctype=NAMUR,
-                              factor=REPAIR_FACTOR, vacation=0, **thresholds)
+        raise AssertionError(f'тревоги {left} не снялись кнопкой')
 
     def ensure_baseline(self) -> None:
         """
@@ -658,9 +644,9 @@ class Stand:
         само. Совпало всё - сеанса не будет: на живом железе он стоит полторы
         минуты, и платить их за каждый тест незачем.
 
-        Поднятую тревогу снимаем до этого: BASELINE обнуляет пороги и
-        возвращает входам тип NAMUR, а после этого снять тревогу нечем - ни
-        порога для ветки снятия расхода, ни опроса входа для датчика.
+        Поднятую тревогу снимаем до этого: BASELINE возвращает входам тип
+        NAMUR, а датчик протечки опрашивается только в своём типе - отпустить
+        вход после смены типа уже некому, и тревога вернулась бы.
         """
         self.clear_alarms()
         payload = self.last_payload
@@ -676,20 +662,18 @@ class Stand:
 
     # --- ожидание чистого состояния ---
 
-    def reset_alarm_budget(self) -> Session:
+    def assert_no_alarms(self) -> Session:
         """
-        Обнулить бюджет внеплановых сеансов - кнопкой, а не ожиданием тишины.
+        Доказать, что тест начинается без поднятой тревоги.
 
-        Бюджет (ALARM_MAX_SESSIONS) обнуляет только плановый сеанс, а период на
-        стенде - два часа. Но плановым attiny считает любое пробуждение, у
-        которого нет тревожного повода: `alarm_wake = alarm_pending()`, при
-        чистом состоянии оно ложно, и нажатие кнопки уходит в ветку
-        new_period() (`Attiny85/src/main.cpp`).
+        Бюджета внеплановых сеансов больше нет: каждая тревога поднимается один
+        раз и молчит до снятия, поэтому ограничивать их число незачем
+        (`Attiny85/src/alarm.h`). Осталось второе: чужая тревога, доставшаяся от
+        предыдущего теста, ломает этот - он ждёт своего внепланового сеанса, а
+        устройство про новость уже доложило.
 
-        Остаток бюджета от прошлого теста иначе утёк бы в этот и сбил счёт.
-        Сеанс по кнопке стоит двадцати секунд против пяти минут ожидания, и
-        попутно доказывает, что тревог нет - по посылке, а не по отсутствию
-        сеансов.
+        Проверяем посылкой, а не отсутствием сеансов: сеанс по кнопке стоит
+        двадцати секунд, а «сеансов не было» доказывается только временем.
         """
         self.reset_observers()
         self.dut.press_button()
@@ -700,6 +684,6 @@ class Stand:
                   for name in ('alarm_flow', 'alarm_leak', 'alarm_wet')
                   if payload.get(f'{name}{ch}')]
         assert not raised, (
-            f'тест начинается с поднятой тревогой {raised}: бюджет внеплановых '
-            f'сеансов утёк бы в него из прошлого\n{session.text}')
+            f'тест начинается с поднятой тревогой {raised}: снять её было некому, '
+            f'сама она не гаснет\n{session.text}')
         return session
