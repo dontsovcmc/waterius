@@ -386,7 +386,7 @@ def test_I2_leak_sensor_publishes_only_its_state(stand: Stand) -> None:
         assert config_topic(topics, 'select', 'ctype0') is not None, topics
         assert config_topic(topics, 'binary_sensor', 'alarm_wet0') is not None, topics
 
-        pointless = ('ch0', 'f0', 'serial0', 'af0', 'al0', 'as0',
+        pointless = ('ch0', 'f0', 'serial0', 'av0', 'ar0', 'ah0', 'as0',
                      'alarm_flow0', 'alarm_leak0', 'alarm_stop0')
         left = [topic for topic in topics
                 for name in pointless if topic.endswith(f'/{name}/config')]
