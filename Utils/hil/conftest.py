@@ -176,6 +176,34 @@ def clean_net(request: pytest.FixtureRequest) -> Iterator[None]:
         device.router.restore(state)
 
 
+@pytest.fixture(autouse=True)
+def clean_dut(request: pytest.FixtureRequest) -> Iterator[None]:
+    """
+    Возврат линий METF в высокоомное состояние после каждого теста стенда.
+
+    Стенд держит линии, пока их не отпустят: `dut.wet(closed=True)` - это
+    pinMode(OUTPUT) плюс digitalWrite(LOW) до отдельной команды. Тест, упавший
+    между замыканием входа и своим `finally`, оставляет вход прижатым к земле
+    на весь оставшийся прогон, и следующий тест считает чужие импульсы или
+    видит вечную тревогу датчика.
+
+    После, а не до, по той же причине, что и у clean_net: упавший тест обязан
+    оставить стенд рабочим. Начало прогона закрыто отдельно - `Stand.create()`
+    зовёт `dut.init()` при подъёме сессии, так что перед первым тестом линии
+    тоже свободны.
+    """
+    if ('stand' not in request.keywords or 'portal' in request.keywords
+            or not request.config.getoption('--stand')):
+        yield
+        return
+
+    device = request.getfixturevalue('stand')
+    try:
+        yield
+    finally:
+        device.dut.init()
+
+
 def _version(text: str) -> tuple[int, ...]:
     return tuple(int(part) for part in str(text).split('.'))
 

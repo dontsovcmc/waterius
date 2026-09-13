@@ -3,12 +3,14 @@
 
 Выдержки не случайны. Механический вход опрашивается раз в 250 мс, замыкание
 подтверждается через 50 мс, а конец импульса - три пустых опроса подряд
-(Attiny85/src/counter.h). Отсюда 300 мс на замыкание и 800 мс на паузу: короче -
+(Attiny85/src/counter.h). Отсюда 500 мс на замыкание и 1,2 с на паузу: короче -
 импульс не засчитается, и это не дефект прошивки, а неверное воздействие.
 
 Серия импульсов по возможности выполняется на самой плате (/pulse). Через два
-HTTP-запроса на каждый фронт на интервал наматывается RTT 5-50 мс, а тесты
-тревог сравнивают интервалы с порогом - там это уже заметно.
+HTTP-запроса на каждый фронт на интервал наматывается RTT 5-50 мс: тревогам это
+уже безразлично - окно объёма нарезано слотами по пять минут, а квант тишины
+считается четвертями часа, - но прирост показаний и короткие импульсы
+электронного входа от него зависят.
 """
 
 from __future__ import annotations
@@ -42,6 +44,14 @@ IMPULSE_GAP_S = 1.2
 BUTTON_SHORT_MS = 100
 BUTTON_SETUP_MS = 4000
 
+# Индикатор METF: зелёный горит ровно пока стенд держит линию кнопки прижатой.
+# Нужен не тестам, а человеку у стенда: если прогон убили посреди нажатия,
+# никакой teardown уже не отработает, и оставшийся гореть светодиод -
+# единственный способ это увидеть. Цвет - RRGGBB, как в примерах METF.
+LED_PRESSED = '00FF00'
+LED_OFF = '000000'
+LED_BRIGHTNESS = 40
+
 
 class Dut:
     """Воздействия на Ватериус через плату METF."""
@@ -52,11 +62,30 @@ class Dut:
         self.button_pin = button_pin
         self.reset_pin = reset_pin
         self._ch = {0: ch0_pin, 1: ch1_pin}
+        self._led_ok: bool | None = None    # есть ли на плате индикатор
 
     def init(self) -> None:
         """Все линии в высокоомное состояние: стенд не должен мешать устройству."""
         for pin in (self.button_pin, self.reset_pin, *self._ch.values()):
             self.api.pinMode(pin, INPUT)
+        self._led(False)
+
+    def _led(self, pressed: bool) -> None:
+        """
+        Индикатор нажатия. Плата без светодиода прогон не роняет: это глаза
+        человека, а не проверка, - предупреждаем один раз и больше не трогаем.
+        """
+        if self._led_ok is False:
+            return
+        try:
+            if self._led_ok is None:
+                self.api.rgb_begin()
+                self.api.rgb_brightness(LED_BRIGHTNESS)
+                self._led_ok = True
+            self.api.rgb_color(LED_PRESSED if pressed else LED_OFF)
+        except Exception as err:
+            self._led_ok = False
+            logger.warning(f'METF без индикатора ({err}): нажатий видно не будет')
 
     # --- базовое воздействие ---
 
@@ -91,16 +120,28 @@ class Dut:
 
     # --- кнопка ---
 
+    def _press(self, msec: int) -> None:
+        """
+        Нажатие с индикацией.
+
+        Гасим только после того, как `_low` вернул управление, то есть линия
+        отпущена. Сорвись он на полпути - светодиод останется гореть вместе с
+        прижатой линией, а это ровно то, что человеку и надо увидеть.
+        """
+        self._led(True)
+        self._low(self.button_pin, msec)
+        self._led(False)
+
     def press_button(self) -> None:
         """Короткое нажатие - разовая передача показаний."""
-        self._low(self.button_pin, BUTTON_SHORT_MS)
+        self._press(BUTTON_SHORT_MS)
 
     def hold_button(self, msec: int = BUTTON_SETUP_MS) -> None:
         """
         Длинное нажатие - режим настройки. На Ватериусе 2 длительность меряет
         сама ЕСП и переводит attiny в режим настройки при удержании дольше 3 с.
         """
-        self._low(self.button_pin, msec)
+        self._press(msec)
 
     def reset(self) -> None:
         self._low(self.reset_pin, BUTTON_SHORT_MS)
