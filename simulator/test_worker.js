@@ -43,7 +43,7 @@ function loadWorker() {
     vm.createContext(scope);
     scope.importScripts = (...files) => {
         files.forEach((file) => {
-            const name = file.replace('./sim/', '');
+            const name = file.replace('./sim/', '').replace(/\?.*$/, ''); // ?v= штамп сборки
             if (name === 'generated.js') {
                 scope.SIM_GENERATED = require('./gen_from_firmware.js')();
                 return;
