@@ -21,28 +21,18 @@
 from __future__ import annotations
 
 import hashlib
-from pathlib import Path
 from typing import Any
 
 import pytest
 from loguru import logger
 
 from . import portal as portal_mod
+from .constants import (OTA_ERR_FW_UPDATE, OTA_ERR_LOW_BATTERY, OTA_ERR_NONE,
+                        OTA_MIN_VOLTAGE_MV, REPO_ROOT, WATERIUS_MODEL_2)
 
 pytestmark = [pytest.mark.stand, pytest.mark.slow]
 
-ROOT = Path(__file__).resolve().parents[2]
-BUILD = ROOT / 'ESP8266' / '.pio' / 'build' / 'waterius_2'
-
-MODEL_2 = 2
-
-# ota_update.h
-OTA_MIN_VOLTAGE_MV = 3300
-
-# core/types.h, enum OtaError
-OTA_ERR_NONE = 0
-OTA_ERR_FW_UPDATE = 3
-OTA_ERR_LOW_BATTERY = 4
+BUILD = REPO_ROOT / 'ESP8266' / '.pio' / 'build' / 'waterius_2'
 
 
 def image(name: str) -> bytes:
@@ -62,7 +52,7 @@ def part(path: str, data: bytes, cfg: Any) -> dict[str, Any]:
 @pytest.fixture(autouse=True)
 def model_2(stand: Any) -> None:
     payload = stand.last_payload
-    if payload is not None and int(payload.get('model', MODEL_2)) != MODEL_2:
+    if payload is not None and int(payload.get('model', WATERIUS_MODEL_2)) != WATERIUS_MODEL_2:
         pytest.skip('обновление по воздуху есть только у Ватериуса-2')
 
 
@@ -94,7 +84,7 @@ def test_J1_ota_updates_both_images(stand: Any, cfg: Any,
     Версия в устройстве и в дереве обязаны совпадать - иначе стенд остался бы
     на сборке, которой нет в репозитории.
     """
-    want = portal_mod.tree_version(ROOT)
+    want = portal_mod.tree_version(REPO_ROOT)
     if want is None or stand.esp_version != want:
         pytest.skip(f'на устройстве {stand.version_str}, в дереве '
                     f'{".".join(map(str, want)) if want else "?"} - '

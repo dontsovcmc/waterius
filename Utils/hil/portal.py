@@ -229,32 +229,33 @@ AP_WAIT_S = 15.0
 PRESS_BUDGET_S = 150.0
 
 
-@contextmanager
-def session(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> Iterator[AtBoard]:
-    """
-    Ватериус в режиме настройки, AT-плата в его сети.
+def wait_ap(stand: Any, timeout: float) -> str | None:
+    """Имя точки портала из лога, как только она поднялась; None - не поднялась."""
+    deadline = time.time() + timeout
+    while True:
+        stand.log.poll()
+        ssid = find_ap(stand.log.lines)
+        if ssid or time.time() >= deadline:
+            return ssid
+        time.sleep(0.5)
 
-    Выход - командой `/api/turnoff`, а не по таймауту: иначе следующий тест
-    ждал бы десять минут сторожевого таймера портала. Пока устройство не
-    уснуло, ЕСП запитана и нажатие кнопки до attiny не доходит, поэтому
-    выходим только дождавшись сна.
+
+def open_portal(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> AtBoard:
+    """
+    Ватериус в режиме настройки, AT-плата в его сети. Закрыть плату - дело
+    вызывающего.
+
+    Нажатие доходит до attiny, только когда ЕСП обесточена: если предыдущий
+    тест ещё доигрывает сеанс, кнопка нажимается впустую. Поэтому короткое
+    ожидание и новое нажатие, а не одно долгое: в обычном случае портал
+    поднимается за те же пять секунд.
     """
     stand.log.clear()
-
-    # Нажатие доходит до attiny, только когда ЕСП обесточена: если предыдущий
-    # тест ещё доигрывает сеанс, кнопка нажимается впустую. Поэтому короткое
-    # ожидание и новое нажатие, а не одно долгое: в обычном случае портал
-    # поднимается за те же пять секунд.
     ssid = None
     deadline = time.time() + timeout
-    while time.time() < deadline and not ssid:
+    while not ssid and time.time() < deadline:
         stand.dut.hold_button()
-        attempt = time.time() + AP_WAIT_S
-        while time.time() < min(attempt, deadline) and not ssid:
-            stand.log.poll()
-            ssid = find_ap(stand.log.lines)
-            if not ssid:
-                time.sleep(0.5)
+        ssid = wait_ap(stand, min(AP_WAIT_S, max(0.0, deadline - time.time())))
     if not ssid:
         raise PortalError(
             f'точка доступа портала не поднялась за {timeout:.0f} с: '
@@ -266,6 +267,20 @@ def session(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> Iterator[A
     # Имя точки нужно тому, кто её переживёт: на шаге подключения к домашней
     # сети точка переезжает на канал роутера, и клиента надо возвращать
     device.portal_ssid = ssid
+    return device
+
+
+@contextmanager
+def session(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> Iterator[AtBoard]:
+    """
+    Ватериус в режиме настройки, AT-плата в его сети.
+
+    Выход - командой `/api/turnoff`, а не по таймауту: иначе следующий тест
+    ждал бы десять минут сторожевого таймера портала. Пока устройство не
+    уснуло, ЕСП запитана и нажатие кнопки до attiny не доходит, поэтому
+    выходим только дождавшись сна.
+    """
+    device = open_portal(cfg, stand, timeout)
     try:
         yield device
     finally:
@@ -275,6 +290,23 @@ def session(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> Iterator[A
             logger.warning(f'портал не закрылся командой: {err}')
         device.close()
         stand.wait_asleep()
+
+
+def post_json(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:
+    """
+    Форма портала: поля телом, как их шлёт страница. Ответ - JSON целиком, без
+    проверки: ошибки полей тест сверяет сам, в отличие от `_save`.
+    """
+    answer = board.post(path, HOST, body=urlencode(params).encode())
+    assert answer.status == 200, f'{path}: код {answer.status}'
+    return json.loads(answer.text or '{}')
+
+
+def get_json(board: AtBoard, path: str) -> Any:
+    """GET к API портала, ответ - разобранный JSON."""
+    answer = board.get(path, HOST)
+    assert answer.status == 200, f'{path}: код {answer.status}'
+    return json.loads(answer.text or '{}')
 
 
 def unresolved(text: str) -> tuple[str, ...]:

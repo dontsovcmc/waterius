@@ -323,6 +323,26 @@ def discovery_reset(request: pytest.FixtureRequest) -> Iterator[None]:
 
 
 @pytest.fixture
+def fresh_device(cfg: Any, stand: Any) -> Iterator[Any]:
+    """
+    Устройство сразу после заводского сброса, в своём портале (`reset.py`).
+
+    Сброс на каждый тест: вес, заданный одним тестом, другому уже не снять, а
+    незаданным он бывает только после сброса. Тестам с этой фикстурой нужна
+    метка `reset` - эталон перед ними выставлять незачем, его сотрёт сброс.
+    Стенд после теста возвращается в рабочее состояние сам.
+    """
+    if not cfg.atboard_port:
+        pytest.skip('нет AT-платы: [atboard] port в stand.ini')
+    from .reset import FreshDevice
+    device = FreshDevice.reset(cfg, stand)
+    try:
+        yield device
+    finally:
+        device.close()
+
+
+@pytest.fixture
 def quiet(stand: Any, device_baseline: None) -> Iterator[None]:
     """
     Для тестов тревог: начинать с заведомо снятыми тревогами.

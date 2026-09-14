@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from .constants import ELECTRONIC, HEAT_UNITS, INPUT_OFF, LEAKAGE, NAMUR, WATER_HOT
 from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
@@ -44,18 +45,6 @@ BASE_ENTITIES = (
 # Период на время теста: любое значение, отличное от базового, - лишь бы
 # отличалось. К базовому его вернёт ensure_baseline перед следующим тестом.
 OTHER_PERIOD_MIN = 90
-
-NAMUR = 0
-LEAKAGE = 5          # CounterType: датчик протечки
-ELECTRONIC = 2       # CounterType: электронный выход, импульс - замыкание
-INPUT_OFF = 255      # CounterType::NONE: вход выключен
-WATER_HOT = 1        # CounterName: то, чем канал 0 настроен по умолчанию
-HEAT_GCAL = 4        # CounterName: тепло в гигакалориях
-HEAT_KWT = 7         # CounterName: то же тепло, но в киловатт-часах
-
-# core/ha_units.h. Единица - не украшение: по ней Home Assistant считает
-# статистику, и перепутанная превращает показания в другие числа
-HEAT_UNITS = {HEAT_GCAL: 'Gcal', HEAT_KWT: 'kWh'}
 
 
 def config_topic(topics: list[str], entity_type: str, entity_id: str) -> str | None:

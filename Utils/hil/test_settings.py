@@ -19,15 +19,13 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from .constants import MASKED
 from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session  # а сбор тестов должен работать без них
     from .stand import Stand
 
 pytestmark = pytest.mark.stand
-
-# portal/resources.h: PARAM_ASTERICS - так интерфейс показывает сохранённый пароль
-MASKED = '********'
 
 
 def apply(stand: Stand, settings: dict[str, Any]) -> Session:

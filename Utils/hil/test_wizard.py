@@ -30,12 +30,10 @@ from loguru import logger
 
 from . import portal as portal_mod
 from .atboard import AtBoard, AtError
+from .constants import COLD, NAMUR, WATER_COLD
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal, pytest.mark.slow]
 
-NAMUR = 0
-WATER_COLD = 0
-CHANNEL = 1
 
 # Отличается и от базового веса стенда, и от спецзначений «Авто» (3) и «как у
 # холодной» (7): иначе непонятно, что именно сохранилось
@@ -56,16 +54,9 @@ def api(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:
     return json.loads(answer.text or '{}')
 
 
-def post(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:
-    """Отправить форму: поля уходят телом, как их шлёт страница. Ответ целиком."""
-    answer = board.post(path, portal_mod.HOST, body=urlencode(params).encode())
-    assert answer.status == 200, f'{path}: {answer.status}'
-    return json.loads(answer.text or '{}')
-
-
 def save(board: AtBoard, path: str, **params: Any) -> dict[str, str]:
     """Сохранить форму и вернуть ошибки полей."""
-    body = post(board, path, **params)
+    body = portal_mod.post_json(board, path, **params)
     return {name: str(code) for name, code in (body.get('errors') or {}).items()}
 
 
@@ -162,27 +153,27 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
 
     # A5: тип входа. Вес у стенда уже задан, и повторная настройка обязана
     # вести сразу к показаниям, минуя определение счётчика (#346)
-    answer = post(board, '/api/save_input_type', input=CHANNEL, ctype=NAMUR)
+    answer = portal_mod.post_json(board, '/api/save_input_type', input=COLD, ctype=NAMUR)
     assert not answer.get('errors'), answer
-    assert answer.get('redirect') == f'/input/{CHANNEL}/settings.html', (
+    assert answer.get('redirect') == f'/input/{COLD}/settings.html', (
         f'повторная настройка ведёт не к показаниям: {answer}')
 
     # A6: страница определения счётчика считает импульсы вживую
-    before = api(board, f'/api/status/{CHANNEL}')
+    before = api(board, f'/api/status/{COLD}')
     assert 'error' not in before, f'нет связи с attiny: {before}'
-    stand.dut.pulse(channel=CHANNEL, count=PULSES)
+    stand.dut.pulse(channel=COLD, count=PULSES)
     time.sleep(2)
-    after = api(board, f'/api/status/{CHANNEL}')
+    after = api(board, f'/api/status/{COLD}')
     assert after['impulses'] - before['impulses'] == PULSES, (
         f"импульсы не досчитались: было {before['impulses']}, "
         f"стало {after['impulses']}")
 
     # A7: показания и вес импульса
-    assert save(board, '/api/save', input=CHANNEL, cname=WATER_COLD,
+    assert save(board, '/api/save', input=COLD, cname=WATER_COLD,
                 channel_start=READINGS, factor=FACTOR) == {}
 
     # A9: куда отправлять
-    assert save(board, '/api/save', input=CHANNEL, waterius_on=1, http_on=1,
+    assert save(board, '/api/save', input=COLD, waterius_on=1, http_on=1,
                 http_url=cfg.http_url, period_min=PERIOD_MIN) == {}
 
     logger.info('мастер пройден, ждём первую посылку')

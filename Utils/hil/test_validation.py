@@ -27,21 +27,10 @@ import pytest
 
 from . import portal as portal_mod
 from .atboard import AtBoard
+from .constants import (ALARM_STOP_MAX_HOURS, ERR_LENGTH, ERR_NO_COMMA,
+                        ERR_PORT_IN_HOST, ERR_TLS, ERR_VALUE, SERIAL_LEN)
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal]
-
-ERR_LENGTH = '14'
-ERR_VALUE = '15'
-ERR_NO_COMMA = '19'
-ERR_TLS = '20'
-ERR_PORT_IN_HOST = '21'
-
-# core/idle.h: потолок остановки расхода в часах
-ALARM_STOP_MAX_HOURS = 1092
-
-# core/types.h: SERIAL_LEN. Девять кириллических букв - это 18 байт, то есть
-# длина считается в байтах, а не в символах
-SERIAL_LEN = 16
 
 
 @pytest.fixture(scope='module')

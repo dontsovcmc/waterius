@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from .constants import HTTP_SEND_ATTEMPTS
 from .logwatch import (BLYNK_CLOUD, BLYNK_CLOUD_ANSWER, BLYNK_MQTT,
                        BLYNK_ROUTER, MANUAL_TRANSMIT_MODE, SEND_BAD_ANSWER,
                        SEND_NO_CONNECTION, SEND_OK)
@@ -41,9 +42,6 @@ pytestmark = pytest.mark.stand
 
 # Поля, которые обязаны быть в каждой посылке. Проверяем не только наличие, но
 # и тип с диапазоном: поле, ставшее всегда нулевым, список имён не поймает.
-# sender_http.h: столько раз прошивка повторяет отправку, пока не получит 200
-HTTP_SEND_ATTEMPTS = 3
-
 REQUIRED_FIELDS: dict[str, Any] = {
     'ch0': float, 'ch1': float,
     'delta0': int, 'delta1': int,

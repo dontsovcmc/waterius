@@ -23,10 +23,10 @@ from urllib.parse import urlencode
 import pytest
 
 from . import portal as portal_mod
+from .constants import FACTOR_TOO_BIG, INPUT_SILENT, NAMUR
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal, pytest.mark.slow]
 
-NAMUR = 0
 
 # Пара весов обязательна: плашка появляется, только когда один вес ровно
 # вдесятеро тяжелее другого (`diagnostics.cpp`, factor_too_big). Виновным
@@ -39,9 +39,6 @@ FACTOR_LIGHT = 10
 # давали ровно 200 литров на лёгком весе, то есть опыт стоял на самой границе,
 # и одного потерянного импульса хватало, чтобы плашки не было
 IMPULSES = 25
-
-FACTOR_TOO_BIG = '23'
-INPUT_SILENT = '24'
 
 
 def problems(board: Any) -> set[tuple[str, Any]]:

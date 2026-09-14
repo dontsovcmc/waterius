@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from .constants import BASE_FACTOR, COLD, LEAKAGE, NAMUR, RESET_ALL
 from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session
@@ -31,16 +32,10 @@ pytestmark = [
     pytest.mark.usefixtures('discovery_reset'),
 ]
 
-CHANNEL = 1
-NAMUR = 0
-LEAKAGE = 5                # тип входа «датчик протечки», core/types.h
-FACTOR = 10
 VOL_LITRES = 50            # за 30 минут; при весе 10 это пять импульсов
 RATE = 1440                # л/ч; при весе 10 это квант в 100 тиков по 250 мс
 RATE_QUANTUM_TICKS = 100
 
-# Маска снятия: все биты обоих каналов (`core/types.h`, ALARM_RESET_ALL)
-RESET_ALL = 0x3F
 
 # Сущности, появившиеся в 2.0.47. Без явного списка тест зеленеет на
 # прошлогоднем наборе автодискавери.
@@ -60,12 +55,12 @@ def armed(request: pytest.FixtureRequest, stand: Stand) -> Session:
     выключенные тревоги. Отдельные настройки теста - маркером `arm`, чтобы это
     стоило того же одного сеанса: на живом железе он идёт полторы минуты.
     """
-    settings = dict(factor=FACTOR, alarm_vol=VOL_LITRES, ctype=NAMUR,
+    settings = dict(factor=BASE_FACTOR, alarm_vol=VOL_LITRES, ctype=NAMUR,
                     vacation=0, mqtt_auto_discovery=1, mqtt_retain=1)
     marker = request.node.get_closest_marker('arm')
     if marker is not None:
         settings.update(marker.kwargs)          # маркер перебивает умолчание
-    return stand.setup_alarms(channel=CHANNEL, **settings)
+    return stand.setup_alarms(channel=COLD, **settings)
 
 
 def test_I1_discovery_alarm_entities(stand: Stand, armed: Session) -> None:
@@ -118,7 +113,7 @@ def test_I3_remote_vacation_reaches_attiny(stand: Stand, armed: Session) -> None
     assert session.payload['vac'] is True
     assert session.alarm_config is not None
     assert session.alarm_config['vacation'] == 1
-    assert session.alarm_config[f'vol{CHANNEL}'] == 1
+    assert session.alarm_config[f'vol{COLD}'] == 1
 
     stand.setup(vacation=0)
 
@@ -134,15 +129,15 @@ def test_I4_remote_threshold_is_recalculated(stand: Stand, armed: Session) -> No
     assert stand.mqtt is not None
 
     stand.reset_observers()
-    stand.mqtt.publish_set(f'ar{CHANNEL}', RATE, retain=True)
+    stand.mqtt.publish_set(f'ar{COLD}', RATE, retain=True)
     stand.dut.press_button()
 
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert session.payload is not None
-    assert session.payload[f'ar{CHANNEL}'] == RATE
+    assert session.payload[f'ar{COLD}'] == RATE
     assert session.alarm_config is not None
-    assert session.alarm_config[f'quantum{CHANNEL}'] == RATE_QUANTUM_TICKS, (
+    assert session.alarm_config[f'quantum{COLD}'] == RATE_QUANTUM_TICKS, (
         f'порог не пересчитан: {session.alarm_config}')
 
 
@@ -173,7 +168,7 @@ def test_I5_remote_mask_change(stand: Stand, quiet: None, armed: Session) -> Non
 
     stand.reset_observers()
     try:
-        stand.dut.wet(channel=CHANNEL, closed=True)
+        stand.dut.wet(channel=COLD, closed=True)
         alarm = stand.wait_session(timeout=180)
         alarm.assert_alarm(wet1=1)
         alarm.assert_confirm(mask=4, confirmed=1)
@@ -181,7 +176,7 @@ def test_I5_remote_mask_change(stand: Stand, quiet: None, armed: Session) -> Non
         # Пока контакт замкнут, тревога поднимается заново на каждом тике, и
         # снять её не сможет ни кнопка, ни маска. А опрашивается вход, лишь
         # пока его тип - датчик: после возврата в NAMUR отпускать будет поздно.
-        stand.dut.wet(channel=CHANNEL, closed=False)
+        stand.dut.wet(channel=COLD, closed=False)
 
     stand.setup(confirm_mqtt=0)
 
@@ -204,10 +199,10 @@ def test_I6_remote_reset_clears_alarms(stand: Stand, quiet: None,
 
     stand.reset_observers()
     try:
-        stand.dut.wet(channel=CHANNEL, closed=True)
+        stand.dut.wet(channel=COLD, closed=True)
         stand.wait_session(timeout=180).assert_alarm(wet1=1)
     finally:
-        stand.dut.wet(channel=CHANNEL, closed=False)
+        stand.dut.wet(channel=COLD, closed=False)
 
     stand.mqtt.publish_set('arst', RESET_ALL, retain=True)
 

@@ -27,10 +27,13 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from .constants import (ALARM_WAIT_S, AUTO_IMPULSE_FACTOR, BASE_FACTOR, LEAKAGE,
+                        LEAKAGE_NC, NAMUR, RESET_FLOW1, RESET_WET1, SILENCE_S,
+                        VACATION_PULSES)
 from .logwatch import ALARM_MODE, MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
@@ -39,12 +42,6 @@ if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
 # выходит на первой строке - вся группа бессмысленна.
 pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=41)]
 
-# Типы входа, core/types.h
-NAMUR = 0
-LEAKAGE = 5
-LEAKAGE_NC = 6
-
-FACTOR = 10            # л/имп
 
 # Много воды сразу: 50 л за полчаса при весе 10 - это пять импульсов. Темп
 # значения не имеет, окно скользящее, так что подаём их подряд.
@@ -60,19 +57,6 @@ HOURS = 1
 LEAK_QUANTUM_TICKS = 3600
 LEAK_QUANTA = 4
 
-# Маска снятия в кадре 'A': биты 0-2 - канал 0, биты 3-5 - канал 1
-# (`ESP8266/src/core/types.h`, ALARM_RESET_SHIFT1).
-RESET_FLOW1 = 0x08
-RESET_WET1 = 0x20
-
-# Сколько ждём внепланового сеанса. Сама тревога поднимается сразу, но attiny
-# молчит ALARM_HOLD_MIN после предыдущего внепланового сеанса - а его только что
-# устроила фикстура `quiet`, снимая чужую тревогу кнопкой.
-ALARM_WAIT_S = 420.0
-
-# Сколько наблюдаем тишину, чтобы утверждать «сеансов больше нет». Меньше
-# ALARM_HOLD_MIN бессмысленно: раньше неё сеанс невозможен физически.
-SILENCE_S = 420.0
 
 # Период на время теста, которому нужен плановый сеанс вместо кнопки: кнопка
 # снимает тревоги сама, и проверять ею снятие маской нельзя.
@@ -113,7 +97,7 @@ def raise_both_channels(stand: Stand) -> None:
 @pytest.mark.experimental
 def test_E1_volume_alarm(stand: Stand, quiet: None) -> None:
     """Объём за полчаса выше порога поднимает тревогу и будит устройство."""
-    armed = stand.setup_alarms(channel=1, factor=FACTOR, alarm_vol=VOL_LITRES,
+    armed = stand.setup_alarms(channel=1, factor=BASE_FACTOR, alarm_vol=VOL_LITRES,
                                ctype=NAMUR, vacation=0)
     assert armed.alarm_config['vol1'] == VOL_PULSES, (
         f'литры не пересчитались в импульсы: {armed.alarm_config}')
@@ -137,7 +121,7 @@ def test_E2_alarm_does_not_clear_itself(stand: Stand, quiet: None) -> None:
     убрано. Наблюдаем плановыми сеансами, а не кнопкой: кнопка тревогу снимает,
     и тест проверял бы собственное нажатие.
     """
-    stand.setup_alarms(channel=1, factor=FACTOR, alarm_vol=VOL_LITRES,
+    stand.setup_alarms(channel=1, factor=BASE_FACTOR, alarm_vol=VOL_LITRES,
                        ctype=NAMUR, vacation=0, period_min=SHORT_PERIOD_MIN)
     stand.reset_observers()
 
@@ -163,7 +147,7 @@ def test_E3_leak_after_an_hour_without_silence(stand: Stand, quiet: None) -> Non
     минуту при кванте в пятнадцать минут заведомо занимает каждый квант, так
     что тест не балансирует на границе.
     """
-    armed = stand.setup_alarms(channel=1, factor=FACTOR, alarm_rate=RATE,
+    armed = stand.setup_alarms(channel=1, factor=BASE_FACTOR, alarm_rate=RATE,
                                alarm_hours=HOURS, ctype=NAMUR, vacation=0)
     assert armed.alarm_config['quantum1'] == LEAK_QUANTUM_TICKS
     assert armed.alarm_config['quanta1'] == LEAK_QUANTA
@@ -337,7 +321,7 @@ def test_E6_vacation_mode(stand: Stand, quiet: None) -> None:
     Проверяем по порогу, уехавшему в attiny, а не по настройке в посылке: порог
     пользователя не затирается, подменяется только значение для attiny.
     """
-    stand.setup_alarms(channel=1, factor=FACTOR, alarm_vol=VOL_LITRES,
+    stand.setup_alarms(channel=1, factor=BASE_FACTOR, alarm_vol=VOL_LITRES,
                        ctype=NAMUR, vacation=0)
 
     on = stand.setup(vacation=1)
@@ -363,7 +347,7 @@ def test_E18_vacation_off_clears_its_alarm(stand: Stand, quiet: None) -> None:
 
     Режим выключается плановым сеансом: кнопка сняла бы тревогу и без него.
     """
-    stand.setup_alarms(channel=1, factor=FACTOR, alarm_vol=VOL_LITRES,
+    stand.setup_alarms(channel=1, factor=BASE_FACTOR, alarm_vol=VOL_LITRES,
                        ctype=NAMUR, vacation=0, period_min=SHORT_PERIOD_MIN)
     stand.setup(vacation=1)
 
@@ -383,6 +367,40 @@ def test_E18_vacation_off_clears_its_alarm(stand: Stand, quiet: None) -> None:
     stand.setup(period_min=120)
 
 
+@pytest.mark.reset
+def test_E10_vacation_works_without_factor(stand: Stand, fresh_device: Any) -> None:
+    """
+    Режиму «Я уехал» известный вес импульса не нужен.
+
+    Обычный порог без веса посчитать нельзя - литры на импульс взять неоткуда,
+    и пересчёт вернёт ноль, то есть «выключено». Отпуску считать нечего:
+    тревогой объявлен любой импульс, и порог объёма подменяется единицей.
+    Поэтому в `alarm_thresholds` (`core/alarm.cpp`) vacation проверяется до
+    веса, и тест следит именно за этим порядком.
+
+    Вес не задан только после заводского сброса: настройками тройку не
+    сохранить, «Авто» разворачивается в число в момент применения.
+    """
+    session = fresh_device.leave()
+    assert session.payload['f1'] == AUTO_IMPULSE_FACTOR, (
+        'тест бессмысленен, если вес всё-таки задан')
+
+    stand.setup(channel=1, ctype=NAMUR)
+    on = stand.setup(vacation=1)
+    assert on.payload['f1'] == AUTO_IMPULSE_FACTOR, 'вес не должен был появиться'
+    assert on.alarm_config['vol1'] == VACATION_PULSES, (
+        f'порог отпуска не уехал в attiny: {on.alarm_config}\n{on.text}')
+
+    stand.reset_observers()
+    # Минута между импульсами - расход, который ни один обычный порог тревогой
+    # не считает. В отпуске считается любой.
+    stand.dut.pulses(channel=1, count=2, gap=60.0)
+
+    stand.wait_session(timeout=180, mode=ALARM_MODE).assert_alarm(flow1=1)
+
+    stand.setup(vacation=0)
+
+
 @pytest.mark.slow
 def test_E7_consumption_stopped(stand: Stand) -> None:
     """
@@ -392,7 +410,7 @@ def test_E7_consumption_stopped(stand: Stand) -> None:
     Эта тревога живёт по своим правилам и снимается сама первым же импульсом:
     её состояние ЕСП пересчитывает в каждом сеансе, а не хранит в attiny.
     """
-    stand.setup(channel=1, alarm_stop=1, ctype=NAMUR, factor=FACTOR,
+    stand.setup(channel=1, alarm_stop=1, ctype=NAMUR, factor=BASE_FACTOR,
                 period_min=5, send_on_consumption=0)
     stand.reset_observers()
 

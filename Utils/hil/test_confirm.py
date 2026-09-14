@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from .constants import CONFIRM_MQTT, LEAKAGE, SILENCE_S
 from .logwatch import (ALARM_MODE, SEND_NO_CONNECTION, SEND_OK, SEND_SKIPPED)
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
@@ -35,16 +36,7 @@ if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
 pytestmark = [pytest.mark.stand, pytest.mark.mqtt,
               pytest.mark.requires(attiny=41)]
 
-LEAKAGE = 5             # тип входа, core/types.h
 SENSOR = 0              # канал с датчиком протечки
-
-CONFIRM_MQTT = 4        # AlarmConfirm, core/types.h
-
-# Сколько наблюдаем тишину, чтобы утверждать «больше не будит». Пауза после
-# сеанса по тревоге - ALARM_HOLD_MIN, пять минут (Attiny85/src/alarm.h), и
-# раньше неё внеплановый сеанс невозможен физически. Берём её плюс сеанс и
-# запас; ждать дольше - платить временем за уже доказанное.
-SILENCE_S = 420.0
 
 
 def arm_sensor(stand: Stand, **extra: int) -> None:

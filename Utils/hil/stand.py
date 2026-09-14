@@ -22,6 +22,7 @@ from metf_python_client import METFClient
 
 from .config import StandConfig
 from .clock import BoardClock
+from .constants import BASE_FACTOR, LEAKAGE_NC, NAMUR, WATER_COLD, WATER_HOT
 from .dut import Dut
 from .logwatch import WAKE_SESSION, LogWatcher, Session
 from .net import Net
@@ -53,14 +54,13 @@ BASELINE = {
     'vac': 0, 'sc': 0,
     'ackw': 1, 'ackh': 1, 'ackm': 1,
     'period_min': 120,
-    'ctype0': 0, 'ctype1': 0,
-    'cname0': 1, 'cname1': 0,      # красный вход - ГВС, синий - ХВС
-    'f1': 10,
+    'ctype0': NAMUR, 'ctype1': NAMUR,
+    'cname0': WATER_HOT, 'cname1': WATER_COLD,  # красный вход - ГВС, синий - ХВС
+    'f1': BASE_FACTOR,
     'av0': 0, 'ar0': 0, 'ah0': 0, 'as0': 0,
     'av1': 0, 'ar1': 0, 'ah1': 0, 'as1': 0,
 }
 
-LEAKAGE_NC = 6          # нормально-замкнутый датчик, core/types.h
 
 # Сколько раз пробуем снять тревогу кнопкой. Одного нажатия достаточно, второе
 # нужно на случай потерянного сеанса - лучше лишние двадцать секунд, чем

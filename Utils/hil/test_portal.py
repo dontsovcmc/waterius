@@ -14,18 +14,17 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any, Iterator
 
 import pytest
 
 from . import portal as portal_mod
 from .atboard import AtBoard
+from .constants import REPO_ROOT
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal]
 
-ROOT = Path(__file__).resolve().parents[2]
-DATA = ROOT / 'ESP8266' / 'data'
+DATA = REPO_ROOT / 'ESP8266' / 'data'
 
 
 @pytest.fixture(scope='module')
@@ -82,7 +81,7 @@ def test_P3_assets_match_image(assets: dict[str, portal_mod.Result], stand: Any)
     старый образ ничем больше не виден: страницы открываются, версия в логе
     правильная, а стили и картинки - от предыдущего выпуска.
     """
-    want = portal_mod.tree_version(ROOT)
+    want = portal_mod.tree_version(REPO_ROOT)
     if want is None or stand.esp_version != want:
         pytest.skip(f'на устройстве {stand.version_str}, в дереве '
                     f'{".".join(map(str, want)) if want else "?"} - сверять нечего')
