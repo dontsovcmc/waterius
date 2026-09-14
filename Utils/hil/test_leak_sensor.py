@@ -30,6 +30,7 @@ if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
 pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=41)]
 
 
+@pytest.mark.needs(ctype0=LEAKAGE)
 def test_E4_leak_sensor_closes(stand: Stand, quiet: None) -> None:
     """
     Датчик протечки: замыкание поднимает тревогу почти мгновенно.
@@ -37,7 +38,6 @@ def test_E4_leak_sensor_closes(stand: Stand, quiet: None) -> None:
     Единственная тревога с реакцией в пределах секунды - остальные ждут
     следующего импульса или пробуждения.
     """
-    stand.setup(channel=0, ctype=LEAKAGE)
     stand.reset_observers()
 
     try:
@@ -50,6 +50,7 @@ def test_E4_leak_sensor_closes(stand: Stand, quiet: None) -> None:
         stand.dut.wet(channel=0, closed=False)
 
 
+@pytest.mark.needs(ctype0=LEAKAGE)
 def test_E4a_sensor_bounce_gives_one_session(stand: Stand, quiet: None) -> None:
     """
     Дребезг датчика больше не стоит сеансов.
@@ -58,7 +59,6 @@ def test_E4a_sensor_bounce_gives_one_session(stand: Stand, quiet: None) -> None:
     один сеанс. Раньше каждый переход был новостью, и мокрый ковёр у порога
     будил устройство до исчерпания бюджета.
     """
-    stand.setup(channel=0, ctype=LEAKAGE)
     stand.reset_observers()
 
     try:
@@ -101,6 +101,7 @@ def test_E5_normally_closed_sensor_detects_cut_wire(stand: Stand, quiet: None) -
 
 @pytest.mark.slow
 @pytest.mark.requires(attiny=42)
+@pytest.mark.needs(ctype0=LEAKAGE, period_min=PLANNED_PERIOD_MIN)
 def test_E12_type_change_clears_alarm(stand: Stand, quiet: None) -> None:
     """
     Смена типа входа снимает тревогу канала.
@@ -116,7 +117,6 @@ def test_E12_type_change_clears_alarm(stand: Stand, quiet: None) -> None:
     читает состояние тревог один раз, в начале сеанса, и повторная посылка
     после применения настроек собирается из того же снимка.
     """
-    stand.setup(channel=0, ctype=LEAKAGE, period_min=PLANNED_PERIOD_MIN)
     stand.reset_observers()
 
     try:
@@ -131,4 +131,3 @@ def test_E12_type_change_clears_alarm(stand: Stand, quiet: None) -> None:
         cleared.assert_alarm(wet0=0)
     finally:
         stand.dut.wet(channel=0, closed=False)
-        stand.setup(period_min=120)

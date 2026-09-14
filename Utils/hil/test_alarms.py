@@ -63,7 +63,13 @@ def raise_both_channels(stand: Stand) -> None:
 
     Порознь, а не разом: каждая тревога сама будит устройство, и поднятые
     вперемешку они дали бы сеанс с одной из двух, а какой именно - решал бы
-    случай. Вторая приедет не раньше чем через ALARM_HOLD_MIN.
+    случай.
+
+    Ждём любой сеанс, а не только тревожный: вторую тревогу attiny будит не
+    раньше чем через ALARM_HOLD_MIN, и плановый сеанс, пришедший раньше, увозит
+    её сам - тревожного после него уже не будет (Attiny85/src/main.cpp, «новость
+    считается отданной независимо от режима»). Доставку отдельным сеансом
+    проверяют тесты датчика, здесь нужны только две поднятые тревоги.
 
     Источник - датчики протечки на обоих входах: сценариям снятия нужны две
     независимые тревоги, а не конкретный их вид, и датчик единственный
@@ -76,7 +82,7 @@ def raise_both_channels(stand: Stand) -> None:
         stand.reset_observers()
         try:
             stand.dut.wet(channel=channel, closed=True)
-            session = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
+            session = stand.wait_session(timeout=ALARM_WAIT_S)
             session.assert_alarm(**{f'wet{channel}': 1})
         finally:
             stand.dut.wet(channel=channel, closed=False)
@@ -122,8 +128,6 @@ def test_E2_alarm_does_not_clear_itself(stand: Stand, quiet: None) -> None:
         planned = stand.wait_session(timeout=15 * 60, mode=TRANSMIT_MODE)
         planned.assert_alarm(flow1=1)
 
-    stand.setup(period_min=120)
-
 
 @pytest.mark.slow
 @pytest.mark.experimental
@@ -149,6 +153,7 @@ def test_E3_leak_after_an_hour_without_silence(stand: Stand, quiet: None) -> Non
     assert session.payload['ah1'] == HOURS
 
 
+@pytest.mark.needs(ctype0=LEAKAGE, ctype1=LEAKAGE)
 def test_E13_button_clears_both_channels(stand: Stand, quiet: None) -> None:
     """
     Короткое нажатие кнопки снимает всё разом, не дожидаясь квитанции.
@@ -157,9 +162,6 @@ def test_E13_button_clears_both_channels(stand: Stand, quiet: None) -> None:
     шкафу ему незачем. Поэтому снятие видно уже в том сеансе, который кнопка и
     подняла, а не в следующем, как при снятии маской.
     """
-    stand.setup(channel=0, ctype=LEAKAGE)
-    stand.setup(channel=1, ctype=LEAKAGE)
-
     raise_both_channels(stand)
 
     stand.reset_observers()
@@ -169,6 +171,7 @@ def test_E13_button_clears_both_channels(stand: Stand, quiet: None) -> None:
 
 
 @pytest.mark.slow
+@pytest.mark.needs(ctype0=LEAKAGE, ctype1=LEAKAGE, period_min=PLANNED_PERIOD_MIN)
 def test_E17_reset_mask_clears_only_its_bits(stand: Stand, quiet: None) -> None:
     """
     Маска с сервера снимает ровно то, что в ней.
@@ -180,9 +183,6 @@ def test_E17_reset_mask_clears_only_its_bits(stand: Stand, quiet: None) -> None:
 
     Маска уезжает плановым сеансом: кнопка сняла бы обе тревоги сама.
     """
-    stand.setup(channel=0, ctype=LEAKAGE, period_min=PLANNED_PERIOD_MIN)
-    stand.setup(channel=1, ctype=LEAKAGE)
-
     raise_both_channels(stand)
 
     applied = stand.setup(arst=RESET_WET1, wake=False, timeout=PLANNED_WAIT_S)
@@ -193,8 +193,6 @@ def test_E17_reset_mask_clears_only_its_bits(stand: Stand, quiet: None) -> None:
     stand.reset_observers()
     cleared = stand.wait_session(timeout=PLANNED_WAIT_S)
     cleared.assert_alarm(wet1=0, wet0=1)
-
-    stand.setup(period_min=120)
 
 
 @pytest.mark.slow

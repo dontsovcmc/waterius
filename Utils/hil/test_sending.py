@@ -264,15 +264,12 @@ def test_G8_own_server_over_https(stand: Stand) -> None:
     """
     stand.receiver.start_tls(stand.cfg.receiver_tls_port)
     before = stand.receiver.tls_hits
-    try:
-        stand.setup(http_url=stand.cfg.https_url)
-        stand.reset_observers()
-        stand.dut.press_button()
-        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    stand.setup(http_url=stand.cfg.https_url)
+    stand.reset_observers()
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-        session.assert_confirm(http=SEND_OK, any=1)
-        assert session.payload is not None, 'посылка не дошла'
-        assert stand.receiver.tls_hits > before, (
-            'посылка пришла, но не по https - адрес не сменился')
-    finally:
-        stand.setup(http_url=stand.cfg.http_url)
+    session.assert_confirm(http=SEND_OK, any=1)
+    assert session.payload is not None, 'посылка не дошла'
+    assert stand.receiver.tls_hits > before, (
+        'посылка пришла, но не по https - адрес не сменился')

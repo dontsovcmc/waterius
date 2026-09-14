@@ -23,13 +23,17 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .constants import ELECTRONIC, HEAT_UNITS, INPUT_OFF, LEAKAGE, NAMUR, WATER_HOT
+from .constants import ELECTRONIC, HEAT_UNITS, INPUT_OFF, LEAKAGE
 from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
 
-pytestmark = [pytest.mark.stand, pytest.mark.mqtt,
-              pytest.mark.usefixtures('discovery_reset')]
+pytestmark = [pytest.mark.stand, pytest.mark.mqtt]
+
+# Автодискавери: при нём показания уходят одним объектом в корень, и только при
+# нём прошивка подписывается на команды (`senders/sender_mqtt.h`)
+DISCOVERY = pytest.mark.needs(mqtt_auto_discovery=1)
+NO_DISCOVERY = pytest.mark.needs(mqtt_auto_discovery=0)
 
 # Сущности автодискавери, которые прошивка публикует независимо от тревог
 # (`ha/publish_discovery.cpp`). Тип в топике важен не меньше имени: `number`
@@ -42,8 +46,8 @@ BASE_ENTITIES = (
     ('sensor', 'model'),
 )
 
-# Период на время теста: любое значение, отличное от базового, - лишь бы
-# отличалось. К базовому его вернёт ensure_baseline перед следующим тестом.
+# Период на время теста: любое значение, отличное от общего, - лишь бы
+# отличалось. Обратно его вернут требования следующего теста.
 OTHER_PERIOD_MIN = 90
 
 
@@ -55,6 +59,7 @@ def config_topic(topics: list[str], entity_type: str, entity_id: str) -> str | N
                 None)
 
 
+@DISCOVERY
 def test_I0_readings_reach_broker(stand: Stand) -> None:
     """
     Показания уезжают в брокер, и это ровно та же посылка, что ушла на сервер.
@@ -63,7 +68,6 @@ def test_I0_readings_reach_broker(stand: Stand) -> None:
     один раз и отдаёт его всем получателям (`senders/send_data.cpp`), поэтому
     любое расхождение означает, что путь MQTT собирает данные сам по себе.
     """
-    stand.setup(mqtt_auto_discovery=1)       # показания одним объектом в корень
     assert stand.mqtt is not None
 
     stand.reset_observers()
@@ -85,6 +89,7 @@ def test_I0_readings_reach_broker(stand: Stand) -> None:
         'в брокер и на сервер ушли разные данные')
 
 
+@DISCOVERY
 def test_I1_discovery_base_entities(stand: Stand) -> None:
     """
     Автодискавери публикуется по кнопке и описывает устройство целиком.
@@ -94,7 +99,6 @@ def test_I1_discovery_base_entities(stand: Stand) -> None:
     Иначе тесты команд проверяли бы путь, которым Home Assistant не ходит:
     подписка у прошивки на `<топик>/#`, и лишний сегмент она бы проглотила.
     """
-    stand.setup(mqtt_auto_discovery=1)
     assert stand.mqtt is not None
     stand.mqtt.drain()
 
@@ -119,7 +123,8 @@ def test_I1_discovery_base_entities(stand: Stand) -> None:
         f'а устройство ждёт их в {command_topic}')
 
 
-def test_I4_remote_period_min(stand: Stand, discovery_on: None) -> None:
+@DISCOVERY
+def test_I4_remote_period_min(stand: Stand) -> None:
     """
     Настройка, присланная из Home Assistant, применяется в том же сеансе.
 
@@ -142,8 +147,8 @@ def test_I4_remote_period_min(stand: Stand, discovery_on: None) -> None:
 
 
 @pytest.mark.requires(esp='2.0.47')       # младшие снимают команду без флага retain
-def test_I4b_retained_command_is_cleared(stand: Stand,
-                                        discovery_on: None) -> None:
+@DISCOVERY
+def test_I4b_retained_command_is_cleared(stand: Stand) -> None:
     """
     Применив удерживаемую команду, устройство обязано стереть её из брокера.
 
@@ -169,9 +174,8 @@ def test_I4b_retained_command_is_cleared(stand: Stand,
     assert command_topic not in left, (
         f'команда осталась в брокере удерживаемой: {left}')
 
-    stand.setup(mqtt_retain=1)
 
-
+@DISCOVERY
 def test_I7_retain_flag(stand: Stand) -> None:
     """
     Флаг retain у публикаций.
@@ -180,10 +184,10 @@ def test_I7_retain_flag(stand: Stand) -> None:
     от его настроек, а не от прошивки. Смотрим сам флаг - глазами нового
     подписчика, потому что в живой доставке он нулевой у любого брокера
     (MQTT 3.1.1, 3.3.1.3).
+
+    Единица retain - общее требование стенда. На прошивках до 2.0.47 настройка
+    не сохраняется вовсе, но там она и так единица (config.cpp, init_config).
     """
-    # На прошивках до 2.0.47 эта настройка не сохраняется вовсе, но там
-    # `mqtt_retain` и так единица по умолчанию (config.cpp, init_config)
-    stand.setup(mqtt_retain=1, mqtt_auto_discovery=1)
     assert stand.mqtt is not None
     stand.mqtt.drain()
 
@@ -231,10 +235,9 @@ def test_I7b_no_retain(stand: Stand) -> None:
     assert stand.mqtt_root not in left, (
         f'показания остались удерживаемыми при mqtt_retain=0: {left}')
 
-    stand.setup(mqtt_retain=1)
 
-
-def test_I8_data_topics_are_not_cleared(stand: Stand, discovery_on: None) -> None:
+@DISCOVERY
+def test_I8_data_topics_are_not_cleared(stand: Stand) -> None:
     """
     Устройство снимает retain только со своих команд.
 
@@ -262,13 +265,13 @@ def test_I8_data_topics_are_not_cleared(stand: Stand, discovery_on: None) -> Non
         f'показания стёрты из брокера, осталось: {sorted(left)}')
 
 
+@DISCOVERY
 def test_I1b_discovery_json_is_valid(stand: Stand) -> None:
     """
     Каждый объявленный топик автодискавери - разбираемый JSON с обязательными
     полями. Обрезанная публикация (а данные уходят кусками, `publish_chunked`)
     иначе видна только в Home Assistant, куда стенд не заглядывает.
     """
-    stand.setup(mqtt_auto_discovery=1)
     assert stand.mqtt is not None
     stand.mqtt.drain()
 
@@ -290,8 +293,8 @@ def test_I1b_discovery_json_is_valid(stand: Stand) -> None:
         assert entity.get('uniq_id'), f'{topic}: нет уникального идентификатора'
 
 
-def test_I0b_readings_go_to_separate_topics(stand: Stand,
-                                            discovery_off: None) -> None:
+@NO_DISCOVERY
+def test_I0b_readings_go_to_separate_topics(stand: Stand) -> None:
     """
     Без автодискавери показания уходят по топику на поле.
 
@@ -324,7 +327,8 @@ def test_I0b_readings_go_to_separate_topics(stand: Stand,
         f'{stand.mqtt.topics("homeassistant/")}')
 
 
-def test_I4c_commands_need_discovery(stand: Stand, discovery_off: None) -> None:
+@NO_DISCOVERY
+def test_I4c_commands_need_discovery(stand: Stand) -> None:
     """
     Без автодискавери команда не доезжает - и это не поломка, а устройство.
 
@@ -355,6 +359,7 @@ def test_I4c_commands_need_discovery(stand: Stand, discovery_off: None) -> None:
     assert 'MQTT: Subscribed to' not in session.text
 
 
+@pytest.mark.needs(ctype0=LEAKAGE, mqtt_auto_discovery=1)
 def test_I2_leak_sensor_publishes_only_its_state(stand: Stand) -> None:
     """
     Датчик протечки - не счётчик: в Home Assistant у него есть тип входа и
@@ -363,61 +368,56 @@ def test_I2_leak_sensor_publishes_only_its_state(stand: Stand) -> None:
     Показания, вес импульса, серийный номер и пороги для него бессмысленны:
     импульсов он не даёт, его тревога - само состояние линии.
     """
-    stand.setup(channel=0, ctype=LEAKAGE, mqtt_auto_discovery=1)
     assert stand.mqtt is not None
-    try:
-        stand.mqtt.drain()
-        stand.reset_observers()
-        stand.dut.press_button()
-        stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    stand.mqtt.drain()
+    stand.reset_observers()
+    stand.dut.press_button()
+    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-        topics = stand.mqtt.topics('homeassistant/')
-        assert topics, 'автодискавери не опубликовано'
+    topics = stand.mqtt.topics('homeassistant/')
+    assert topics, 'автодискавери не опубликовано'
 
-        assert config_topic(topics, 'select', 'ctype0') is not None, topics
-        assert config_topic(topics, 'binary_sensor', 'alarm_wet0') is not None, topics
+    assert config_topic(topics, 'select', 'ctype0') is not None, topics
+    assert config_topic(topics, 'binary_sensor', 'alarm_wet0') is not None, topics
 
-        pointless = ('ch0', 'f0', 'serial0', 'av0', 'ar0', 'ah0', 'as0',
-                     'alarm_flow0', 'alarm_leak0', 'alarm_stop0')
-        left = [topic for topic in topics
-                for name in pointless if topic.endswith(f'/{name}/config')]
-        assert not left, f'у датчика протечки объявлено лишнее: {left}'
+    pointless = ('ch0', 'f0', 'serial0', 'av0', 'ar0', 'ah0', 'as0',
+                 'alarm_flow0', 'alarm_leak0', 'alarm_stop0')
+    left = [topic for topic in topics
+            for name in pointless if topic.endswith(f'/{name}/config')]
+    assert not left, f'у датчика протечки объявлено лишнее: {left}'
 
-        # Соседний вход - обычный счётчик, и его сущности на месте: проверка
-        # не про «мало топиков», а про то, что молчит именно этот канал
-        assert config_topic(topics, 'sensor', 'ch1') is not None, topics
-    finally:
-        stand.setup(channel=0, ctype=NAMUR)
+    # Соседний вход - обычный счётчик, и его сущности на месте: проверка
+    # не про «мало топиков», а про то, что молчит именно этот канал
+    assert config_topic(topics, 'sensor', 'ch1') is not None, topics
 
 
 @pytest.mark.parametrize('resource', sorted(HEAT_UNITS))
+@DISCOVERY
 def test_I6_heat_carries_its_own_unit(stand: Stand, resource: int) -> None:
     """
     Тепло бывает двух ресурсов, и единица у них разная: гигакалории и
     киловатт-часы. Берётся она по названию канала, а не по типу входа.
     """
     unit = HEAT_UNITS[resource]
-    stand.setup(channel=0, cname=resource, mqtt_auto_discovery=1)
+    stand.setup(channel=0, cname=resource)
     assert stand.mqtt is not None
-    try:
-        stand.mqtt.drain()
-        stand.reset_observers()
-        stand.dut.press_button()
-        stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    stand.mqtt.drain()
+    stand.reset_observers()
+    stand.dut.press_button()
+    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-        topics = stand.mqtt.topics('homeassistant/')
-        topic = config_topic(topics, 'sensor', 'ch0')
-        assert topic is not None, topics
+    topics = stand.mqtt.topics('homeassistant/')
+    topic = config_topic(topics, 'sensor', 'ch0')
+    assert topic is not None, topics
 
-        message = stand.mqtt.last(topic)
-        assert message is not None
-        entity = message.json()
-        assert entity.get('unit_of_meas') == unit, entity
-    finally:
-        stand.setup(channel=0, cname=WATER_HOT)
+    message = stand.mqtt.last(topic)
+    assert message is not None
+    entity = message.json()
+    assert entity.get('unit_of_meas') == unit, entity
 
 
-def test_I9_both_input_types_in_one_session(stand: Stand, discovery_on: None) -> None:
+@DISCOVERY
+def test_I9_both_input_types_in_one_session(stand: Stand) -> None:
     """
     Два типа входа одним сеансом применяются оба (#360).
 
@@ -450,8 +450,8 @@ def test_I9_both_input_types_in_one_session(stand: Stand, discovery_on: None) ->
             stand.mqtt.clear_retained(stand.mqtt.command_topic(name))
 
 
-def test_I10_zero_readings_from_home_assistant(stand: Stand,
-                                              discovery_on: None) -> None:
+@DISCOVERY
+def test_I10_zero_readings_from_home_assistant(stand: Stand) -> None:
     """
     Показания 0.0 из Home Assistant принимаются (#325).
 

@@ -15,7 +15,7 @@ retain. MQTT-путь проверяется отдельными тестами
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Mapping
 
 from loguru import logger
 from metf_python_client import METFClient
@@ -23,6 +23,7 @@ from metf_python_client import METFClient
 from .config import StandConfig
 from .clock import BoardClock
 from .constants import BASE_FACTOR, LEAKAGE_NC, NAMUR, WATER_COLD, WATER_HOT
+from .state import merge, same_value, unmet
 from .dut import Dut
 from .logwatch import MANUAL_TRANSMIT_MODE, WAKE_SESSION, LogWatcher, Session
 from .net import Net
@@ -45,11 +46,12 @@ CHANNEL_PARAMS = {
     'value': 'ch',
 }
 
-# Состояние, с которого начинается каждый тест. Без него результат зависит от
-# того, что оставил предыдущий: test_I5 выключает квитанцию MQTT, а test_G1
-# ничего не настраивает и требует, чтобы она была включена. Имена - как их
-# печатает прошивка в посылке, чтобы сверять напрямую с ней, а не со своей
-# памятью: настройки меняются и через MQTT, мимо setup().
+# Настройки устройства, которые требуются от него в каждом тесте, если тест не
+# объявил другие (маркер needs). Без них результат зависит от того, что оставил
+# предыдущий: test_I5 выключает квитанцию MQTT, а test_G1 ничего не настраивает
+# и требует, чтобы она была включена. Имена - параметров прошивки, как они
+# уходят в ответе сервера. Сеть, брокер и часы добавляет Stand.requirements:
+# их значения берутся из stand.ini.
 BASELINE = {
     'vac': 0, 'sc': 0,
     'ackw': 1, 'ackh': 1, 'ackm': 1,
@@ -81,23 +83,6 @@ GLOBAL_PARAMS = {
 }
 
 
-def same_value(got: Any, want: Any) -> bool:
-    """
-    Одно ли это значение настройки.
-
-    Флаги задаются числом (в прошивку они и уходят как "1"/"0"), а в посылке
-    приезжают булевыми, поэтому сравнение строк дало бы вечное '1' != 'True'.
-    Числа сравниваем как числа: показания задаются с литрами ("10.000"), а в
-    посылке приезжают числом 10.0.
-    """
-    if isinstance(got, bool) or isinstance(want, bool):
-        return bool(got) == bool(want)
-    try:
-        return abs(float(got) - float(want)) < 1e-6
-    except (TypeError, ValueError):
-        return str(got) == str(want)
-
-
 class Stand:
     """Фасад над всем железом стенда."""
 
@@ -120,6 +105,9 @@ class Stand:
         self.esp_version: tuple[int, int, int] | None = None
         self.dut_mac: str = cfg.dut_mac.lower()
         self.device_config: dict[str, str] = {}
+        # Последнее известное состояние устройства (state.py). None - неизвестно,
+        # и следующий тест начнёт с короткого нажатия
+        self.state: dict[str, Any] | None = None
 
     # --- жизненный цикл ---
 
@@ -256,6 +244,8 @@ class Stand:
         config = session.config
         if config:
             self.device_config = config
+        if config or session.payload is not None or session.saved:
+            self.state = merge(self.state, config, session.payload, session.saved)
         if session.mac and session.mac != self.dut_mac:
             if self.dut_mac:
                 logger.warning(f'MAC из лога {session.mac} != {self.dut_mac} из stand.ini')
@@ -686,28 +676,60 @@ class Stand:
 
         raise AssertionError(f'тревоги {left} не снялись кнопкой')
 
-    def ensure_baseline(self) -> None:
+    def read_state(self) -> None:
+        """Узнать состояние коротким нажатием: сеанс привозит и посылку, и конфиг."""
+        logger.info('состояние устройства неизвестно, читаем коротким нажатием')
+        self.reset_observers()
+        self.dut.press_button()
+        self.wait_session(timeout=180)
+
+    def forget_state(self) -> None:
         """
-        Привести устройство к BASELINE перед тестом.
+        Состояние больше не известно: настройки менялись мимо стенда (портал,
+        заводской сброс) или тест упал на середине, и чем он кончил, не видно.
+        """
+        self.state = None
 
-        Сверяемся с последней посылкой - это то, что устройство сообщает о себе
-        само. Совпало всё - сеанса не будет: на живом железе он стоит полторы
-        минуты, и платить их за каждый тест незачем.
+    def requirements(self, extra: Mapping[str, Any] | None = None) -> dict[str, Any]:
+        """
+        Требования к устройству: общие для всех тестов плюс свои из маркера needs.
 
-        Поднятую тревогу снимаем до этого: BASELINE возвращает входам тип
+        Общие - то, без чего тест проверял бы не прошивку, а наследство соседа:
+        сервер стенда, часы платы, брокер и BASELINE. Получатель стоит раньше
+        адреса: адрес прошивка принимает только при включённом получателе, а
+        параметры применяются в порядке ключей ответа.
+
+        Автодискавери по умолчанию выключено: сеанс с ним печатает сотни строк и
+        вытесняет из кольца METF начало следующего.
+        """
+        want: dict[str, Any] = {'http_on': 1, 'http_url': self.cfg.http_url,
+                                'ntp_server': self.cfg.metf_host}
+        if self.mqtt is not None:
+            want.update(mqtt_on=1, mqtt_host=self.cfg.broker_host,
+                        mqtt_port=self.cfg.broker_port, mqtt_retain=1,
+                        mqtt_auto_discovery=0)
+        want.update(BASELINE)
+        want.update(extra or {})
+        return want
+
+    def ensure_requirements(self, extra: Mapping[str, Any] | None = None) -> None:
+        """
+        Привести устройство к требованиям теста, если оно им не отвечает.
+
+        Неизвестное состояние сперва читается коротким нажатием. Совпало всё -
+        сеанса с настройкой не будет: на живом железе он стоит полторы минуты.
+
+        Поднятую тревогу снимаем до настройки: требования возвращают входам тип
         NAMUR, а датчик протечки опрашивается только в своём типе - отпустить
         вход после смены типа уже некому, и тревога вернулась бы.
         """
+        if self.state is None:
+            self.read_state()
         self.clear_alarms()
-        payload = self.last_payload
-        if payload is None:
-            diff = dict(BASELINE)
-        else:
-            diff = {name: value for name, value in BASELINE.items()
-                    if name in payload and not same_value(payload[name], value)}
+        diff = unmet(self.state or {}, self.requirements(extra))
         if not diff:
             return
-        logger.info(f'возврат к базовому состоянию: {diff}')
+        logger.info(f'настройка под требования теста: {diff}')
         self.setup(**diff)
 
     # --- ожидание чистого состояния ---

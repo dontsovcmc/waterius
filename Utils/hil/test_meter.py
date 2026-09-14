@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .constants import (BASE_FACTOR, ELECTRO, ELECTRONIC, ELECTRONIC_HIGH, NAMUR,
-                        WATER_COLD)
+from .constants import BASE_FACTOR, ELECTRO, ELECTRONIC, ELECTRONIC_HIGH, NAMUR
 from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
@@ -113,22 +112,19 @@ def test_D3_electricity_counts_kilowatt_hours(stand: Stand) -> None:
     числом. Проверяем именно так, как оно есть, - на целом киловатт-часе.
     """
     per_kwh = 10
-    try:
-        before = stand.setup(channel=1, cname=ELECTRO, ctype=NAMUR,
-                             factor=per_kwh, value='100')
-        assert before.payload is not None
-        kwh_before = float(before.payload['ch1'])
+    before = stand.setup(channel=1, cname=ELECTRO, ctype=NAMUR,
+                         factor=per_kwh, value='100')
+    assert before.payload is not None
+    kwh_before = float(before.payload['ch1'])
 
-        stand.reset_observers()
-        stand.dut.pulse(channel=1, count=per_kwh)
-        stand.dut.press_button()
-        session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
+    stand.reset_observers()
+    stand.dut.pulse(channel=1, count=per_kwh)
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
-        assert abs(float(session.payload['ch1']) - kwh_before - 1.0) < 0.001, (
-            f"было {kwh_before}, стало {session.payload['ch1']}")
-        session.assert_delta(channel=1, liters=1)
-    finally:
-        stand.setup(channel=1, cname=WATER_COLD, factor=BASE_FACTOR, value='20.000')
+    assert abs(float(session.payload['ch1']) - kwh_before - 1.0) < 0.001, (
+        f"было {kwh_before}, стало {session.payload['ch1']}")
+    session.assert_delta(channel=1, liters=1)
 
 
 def test_D4_readings_below_current_are_accepted(stand: Stand) -> None:
@@ -158,6 +154,7 @@ def test_D4_readings_below_current_are_accepted(stand: Stand) -> None:
     session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)
 
 
+@pytest.mark.needs(ctype1=ELECTRONIC)
 def test_D5_electronic_input_catches_short_pulses(stand: Stand) -> None:
     """
     Электронный вход считает импульс длиной в миллисекунду.
@@ -171,18 +168,14 @@ def test_D5_electronic_input_catches_short_pulses(stand: Stand) -> None:
     Тип «Электронный (+)» так не проверить: у стенда сухой контакт, а не
     источник уровня (04_not-tested.md).
     """
-    try:
-        stand.setup(channel=1, ctype=ELECTRONIC, factor=BASE_FACTOR)
-        stand.reset_observers()
+    stand.reset_observers()
 
-        stand.dut.pulse(channel=1, count=PULSES, width_ms=SHORT_PULSE_MS)
-        stand.dut.press_button()
-        session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
+    stand.dut.pulse(channel=1, count=PULSES, width_ms=SHORT_PULSE_MS)
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
-        # Ровно столько, сколько подали: ни потерянных, ни удвоенных дребезгом
-        session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)
-    finally:
-        stand.setup(channel=1, ctype=NAMUR)
+    # Ровно столько, сколько подали: ни потерянных, ни удвоенных дребезгом
+    session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)
 
 
 def test_D6_electronic_high_input_counts_rising_pulses(stand: Stand) -> None:
@@ -202,14 +195,13 @@ def test_D6_electronic_high_input_counts_rising_pulses(stand: Stand) -> None:
         pytest.skip('стенд не выдаёт уровень на вход: [metf] can_drive_high в '
                     'stand.ini, обвязка - 04_not-tested.md')
 
-    try:
-        stand.setup(channel=1, ctype=ELECTRONIC_HIGH, factor=BASE_FACTOR)
-        with stand.dut.driven(channel=1):
-            stand.reset_observers()
-            stand.dut.pulse_high(channel=1, count=PULSES, width_ms=HIGH_PULSE_MS)
-            stand.dut.press_button()
-            session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
+    # Тип - в теле, а не маркером: без обвязки тест пропускается выше, и
+    # перенастройка до него была бы впустую
+    stand.setup(channel=1, ctype=ELECTRONIC_HIGH, factor=BASE_FACTOR)
+    with stand.dut.driven(channel=1):
+        stand.reset_observers()
+        stand.dut.pulse_high(channel=1, count=PULSES, width_ms=HIGH_PULSE_MS)
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
-        session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)
-    finally:
-        stand.setup(channel=1, ctype=NAMUR)
+    session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)

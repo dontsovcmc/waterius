@@ -80,8 +80,6 @@ def test_E18_vacation_off_clears_its_alarm(stand: Stand, quiet: None) -> None:
     stand.reset_observers()
     stand.wait_session(timeout=PLANNED_WAIT_S).assert_alarm(flow1=0)
 
-    stand.setup(period_min=120)
-
 
 @pytest.mark.reset
 def test_E10_vacation_works_without_factor(stand: Stand, fresh_device: Any) -> None:
@@ -113,5 +111,3 @@ def test_E10_vacation_works_without_factor(stand: Stand, fresh_device: Any) -> N
     stand.dut.pulses(channel=1, count=2, gap=60.0)
 
     stand.wait_session(timeout=180, mode=ALARM_MODE).assert_alarm(flow1=1)
-
-    stand.setup(vacation=0)

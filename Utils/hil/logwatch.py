@@ -77,7 +77,16 @@ RE_SAVED = re.compile(r'Saved: (\S+)=(\S*)')
 # идут заголовками, а `state=` и `host=` внутри них называются одинаково -
 # поэтому разбор идёт с оглядкой на текущую секцию, а не по одной строке.
 RE_SECTION = re.compile(r'--- (\S+) ---')
-SECTION_KEYS = {'Waterius.ru': 'waterius', 'HTTP': 'http', 'MQTT': 'mqtt'}
+SECTION_KEYS = {'Waterius.ru': 'waterius', 'HTTP': 'http', 'MQTT': 'mqtt',
+                'Network': 'network'}
+# Остальные поля секций - именами параметров прошивки: их нет в посылке, и
+# без них стенд не знал бы, выполнены ли требования теста
+SECTION_FIELDS = {
+    'waterius': (('waterius_email', re.compile(r'\bemail=(\S*)')),),
+    'mqtt': (('mqtt_auto_discovery', re.compile(r'\bauto discovery=(\d)')),
+             ('mqtt_retain', re.compile(r'\bretain=(\d)'))),
+    'network': (('ntp_server', re.compile(r'\bntp_server=(\S*)')),),
+}
 RE_STATE = re.compile(r'\bstate=(ON|OFF)\b')
 RE_HOST = re.compile(r'\bhost=(\S*)')
 # У брокера порт печатается той же строкой, что и адрес (config.cpp).
@@ -300,6 +309,10 @@ class Session:
                 continue
             if not section:
                 continue
+            for name, regex in SECTION_FIELDS.get(section, ()):
+                found = regex.search(line)
+                if found:
+                    out[name] = found.group(1)
             state = RE_STATE.search(line)
             if state:
                 out[f'{section}_on'] = '1' if state.group(1) == 'ON' else '0'
