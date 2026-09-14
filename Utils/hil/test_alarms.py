@@ -20,20 +20,19 @@
 
 Много воды сразу (E1, E2) и протечка по расходу (E3) помечены `experimental`: правила
 детекции ещё могут измениться, по умолчанию эти тесты не идут. Гонять их -
-`pytest --experimental`. Режим отпуска, снятие и остановка потребления
-проверяются всегда. Датчик протечки - отдельный вход, а не расход, и живёт в
-`test_leak_sensor.py`.
+`pytest --experimental`. Снятие и остановка потребления проверяются всегда.
+Датчик протечки живёт в `test_leak_sensor.py`, режим «Я уехал» - в
+`test_vacation.py`.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
-from .constants import (ALARM_WAIT_S, AUTO_IMPULSE_FACTOR, BASE_FACTOR, LEAKAGE, NAMUR,
-                        PLANNED_PERIOD_MIN, PLANNED_WAIT_S, RESET_FLOW1, RESET_WET1,
-                        VACATION_PULSES)
+from .constants import (ALARM_WAIT_S, BASE_FACTOR, LEAKAGE, NAMUR, PLANNED_PERIOD_MIN,
+                        PLANNED_WAIT_S, RESET_WET1, VOL_LITRES, VOL_PULSES)
 from .logwatch import ALARM_MODE, MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
@@ -42,11 +41,6 @@ if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
 # выходит на первой строке - вся группа бессмысленна.
 pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=41)]
 
-
-# Много воды сразу: 50 л за полчаса при весе 10 - это пять импульсов. Темп
-# значения не имеет, окно скользящее, так что подаём их подряд.
-VOL_LITRES = 50
-VOL_PULSES = 5
 
 # Протечка: «расход не падал ниже 40 л/ч в течение часа». При весе 10 это квант
 # тишины 14400*10/40 = 3600 тиков (15 минут) и 40/10 = 4 кванта подряд. Час
@@ -201,94 +195,6 @@ def test_E17_reset_mask_clears_only_its_bits(stand: Stand, quiet: None) -> None:
     cleared.assert_alarm(wet1=0, wet0=1)
 
     stand.setup(period_min=120)
-
-
-@pytest.mark.slow
-def test_E6_vacation_mode(stand: Stand, quiet: None) -> None:
-    """
-    Режим «Я уехал»: тревогой становится любой расход.
-
-    Проверяем по порогу, уехавшему в attiny, а не по настройке в посылке: порог
-    пользователя не затирается, подменяется только значение для attiny.
-    """
-    stand.setup_alarms(channel=1, factor=BASE_FACTOR, alarm_vol=VOL_LITRES,
-                       ctype=NAMUR, vacation=0)
-
-    on = stand.setup(vacation=1)
-    assert on.alarm_config['vol1'] == 1, (
-        f'в режиме «Я уехал» порог объёма - один импульс: {on.alarm_config}')
-    assert on.alarm_config['vacation'] == 1
-
-    stand.reset_observers()
-    stand.dut.pulse(channel=1, count=1)
-
-    session = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
-    session.assert_alarm(flow1=1)
-
-
-@pytest.mark.slow
-def test_E18_vacation_off_clears_its_alarm(stand: Stand, quiet: None) -> None:
-    """
-    Выключение режима снимает тревогу, которую режим и поднял.
-
-    Иначе она висела бы после возвращения: порог в режиме подменён одним
-    импульсом, и сработать он был обязан. Снимается только ALARM_FLOW обоих
-    каналов - протечка и датчик к режиму отношения не имеют.
-
-    Режим выключается плановым сеансом: кнопка сняла бы тревогу и без него.
-    """
-    stand.setup_alarms(channel=1, factor=BASE_FACTOR, alarm_vol=VOL_LITRES,
-                       ctype=NAMUR, vacation=0, period_min=PLANNED_PERIOD_MIN)
-    stand.setup(vacation=1)
-
-    stand.reset_observers()
-    stand.dut.pulse(channel=1, count=1)
-    stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE).assert_alarm(flow1=1)
-
-    off = stand.setup(vacation=0, wake=False, timeout=PLANNED_WAIT_S)
-    assert off.alarm_config['vacation'] == 0
-    assert off.alarm_config['vol1'] == VOL_PULSES, 'пороги пользователя должны вернуться'
-    assert off.alarm_config['reset'] & RESET_FLOW1, (
-        f'выключение режима обязано снять свою тревогу: {off.alarm_config}')
-
-    stand.reset_observers()
-    stand.wait_session(timeout=PLANNED_WAIT_S).assert_alarm(flow1=0)
-
-    stand.setup(period_min=120)
-
-
-@pytest.mark.reset
-def test_E10_vacation_works_without_factor(stand: Stand, fresh_device: Any) -> None:
-    """
-    Режиму «Я уехал» известный вес импульса не нужен.
-
-    Обычный порог без веса посчитать нельзя - литры на импульс взять неоткуда,
-    и пересчёт вернёт ноль, то есть «выключено». Отпуску считать нечего:
-    тревогой объявлен любой импульс, и порог объёма подменяется единицей.
-    Поэтому в `alarm_thresholds` (`core/alarm.cpp`) vacation проверяется до
-    веса, и тест следит именно за этим порядком.
-
-    Вес не задан только после заводского сброса: настройками тройку не
-    сохранить, «Авто» разворачивается в число в момент применения.
-    """
-    session = fresh_device.leave()
-    assert session.payload['f1'] == AUTO_IMPULSE_FACTOR, (
-        'тест бессмысленен, если вес всё-таки задан')
-
-    stand.setup(channel=1, ctype=NAMUR)
-    on = stand.setup(vacation=1)
-    assert on.payload['f1'] == AUTO_IMPULSE_FACTOR, 'вес не должен был появиться'
-    assert on.alarm_config['vol1'] == VACATION_PULSES, (
-        f'порог отпуска не уехал в attiny: {on.alarm_config}\n{on.text}')
-
-    stand.reset_observers()
-    # Минута между импульсами - расход, который ни один обычный порог тревогой
-    # не считает. В отпуске считается любой.
-    stand.dut.pulses(channel=1, count=2, gap=60.0)
-
-    stand.wait_session(timeout=180, mode=ALARM_MODE).assert_alarm(flow1=1)
-
-    stand.setup(vacation=0)
 
 
 @pytest.mark.slow

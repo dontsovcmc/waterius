@@ -41,7 +41,8 @@ FACTOR = 25
 READINGS = '12.345'
 PERIOD_MIN = 60
 
-PULSES = 3
+# Импульсы на шаге определения счётчика: мастер обязан их досчитать
+DETECT_PULSES = 3
 
 # save_fast_connect печатает пару, которую сохранил
 RE_FAST_CONNECT = re.compile(r'Fast connect: channel=(\d+) bssid=(\S+)')
@@ -161,10 +162,10 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
     # A6: страница определения счётчика считает импульсы вживую
     before = api(board, f'/api/status/{COLD}')
     assert 'error' not in before, f'нет связи с attiny: {before}'
-    stand.dut.pulse(channel=COLD, count=PULSES)
+    stand.dut.pulse(channel=COLD, count=DETECT_PULSES)
     time.sleep(2)
     after = api(board, f'/api/status/{COLD}')
-    assert after['impulses'] - before['impulses'] == PULSES, (
+    assert after['impulses'] - before['impulses'] == DETECT_PULSES, (
         f"импульсы не досчитались: было {before['impulses']}, "
         f"стало {after['impulses']}")
 

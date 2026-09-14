@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from .constants import (BASE_FACTOR, COLD, LEAKAGE, NAMUR, PLANNED_PERIOD_MIN,
-                        PLANNED_WAIT_S, RESET_ALL)
+                        PLANNED_WAIT_S, RESET_ALL, VOL_LITRES)
 from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session
@@ -33,7 +33,6 @@ pytestmark = [
     pytest.mark.usefixtures('discovery_reset'),
 ]
 
-VOL_LITRES = 50            # за 30 минут; при весе 10 это пять импульсов
 RATE = 1440                # л/ч; при весе 10 это квант в 100 тиков по 250 мс
 RATE_QUANTUM_TICKS = 100
 
