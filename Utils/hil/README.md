@@ -56,6 +56,7 @@ python3 -m pytest Utils/hil --stand               # всё, включая ча�
 python3 -m pytest Utils/hil --stand --durations=0 # то же, со сводкой времени по фазам в конце
 python3 -m pytest Utils/hil --stand --pcap -k G4  # с дампом трафика к упавшим
 python3 -m pytest Utils/hil --stand --experimental # и экспериментальные функции
+python3 -m pytest Utils/hil --stand --soak -k Z1   # многочасовой прогон, --soak-minutes=720
 ```
 
 Без `--stand` тесты железа пропускаются, а `selftest/` проверяется где угодно —
@@ -85,13 +86,17 @@ i2c - прошивка или фьюзы); строки идут, а сеанс 
 протечки, режим отпуска и остановка потребления к экспериментальным не
 относятся и идут всегда.
 
+Флаг `--soak` включает многочасовой прогон (`test_soak.py`): плановые сеансы
+раз в пять минут, без пропусков, без сбоев i2c и с растущим счётом. Он
+занимает стенд целиком, поэтому в общий прогон не входит.
+
 ## Что где лежит
 
 | Где | Что |
 |---|---|
 | `test_*.py` в корне пакета | тесты **устройства**: нужен собранный стенд и живой Ватериус |
 | `selftest/` | тесты **самого стенда**: разбор лога и брокер, железо не нужно |
-| остальные `*.py` | стенд: роутер, приёмник, брокер, плата, часы, разбор лога, фасад `Stand` |
+| остальные `*.py` | стенд: роутер, приёмник, брокер, плата, часы, разбор лога, шаблоны Home Assistant (`hatemplates.py`), фасад `Stand` |
 | `01_`, `02_`, `03_*.md` | платы стенда: как ввести в строй и чем они болеют |
 | `04_not-tested.md` | проверки, которые стенду не по силам, и что для них нужно |
 
@@ -327,11 +332,11 @@ already running`, а лог пуст — METF не получает ни стр�
 
 | Дефект | Тест | Исправлено в |
 |---|---|---|
-| [#405](https://github.com/dontsovcmc/waterius/issues/405) один импульс после долгой тишины поднимал протечку, и она не снималась никогда | `test_E3a_single_pulse_is_not_a_leak` | attiny 42 |
-| [#406](https://github.com/dontsovcmc/waterius/issues/406) повторная отправка после применения настроек не уходила в брокер | `test_G1_all_three_channels` следит за `MQTT: Not connected` | ЕСП 2.0.47 |
+| [#405](https://github.com/dontsovcmc/waterius/issues/405) один импульс после долгой тишины поднимал протечку, и она не снималась никогда | `test_E3n_single_pulse_is_not_a_leak`; на хосте - `Leak.SinglePulseAfterLongSilenceIsNotLeak` | attiny 42 |
+| [#406](https://github.com/dontsovcmc/waterius/issues/406) повторная отправка после применения настроек не уходила в брокер | `test_G1b_resend_after_settings_reaches_broker` | ЕСП 2.0.47 |
 | [#407](https://github.com/dontsovcmc/waterius/issues/407) прирост терялся, если Wi-Fi поднялся, а посылка не дошла | `test_D2b_undelivered_session_keeps_delta` | ЕСП 2.0.47 |
 | [#408](https://github.com/dontsovcmc/waterius/issues/408) `mqtt_connect` возвращал успех после всех неудач | `test_G5_broker_unreachable` | ЕСП 2.0.47 |
-| [#409](https://github.com/dontsovcmc/waterius/issues/409) снятие retained-команды уходило без флага retain | `test_I7_retain_flag` | ЕСП 2.0.47 |
+| [#409](https://github.com/dontsovcmc/waterius/issues/409) снятие retained-команды уходило без флага retain | `test_I4b_retained_command_is_cleared` | ЕСП 2.0.47 |
 | [#421](https://github.com/dontsovcmc/waterius/issues/421) снятие retain возвращалось по своей же подписке и затирало принятую команду | `test_I4_remote_period_min` | ЕСП 2.0.47 |
 | [#422](https://github.com/dontsovcmc/waterius/issues/422) устройство стирало удерживаемые показания собственного дерева | `test_I8_data_topics_are_not_cleared` | ЕСП 2.0.47 |
 
@@ -362,3 +367,69 @@ already running`, а лог пуст — METF не получает ни стр�
 `test_I4_remote_period_min` и `test_I8_data_topics_are_not_cleared` зелёные.
 Пропуски целиком версионные: все десять требуют attiny 41, а тесты, которым
 нужна была ЕСП 2.0.47, теперь идут и проходят.
+
+## Issue и тесты
+
+Все issue репозитория, открытые и закрытые, сверены со стендом (сентябрь
+2026). Здесь - что каким тестом закрыто; чего стенд не может в принципе -
+[04_not-tested.md](04_not-tested.md); правила без железа закрывают хостовые тесты
+(`ESP8266/test`, `Attiny85/test`).
+
+| Issue | Что ломалось | Тест |
+|---|---|---|
+| #22, #269 | 42949670 в показаниях и приросте | `test_G2_payload_schema` (диапазоны) |
+| #50, #113, #114, #280 | сеть с пробелом, апострофом, пароль из цифр | `test_W3_unusual_network_names` |
+| #69, #78, #339, #346 | вес «Авто», повторная настройка без определения | `test_A10_auto_factor_by_pulse_count`, `test_W1_wizard_configures_the_device` |
+| #76, #337 | замкнутый вход и кнопка | `test_D8_input_held_closed_counts_once` |
+| #88 | режим «Я уехал» | `test_E6_vacation_mode`, `test_E10_vacation_works_without_factor`, `test_E18_vacation_off_clears_its_alarm`, `test_I3_remote_vacation_reaches_attiny` |
+| #108, #307 | пароль в разметке, звёздочки | `test_P5_saved_password_is_masked`, `test_C6_masked_password_keeps_the_old_one` |
+| #121, #238 | импульсы посреди сеанса | `test_D7_pulses_during_session_are_not_lost` |
+| #150, #200, #371 | дребезг, короткие замыкания | `test_D9_glitches_and_bounce_are_not_counted` |
+| #181, #224 | серийный номер, пробелы по краям | `test_S3_text_is_trimmed` |
+| #202, #389 | тревоги | блоки E и F: `test_alarms.py`, `test_leak_sensor.py`, `test_confirm.py` |
+| #204 | перестаёт выходить на связь | `test_G11_router_reboot_between_sessions`, `test_Z1_soak` |
+| #222, #372 | роутер сменил канал | `test_W4_router_changed_channel` |
+| #242, #350, #354 | период и флаг после перезагрузки ЕСП | `test_H7_esp_reset_keeps_period` |
+| #282 | неверный пароль в мастере | `test_W2_wrong_password_returns_to_wifi_settings` |
+| #283 | плашки настройки | `test_B3_heavy_factor_is_suspicious`, `test_B4_silent_input` |
+| #288, #319 | каналы HA перепутаны, выключенный вход | `test_I15_templates_render_the_payload`, `test_I15b_disabled_input_publishes_only_its_type` |
+| #296, #305 | таймер портала | `test_K3_action_extends_the_window` |
+| #301 | пароль брокера в 64 символа | `test_I16_long_mqtt_password` |
+| #313, #330, #332, #353 | запятая, адрес брокера, показания без литров | `test_S1_readings_accept_a_comma`, `test_C1_water_readings_need_liters`, `test_C2_broker_over_tls_is_refused`, `test_C3_port_belongs_to_its_own_field`, `test_C8_valid_forms_are_accepted` |
+| #320 | без облака не уходит MQTT | `test_G10_single_receiver` |
+| #325 | ноль из HA | `test_I10_zero_readings_from_home_assistant` |
+| #326 | сброс к заводским | `test_R2_settings_return_to_defaults` |
+| #331, #356 | тепло в HA | `test_I6_heat_carries_its_own_unit` |
+| #333 | электричество на красном входе | `test_D3_electricity_counts_kilowatt_hours` |
+| #340, #281, #382 | канал в списке сетей, повторы | `test_W1_wizard_configures_the_device`, `test_W1b_networks_list` |
+| #345, #347 | пропуск сеанса и подстройка | `test_H8_missed_session_keeps_tuning` |
+| #357 | NTP не каждое пробуждение | `test_N4_sync_is_not_asked_every_wakeup` |
+| #360 | два типа входа одним сеансом | `test_I9_both_input_types_in_one_session` |
+| #336, #361 | только при расходе | `test_H3_silent_when_no_consumption`, `test_H4_consumption_wakes_it_up` |
+| #363 | обновление по воздуху | `test_J1_ota_updates_both_images`, `test_J3_low_battery_refuses`, `test_J4_bad_url_is_reported`, `test_J6_md5_mismatch_is_refused`, `test_J7_ota_command_with_broken_json` |
+| #367 | сервер принял соединение и молчит | `test_G9_hanging_server` |
+| #379 | короткий импульс газового счётчика | `test_D5_electronic_input_catches_short_pulses` |
+| #380 | ручное пробуждение и расписание | `test_H6_manual_wakeup_restarts_schedule` |
+| #405 | протечка от одного импульса | `test_E3n_single_pulse_is_not_a_leak` |
+| #406 | повторная посылка не доходит до брокера | `test_G1b_resend_after_settings_reaches_broker` |
+| #407 | прирост терялся при недоставке | `test_D2b_undelivered_session_keeps_delta` |
+| #408 | неудачный брокер выглядел удачным | `test_G5_broker_unreachable` |
+| #409, #421 | удерживаемые команды | `test_I4b_retained_command_is_cleared`, `test_I4_remote_period_min`, `test_I14_invalid_command_is_dropped` |
+| #419 | флаги то true/false, то 1/0 | `test_S2_flags_accept_words`, `test_G2_payload_schema`, `test_I0b_readings_go_to_separate_topics` |
+| #422 | стёрты удерживаемые показания | `test_I8_data_topics_are_not_cleared` |
+| PR #378 | время из прошлого, переполнение числа | `test_N7_bogus_time_is_rejected`, `test_S4_invalid_value_is_rejected` |
+| PR #396 | будил каждые 5 минут при периоде 15 | `test_H1_wakeup_period` |
+| PR #431, #440 | настройки ссылкой со строкой запроса | `test_C10_settings_come_only_from_the_body` |
+
+### Известные дефекты под xfail
+
+Тест описывает правильное поведение и падает на нынешней прошивке. Метка
+`xfail(strict=True)`: исправят - тест станет `XPASS`, прогон покраснеет, и
+метку снимут осознанно.
+
+| Тест | Что не так | Где |
+|---|---|---|
+| `test_S4_invalid_value_is_rejected[ctype_unknown]` | тип входа с сервера и из HA уходит в attiny без проверки | `active_point_api.cpp`, applyInputParameter |
+| `test_S4b_rejected_period_keeps_tuning` | отвергнутый `period_min` всё равно сбрасывает подстройку | `active_point_api.cpp`, applyNonCheckBoxParameter |
+| `test_C6b_masked_password_keeps_fast_connect` | звёздочки сбрасывают кэш быстрого коннекта | там же, ветка password |
+| `test_W3_unusual_network_names[ssid_32]` | имя сети в 32 байта не сохраняется | `core/types.h`, WIFI_SSID_LEN |
