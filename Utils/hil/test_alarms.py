@@ -18,21 +18,21 @@
 - негативные проверки («не снялась сама», «повторных сеансов нет») стали
   содержательными и вынесены в отдельные тесты.
 
-Много воды сразу (E1, E2) и протечка (E3) помечены `experimental`: правила
+Много воды сразу (E1, E2) и протечка по расходу (E3) помечены `experimental`: правила
 детекции ещё могут измениться, по умолчанию эти тесты не идут. Гонять их -
-`pytest --experimental`. Датчик протечки, режим отпуска, снятие и остановка
-потребления проверяются всегда.
+`pytest --experimental`. Режим отпуска, снятие и остановка потребления
+проверяются всегда. Датчик протечки - отдельный вход, а не расход, и живёт в
+`test_leak_sensor.py`.
 """
 
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from .constants import (ALARM_WAIT_S, AUTO_IMPULSE_FACTOR, BASE_FACTOR, LEAKAGE,
-                        LEAKAGE_NC, NAMUR, RESET_FLOW1, RESET_WET1, SILENCE_S,
+from .constants import (ALARM_WAIT_S, AUTO_IMPULSE_FACTOR, BASE_FACTOR, LEAKAGE, NAMUR,
+                        PLANNED_PERIOD_MIN, PLANNED_WAIT_S, RESET_FLOW1, RESET_WET1,
                         VACATION_PULSES)
 from .logwatch import ALARM_MODE, MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
@@ -56,12 +56,6 @@ RATE = 40              # л/ч
 HOURS = 1
 LEAK_QUANTUM_TICKS = 3600
 LEAK_QUANTA = 4
-
-
-# Период на время теста, которому нужен плановый сеанс вместо кнопки: кнопка
-# снимает тревоги сама, и проверять ею снятие маской нельзя.
-SHORT_PERIOD_MIN = 5
-PLANNED_WAIT_S = 15 * 60
 
 
 def raise_volume_alarm(stand: Stand) -> None:
@@ -122,7 +116,7 @@ def test_E2_alarm_does_not_clear_itself(stand: Stand, quiet: None) -> None:
     и тест проверял бы собственное нажатие.
     """
     stand.setup_alarms(channel=1, factor=BASE_FACTOR, alarm_vol=VOL_LITRES,
-                       ctype=NAMUR, vacation=0, period_min=SHORT_PERIOD_MIN)
+                       ctype=NAMUR, vacation=0, period_min=PLANNED_PERIOD_MIN)
     stand.reset_observers()
 
     raise_volume_alarm(stand)
@@ -161,110 +155,6 @@ def test_E3_leak_after_an_hour_without_silence(stand: Stand, quiet: None) -> Non
     assert session.payload['ah1'] == HOURS
 
 
-def test_E4_leak_sensor_closes(stand: Stand, quiet: None) -> None:
-    """
-    Датчик протечки: замыкание поднимает тревогу почти мгновенно.
-
-    Единственная тревога с реакцией в пределах секунды - остальные ждут
-    следующего импульса или пробуждения.
-    """
-    stand.setup(channel=0, ctype=LEAKAGE)
-    stand.reset_observers()
-
-    try:
-        stand.dut.wet(channel=0, closed=True)
-        session = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
-        session.assert_alarm(wet0=1)
-    finally:
-        # Отпускаем, пока тип входа ещё датчик: в другом типе вход не
-        # опрашивается, и снять тревогу станет нечем.
-        stand.dut.wet(channel=0, closed=False)
-
-
-def test_E4a_sensor_bounce_gives_one_session(stand: Stand, quiet: None) -> None:
-    """
-    Дребезг датчика больше не стоит сеансов.
-
-    `set_wet` только поднимает, поэтому намок-высох-намок даёт одну тревогу и
-    один сеанс. Раньше каждый переход был новостью, и мокрый ковёр у порога
-    будил устройство до исчерпания бюджета.
-    """
-    stand.setup(channel=0, ctype=LEAKAGE)
-    stand.reset_observers()
-
-    try:
-        stand.dut.wet(channel=0, closed=True)
-        stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE).assert_alarm(wet0=1)
-
-        stand.reset_observers()
-        for _ in range(3):
-            # Секунда на переход: вход опрашивается раз в 250 мс, и мгновенное
-            # переключение attiny могла бы не увидеть вовсе
-            stand.dut.wet(channel=0, closed=False)
-            time.sleep(1.0)
-            stand.dut.wet(channel=0, closed=True)
-            time.sleep(1.0)
-
-        # Признак новости у attiny не протухает: будь дребезг новостью, сеанс
-        # пришёл бы сразу по истечении ALARM_HOLD_MIN, то есть внутри окна.
-        stand.expect_no_session(timeout=SILENCE_S, mode=ALARM_MODE)
-    finally:
-        stand.dut.wet(channel=0, closed=False)
-
-
-def test_E5_normally_closed_sensor_detects_cut_wire(stand: Stand, quiet: None) -> None:
-    """
-    Нормально-замкнутый датчик: обрыв провода - это тревога.
-
-    Ради этого он и нужен: у нормально-разомкнутого перекушенный провод выглядит
-    как «всё в порядке», и владелец считает себя защищённым.
-    """
-    stand.dut.wet(channel=0, closed=True)        # спокойное состояние - замкнуто
-    stand.setup(channel=0, ctype=LEAKAGE_NC)
-    stand.reset_observers()
-
-    stand.dut.wet(channel=0, closed=False)       # обрыв
-    session = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
-    session.assert_alarm(wet0=1)
-
-    stand.dut.wet(channel=0, closed=True)
-
-
-@pytest.mark.slow
-@pytest.mark.requires(attiny=42)
-def test_E12_type_change_clears_alarm(stand: Stand, quiet: None) -> None:
-    """
-    Смена типа входа снимает тревогу канала.
-
-    Датчик остаётся замкнутым: тревога описывала прежний вход, и снять её после
-    смены типа было бы нечем - опрашивается вход, только пока его тип датчик
-    (`Attiny85/src/main.cpp`, alarm_tick).
-
-    Тип меняется плановым сеансом, без кнопки: кнопка снимает тревоги сама, и
-    тест зеленел бы на любой прошивке. Отсюда короткий период и метка slow.
-
-    Снятие проверяется следующим сеансом, а не тем, в котором сменили тип: ЕСП
-    читает состояние тревог один раз, в начале сеанса, и повторная посылка
-    после применения настроек собирается из того же снимка.
-    """
-    stand.setup(channel=0, ctype=LEAKAGE, period_min=SHORT_PERIOD_MIN)
-    stand.reset_observers()
-
-    try:
-        stand.dut.wet(channel=0, closed=True)
-        alarm = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
-        alarm.assert_alarm(wet0=1)
-
-        stand.setup(channel=0, ctype=NAMUR, wake=False, timeout=PLANNED_WAIT_S)
-
-        stand.reset_observers()
-        cleared = stand.wait_session(timeout=PLANNED_WAIT_S)
-        cleared.assert_alarm(wet0=0)
-    finally:
-        stand.dut.wet(channel=0, closed=False)
-        stand.setup(period_min=120)
-
-
 def test_E13_button_clears_both_channels(stand: Stand, quiet: None) -> None:
     """
     Короткое нажатие кнопки снимает всё разом, не дожидаясь квитанции.
@@ -296,7 +186,7 @@ def test_E17_reset_mask_clears_only_its_bits(stand: Stand, quiet: None) -> None:
 
     Маска уезжает плановым сеансом: кнопка сняла бы обе тревоги сама.
     """
-    stand.setup(channel=0, ctype=LEAKAGE, period_min=SHORT_PERIOD_MIN)
+    stand.setup(channel=0, ctype=LEAKAGE, period_min=PLANNED_PERIOD_MIN)
     stand.setup(channel=1, ctype=LEAKAGE)
 
     raise_both_channels(stand)
@@ -348,7 +238,7 @@ def test_E18_vacation_off_clears_its_alarm(stand: Stand, quiet: None) -> None:
     Режим выключается плановым сеансом: кнопка сняла бы тревогу и без него.
     """
     stand.setup_alarms(channel=1, factor=BASE_FACTOR, alarm_vol=VOL_LITRES,
-                       ctype=NAMUR, vacation=0, period_min=SHORT_PERIOD_MIN)
+                       ctype=NAMUR, vacation=0, period_min=PLANNED_PERIOD_MIN)
     stand.setup(vacation=1)
 
     stand.reset_observers()

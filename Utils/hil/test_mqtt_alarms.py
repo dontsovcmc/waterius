@@ -19,7 +19,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .constants import BASE_FACTOR, COLD, LEAKAGE, NAMUR, RESET_ALL
+from .constants import (BASE_FACTOR, COLD, LEAKAGE, NAMUR, PLANNED_PERIOD_MIN,
+                        PLANNED_WAIT_S, RESET_ALL)
 from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session
@@ -182,7 +183,7 @@ def test_I5_remote_mask_change(stand: Stand, quiet: None, armed: Session) -> Non
 
 
 @pytest.mark.slow
-@pytest.mark.arm(ctype=LEAKAGE, period_min=5)
+@pytest.mark.arm(ctype=LEAKAGE, period_min=PLANNED_PERIOD_MIN)
 def test_I6_remote_reset_clears_alarms(stand: Stand, quiet: None,
                                        armed: Session) -> None:
     """
@@ -207,14 +208,14 @@ def test_I6_remote_reset_clears_alarms(stand: Stand, quiet: None,
     stand.mqtt.publish_set('arst', RESET_ALL, retain=True)
 
     stand.reset_observers()
-    applied = stand.wait_session(timeout=15 * 60)
+    applied = stand.wait_session(timeout=PLANNED_WAIT_S)
     assert applied.alarm_config is not None
     assert applied.alarm_config['reset'] == RESET_ALL, (
         f'маска не уехала в attiny: {applied.alarm_config}')
 
     # В этом сеансе посылка собрана из снимка, снятого до снятия тревоги
     stand.reset_observers()
-    stand.wait_session(timeout=15 * 60).assert_alarm(wet1=0)
+    stand.wait_session(timeout=PLANNED_WAIT_S).assert_alarm(wet1=0)
 
     # Ретейн снят: иначе маска приезжала бы в каждом сеансе следующего теста
     stand.mqtt.clear_retained(stand.mqtt.command_topic('arst'))

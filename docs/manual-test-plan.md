@@ -23,7 +23,7 @@ attiny, тесты строк портала, проверки симулято�
 | B плашки | `test_diagnostics.py` - завышенный вес, молчащий вход, гашение плашки | B1, B2, B6 - вид главной страницы |
 | C проверка ввода | `test_validation.py` - C1-C5, C7; `test_settings.py` - C6 | - |
 | D показания | `test_meter.py` - D1-D4 | - |
-| E тревоги | `test_alarms.py` - E1-E7, E10, E12, E13, E17, E18 | E8, E9 - в симуляторе; E14, E15 - вид портала; E16 - вид Home Assistant; E11 - см. ниже |
+| E тревоги | `test_alarms.py` - E1-E3, E6, E7, E10, E13, E17, E18; `test_leak_sensor.py` - E4, E4a, E5, E12 | E8, E9 - в симуляторе; E14, E15 - вид портала; E16 - вид Home Assistant; E11 - см. ниже |
 | F доставка тревоги | `test_confirm.py` - F1-F4; F6 проверяет он же, тишиной после подтверждённой тревоги | F5 - вид страницы |
 | G отправка | `test_sending.py` - G1-G5, G7, G8 | G6 - обрыв i2c |
 | H расписание | `test_schedule.py` - H1, H3, H4 | H2, H5, H6 - сутки и больше |

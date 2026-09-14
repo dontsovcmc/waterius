@@ -94,6 +94,13 @@ CONFIRM_MQTT = 4
 ALARM_WAIT_S = 420.0
 SILENCE_S = 420.0
 
+# Период на время теста, которому нужен плановый сеанс вместо кнопки: кнопка
+# снимает тревоги сама (Attiny85/src/main.cpp, ButtonPressType::SHORT), и
+# проверять ею снятие чем-то другим нельзя. Ждём такой сеанс с запасом на
+# три периода
+PLANNED_PERIOD_MIN = 5
+PLANNED_WAIT_S = 15 * 60
+
 # core/types.h: WATERIUS_MODEL_2
 WATERIUS_MODEL_2 = 2
 
