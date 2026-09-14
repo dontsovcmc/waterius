@@ -133,10 +133,6 @@ def test_F3_disabled_receiver_drops_out(stand: Stand, quiet: None) -> None:
         stand.expect_no_session(timeout=SILENCE_S, mode=ALARM_MODE)
     finally:
         stand.dut.wet(channel=SENSOR, closed=False)
-        # Брокер обязан вернуться даже после падения: в BASELINE его нет, и
-        # выключенным его унаследует весь блок I. Падать будет он, а
-        # разбираться придётся здесь.
-        stand.setup(mqtt_on=1)
 
 
 @pytest.mark.slow

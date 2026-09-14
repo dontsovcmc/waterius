@@ -59,6 +59,11 @@ def pytest_configure(config: pytest.Config) -> None:
         'без указания версии тест идёт на любой')
     config.addinivalue_line(
         'markers',
+        'needs(**settings): настройки устройства, которые нужны тесту поверх '
+        'общих (Stand.requirements); имена - параметров прошивки. Ближний '
+        'маркер перебивает дальний: тест - модуль')
+    config.addinivalue_line(
+        'markers',
         'experimental: функция прошивки ещё не устоялась, поведение может '
         'измениться; по умолчанию пропускается, гоняется с --experimental')
 
@@ -247,80 +252,59 @@ def firmware_versions(request: pytest.FixtureRequest) -> None:
             pytest.skip(f'нужна ЕСП {need_esp}, на стенде {stand.version_str}')
 
 
+def needs(node: pytest.Item) -> dict[str, Any]:
+    """Настройки из маркеров needs: модуля, потом теста - ближний перебивает."""
+    out: dict[str, Any] = {}
+    for marker in reversed(list(node.iter_markers('needs'))):
+        out.update(marker.kwargs)
+    return out
+
+
 @pytest.fixture(autouse=True)
 def device_baseline(request: pytest.FixtureRequest) -> None:
     """
-    Известное состояние устройства перед каждым тестом стенда.
+    Устройство отвечает требованиям теста - общим и своим из маркера needs.
 
     Иначе тест наследует настройки соседа: test_I5 оставляет выключенной
     квитанцию MQTT, а test_G1 ничего не настраивает и требует её включённой -
-    при полном прогоне он падает и обвиняет прошивку.
+    при полном прогоне он падает и обвиняет прошивку. Перенастройка - только
+    при расхождении с последним известным состоянием (Stand.ensure_requirements).
 
     Тесты портала исключены: устройство там в режиме настройки, обычного
-    сеанса с посылкой не будет, и приведение к эталону просто не дождётся его.
+    сеанса с посылкой не будет, и перенастройка просто не дождётся его.
     """
     if ('stand' not in request.keywords or 'portal' in request.keywords
             or not request.config.getoption('--stand')):
         return
     request.getfixturevalue('firmware_versions')
     if 'reset' in request.keywords:
-        # Блок R проверяет сами умолчания: выставить эталон - значит стереть
-        # предмет проверки. Возврат стенда делает фикстура модуля.
+        # Блок R проверяет сами умолчания: выставить требования - значит
+        # стереть предмет проверки. Возврат стенда делает фикстура модуля.
         return
-    request.getfixturevalue('stand').ensure_baseline()
+    request.getfixturevalue('stand').ensure_requirements(needs(request.node))
 
 
-@pytest.fixture
-def discovery_on(request: pytest.FixtureRequest) -> None:
+@pytest.fixture(autouse=True)
+def forget_state(request: pytest.FixtureRequest) -> Iterator[None]:
     """
-    Предусловие тестов команд: включённое автодискавери.
+    После теста, менявшего настройки мимо стенда, состояние устройства неизвестно.
 
-    Подписку на `<топик>/#` и сам обработчик команд прошивка заводит только при
-    нём (`senders/sender_mqtt.h`), поэтому без него команда из Home Assistant не
-    доедет вовсе - и тест обвинит устройство в том, чего оно не обещало.
-
-    Состояние читаем в посылке (`ha` - это mqtt плюс автодискавери,
-    `core/routing.cpp`), чтобы не платить сеансом там, где всё и так включено.
+    Портал и заводской сброс меняют настройки без сеанса с посылкой, а упавший
+    тест мог оборваться между настройкой и её проверкой. Следующий тест тогда
+    начнёт с короткого нажатия, а не поверит устаревшему состоянию.
     """
-    if not request.config.getoption('--stand'):
+    if 'stand' not in request.keywords or not request.config.getoption('--stand'):
+        yield
         return
+
     stand = request.getfixturevalue('stand')
-    if not (stand.last_payload or {}).get('ha'):
-        stand.setup(mqtt_auto_discovery=1)
-
-
-@pytest.fixture
-def discovery_off(request: pytest.FixtureRequest) -> None:
-    """
-    Обратное предусловие: автодискавери выключено.
-
-    Тогда показания уходят по топику на поле, а команды не доезжают вовсе -
-    подписки у прошивки нет. Это отдельный режим работы, и проверять его надо
-    отдельными тестами, а не полагаться на то, что осталось от соседа.
-    """
-    if not request.config.getoption('--stand'):
-        return
-    stand = request.getfixturevalue('stand')
-    if (stand.last_payload or {}).get('ha'):
-        stand.setup(mqtt_auto_discovery=0)
-
-
-@pytest.fixture(scope='module')
-def discovery_reset(request: pytest.FixtureRequest) -> Iterator[None]:
-    """
-    Выключить автодискавери, когда группа MQTT отработала.
-
-    Публикация автодискавери - это две с половиной сотни строк лога за сеанс, а
-    кольцо METF держит около тридцати пяти и вытесняет старые молча. Оставленное
-    включённым, оно уносит из лога `Startup mode:` следующих тестов, и те ждут
-    свой сеанс до таймаута, обвиняя устройство.
-    """
     yield
-    if not request.config.getoption('--stand'):
-        return
-    if request.getfixturevalue('broker') is None:
-        return
-    request.getfixturevalue('stand').setup(mqtt_auto_discovery=0)
+    touched = 'portal' in request.keywords or 'reset' in request.keywords
+    failed = any(getattr(request.node, f'rep_{when}', None) is not None
+                 and getattr(request.node, f'rep_{when}').failed
+                 for when in ('setup', 'call'))
+    if touched or failed:
+        stand.forget_state()
 
 
 @pytest.fixture

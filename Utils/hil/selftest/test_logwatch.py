@@ -205,6 +205,14 @@ SETTINGS_PRINT = [
     fw('--- MQTT ---- '),
     fw('state=ON'),
     fw('host=192.168.50.252 port=1883'),
+    fw('login= pass='),
+    fw('auto discovery=0'),
+    fw('retain=1'),
+    fw('discovery topic=homeassistant'),
+    fw('--- Network ---- '),
+    fw('DHCP is on'),
+    fw('ntp_server=192.168.51.14'),
+    fw('--- WIFI ---- '),
 ]
 
 
@@ -227,6 +235,11 @@ def test_настройки_разбираются_по_секциям() -> None
     assert config['mqtt_on'] == '1'
     assert config['mqtt_host'] == '192.168.50.252'
     assert config['mqtt_port'] == '1883'
+    # Этих полей нет в посылке, а требования тестов на них опираются
+    assert config['mqtt_auto_discovery'] == '0'
+    assert config['mqtt_retain'] == '1'
+    assert config['ntp_server'] == '192.168.51.14'
+    assert 'waterius_email' not in config, 'почты в образце нет'
 
 
 def test_принятая_настройка_не_значит_сохранённая() -> None:

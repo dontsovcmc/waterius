@@ -102,8 +102,8 @@ class FreshDevice:
 
 def restore(stand: Stand, before: dict[str, Any]) -> None:
     """
-    Вернуть стенд в рабочее состояние: почта, эталон настроек, брокер,
-    автодискавери. Сеть и приёмник к этому моменту уже вернул `leave`.
+    Вернуть стенд в рабочее состояние: почта, требования по умолчанию, топик
+    брокера. Сеть и приёмник к этому моменту уже вернул `leave`.
     """
     logger.info('возвращаем стенд в рабочее состояние после сброса')
     # Почта уезжает в облако вместе с показаниями, и без неё блок G сверял бы
@@ -116,11 +116,8 @@ def restore(stand: Stand, before: dict[str, Any]) -> None:
         except AssertionError as err:
             logger.warning(f'почта не вернулась: {err}')
 
-    stand.ensure_baseline()          # тревоги, вес, период, типы входов, квитанции
-    stand.ensure_mqtt()              # брокер: mqtt_on, адрес и топик стенда
-
-    # Автодискавери сброс включает (init_config, MQTT_AUTO_DISCOVERY), а в
-    # BASELINE его нет: тесты команд поднимают его сами фикстурой discovery_on.
-    was_ha = bool(before.get('ha'))
-    if bool((stand.last_payload or {}).get('ha')) != was_ha:
-        stand.setup(mqtt_auto_discovery=int(was_ha))
+    # Общие требования: часы платы, брокер, эталон входов и квитанций. Всё это
+    # сброс вернул к умолчаниям прошивки
+    stand.ensure_requirements()
+    # Топик в лог не печатается, и сверить его можно только публикацией
+    stand.ensure_mqtt()

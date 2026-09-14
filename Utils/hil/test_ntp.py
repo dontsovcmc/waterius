@@ -141,21 +141,17 @@ def test_N3_pool_server_is_chosen_at_random(stand: Stand, clock: Any) -> None:
     Резолв при этом может и не удаться: имя прошивка печатает в обоих случаях,
     и проверка от наличия интернета не зависит.
     """
-    # Единственный тест, которому нужен настоящий пул: возвращаем устройство
-    # на него и обязательно уводим обратно - остальные блоки берут время у
-    # платы, и оставить их в интернете значит вернуть зависимость от него
+    # Единственный тест, которому нужен настоящий пул. Обратно к часам платы
+    # устройство вернут общие требования следующего теста (Stand.requirements)
     stand.setup(ntp_server=DEFAULT_NTP_SERVER)
-    try:
-        chosen = []
-        for attempt in range(6):
-            stand.reset_observers()
-            stand.dut.press_button()
-            session = stand.wait_session(timeout=180)
-            names = pool_names(session.lines)
-            assert names, f'сеанс {attempt + 1}: пул не опрашивался\n{session.text}'
-            chosen.append(names[0])
-    finally:
-        stand.setup(ntp_server=stand.cfg.metf_host)
+    chosen = []
+    for attempt in range(6):
+        stand.reset_observers()
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180)
+        names = pool_names(session.lines)
+        assert names, f'сеанс {attempt + 1}: пул не опрашивался\n{session.text}'
+        chosen.append(names[0])
 
     assert all(int(name) < NTP_POOL_SIZE for name in chosen), (
         f'номер сервера вне пула: {chosen}')
@@ -185,25 +181,22 @@ def test_N4_sync_is_not_asked_every_wakeup(stand: Stand, clock: Any) -> None:
     бы время - по делу, а не по дефекту.
     """
     stand.setup(period_min=SHORT_PERIOD_MIN)
-    try:
-        for _ in range(NTP_WARMUP_SYNCS):
-            stand.reset_observers()
-            stand.dut.press_button()
-            stand.wait_session(timeout=180)
+    for _ in range(NTP_WARMUP_SYNCS):
+        stand.reset_observers()
+        stand.dut.press_button()
+        stand.wait_session(timeout=180)
 
-        before = clock.requests_seen
+    before = clock.requests_seen
 
-        for number in range(3):
-            session = stand.wait_session(timeout=300, mode=TRANSMIT_MODE)
-            assert 'NTP: Time synced' not in session.text, (
-                f'плановое пробуждение {number + 1} снова синхронизировало '
-                f'время\n{session.text}')
+    for number in range(3):
+        session = stand.wait_session(timeout=300, mode=TRANSMIT_MODE)
+        assert 'NTP: Time synced' not in session.text, (
+            f'плановое пробуждение {number + 1} снова синхронизировало '
+            f'время\n{session.text}')
 
-        assert clock.requests_seen == before, (
-            f'устройство ходило к серверу времени '
-            f'{clock.requests_seen - before} раз за три плановых пробуждения')
-    finally:
-        stand.setup(period_min=120)
+    assert clock.requests_seen == before, (
+        f'устройство ходило к серверу времени '
+        f'{clock.requests_seen - before} раз за три плановых пробуждения')
 
 
 @pytest.mark.slow

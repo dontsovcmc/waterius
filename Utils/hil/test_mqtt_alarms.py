@@ -30,7 +30,6 @@ pytestmark = [
     pytest.mark.stand,
     pytest.mark.mqtt,
     pytest.mark.requires(attiny=41, esp='2.0.47'),
-    pytest.mark.usefixtures('discovery_reset'),
 ]
 
 RATE = 1440                # л/ч; при весе 10 это квант в 100 тиков по 250 мс
@@ -114,8 +113,6 @@ def test_I3_remote_vacation_reaches_attiny(stand: Stand, armed: Session) -> None
     assert session.alarm_config is not None
     assert session.alarm_config['vacation'] == 1
     assert session.alarm_config[f'vol{COLD}'] == 1
-
-    stand.setup(vacation=0)
 
 
 def test_I4_remote_threshold_is_recalculated(stand: Stand, armed: Session) -> None:
@@ -218,4 +215,3 @@ def test_I6_remote_reset_clears_alarms(stand: Stand, quiet: None,
 
     # Ретейн снят: иначе маска приезжала бы в каждом сеансе следующего теста
     stand.mqtt.clear_retained(stand.mqtt.command_topic('arst'))
-    stand.setup(period_min=120)
