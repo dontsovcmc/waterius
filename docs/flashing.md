@@ -1,7 +1,7 @@
 # Прошивка платы по проводам
 
-Готовый порядок действий: определить, собрать, записать, убедиться. Всё, что
-ниже, проверено на живой плате — команды можно копировать как есть.
+Готовый порядок действий: определить плату, собрать, записать, убедиться. Всё,
+что ниже, проверено на живой плате — команды можно копировать как есть.
 
 Про обновление по воздуху здесь ничего нет: это `ESP8266/scripts/build_and_deploy.sh`
 и [ota-and-reset.md](ota-and-reset.md).
@@ -27,7 +27,7 @@
 ~/.platformio/packages/tool-avrdude/avrdude.conf
 ```
 
-## 1. Порт и модель
+## 1. Порт и плата
 
 Портов в списке много, нужен тот, за которым стоит USB-UART:
 
@@ -36,71 +36,104 @@ ls /dev/cu.*
 system_profiler SPUSBDataType | grep -B2 -A6 "FT232\|CP210"
 ```
 
-Модель определяется размером флеша, а не на глаз — от неё зависят и окружение
-сборки, и адрес файловой системы:
+Плата определяется размером флеша, а не на глаз:
 
 ```shell
 ~/.platformio/penv/bin/python -m esptool --port <PORT> --baud 115200 flash_id
 ```
 
-| Detected flash size | Модель | Окружение ЕСП | Окружение attiny | ФС |
-|---|---|---|---|---|
-| 4MB | Ватериус-2 (ESP-12F) | `waterius_2` | `waterius_2` | `0x300000` |
-| 1MB | Классик (ESP-01) | `esp01_1m` | `attiny85` | `0xBB000` |
+| Detected flash size | Плата | Раздел |
+|---|---|---|
+| 4MB | Ватериус-2 (ESP-12F) | [2](#2-ватериус-2) |
+| 1MB | Классик (ESP-01) | [3](#3-классик) |
 
-Определив модель, берите **целиком** соответствующий рецепт из раздела 2 и не
-смешивайте команды из разных: окружение у attiny и у ЕСП обязано быть от одной
-модели.
+Дальше идите в свой раздел и не смешивайте команды из соседнего.
 
-## 2. Два готовых рецепта
+## 2. Ватериус-2
 
-Заполнять здесь нечего, кроме `<PORT>`: окружение стоит в самом пути, поэтому
-перепутать модель, копируя команду целиком, нельзя. Порядок внутри рецепта
-менять нельзя — сначала attiny, потом ЕСП: ЕСП при старте читает у attiny
-версию и данные.
+Две прошивки, attiny первой: ЕСП при старте читает у attiny версию и данные.
 
-### Ватериус-2 (ESP-12F, `Detected flash size: 4MB`)
+### 2.1. attiny
+
+1. **Папка:** `-d Attiny85`
+2. **Окружение:** `-e waterius_2`
+3. **Файл на выходе:** `Attiny85/waterius_2-42.hex` — имя собирает
+   `Attiny85/objdump.py` из окружения и `firmware_version`
+   (`Attiny85/platformio.ini`); с `LOG_ON` добавляется `-log`
 
 ```shell
 ~/.platformio/penv/bin/pio run -d Attiny85 -e waterius_2
-~/.platformio/penv/bin/pio run -d ESP8266  -e waterius_2
-~/.platformio/penv/bin/pio run -d ESP8266  -e waterius_2 -t buildfs
 
 ~/.platformio/packages/tool-avrdude/bin/avrdude \
   -C ~/.platformio/packages/tool-avrdude/avrdude.conf \
   -p t85 -c usbasp -B 4 -P usb \
-  -U flash:w:"Attiny85/.pio/build/waterius_2/firmware.hex":i
+  -U flash:w:"Attiny85/waterius_2-42.hex":i
+```
+
+### 2.2. ЕСП
+
+1. **Папка:** `-d ESP8266`
+2. **Окружение:** `-e waterius_2`
+3. **Файлы на выходе:** `ESP8266/waterius_2-2.0.47.bin` и
+   `ESP8266/waterius_2-2.0.47-fs.bin` — имена собирает
+   `ESP8266/post_compile.py` из окружения и `firmware_version`
+   (`ESP8266/platformio.ini`), у образа ФС суффикс `-fs`; если в
+   `ESP8266/secrets.ini` задан `WIFI_SSID`, добавляется ещё `-test`
+
+```shell
+~/.platformio/penv/bin/pio run -d ESP8266 -e waterius_2
+~/.platformio/penv/bin/pio run -d ESP8266 -e waterius_2 -t buildfs
 
 ~/.platformio/penv/bin/python -m esptool --port <PORT> --baud 460800 \
   write_flash --flash_freq 40m --flash_size 4MB --flash_mode qio \
-  0x0      ESP8266/.pio/build/waterius_2/firmware.bin \
-  0x300000 ESP8266/.pio/build/waterius_2/littlefs.bin
+  0x0      ESP8266/waterius_2-2.0.47.bin \
+  0x300000 ESP8266/waterius_2-2.0.47-fs.bin
 ```
 
-### Классик (ESP-01, `Detected flash size: 1MB`)
+## 3. Классик
+
+Порядок тот же: attiny первой, потом ЕСП.
+
+### 3.1. attiny
+
+1. **Папка:** `-d Attiny85`
+2. **Окружение:** `-e attiny85`
+3. **Файл на выходе:** `Attiny85/attiny85-42.hex`
 
 ```shell
 ~/.platformio/penv/bin/pio run -d Attiny85 -e attiny85
-~/.platformio/penv/bin/pio run -d ESP8266  -e esp01_1m
-~/.platformio/penv/bin/pio run -d ESP8266  -e esp01_1m -t buildfs
 
 ~/.platformio/packages/tool-avrdude/bin/avrdude \
   -C ~/.platformio/packages/tool-avrdude/avrdude.conf \
   -p t85 -c usbasp -B 4 -P usb \
-  -U flash:w:"Attiny85/.pio/build/attiny85/firmware.hex":i
+  -U flash:w:"Attiny85/attiny85-42.hex":i
+```
+
+### 3.2. ЕСП
+
+1. **Папка:** `-d ESP8266`
+2. **Окружение:** `-e esp01_1m`
+3. **Файлы на выходе:** `ESP8266/esp01_1m-2.0.47.bin` и
+   `ESP8266/esp01_1m-2.0.47-fs.bin`
+
+```shell
+~/.platformio/penv/bin/pio run -d ESP8266 -e esp01_1m
+~/.platformio/penv/bin/pio run -d ESP8266 -e esp01_1m -t buildfs
 
 ~/.platformio/penv/bin/python -m esptool --port <PORT> --baud 460800 \
   write_flash --flash_freq 40m --flash_size 1MB --flash_mode qio \
-  0x0     ESP8266/.pio/build/esp01_1m/firmware.bin \
-  0xBB000 ESP8266/.pio/build/esp01_1m/littlefs.bin
+  0x0     ESP8266/esp01_1m-2.0.47.bin \
+  0xBB000 ESP8266/esp01_1m-2.0.47-fs.bin
 ```
 
-### Почему рецепта два, а не один с подстановкой
+## 4. Окружение обязано стоять в каждой команде
 
-Прошивки различаются на этапе компиляции, и **у attiny тоже**. У ЕСП это
-`WATERIUS_MODEL`: линия i2c на GPIO0/GPIO2 против GPIO4/GPIO5
+`-e` не для красоты: **окружение — это и есть выбор платы**, обе прошивки
+различаются на этапе компиляции.
+
+У ЕСП от него зависит линия i2c — GPIO0/GPIO2 против GPIO4/GPIO5
 (`ESP8266/src/master_i2c.h`), светодиоды и кнопка (`ESP8266/src/setup.h`).
-У attiny тот же флаг разводит вещи, от которых зависит, оживёт ли плата вообще:
+У attiny — вещи, от которых зависит, оживёт ли плата вообще:
 
 | | Классик (`attiny85`) | Ватериус-2 (`waterius_2`) |
 |---|---|---|
@@ -108,36 +141,17 @@ system_profiler SPUSBDataType | grep -B2 -A6 "FT232\|CP210"
 | Кнопка | PB2 | **PB1** (`Attiny85/src/main.cpp`) |
 | Пороги компаратора входов | под 3к3+300 Ом | под 1 кОм (`Attiny85/src/counter.h`) |
 
-**`default_envs` в `Attiny85/platformio.ini` — это `attiny85`, то есть
-классик.** Поэтому `pio run -d Attiny85` без `-e` собирает прошивку классика
-молча и успешно, и на Ватериусе-2 она даёт мёртвую плату: attiny не считает PB1
-кнопкой, сеанс не заказывает, на i2c не отвечает. Как это выглядит снаружи —
-в разборе неисправностей ниже.
+**Команда без `-e` не отказывается работать — она молча собирает классик.**
+В `default_envs` у обоих проектов стоит он (`Attiny85/platformio.ini`,
+`ESP8266/platformio.ini`), так что `pio run -d Attiny85` даёт
+`attiny85-42.hex` и на Ватериусе-2 это мёртвая плата. Как она при этом
+выглядит — в разборе неисправностей.
 
-## 3. Адреса и имена, если рецепт не подошёл
+Версии в именах файлов (`42`, `2.0.47`) берутся из `firmware_version` в
+`platformio.ini` каждого проекта. Подняли версию — имя файла поменялось,
+сверьтесь с выводом сборки: он печатает путь, куда положил образ.
 
-Адрес ФС берётся из `board_build.ldscript` в `ESP8266/platformio.ini`:
-`_FS_start` минус `0x40200000`.
-
-Кроме каталогов сборки, образы раскладываются в корни проектов под именами с
-версией (`objdump.py`, `post_compile.py`) — версия у attiny в
-`Attiny85/platformio.ini`, у ЕСП в `ESP8266/platformio.ini`:
-
-| Файл | Что это |
-|---|---|
-| `Attiny85/<окружение>-<версия>.hex` | прошивка attiny; с `LOG_ON` имя получает `-log` |
-| `ESP8266/<окружение>-<версия>.bin` | прошивка ЕСП |
-| `ESP8266/<окружение>-<версия>-fs.bin` | образ LittleFS |
-| `ESP8266/<окружение>-<версия>-full.bin` | оба образа в одном файле с адреса `0x0` — для ESP Web Tools |
-
-Если в локальном `secrets.ini` (шаблон — [ESP8266/secrets.ini.template](../ESP8266/secrets.ini.template)) задан `WIFI_SSID`, к имени добавляется `-test`.
-
-Фьюзы attiny (ставятся один раз, при первой прошивке чипа): `E:FF, H:DF, L:62`.
-EESAVE в них не запрограммирован, поэтому **каждая прошивка attiny стирает её
-EEPROM**: счётчики импульсов начинаются с нуля. Показания счётчиков воды это не
-затрагивает — они в настройках ЕСП.
-
-## 4. Почему ЕСП пишется одной командой
+## 5. Почему ЕСП пишется одной командой
 
 **Двумя отдельными командами не получится.** После записи прошивки ЕСП
 перезагружается и уходит в свой цикл i2c и сна, автосброс больше не роняет её в
@@ -146,7 +160,18 @@ waiting for packet header`. Одна команда держит чип в за�
 
 По той же причине не годятся `pio run -t upload` и следом `-t uploadfs`.
 
-## 5. Чем доказывается успех
+Адрес ФС, если понадобится считать самому, берётся из `board_build.ldscript` в
+`ESP8266/platformio.ini`: `_FS_start` минус `0x40200000`.
+
+## 6. Фьюзы и EEPROM attiny
+
+Фьюзы ставятся один раз, при первой прошивке чипа: `E:FF, H:DF, L:62`.
+
+EESAVE в них не запрограммирован, поэтому **каждая прошивка attiny стирает её
+EEPROM**: счётчики импульсов начинаются с нуля. Показания счётчиков воды это не
+затрагивает — они в настройках ЕСП.
+
+## 7. Чем доказывается успех
 
 Ровно двумя вещами:
 
@@ -159,12 +184,11 @@ Wrote  NNNNNN bytes at <адрес ФС> …  Hash of data verified.
 
 Всё, прошивка записана. Больше проверять нечего.
 
-**«Verified» доказывает запись, а не выбор файла.** Прошивка не той модели
+**«Verified» доказывает запись, а не выбор файла.** Прошивка не той платы
 пишется и сверяется так же успешно, как своя: avrdude сверяет чип с тем файлом,
 который ему дали, и о том, что файл чужой, не скажет никогда. Защищает от этого
-только одно - окружение, стоящее прямо в пути (`.pio/build/waterius_2/` против
-`.pio/build/attiny85/`). Поэтому рецепт и копируется целиком, а не собирается
-из кусков.
+только одно — окружение в имени файла (`waterius_2-42.hex` против
+`attiny85-42.hex`). Поэтому раздел берётся целиком, а не собирается из кусков.
 
 **Слушать UART после прошивки бессмысленно.** Питанием ЕСП распоряжается attiny
 и между сеансами держит его выключенным, а сброс по RTS сеанса не заказывает —
@@ -178,5 +202,6 @@ Wrote  NNNNNN bytes at <адрес ФС> …  Hash of data verified.
 | `Failed to connect to ESP8266` | плата не в загрузчике: у Ватериуса-2 ЕСП запитывает attiny, дайте питание и держите GPIO0 на земле |
 | `can't open config file` у avrdude | забыт `-C`, см. путь выше |
 | `command not found: avrdude` | берите из пакетов PlatformIO, в PATH его нет |
-| `Detected flash size` не совпал с ожидаемой моделью | модель другая: адрес ФС и окружение сборки тоже другие |
-| После прошивки: удержание кнопки ничем не подсвечивается, затем 5 вспышек красного | ЕСП не получила ответа attiny по i2c. `main.cpp:loop` пропускает весь блок, `config_loaded` остаётся false, `blynk_error(ERROR_CONFIG=5)`. Первое, что проверить, - не залита ли в attiny прошивка чужой модели |
+| `Detected flash size` не совпал с ожидаемой платой | плата другая: раздел, окружение и адрес ФС тоже другие |
+| Нет файла `<окружение>-<версия>.hex`/`.bin` | сборка шла с другим `-e`, и образ лежит под другим именем |
+| После прошивки: удержание кнопки ничем не подсвечивается, затем 5 вспышек красного | ЕСП не получила ответа attiny по i2c. `main.cpp:loop` пропускает весь блок, `config_loaded` остаётся false, `blynk_error(ERROR_CONFIG=5)`. Первое, что проверить, — не залита ли в attiny прошивка чужой платы |
