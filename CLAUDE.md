@@ -88,6 +88,14 @@ and esptool paths, fuses, and how success is proven: **[docs/flashing.md](docs/f
 
 Read it when asked to flash; do not re-derive the commands.
 
+It has one section per board — Waterius-2 and Classic — and inside each, one
+block per firmware (attiny, then ESP) giving the folder, the environment and the
+resulting file name. Take one section whole and never mix commands across them.
+
+**Always pass `-e`.** The environment *is* the board choice: both firmwares
+differ at compile time, and `default_envs` in both projects is the Classic one,
+so a build without `-e` silently produces the Classic image.
+
 ## Architecture
 
 ### Communication Flow
