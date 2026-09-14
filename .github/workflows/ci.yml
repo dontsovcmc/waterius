@@ -92,6 +92,30 @@ jobs:
       - name: Тесты strings.js
         run: node ESP8266/scripts/test_strings.js
 
+  hil-static:
+    name: Стенд без железа
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Зависимости стенда
+        run: pip install -r Utils/hil/requirements.txt
+
+      - name: selftest
+        run: python -m pytest Utils/hil/selftest -q
+
+      # Тесты устройства без --stand пропускаются, но собираются: сломанный
+      # импорт, фикстура или маркер видны уже здесь, а не на стенде через час
+      - name: Сбор тестов устройства
+        run: python -m pytest Utils/hil --collect-only -q
+
+      - name: Ссылки в документах и имена тестов стенда
+        run: python docs/check_refs.py
+
   build-esp:
     name: ESP8266 ${{ matrix.environment }}
     runs-on: ubuntu-latest

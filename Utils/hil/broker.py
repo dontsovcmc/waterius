@@ -19,7 +19,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import tempfile
 import threading
+from pathlib import Path
 
 from loguru import logger
 
@@ -27,8 +29,13 @@ from loguru import logger
 class MqttBroker:
     """Брокер внутри процесса pytest, на своём потоке с отдельным циклом."""
 
-    def __init__(self, port: int = 1883, host: str = '') -> None:
+    def __init__(self, port: int = 1883, host: str = '',
+                 users: dict[str, str] | None = None) -> None:
         self.port = port
+        # Пользователи с паролями - для проверки входа по паролю (I16). Без
+        # них брокер пускает любого, как и нужен остальным тестам
+        self.users = dict(users or {})
+        self._secrets: tempfile.TemporaryDirectory[str] | None = None
         # Адрес, по которому брокер ищет Ватериус: он приходит через NAT точки
         # доступа, значит слушать только localhost недостаточно. Готовность
         # проверяем по нему же, а не по 127.0.0.1.
@@ -153,6 +160,9 @@ class MqttBroker:
                     'allow_anonymous': True},
             },
         }
+        if self.users:
+            config['plugins']['amqtt.plugins.authentication.FileAuthPlugin'] = {
+                'password_file': self._password_file()}
         # amqtt и его конечный автомат (transitions) сыплют в лог каждым
         # переходом состояния клиента: в отчёте о прогоне это прячет
         # настоящие строки стенда.
@@ -185,6 +195,26 @@ class MqttBroker:
 
         logger.info(f'брокер слушает {self.host}:{self.port}')
 
+    def _password_file(self) -> str:
+        """
+        Файл пользователей FileAuthPlugin, пароли - хешами argon2.
+
+        Анонимный вход остаётся: amqtt пускает клиента, только если согласны
+        все плагины, а клиента без имени FileAuthPlugin не судит
+        (`amqtt/plugins/authentication.py`, `amqtt/broker.py` _authenticate).
+        Стенд подписывается без пароля, а клиент с именем обязан знать пароль.
+        """
+        from pwdlib import PasswordHash
+        from pwdlib.hashers.argon2 import Argon2Hasher
+
+        hasher = PasswordHash((Argon2Hasher(),))
+        self._secrets = tempfile.TemporaryDirectory(prefix='hil-mqtt-')
+        path = Path(self._secrets.name) / 'passwd'
+        path.write_text(''.join(f'{user}:{hasher.hash(password)}\n'
+                                for user, password in self.users.items()),
+                        encoding='utf-8')
+        return str(path)
+
     def stop(self) -> None:
         if self._broker is not None and self._loop is not None:
             try:
@@ -201,3 +231,6 @@ class MqttBroker:
         if self._loop is not None:
             self._loop.close()
             self._loop = None
+        if self._secrets is not None:
+            self._secrets.cleanup()
+            self._secrets = None

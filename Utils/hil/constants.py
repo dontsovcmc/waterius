@@ -122,6 +122,7 @@ OTA_ERR_LOW_BATTERY = 4
 DEFAULT_NTP_SERVER = 'ru.pool.ntp.org'
 NTP_POOL_SIZE = 4          # core/timekeeping.h
 NTP_WARMUP_SYNCS = 2       # столько синхронизаций подряд, потом раз в сутки
+START_VALID_TIME = 1704067201  # core/timekeeping.h: время раньше - негодное
 
 # sender_http.h: столько раз прошивка повторяет отправку, пока не получит 200
 HTTP_SEND_ATTEMPTS = 3
