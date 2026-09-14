@@ -20,6 +20,10 @@
 
 #define INIT_ATTINY_CRC 0xFF
 
+// Пока attiny пишет конфиг в EEPROM, она на I2C не отвечает
+#define COUNTER_TYPES_ATTEMPTS 3
+#define COUNTER_TYPES_RETRY_MS 50
+
 // Класс для синхронизации запросов к i2c, которые могут быть из разных потоков в AsyncWebServer
 // В ESP отсутствуют мьютексы, поэтому будем считать, что это проще сдела
 class BusyGuard {
