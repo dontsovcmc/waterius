@@ -20,7 +20,8 @@
 
 Много воды сразу (E1, E2) и протечка по расходу (E3) помечены `experimental`: правила
 детекции ещё могут измениться, по умолчанию эти тесты не идут. Гонять их -
-`pytest --experimental`. Снятие и остановка потребления проверяются всегда.
+`pytest --experimental`. Снятие, остановка потребления и негативный контроль
+протечки (E3n) проверяются всегда.
 Датчик протечки живёт в `test_leak_sensor.py`, режим «Я уехал» - в
 `test_vacation.py`.
 """
@@ -50,6 +51,10 @@ RATE = 40              # л/ч
 HOURS = 1
 LEAK_QUANTUM_TICKS = 3600
 LEAK_QUANTA = 4
+
+# Сколько наблюдаем тишину после одного импульса: заданные часы и ещё два
+# кванта по пятнадцать минут - ошибка счёта квантов успела бы сработать
+LEAK_SILENCE_S = (HOURS * 60 + 2 * 15) * 60
 
 
 def raise_volume_alarm(stand: Stand) -> None:
@@ -151,6 +156,29 @@ def test_E3_leak_after_an_hour_without_silence(stand: Stand, quiet: None) -> Non
     session.assert_alarm(leak1=1)
     assert session.payload['ar1'] == RATE
     assert session.payload['ah1'] == HOURS
+
+
+@pytest.mark.slow
+def test_E3n_single_pulse_is_not_a_leak(stand: Stand, quiet: None) -> None:
+    """
+    Негативный контроль протечки: один импульс - не протечка (#405).
+
+    Протечке нужны LEAK_QUANTA занятых квантов подряд (`Attiny85/src/alarm.h`,
+    on_tick), один импульс занимает один. Без метки experimental: ложная
+    тревога от одного импульса недопустима при любых правилах детекции.
+
+    Свидетельство - отсутствие тревожного сеанса: attiny будит ЕСП на каждую
+    новую тревогу, а проверка кнопкой сняла бы тревогу до чтения.
+    """
+    armed = stand.setup_alarms(channel=1, factor=BASE_FACTOR, alarm_rate=RATE,
+                               alarm_hours=HOURS, ctype=NAMUR, vacation=0)
+    assert armed.alarm_config['quantum1'] == LEAK_QUANTUM_TICKS
+    assert armed.alarm_config['quanta1'] == LEAK_QUANTA
+    stand.reset_observers()
+
+    stand.dut.pulse(channel=1, count=1)
+
+    stand.expect_no_session(timeout=LEAK_SILENCE_S, mode=ALARM_MODE)
 
 
 @pytest.mark.needs(ctype0=LEAKAGE, ctype1=LEAKAGE)

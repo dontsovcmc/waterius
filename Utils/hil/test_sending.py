@@ -31,12 +31,13 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from .constants import HTTP_SEND_ATTEMPTS
+from .constants import HTTP_SEND_ATTEMPTS, PLANNED_PERIOD_MIN, PLANNED_WAIT_S
 from .logwatch import (BLYNK_CLOUD, BLYNK_CLOUD_ANSWER, BLYNK_MQTT,
                        BLYNK_ROUTER, MANUAL_TRANSMIT_MODE, SEND_BAD_ANSWER,
-                       SEND_NO_CONNECTION, SEND_OK)
+                       SEND_NO_CONNECTION, SEND_OK, SEND_SKIPPED, TRANSMIT_MODE)
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
-    from .stand import Stand      # а сбор тестов должен работать без них
+    from .logwatch import Session  # а сбор тестов должен работать без них
+    from .stand import Stand
 
 pytestmark = pytest.mark.stand
 
@@ -71,6 +72,21 @@ FIELDS_SINCE: dict[tuple[int, int, int], dict[str, Any]] = {
 }
 
 
+# Правдоподобные границы. Ловят класс #22 и #269: беззнаковый перенос давал
+# в показаниях и приросте 42949670 и 4.29e9 при верных типах
+RANGES: dict[str, tuple[float, float]] = {
+    'ch0': (0, 1e6), 'ch1': (0, 1e6),
+    'delta0': (0, 1e6), 'delta1': (0, 1e6),
+    'imp0': (0, 1e9), 'imp1': (0, 1e9),
+    'voltage': (2.0, 5.5),
+    'rssi': (-100, 0),
+    'period_min': (1, 65535),
+}
+
+# Период из ответа сервера в G1b: любой, отличный от эталона стенда
+RESEND_PERIOD_MIN = 95
+
+
 def expected_fields(esp_version: tuple[int, int, int] | None) -> dict[str, Any]:
     fields = dict(REQUIRED_FIELDS)
     for since, group in FIELDS_SINCE.items():
@@ -94,14 +110,42 @@ def test_G1_all_three_channels(stand: Stand) -> None:
     # Успех не моргается ни на одной модели (main.cpp), значит и строки нет
     assert session.blynk is None, f'удачный сеанс собрался моргать: {session.blynk}'
 
-    # Ловит дефект, при котором повторная отправка после применения настроек
-    # уходит в брокер уже после disconnect
-    assert 'MQTT: Not connected' not in session.text
-
     assert stand.mqtt is not None
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
         f'в брокере нет ни одного топика {stand.mqtt_root}/, '
         f'пришло: {stand.mqtt.topics()}')
+
+
+@pytest.mark.mqtt
+@pytest.mark.requires(esp='2.0.47')
+@pytest.mark.needs(mqtt_auto_discovery=1)     # показания одним объектом в корень
+def test_G1b_resend_after_settings_reaches_broker(stand: Stand) -> None:
+    """
+    Настройки в ответе сервера: повторная посылка того же сеанса доходит и до
+    брокера (#406).
+
+    Повторная отправка бывает только в сеансе, где применили настройки
+    (main.cpp, второй send_data), поэтому сеанс без них дефекта не видит.
+    Корень сравнивается со второй посылкой: при закрытом соединении в брокере
+    осталась бы первая, со старым периодом.
+    """
+    assert stand.mqtt is not None
+    stand.reset_observers()
+    stand.receiver.reply_settings({'period_min': RESEND_PERIOD_MIN})
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    assert session.applied.get('period_min') == str(RESEND_PERIOD_MIN), session.applied
+    assert len(session.payloads) >= 2, 'после применения данные должны уйти повторно'
+    assert 'MQTT: Not connected' not in session.text, session.text
+    session.assert_confirm(mqtt=SEND_OK)
+
+    assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=10) is not None
+    message = stand.mqtt.last(stand.mqtt_root)
+    assert message is not None, (
+        f'в корне ничего нет, дерево: {stand.mqtt.topics(stand.mqtt_root)}')
+    assert message.json()['period_min'] == RESEND_PERIOD_MIN, (
+        'в брокере осталась первая посылка сеанса: повторная до него не дошла')
 
 
 def test_G2_payload_schema(stand: Stand) -> None:
@@ -133,6 +177,9 @@ def test_G2_payload_schema(stand: Stand) -> None:
             # type(), а не isinstance(): bool - подкласс int, и обе проверки
             # прошли бы для любого из двух форматов флага
             assert type(value) is expected, f'{name}={value!r} не {expected.__name__}'
+
+    for name, (low, high) in RANGES.items():
+        assert low <= payload[name] <= high, f'{name}={payload[name]!r} вне [{low}, {high}]'
 
 
 def test_G3_no_router(stand: Stand) -> None:
@@ -273,3 +320,124 @@ def test_G8_own_server_over_https(stand: Stand) -> None:
     assert session.payload is not None, 'посылка не дошла'
     assert stand.receiver.tls_hits > before, (
         'посылка пришла, но не по https - адрес не сменился')
+
+
+@pytest.mark.mqtt
+@pytest.mark.requires(esp='2.0.47')
+def test_G9_hanging_server(stand: Stand) -> None:
+    """
+    Свой сервер принял соединение и молчит (#367).
+
+    Не то же, что G4b: там порт закрыт и отказ приходит сразу, здесь прошивка
+    ждёт своего таймаута на каждой попытке. Утверждается исход, а не время:
+    сеанс доигран до сна, облако и брокер своё получили, свой сервер - нет.
+    Не уложись попытки в окно attiny (`WAIT_ESP_MSEC`), питание сняли бы
+    посреди сеанса, и строки `Going to sleep` не было бы.
+    """
+    stand.reset_observers()
+    hung = stand.receiver.hung
+
+    with stand.receiver.hanging():
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=300, mode=MANUAL_TRANSMIT_MODE)
+
+    assert stand.receiver.hung > hung, 'прошивка не дошла до своего сервера'
+    assert session.complete, f'сеанс оборван до сна\n{session.text}'
+    session.assert_confirm(waterius=SEND_OK, mqtt=SEND_OK)
+    assert session.confirm['http'] != SEND_OK, session.confirm
+    assert session.payload is None, 'сервер не ответил, посылки в очереди быть не должно'
+
+
+# Получатели по именам параметров прошивки (portal/resources.h)
+RECEIVERS = ('waterius_on', 'http_on', 'mqtt_on')
+
+
+def switch_receivers(stand: Stand, **flags: int) -> Session:
+    """
+    Включить и выключить получателей ответом приёмника.
+
+    `stand.setup` здесь не годится: он ждёт повторной посылки на приёмник, а
+    выключенный свой сервер её не получит. Свидетельство - строки `Saved:`.
+    """
+    stand.reset_observers()
+    stand.receiver.reply_settings(flags)
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    for name, value in flags.items():
+        assert session.saved.get(name) == str(value), (
+            f'{name} не сохранён: {session.saved}\n{session.text}')
+    return session
+
+
+def restore_receivers(stand: Stand, alone: str) -> None:
+    """Вернуть всех трёх получателей через того, кто остался включён."""
+    if alone == 'http_on':
+        switch_receivers(stand, **{name: 1 for name in RECEIVERS})
+        return
+
+    assert stand.mqtt is not None
+    stand.reset_observers()
+    for name in RECEIVERS:
+        stand.mqtt.publish_set(name, 1, retain=True)
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    left = {name: session.saved.get(name) for name in RECEIVERS
+            if session.saved.get(name) != '1'}
+    assert not left, f'получатели не вернулись командой MQTT: {left}\n{session.text}'
+
+
+@pytest.mark.mqtt
+@pytest.mark.requires(esp='2.0.47')
+@pytest.mark.parametrize('alone', ['http_on', 'mqtt_on'], ids=['only_http', 'only_mqtt'])
+def test_G10_single_receiver(stand: Stand, alone: str) -> None:
+    """
+    Включён один получатель - данные уходят ему, остальные пропущены (#320).
+
+    #320: при выключенном waterius.ru переставали уходить данные в MQTT.
+    Правило маршрутов проверяет хостовый test_routing, здесь - сеанс целиком.
+    Случая «только облако» нет: свой сервер и брокер тогда вернуть стенду
+    можно лишь порталом.
+    """
+    assert stand.mqtt is not None
+    flags = {name: int(name == alone) for name in RECEIVERS}
+    if alone == 'mqtt_on':
+        # Вернуть остальных можно будет только командой, а команды слушает
+        # лишь устройство с автодискавери (I4c)
+        flags['mqtt_auto_discovery'] = 1
+
+    try:
+        switch_receivers(stand, **flags)
+
+        stand.reset_observers()
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+        session.assert_confirm(**{name.removesuffix('_on'): SEND_OK if name == alone
+                                  else SEND_SKIPPED for name in RECEIVERS})
+        assert session.blynk is None, f'выключенный получатель - не ошибка\n{session.text}'
+        if alone == 'http_on':
+            assert session.payload is not None, 'свой сервер включён, а посылки нет'
+        else:
+            assert session.payload is None, 'свой сервер выключен, а посылка пришла'
+            assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
+                f'брокер включён один, а в {stand.mqtt_root}/ пусто')
+    finally:
+        restore_receivers(stand, alone)
+
+
+@pytest.mark.slow
+@pytest.mark.needs(period_min=PLANNED_PERIOD_MIN)
+def test_G11_router_reboot_between_sessions(stand: Stand) -> None:
+    """
+    Роутер перезагрузился между сеансами - плановый сеанс снова в сети (#204).
+
+    Плановый, а не по кнопке: в #204 устройство переставало выходить на связь
+    само и оживало только от нажатия.
+    """
+    stand.router.restart()
+    stand.reset_observers()
+
+    session = stand.wait_session(timeout=PLANNED_WAIT_S, mode=TRANSMIT_MODE)
+
+    assert session.wifi_connected, f'после перезагрузки роутера сети нет\n{session.text}'
+    assert session.payload is not None, 'сеанс в сети, а посылки нет'

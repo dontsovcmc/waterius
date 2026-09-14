@@ -213,7 +213,7 @@ test('повторы ограничены, иначе вкладка стучи�
 
 test('типы входа названы для всех значений из списка на странице', () => {
     // Значения из data/input_setup.html
-    for (const type of [0, 2, 4, 5, 0xFF]) {
+    for (const type of [0, 2, 4, 5, 6, 0xFF]) {
         assert.ok(ctx.COUNTER_TYPES[type], 'нет названия у типа входа ' + type);
     }
 });

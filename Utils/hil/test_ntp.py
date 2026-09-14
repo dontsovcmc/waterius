@@ -30,7 +30,8 @@ from typing import TYPE_CHECKING, Any, Iterator
 
 import pytest
 
-from .constants import DEFAULT_NTP_SERVER, NTP_POOL_SIZE, NTP_WARMUP_SYNCS
+from .constants import (DEFAULT_NTP_SERVER, NTP_POOL_SIZE, NTP_WARMUP_SYNCS,
+                        START_VALID_TIME)
 from .logwatch import TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
@@ -248,3 +249,33 @@ def test_N5_unreachable_server_freezes_the_tuning(stand: Stand, clock: Any) -> N
             now = payload_epoch(session.payload)
             assert now >= stamp, f'часы пошли назад: {stamp} -> {now}'
             stamp = now
+
+
+# Время до START_VALID_TIME: пакет разбирается, а время обязано быть отвергнуто
+BOGUS_EPOCH = 1685577600       # 1 июня 2023
+
+
+def test_N7_bogus_time_is_rejected(stand: Stand, clock: Any) -> None:
+    """
+    Сервер отдал время из прошлого - прошивка его не берёт (PR #378).
+
+    Раньше неудавшаяся синхронизация ставила часы на 1 января 2024-го, и
+    подстройка хода по такому времени давала 720 минут вместо 1440. Проверка
+    годности - `core/timekeeping.cpp`, is_valid_time.
+
+    Подстройку здесь не сверяем: после отказа своего сервера прошивка идёт в
+    пул и честно синхронизируется, а резать udp/123 значит отрезать и плату.
+    """
+    asked = clock.requests_seen
+    clock.set_time(BOGUS_EPOCH)
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180)
+
+    assert clock.requests_seen > asked, 'устройство не спросило время у стенда'
+    assert 'NTP: Unable to sync time' in session.text, (
+        'время 2023 года принято без возражений\n' + session.text)
+    assert session.payload is not None
+    got = payload_epoch(session.payload)
+    assert got > START_VALID_TIME, f'в посылке время из прошлого: {got}'
