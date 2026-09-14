@@ -134,15 +134,15 @@ def _save(board: AtBoard, path: str, host: str, **params: str) -> dict:
     """
     Отправить форму портала и убедиться, что прошивка её приняла.
 
-    Параметры уходят строкой запроса: `request->params()` не различает, откуда
-    параметр приехал (`_parseReqHead` разбирает query у любого метода), а
-    кодировать тело вторым способом ради того же результата незачем.
+    Параметры - телом, как их шлют формы: из строки запроса значения настроек
+    прошивка не принимает (`active_point_api.cpp`, from_form), хотя в `Apply N
+    parameters` их и считает.
 
     Ответ - JSON; поле `errors` означает, что настройка не сохранена. Молча
     проглоченная ошибка здесь дороже всего: устройство останется в чужой сети,
     а тесты будут падать на пустом приёмнике.
     """
-    answer = board.post(f'{path}?{urlencode(params)}', host)
+    answer = board.post(path, host, body=urlencode(params).encode())
     if answer.status != 200:
         raise PortalError(f'{path}: код {answer.status}')
     try:
