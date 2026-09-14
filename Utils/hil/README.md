@@ -53,13 +53,16 @@ python3 -m pytest Utils/hil --stand -m "not slow" # быстрые тесты н
 python3 -m pytest Utils/hil --stand -k E1 -v      # один тест по номеру из плана
 python3 -m pytest Utils/hil --stand -m portal -v  # портал: файлы образа и API
 python3 -m pytest Utils/hil --stand               # всё, включая часовые
-python3 -m pytest Utils/hil --stand --durations=0 # то же, с временем каждого теста
+python3 -m pytest Utils/hil --stand --durations=0 # то же, со сводкой времени по фазам в конце
 python3 -m pytest Utils/hil --stand --pcap -k G4  # с дампом трафика к упавшим
 python3 -m pytest Utils/hil --stand --experimental # и экспериментальные функции
 ```
 
 Без `--stand` тесты железа пропускаются, а `selftest/` проверяется где угодно —
 он не требует ни pyserial, ни paho-mqtt.
+
+Время печатается по ходу прогона: под каждым тестом — его время вместе с
+подготовкой и возвратом стенда, после последнего теста файла — сумма по файлу.
 
 `stand.ini` не из соседней папки передавайте одним аргументом:
 `--stand-config=<путь>`. Через пробел pytest примет путь за тесты и загрузит
