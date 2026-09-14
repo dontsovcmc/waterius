@@ -255,11 +255,17 @@ bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
     txBuf[2] = type1;
     txBuf[3] = crc_8(&txBuf[1], 2, INIT_ATTINY_CRC);
 
-    if (!sendData(txBuf, 4))
+    // attiny пишет типы в EEPROM прямо в обработчике I2C и на это время
+    // перестаёт отвечать: вторая команда подряд получает NACK
+    for (uint8_t attempt = 0; attempt < COUNTER_TYPES_ATTEMPTS; attempt++)
     {
-        return false;
+        if (sendData(txBuf, 4))
+        {
+            return true;
+        }
+        delay(COUNTER_TYPES_RETRY_MS);
     }
-    return true;
+    return false;
 }
 
 /*
