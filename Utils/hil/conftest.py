@@ -191,9 +191,11 @@ def clean_dut(request: pytest.FixtureRequest) -> Iterator[None]:
     оставить стенд рабочим. Начало прогона закрыто отдельно - `Stand.create()`
     зовёт `dut.init()` при подъёме сессии, так что перед первым тестом линии
     тоже свободны.
+
+    Тесты портала не исключены, в отличие от clean_net: мастер и плашки тоже
+    подают импульсы (W1, B3, B4), а отпущенная линия режиму настройки не мешает.
     """
-    if ('stand' not in request.keywords or 'portal' in request.keywords
-            or not request.config.getoption('--stand')):
+    if 'stand' not in request.keywords or not request.config.getoption('--stand'):
         yield
         return
 
