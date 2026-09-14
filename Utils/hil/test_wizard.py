@@ -12,15 +12,15 @@
 симулятор (`simulator/test_simulator.js`, сценарий мастера).
 
 Сеть в мастере указывается та же, в которой устройство и так живёт: тест
-проходит настоящий путь, но не может увести стенд в чужой эфир. Пара
-«канал + BSSID» для быстрого коннекта не проверяется - её прошивка читает
-только из тела POST (`save_fast_connect`), а AT-плата шлёт параметры строкой
-запроса.
+проходит настоящий путь, но не может увести стенд в чужой эфир. Вместе с
+сетью уходит пара «канал + BSSID» из скана, как её шлёт страница: без неё
+первый коннект идёт полным сканом эфира (#340, #382).
 """
 
 from __future__ import annotations
 
 import json
+import re
 import time
 from typing import Any, Iterator
 from urllib.parse import urlencode
@@ -45,6 +45,9 @@ PERIOD_MIN = 60
 
 PULSES = 3
 
+# save_fast_connect печатает пару, которую сохранил
+RE_FAST_CONNECT = re.compile(r'Fast connect: channel=(\d+) bssid=(\S+)')
+
 
 def api(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:
     query = f'?{urlencode(params)}' if params else ''
@@ -53,12 +56,32 @@ def api(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:
     return json.loads(answer.text or '{}')
 
 
-def save(board: AtBoard, path: str, **params: Any) -> dict[str, str]:
-    """Сохранить форму: поля уходят телом, как их шлёт страница."""
+def post(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:
+    """Отправить форму: поля уходят телом, как их шлёт страница. Ответ целиком."""
     answer = board.post(path, portal_mod.HOST, body=urlencode(params).encode())
     assert answer.status == 200, f'{path}: {answer.status}'
-    body = json.loads(answer.text or '{}')
+    return json.loads(answer.text or '{}')
+
+
+def save(board: AtBoard, path: str, **params: Any) -> dict[str, str]:
+    """Сохранить форму и вернуть ошибки полей."""
+    body = post(board, path, **params)
     return {name: str(code) for name, code in (body.get('errors') or {}).items()}
+
+
+def find_line(stand: Any, pattern: re.Pattern[str],
+              timeout: float = 5.0) -> re.Match[str] | None:
+    """Строка лога по шаблону: METF отдаёт UART с задержкой, ждём немного."""
+    deadline = time.time() + timeout
+    while True:
+        stand.log.poll()
+        for line in stand.log.lines:
+            match = pattern.search(line)
+            if match:
+                return match
+        if time.time() >= deadline:
+            return None
+        time.sleep(0.5)
 
 
 @pytest.fixture
@@ -102,9 +125,18 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
         assert 1 <= net['level'] <= 4, net
         assert net['bssid'] and net['wifi_channel'], net
 
-    # A4: сеть и пароль
+    # A4: сеть и пароль, с парой канал-BSSID из скана - как их шлёт страница
+    ours = next(net for net in networks if net['ssid'] == ssid)
     assert save(board, '/api/save_connect', ssid=ssid,
-                password=cfg.ap_password, wizard='true') == {}
+                password=cfg.ap_password, wifi_channel=ours['wifi_channel'],
+                bssid=ours['bssid'], wizard='true') == {}
+
+    fast = find_line(stand, RE_FAST_CONNECT)
+    assert fast, ('прошивка не сохранила канал и BSSID: первый коннект пойдёт '
+                  'полным сканом эфира (#340, #382)')
+    assert (int(fast.group(1)), fast.group(2).lower()) == (
+        int(ours['wifi_channel']), ours['bssid'].lower()), (
+        f'сохранена чужая пара: {fast.group(0)}, из скана {ours}')
 
     # Точка доступа переезжает на канал роутера, и клиент с неё слетает - у
     # человека это видно как «нет связи с Ватериусом». Возвращаться обязан
@@ -128,9 +160,12 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
     assert redirect == '/input/1/setup.html', (
         f'мастер не увидел подключения к сети: {redirect}')
 
-    # A5: тип входа
-    assert save(board, '/api/save_input_type',
-                input=CHANNEL, ctype=NAMUR) == {}
+    # A5: тип входа. Вес у стенда уже задан, и повторная настройка обязана
+    # вести сразу к показаниям, минуя определение счётчика (#346)
+    answer = post(board, '/api/save_input_type', input=CHANNEL, ctype=NAMUR)
+    assert not answer.get('errors'), answer
+    assert answer.get('redirect') == f'/input/{CHANNEL}/settings.html', (
+        f'повторная настройка ведёт не к показаниям: {answer}')
 
     # A6: страница определения счётчика считает импульсы вживую
     before = api(board, f'/api/status/{CHANNEL}')

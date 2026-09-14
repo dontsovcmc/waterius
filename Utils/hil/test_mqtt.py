@@ -47,6 +47,8 @@ OTHER_PERIOD_MIN = 90
 
 NAMUR = 0
 LEAKAGE = 5          # CounterType: датчик протечки
+ELECTRONIC = 2       # CounterType: электронный выход, импульс - замыкание
+INPUT_OFF = 255      # CounterType::NONE: вход выключен
 WATER_HOT = 1        # CounterName: то, чем канал 0 настроен по умолчанию
 HEAT_GCAL = 4        # CounterName: тепло в гигакалориях
 HEAT_KWT = 7         # CounterName: то же тепло, но в киловатт-часах
@@ -424,3 +426,62 @@ def test_I6_heat_carries_its_own_unit(stand: Stand, resource: int) -> None:
         assert entity.get('unit_of_meas') == unit, entity
     finally:
         stand.setup(channel=0, cname=WATER_HOT)
+
+
+def test_I9_both_input_types_in_one_session(stand: Stand, discovery_on: None) -> None:
+    """
+    Два типа входа одним сеансом применяются оба (#360).
+
+    Тип уходит в attiny парой (`setCountersType(t0, t1)`), и команда для
+    одного входа берёт тип соседа из живой копии `runtime_data`. Не обнови
+    первая команда эту копию - вторая вернула бы соседу прежний тип, и
+    изменился бы только один вход. Так issue и описан: ch0 не меняется.
+
+    Значения разные и оба не NAMUR: перепутанные каналы тоже видны.
+    """
+    assert stand.mqtt is not None
+    stand.reset_observers()
+    stand.mqtt.publish_set('ctype0', ELECTRONIC, retain=True)
+    stand.mqtt.publish_set('ctype1', INPUT_OFF, retain=True)
+    try:
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+        assert session.applied.get('ctype0') == str(ELECTRONIC), session.applied
+        assert session.applied.get('ctype1') == str(INPUT_OFF), session.applied
+        assert session.payload is not None
+        assert session.payload['ctype0'] == ELECTRONIC, (
+            f"вход 0 не сменил тип: {session.payload['ctype0']}")
+        assert session.payload['ctype1'] == INPUT_OFF, (
+            f"вход 1 не сменил тип: {session.payload['ctype1']}")
+    finally:
+        # Устройство снимает свои команды само (I4b), но упавший тест иначе
+        # оставил бы их применяться в каждом следующем сеансе
+        for name in ('ctype0', 'ctype1'):
+            stand.mqtt.clear_retained(stand.mqtt.command_topic(name))
+
+
+def test_I10_zero_readings_from_home_assistant(stand: Stand,
+                                              discovery_on: None) -> None:
+    """
+    Показания 0.0 из Home Assistant принимаются (#325).
+
+    Ноль - законное значение: новый счётчик приходит с нулём на табло.
+    Водяные показания обязаны содержать разделитель (`core/input.h`,
+    check_reading), и `0.0` его содержит; разбор даёт ноль, а не отказ.
+    """
+    assert stand.mqtt is not None
+    stand.setup(channel=1, value='5.000')     # чтобы ноль был изменением
+
+    stand.reset_observers()
+    stand.mqtt.publish_set('ch1', '0.0', retain=True)
+    try:
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+        assert session.applied.get('ch1') == '0.0', session.applied
+        assert session.payload is not None
+        assert abs(float(session.payload['ch1'])) < 0.001, (
+            f"показания не обнулились: {session.payload['ch1']}")
+    finally:
+        stand.mqtt.clear_retained(stand.mqtt.command_topic('ch1'))

@@ -105,3 +105,24 @@ def test_P4_api_answers(api: dict[str, portal_mod.Result]) -> None:
         if url.startswith('/api/status/'):
             assert 'error' not in body, f'{url}: {body}'
             assert {'state', 'factor', 'impulses'} <= set(body), f'{url}: {body}'
+
+
+def test_P5_saved_password_is_masked(board: AtBoard, cfg: Any) -> None:
+    """
+    Сохранённый пароль Wi-Fi страница отдаёт звёздочками, а не текстом (#108, #307).
+
+    Точка настройки открыта, пароля у неё нет: разметку видит любой, кто
+    подключился. `%password%` прошивка подставляет как `********`, если пароль
+    задан (`active_point.cpp`, processor), а те же звёздочки при сохранении
+    означают «не трогали» (`core/input.h`, is_all_asterisks) - это проверяет C6.
+    """
+    assert cfg.ap_password, '[router] ap_password в stand.ini'
+    for url in ('/wifi_settings.html', '/setup_send.html'):
+        answer = board.get(url, portal_mod.HOST)
+        assert answer.status == 200, f'{url}: {answer.status}'
+        assert cfg.ap_password not in answer.text, f'{url}: пароль Wi-Fi виден в разметке'
+
+    page = board.get('/wifi_settings.html', portal_mod.HOST).text
+    assert 'value="********"' in page, (
+        'поле пароля пустое, хотя пароль сохранён: форма уйдёт без него, и '
+        'прошивка примет пустой пароль за новый')
