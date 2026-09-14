@@ -29,11 +29,10 @@ from loguru import logger
 
 from . import portal as portal_mod
 from .atboard import AtBoard
+from .constants import PORTAL_WATCHDOG_S
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal]
 
-# core/portal_watchdog.h
-WATCHDOG_S = 600
 
 # Пауза между замерами. Остаток отдаётся целыми секундами, так что хватает
 # нескольких: разница обязана быть заметно больше единицы
@@ -65,7 +64,7 @@ def test_K3_action_extends_the_window(portal: AtBoard) -> None:
     продлилось, осталось стало меньше - нет.
     """
     started = left(portal)
-    assert started > WATCHDOG_S - 120, (
+    assert started > PORTAL_WATCHDOG_S - 120, (
         f'портал только открыт, а осталось всего {started} с')
 
     time.sleep(STEP_S)
@@ -84,5 +83,5 @@ def test_K3_action_extends_the_window(portal: AtBoard) -> None:
         f'страница не продлила окно: было {polled} с, стало {fed} с')
     # Не сравниваем с первым замером: пока идут запросы AT-платы, проходят
     # секунды, и «не меньше прежнего» здесь означало бы «успели за ноль секунд»
-    assert fed > WATCHDOG_S - 30, (
-        f'окно продлилось не до полного: {fed} с при сроке {WATCHDOG_S} с')
+    assert fed > PORTAL_WATCHDOG_S - 30, (
+        f'окно продлилось не до полного: {fed} с при сроке {PORTAL_WATCHDOG_S} с')

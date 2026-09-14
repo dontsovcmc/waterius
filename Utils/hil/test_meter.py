@@ -12,18 +12,14 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from .constants import (BASE_FACTOR, ELECTRO, ELECTRONIC, ELECTRONIC_HIGH, NAMUR,
+                        WATER_COLD)
 from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
 
 pytestmark = pytest.mark.stand
 
-NAMUR = 0
-ELECTRONIC = 2       # CounterType: импульс - замыкание на минус
-ELECTRONIC_HIGH = 4  # CounterType: импульс - подъём линии
-WATER_COLD = 0
-ELECTRO = 2          # CounterName: у электричества вес - импульсы на кВт*ч
-FACTOR = 10          # л/имп
 # Столько, чтобы прирост был заведомо не нулевым и не совпал ни с числом
 # импульсов, ни с весом: 3 x 10 = 30 литров. Больше не доказывает ничего -
 # арифметика в прошивке одна и та же на трёх импульсах и на трёхстах.
@@ -41,7 +37,7 @@ HIGH_PULSE_MS = 30
 
 def test_D1_delta_matches_pulses(stand: Stand) -> None:
     """Импульсы при весе 10 л/имп дают ровно десять литров каждый."""
-    before = stand.setup(channel=1, factor=FACTOR, ctype=NAMUR, period_min=120)
+    before = stand.setup(channel=1, factor=BASE_FACTOR, ctype=NAMUR, period_min=120)
     assert before.payload is not None
     ch_before = float(before.payload['ch1'])
 
@@ -52,8 +48,8 @@ def test_D1_delta_matches_pulses(stand: Stand) -> None:
     session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
     # Литры целые - сравниваем точно, кубометры дробные - с допуском
-    session.assert_delta(channel=1, liters=PULSES * FACTOR)
-    cubic = PULSES * FACTOR / 1000
+    session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)
+    cubic = PULSES * BASE_FACTOR / 1000
     assert abs(float(session.payload['ch1']) - ch_before - cubic) < 0.001
 
 
@@ -66,7 +62,7 @@ def test_D2a_missed_session_keeps_consumption(stand: Stand) -> None:
     поднятом Wi-Fi. Значит при выключенной точке доступа импульсы обоих
     периодов приедут одной посылкой.
     """
-    stand.setup(channel=1, factor=FACTOR, ctype=NAMUR, period_min=120)
+    stand.setup(channel=1, factor=BASE_FACTOR, ctype=NAMUR, period_min=120)
     stand.reset_observers()
 
     with stand.net.ap_off():
@@ -79,7 +75,7 @@ def test_D2a_missed_session_keeps_consumption(stand: Stand) -> None:
     stand.dut.press_button()
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    session.assert_delta(channel=1, liters=2 * PULSES * FACTOR)
+    session.assert_delta(channel=1, liters=2 * PULSES * BASE_FACTOR)
 
 
 @pytest.mark.slow
@@ -91,7 +87,7 @@ def test_D2b_undelivered_session_keeps_delta(stand: Stand) -> None:
     Прирост не теряется от того, что посылка не доехала: точка отсчёта
     двигается после доставки, а не после подключения к Wi-Fi.
     """
-    stand.setup(channel=1, factor=FACTOR, ctype=NAMUR, period_min=120)
+    stand.setup(channel=1, factor=BASE_FACTOR, ctype=NAMUR, period_min=120)
     stand.reset_observers()
 
     with stand.net.internet_down():
@@ -104,7 +100,7 @@ def test_D2b_undelivered_session_keeps_delta(stand: Stand) -> None:
     stand.dut.press_button()
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    session.assert_delta(channel=1, liters=2 * PULSES * FACTOR)
+    session.assert_delta(channel=1, liters=2 * PULSES * BASE_FACTOR)
 
 
 def test_D3_electricity_counts_kilowatt_hours(stand: Stand) -> None:
@@ -132,7 +128,7 @@ def test_D3_electricity_counts_kilowatt_hours(stand: Stand) -> None:
             f"было {kwh_before}, стало {session.payload['ch1']}")
         session.assert_delta(channel=1, liters=1)
     finally:
-        stand.setup(channel=1, cname=WATER_COLD, factor=FACTOR, value='20.000')
+        stand.setup(channel=1, cname=WATER_COLD, factor=BASE_FACTOR, value='20.000')
 
 
 def test_D4_readings_below_current_are_accepted(stand: Stand) -> None:
@@ -143,7 +139,7 @@ def test_D4_readings_below_current_are_accepted(stand: Stand) -> None:
     Так выглядит и обычная ошибка ввода, и замена счётчика на новый с нулём на
     табло: прошивка обязана поверить человеку, а не своей истории.
     """
-    stand.setup(channel=1, ctype=NAMUR, factor=FACTOR, value='500.000')
+    stand.setup(channel=1, ctype=NAMUR, factor=BASE_FACTOR, value='500.000')
     lowered = stand.setup(channel=1, value='1.000')
 
     assert lowered.payload is not None
@@ -156,10 +152,10 @@ def test_D4_readings_below_current_are_accepted(stand: Stand) -> None:
     session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
     # Счёт продолжается от введённого числа, а не от прежнего
-    expected = 1.0 + PULSES * FACTOR / 1000
+    expected = 1.0 + PULSES * BASE_FACTOR / 1000
     assert abs(float(session.payload['ch1']) - expected) < 0.001, (
         f"ждали {expected}, приехало {session.payload['ch1']}")
-    session.assert_delta(channel=1, liters=PULSES * FACTOR)
+    session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)
 
 
 def test_D5_electronic_input_catches_short_pulses(stand: Stand) -> None:
@@ -176,7 +172,7 @@ def test_D5_electronic_input_catches_short_pulses(stand: Stand) -> None:
     источник уровня (04_not-tested.md).
     """
     try:
-        stand.setup(channel=1, ctype=ELECTRONIC, factor=FACTOR)
+        stand.setup(channel=1, ctype=ELECTRONIC, factor=BASE_FACTOR)
         stand.reset_observers()
 
         stand.dut.pulse(channel=1, count=PULSES, width_ms=SHORT_PULSE_MS)
@@ -184,7 +180,7 @@ def test_D5_electronic_input_catches_short_pulses(stand: Stand) -> None:
         session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
         # Ровно столько, сколько подали: ни потерянных, ни удвоенных дребезгом
-        session.assert_delta(channel=1, liters=PULSES * FACTOR)
+        session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)
     finally:
         stand.setup(channel=1, ctype=NAMUR)
 
@@ -207,13 +203,13 @@ def test_D6_electronic_high_input_counts_rising_pulses(stand: Stand) -> None:
                     'stand.ini, обвязка - 04_not-tested.md')
 
     try:
-        stand.setup(channel=1, ctype=ELECTRONIC_HIGH, factor=FACTOR)
+        stand.setup(channel=1, ctype=ELECTRONIC_HIGH, factor=BASE_FACTOR)
         with stand.dut.driven(channel=1):
             stand.reset_observers()
             stand.dut.pulse_high(channel=1, count=PULSES, width_ms=HIGH_PULSE_MS)
             stand.dut.press_button()
             session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
-        session.assert_delta(channel=1, liters=PULSES * FACTOR)
+        session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)
     finally:
         stand.setup(channel=1, ctype=NAMUR)

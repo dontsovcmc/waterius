@@ -12,15 +12,15 @@
 симулятор (`simulator/test_simulator.js`, сценарий мастера).
 
 Сеть в мастере указывается та же, в которой устройство и так живёт: тест
-проходит настоящий путь, но не может увести стенд в чужой эфир. Пара
-«канал + BSSID» для быстрого коннекта не проверяется - её прошивка читает
-только из тела POST (`save_fast_connect`), а AT-плата шлёт параметры строкой
-запроса.
+проходит настоящий путь, но не может увести стенд в чужой эфир. Вместе с
+сетью уходит пара «канал + BSSID» из скана, как её шлёт страница: без неё
+первый коннект идёт полным сканом эфира (#340, #382).
 """
 
 from __future__ import annotations
 
 import json
+import re
 import time
 from typing import Any, Iterator
 from urllib.parse import urlencode
@@ -30,12 +30,10 @@ from loguru import logger
 
 from . import portal as portal_mod
 from .atboard import AtBoard, AtError
+from .constants import COLD, NAMUR, WATER_COLD
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal, pytest.mark.slow]
 
-NAMUR = 0
-WATER_COLD = 0
-CHANNEL = 1
 
 # Отличается и от базового веса стенда, и от спецзначений «Авто» (3) и «как у
 # холодной» (7): иначе непонятно, что именно сохранилось
@@ -43,7 +41,11 @@ FACTOR = 25
 READINGS = '12.345'
 PERIOD_MIN = 60
 
-PULSES = 3
+# Импульсы на шаге определения счётчика: мастер обязан их досчитать
+DETECT_PULSES = 3
+
+# save_fast_connect печатает пару, которую сохранил
+RE_FAST_CONNECT = re.compile(r'Fast connect: channel=(\d+) bssid=(\S+)')
 
 
 def api(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:
@@ -54,11 +56,24 @@ def api(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:
 
 
 def save(board: AtBoard, path: str, **params: Any) -> dict[str, str]:
-    """Сохранить форму: поля уходят телом, как их шлёт страница."""
-    answer = board.post(path, portal_mod.HOST, body=urlencode(params).encode())
-    assert answer.status == 200, f'{path}: {answer.status}'
-    body = json.loads(answer.text or '{}')
+    """Сохранить форму и вернуть ошибки полей."""
+    body = portal_mod.post_json(board, path, **params)
     return {name: str(code) for name, code in (body.get('errors') or {}).items()}
+
+
+def find_line(stand: Any, pattern: re.Pattern[str],
+              timeout: float = 5.0) -> re.Match[str] | None:
+    """Строка лога по шаблону: METF отдаёт UART с задержкой, ждём немного."""
+    deadline = time.time() + timeout
+    while True:
+        stand.log.poll()
+        for line in stand.log.lines:
+            match = pattern.search(line)
+            if match:
+                return match
+        if time.time() >= deadline:
+            return None
+        time.sleep(0.5)
 
 
 @pytest.fixture
@@ -102,9 +117,18 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
         assert 1 <= net['level'] <= 4, net
         assert net['bssid'] and net['wifi_channel'], net
 
-    # A4: сеть и пароль
+    # A4: сеть и пароль, с парой канал-BSSID из скана - как их шлёт страница
+    ours = next(net for net in networks if net['ssid'] == ssid)
     assert save(board, '/api/save_connect', ssid=ssid,
-                password=cfg.ap_password, wizard='true') == {}
+                password=cfg.ap_password, wifi_channel=ours['wifi_channel'],
+                bssid=ours['bssid'], wizard='true') == {}
+
+    fast = find_line(stand, RE_FAST_CONNECT)
+    assert fast, ('прошивка не сохранила канал и BSSID: первый коннект пойдёт '
+                  'полным сканом эфира (#340, #382)')
+    assert (int(fast.group(1)), fast.group(2).lower()) == (
+        int(ours['wifi_channel']), ours['bssid'].lower()), (
+        f'сохранена чужая пара: {fast.group(0)}, из скана {ours}')
 
     # Точка доступа переезжает на канал роутера, и клиент с неё слетает - у
     # человека это видно как «нет связи с Ватериусом». Возвращаться обязан
@@ -128,26 +152,29 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
     assert redirect == '/input/1/setup.html', (
         f'мастер не увидел подключения к сети: {redirect}')
 
-    # A5: тип входа
-    assert save(board, '/api/save_input_type',
-                input=CHANNEL, ctype=NAMUR) == {}
+    # A5: тип входа. Вес у стенда уже задан, и повторная настройка обязана
+    # вести сразу к показаниям, минуя определение счётчика (#346)
+    answer = portal_mod.post_json(board, '/api/save_input_type', input=COLD, ctype=NAMUR)
+    assert not answer.get('errors'), answer
+    assert answer.get('redirect') == f'/input/{COLD}/settings.html', (
+        f'повторная настройка ведёт не к показаниям: {answer}')
 
     # A6: страница определения счётчика считает импульсы вживую
-    before = api(board, f'/api/status/{CHANNEL}')
+    before = api(board, f'/api/status/{COLD}')
     assert 'error' not in before, f'нет связи с attiny: {before}'
-    stand.dut.pulse(channel=CHANNEL, count=PULSES)
+    stand.dut.pulse(channel=COLD, count=DETECT_PULSES)
     time.sleep(2)
-    after = api(board, f'/api/status/{CHANNEL}')
-    assert after['impulses'] - before['impulses'] == PULSES, (
+    after = api(board, f'/api/status/{COLD}')
+    assert after['impulses'] - before['impulses'] == DETECT_PULSES, (
         f"импульсы не досчитались: было {before['impulses']}, "
         f"стало {after['impulses']}")
 
     # A7: показания и вес импульса
-    assert save(board, '/api/save', input=CHANNEL, cname=WATER_COLD,
+    assert save(board, '/api/save', input=COLD, cname=WATER_COLD,
                 channel_start=READINGS, factor=FACTOR) == {}
 
     # A9: куда отправлять
-    assert save(board, '/api/save', input=CHANNEL, waterius_on=1, http_on=1,
+    assert save(board, '/api/save', input=COLD, waterius_on=1, http_on=1,
                 http_url=cfg.http_url, period_min=PERIOD_MIN) == {}
 
     logger.info('мастер пройден, ждём первую посылку')

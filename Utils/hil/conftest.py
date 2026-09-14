@@ -191,9 +191,11 @@ def clean_dut(request: pytest.FixtureRequest) -> Iterator[None]:
     оставить стенд рабочим. Начало прогона закрыто отдельно - `Stand.create()`
     зовёт `dut.init()` при подъёме сессии, так что перед первым тестом линии
     тоже свободны.
+
+    Тесты портала не исключены, в отличие от clean_net: мастер и плашки тоже
+    подают импульсы (W1, B3, B4), а отпущенная линия режиму настройки не мешает.
     """
-    if ('stand' not in request.keywords or 'portal' in request.keywords
-            or not request.config.getoption('--stand')):
+    if 'stand' not in request.keywords or not request.config.getoption('--stand'):
         yield
         return
 
@@ -318,6 +320,26 @@ def discovery_reset(request: pytest.FixtureRequest) -> Iterator[None]:
     if request.getfixturevalue('broker') is None:
         return
     request.getfixturevalue('stand').setup(mqtt_auto_discovery=0)
+
+
+@pytest.fixture
+def fresh_device(cfg: Any, stand: Any) -> Iterator[Any]:
+    """
+    Устройство сразу после заводского сброса, в своём портале (`reset.py`).
+
+    Сброс на каждый тест: вес, заданный одним тестом, другому уже не снять, а
+    незаданным он бывает только после сброса. Тестам с этой фикстурой нужна
+    метка `reset` - эталон перед ними выставлять незачем, его сотрёт сброс.
+    Стенд после теста возвращается в рабочее состояние сам.
+    """
+    if not cfg.atboard_port:
+        pytest.skip('нет AT-платы: [atboard] port в stand.ini')
+    from .reset import FreshDevice
+    device = FreshDevice.reset(cfg, stand)
+    try:
+        yield device
+    finally:
+        device.close()
 
 
 @pytest.fixture

@@ -14,13 +14,13 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from .constants import NAMUR
 from .logwatch import MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
 
 pytestmark = [pytest.mark.stand, pytest.mark.slow]
 
-NAMUR = 0
 PERIOD_MIN = 5
 
 

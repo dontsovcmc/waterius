@@ -22,6 +22,7 @@ from metf_python_client import METFClient
 
 from .config import StandConfig
 from .clock import BoardClock
+from .constants import BASE_FACTOR, LEAKAGE_NC, NAMUR, WATER_COLD, WATER_HOT
 from .dut import Dut
 from .logwatch import WAKE_SESSION, LogWatcher, Session
 from .net import Net
@@ -53,14 +54,13 @@ BASELINE = {
     'vac': 0, 'sc': 0,
     'ackw': 1, 'ackh': 1, 'ackm': 1,
     'period_min': 120,
-    'ctype0': 0, 'ctype1': 0,
-    'cname0': 1, 'cname1': 0,      # красный вход - ГВС, синий - ХВС
-    'f1': 10,
+    'ctype0': NAMUR, 'ctype1': NAMUR,
+    'cname0': WATER_HOT, 'cname1': WATER_COLD,  # красный вход - ГВС, синий - ХВС
+    'f1': BASE_FACTOR,
     'av0': 0, 'ar0': 0, 'ah0': 0, 'as0': 0,
     'av1': 0, 'ar1': 0, 'ah1': 0, 'as1': 0,
 }
 
-LEAKAGE_NC = 6          # нормально-замкнутый датчик, core/types.h
 
 # Сколько раз пробуем снять тревогу кнопкой. Одного нажатия достаточно, второе
 # нужно на случай потерянного сеанса - лучше лишние двадцать секунд, чем
@@ -144,6 +144,11 @@ class Stand:
             raise AssertionError(
                 f'стенд: WT32-ETH01 {router_at} - нет: консоль не отвечает\n{err}') from err
         logger.info(f'стенд: WT32-ETH01 {router_at} - есть, {version}')
+
+        # Прошлый прогон мог умереть с выключенной точкой или правилом фильтра.
+        # restore() чинит это после теста, а identify() идёт раньше первого
+        router.acl_clear()
+        router.ap(True)
 
         receiver = Receiver(port=cfg.receiver_port,
                             cert_host=cfg.receiver_host)
@@ -336,7 +341,7 @@ class Stand:
             self.router.dhcp_reserve(self.dut_mac, self.cfg.dut_ip)
             self.net.dut_mac = self.dut_mac
 
-    def ensure_network(self, timeout: float = 300.0) -> bool:
+    def ensure_network(self, timeout: float = 300.0, force: bool = False) -> bool:
         """
         Привести устройство в сеть стенда, если оно смотрит в чужую.
 
@@ -349,6 +354,10 @@ class Stand:
         спрашиваем у точки доступа: держать его третьей копией в stand.ini
         значит однажды переименовать точку и не заметить.
 
+        force=True настраивает заново и при совпавших настройках: так возвращают
+        в сеть устройство, у которого испорчен пароль, а имя сети и сервер
+        прежние.
+
         Возвращает True, если пришлось настраивать.
         """
         want_ssid = self.ap_ssid
@@ -357,7 +366,7 @@ class Stand:
         config = self.device_config
         assert config, ('устройство не напечатало свои настройки: '
                         'нечего сверять, проверьте лог и уровень логирования')
-        if (config.get('wifi_ssid') == want_ssid
+        if (not force and config.get('wifi_ssid') == want_ssid
                 and config.get('http_on') == '1'
                 and config.get('http_host') == want_url):
             logger.info(f'устройство уже в сети стенда: {want_ssid} -> {want_url}')

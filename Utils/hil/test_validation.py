@@ -10,10 +10,11 @@
 21 порт в адресе. Отвергнутый параметр не сохраняется, поэтому опыты здесь
 безопасны: адрес брокера и показания остаются прежними.
 
-Чего здесь нет: случая с полем из одних звёздочек (C6). Прошивка распознаёт
-его как «не редактировали» и молча оставляет прежнее значение, а прежнее
-значение - пароль, и прочитать его для сверки неоткуда: портал отдаёт те же
-звёздочки.
+Поле из одних звёздочек (C6) - в `test_settings.py`. Прошивка распознаёт его
+как «не редактировали» и оставляет прежний пароль, а прочитать пароль для
+сверки неоткуда: портал отдаёт те же звёздочки. Проверять приходится
+следствием - следующий сеанс снова в сети, - а для этого надо выйти из
+портала, который здесь открыт на весь модуль.
 """
 
 from __future__ import annotations
@@ -26,21 +27,10 @@ import pytest
 
 from . import portal as portal_mod
 from .atboard import AtBoard
+from .constants import (ALARM_STOP_MAX_HOURS, ERR_LENGTH, ERR_NO_COMMA,
+                        ERR_PORT_IN_HOST, ERR_TLS, ERR_VALUE, SERIAL_LEN)
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal]
-
-ERR_LENGTH = '14'
-ERR_VALUE = '15'
-ERR_NO_COMMA = '19'
-ERR_TLS = '20'
-ERR_PORT_IN_HOST = '21'
-
-# core/idle.h: потолок остановки расхода в часах
-ALARM_STOP_MAX_HOURS = 1092
-
-# core/types.h: SERIAL_LEN. Девять кириллических букв - это 18 байт, то есть
-# длина считается в байтах, а не в символах
-SERIAL_LEN = 16
 
 
 @pytest.fixture(scope='module')

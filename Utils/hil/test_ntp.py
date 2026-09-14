@@ -30,18 +30,13 @@ from typing import TYPE_CHECKING, Any, Iterator
 
 import pytest
 
+from .constants import DEFAULT_NTP_SERVER, NTP_POOL_SIZE, NTP_WARMUP_SYNCS
 from .logwatch import TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
 
 pytestmark = [pytest.mark.stand, pytest.mark.requires(esp='2.0.47')]
 
-# Умолчание прошивки: с этим значением пользовательский сервер не используется
-# и время берётся из пула (`ESP8266/src/sync_time.cpp`, sync_ntp_time)
-DEFAULT_NTP_SERVER = 'ru.pool.ntp.org'
-
-NTP_POOL_SIZE = 4          # core/timekeeping.h
-NTP_WARMUP_SYNCS = 2       # столько синхронизаций подряд, потом раз в сутки
 
 SKEW_SEC = 3600            # на сколько часы стенда отличаются от настоящих
 SKEW_TOLERANCE = 600       # допуск при сверке: сеанс идёт до двух минут
