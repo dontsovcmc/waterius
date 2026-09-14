@@ -24,7 +24,7 @@ from .config import StandConfig
 from .clock import BoardClock
 from .constants import BASE_FACTOR, LEAKAGE_NC, NAMUR, WATER_COLD, WATER_HOT
 from .dut import Dut
-from .logwatch import WAKE_SESSION, LogWatcher, Session
+from .logwatch import MANUAL_TRANSMIT_MODE, WAKE_SESSION, LogWatcher, Session
 from .net import Net
 from .receiver import Receiver
 if TYPE_CHECKING:                     # paho нужен только тестам MQTT, а стенд
@@ -385,7 +385,10 @@ class Stand:
 
         self._setup_via_portal(want_ssid, want_url)
 
-        session = self.wait_session(timeout=timeout)
+        # Первым в логе лежит сеанс самого портала, и настройки он напечатал до
+        # сохранения. Сеанс после «Завершить» attiny помечает MANUAL_TRANSMIT
+        # (SlaveI2C.cpp, команда 'T')
+        session = self.wait_session(timeout=timeout, mode=MANUAL_TRANSMIT_MODE)
         config = session.config
         assert config.get('wifi_ssid') == want_ssid, (
             f'после настройки сеть осталась {config.get("wifi_ssid")!r}\n{session.text}')

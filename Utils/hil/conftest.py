@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator
 
 import pytest
@@ -391,3 +392,36 @@ def capture(request: pytest.FixtureRequest,
         logger.info(f'дамп трафика: {path}')
     else:
         path.unlink()
+
+
+# Время по ходу прогона. --durations печатает сводку только в конце и по фазам,
+# а по многочасовому прогону надо видеть сразу, какой тест и какой файл съедают
+# время. Подготовка и возврат стенда входят в сумму: это тоже время теста.
+_test_seconds: dict[str, float] = {}
+_file_seconds: dict[Path, float] = {}
+
+
+def elapsed(seconds: float) -> str:
+    minutes, sec = divmod(round(seconds), 60)
+    hours, minutes = divmod(minutes, 60)
+    return f'{hours:02d}:{minutes:02d}:{sec:02d}'
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    _test_seconds[report.nodeid] = _test_seconds.get(report.nodeid, 0.0) + report.duration
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
+    """После теста - его время, после последнего теста файла - время файла."""
+    yield
+    spent = _test_seconds.pop(item.nodeid, 0.0)
+    _file_seconds[item.path] = _file_seconds.get(item.path, 0.0) + spent
+
+    terminal = item.config.pluginmanager.get_plugin('terminalreporter')
+    if terminal is None:
+        return
+    terminal.write_line(f'    время теста: {elapsed(spent)}')
+    if nextitem is None or nextitem.path != item.path:
+        terminal.write_line(
+            f'--- {item.path.name}: {elapsed(_file_seconds[item.path])} ---')
