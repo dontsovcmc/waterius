@@ -120,8 +120,8 @@ def mqtt(cfg: Any, broker: Any) -> Iterator[Any]:
 @pytest.fixture(scope='session')
 def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     from .stand import Stand
-    device = Stand.create(cfg, mqtt)
-    logger.info(f'роутер: {device.router.version()}')
+    device = Stand.create(cfg, mqtt)    # METF и роутер: без них дальше нечем
+    device.check_atboard()     # до первого теста, а не на сороковой минуте
     device.identify()          # версии и MAC - у самого устройства, до первого теста
     device.ensure_network()    # и сеть: в чужой стенд бесполезен
     device.ensure_mqtt()       # и брокер, если он поднялся

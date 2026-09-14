@@ -189,11 +189,10 @@ class AtBoard:
     def post(self, path: str, host: str, body: bytes = b'',
              timeout: float = 30.0) -> Response:
         """
-        POST без тела: параметры портал принимает и из строки запроса.
+        POST; тело - x-www-form-urlencoded, как у форм портала.
 
-        `_parseReqHead` разбирает query у любого метода (WebRequest.cpp:285), а
-        `request->params()` не различает, откуда параметр приехал. Тело нужно
-        было бы кодировать вторым способом ради того же результата.
+        Значения настроек прошивка берёт только из тела (`active_point_api.cpp`,
+        from_form), строкой запроса едут лишь признаки маршрута - input, wizard.
         """
         return self.request('POST', path, host, body=body, timeout=timeout)
 

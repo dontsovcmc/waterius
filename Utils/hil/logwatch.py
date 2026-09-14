@@ -92,6 +92,80 @@ SESSION_END = 'Going to sleep'
 # фильтром по режиму нужный сеанс выбрасывался вместе с чужим.
 RE_BOOT = re.compile(r'\bChipId: ')
 
+# Стартовый лог ЕСП (main.cpp: setup, master_i2c.cpp) печатается до разговора с
+# attiny: по нему видно, что ЕСП жива и чем прошита, даже когда сеанса не будет.
+RE_ESP_BOOT_VER = re.compile(r'ESP firmware ver: (\S+)')
+RE_BUILD = re.compile(r'Build: (.+?)\s*$')
+RE_ERROR = re.compile(r'\bERROR\s*:\s*(.+?)\s*$')
+ATTINY_LOST = 'Attiny not found.'
+
+# Чем кончилось пробуждение по кнопке (LogWatcher.wait_wake)
+WAKE_SESSION = 'session'        # attiny ответила, сеанс начался
+WAKE_NO_ATTINY = 'no_attiny'    # ЕСП жива, attiny молчит на i2c
+WAKE_SILENT = 'silent'          # на UART ни строки
+WAKE_STUCK = 'stuck'            # ЕСП печатает, но ни сеанса, ни ошибки attiny
+
+
+@dataclass
+class Wake:
+    """Стартовый лог одного пробуждения: жива ли ЕСП и ответила ли ей attiny."""
+
+    state: str
+    lines: list[str]
+    waited: float
+    raw: str = ''       # всё, что отдала METF, включая недописанную строку
+
+    def dump(self) -> str:
+        """Всё прочитанное платой после нажатия, как есть."""
+        if not self.raw:
+            return 'METF не отдала ни байта'
+        if not self.lines:
+            return f'METF отдала {len(self.raw)} байт, ни одной полной строки: {self.raw!r}'
+        return f'METF отдала {len(self.raw)} байт:\n{self.raw.rstrip()}'
+
+    def _first(self, pattern: re.Pattern[str]) -> str | None:
+        for line in self.lines:
+            m = pattern.search(line)
+            if m:
+                return m.group(1)
+        return None
+
+    @property
+    def esp_version(self) -> str | None:
+        return self._first(RE_ESP_BOOT_VER)
+
+    @property
+    def build(self) -> str | None:
+        return self._first(RE_BUILD)
+
+    @property
+    def errors(self) -> list[str]:
+        return [m.group(1) for m in map(RE_ERROR.search, self.lines) if m]
+
+    @property
+    def blynk(self) -> int | None:
+        code = self._first(RE_BLYNK)
+        return int(code) if code is not None else None
+
+    def describe(self, button: str) -> str:
+        """Что сказать человеку, когда сеанс не начался. button - чем нажимали."""
+        if self.state == WAKE_NO_ATTINY:
+            blynk = f', Blynk: code={self.blynk}' if self.blynk is not None else ''
+            return (f'ЕСП жива и прошита (ЕСП {self.esp_version or "?"}, сборка '
+                    f'{self.build or "?"}), но attiny не отвечает по i2c: '
+                    f'{"; ".join(self.errors)}{blynk}. Проверьте прошивку и фьюзы '
+                    f'attiny - docs/flashing.md\n{self.dump()}')
+        if self.state == WAKE_SILENT:
+            return (f'Ватериус не проснулся: за {self.waited:.1f} с после нажатия '
+                    f'{button} на UART ни одной строки. Кнопка не доходит до '
+                    f'attiny, нет питания, или к UART ЕСП подключён программатор - '
+                    f'он держит её в загрузчике\n{self.dump()}')
+        if self.state == WAKE_STUCK:
+            errors = f', ошибки: {"; ".join(self.errors)}' if self.errors else ''
+            return (f'ЕСП печатает, но сеанс не начался: за {self.waited:.1f} с '
+                    f'ни `Startup mode:`, ни `{ATTINY_LOST}`{errors}\n{self.dump()}')
+        return 'сеанс начался'
+
 
 @dataclass
 class Session:
@@ -321,6 +395,9 @@ class LogWatcher:
         self.api = api
         self.lines: list[str] = []
         self._tail = ''
+        # Всё прочитанное с последнего clear() как есть: недописанная строка и
+        # мусор в lines не попадают, а при отказе показывать надо и их
+        self.raw = ''
         self._can_stat: bool | None = None      # None - ещё не спрашивали
 
     def poll(self) -> None:
@@ -332,6 +409,7 @@ class LogWatcher:
             return
         if not chunk:
             return
+        self.raw += chunk
 
         raw = (self._tail + chunk).split('\n')
         # Последний кусок может быть незавершённым - придержим до следующего раза
@@ -351,6 +429,7 @@ class LogWatcher:
         self.poll()
         self.lines.clear()
         self._tail = ''
+        self.raw = ''
 
     # --- потери лога ---
 
@@ -448,6 +527,40 @@ class LogWatcher:
                 return time.time() - started
             time.sleep(poll_interval)
         self.assert_no_loss(mark, f'ожидание строки {text!r} {timeout:.0f} с')
+        return None
+
+    def wait_wake(self, timeout: float, poll_interval: float = 0.1) -> Wake:
+        """
+        Разобрать стартовый лог после нажатия кнопки, не досиживая таймаут.
+
+        `Startup mode:` ЕСП печатает только после ответа attiny (main.cpp:
+        loop), поэтому одна эта строка не отличает живую ЕСП без attiny от
+        отсутствующего устройства. Решает первая строка, которая определяет
+        исход; таймаут - только для молчания.
+        """
+        mark = self.loss_mark()
+        started = time.time()
+        while True:
+            self.poll()
+            waited = time.time() - started
+            state = self._wake_state()
+            if state is None and waited >= timeout:
+                state = WAKE_STUCK if self.lines else WAKE_SILENT
+            if state is not None:
+                if state == WAKE_NO_ATTINY:
+                    # `Blynk: code=` идёт следом через 4 мс - в этот опрос или в следующий
+                    time.sleep(poll_interval)
+                    self.poll()
+                self.assert_no_loss(mark, 'стартовый лог')
+                return Wake(state, list(self.lines), waited, self.raw)
+            time.sleep(poll_interval)
+
+    def _wake_state(self) -> str | None:
+        for line in self.lines:
+            if RE_MODE.search(line):
+                return WAKE_SESSION
+            if ATTINY_LOST in line:
+                return WAKE_NO_ATTINY
         return None
 
     def expect_no_session(self, timeout: float, mode: int | None = None,

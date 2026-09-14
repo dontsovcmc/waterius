@@ -23,7 +23,7 @@ from metf_python_client import METFClient
 from .config import StandConfig
 from .clock import BoardClock
 from .dut import Dut
-from .logwatch import LogWatcher, Session
+from .logwatch import WAKE_SESSION, LogWatcher, Session
 from .net import Net
 from .receiver import Receiver
 if TYPE_CHECKING:                     # paho нужен только тестам MQTT, а стенд
@@ -67,9 +67,9 @@ LEAKAGE_NC = 6          # нормально-замкнутый датчик, co
 # упавший на чужой тревоге следующий тест.
 CLEAR_TRIES = 3
 
-# Сколько ждём первой строки от устройства после нажатия кнопки. ЕСП печатает
-# её через треть секунды; пятнадцать - с запасом на пробуждение attiny.
-DEVICE_ALIVE_S = 15.0
+# Сколько ждём стартового лога после нажатия. attiny подаёт питание сразу
+# (main.cpp: esp.power за button.reset), баннер ЕСП идёт через 70 мс.
+DEVICE_ALIVE_S = 2.0
 
 GLOBAL_PARAMS = {
     'vacation': 'vac',
@@ -126,10 +126,25 @@ class Stand:
     @classmethod
     def create(cls, cfg: StandConfig, mqtt: 'MqttWatch | None' = None) -> 'Stand':
         api = METFClient(cfg.metf_host)
-        api.ping()
-        api.serial_begin()
-        router = connect(cfg.router_port or None, cfg.router_host or None,
-                         cfg.router_password, cfg.ap_password)
+        try:
+            api.ping()
+            api.serial_begin()
+        except Exception as err:
+            raise AssertionError(
+                f'стенд: METF {cfg.metf_host} - нет: без неё нечем ни жать '
+                f'кнопку, ни читать лог\n{err}') from err
+        logger.info(f'стенд: METF {cfg.metf_host} - есть')
+
+        router_at = cfg.router_port or cfg.router_host
+        try:
+            router = connect(cfg.router_port or None, cfg.router_host or None,
+                             cfg.router_password, cfg.ap_password)
+            version = router.version()
+        except Exception as err:
+            raise AssertionError(
+                f'стенд: WT32-ETH01 {router_at} - нет: консоль не отвечает\n{err}') from err
+        logger.info(f'стенд: WT32-ETH01 {router_at} - есть, {version}')
+
         receiver = Receiver(port=cfg.receiver_port,
                             cert_host=cfg.receiver_host)
         receiver.start()
@@ -241,22 +256,50 @@ class Stand:
                 logger.warning(f'MAC из лога {session.mac} != {self.dut_mac} из stand.ini')
             self.dut_mac = session.mac
 
+    def check_atboard(self, timeout: float = 10.0) -> None:
+        """
+        AT-плата на месте. Нужна только тестам портала, но узнать, что её нет,
+        лучше до первого теста, чем на сороковой минуте прогона.
+        """
+        port = self.cfg.atboard_port
+        if not port:
+            logger.warning('стенд: AT-плата не задана ([atboard] port) - '
+                           'тесты портала будут пропущены')
+            return
+
+        from .atboard import AtBoard, AtError
+        try:
+            board = AtBoard(port)
+        except Exception as err:
+            raise AssertionError(f'стенд: AT-плата {port} - нет: порт не открылся\n{err}') from err
+        try:
+            # Открытие порта перезагружает NodeMCU: первые команды тонут (atboard.py, wait_ready)
+            deadline = time.time() + timeout
+            answer = ''
+            while 'OK' not in answer and time.time() < deadline:
+                try:
+                    answer = board.cmd('AT', timeout=1)
+                except AtError:
+                    pass
+            assert 'OK' in answer, (
+                f'стенд: AT-плата {port} - нет: на `AT` нет OK за {timeout:.0f} с, '
+                f'ответ {answer!r}')
+        finally:
+            board.close()
+        logger.info(f'стенд: AT-плата {port} - есть')
+
     def expect_awake(self, timeout: float = DEVICE_ALIVE_S) -> None:
         """
         Убедиться, что Ватериус проснулся, - сразу после нажатия кнопки.
 
         Отсутствие устройства и спящее устройство по логу неотличимы: между
-        сеансами оно молчит всегда. Отличает их нажатие: после него ЕСП
-        печатает `Startup mode:` через треть секунды. Нажимает вызывающий -
-        своего нажатия здесь нет намеренно, второе подряд ЕСП проглотит, она
-        уже не спит.
+        сеансами оно молчит всегда. Отличает их нажатие, после которого ЕСП
+        печатает стартовый лог. Нажимает вызывающий - своего нажатия здесь нет
+        намеренно, второе подряд ЕСП проглотит, она уже не спит.
 
-        Ждём именно эту строку, а не любую. Ею стенд открывает сеанс, и без
-        неё он не соберёт ни одного, даже когда лог идёт: подключённый к тому
-        же UART программатор рвёт поток, хвосты сеансов доезжают, а начала
-        нет. «Хоть что-то в логе» такую линию считает живой и пропускает
-        дальше - разбираться потом в `identify`, через три минуты и с
-        сообщением «сеанс не пришёл», которое уводит искать не там.
+        Разбор стартового лога - `LogWatcher.wait_wake`: он отличает молчание,
+        живую ЕСП без attiny и лог без начала сеанса (программатор на том же
+        UART рвёт поток), и каждое называет своими словами.
         """
         try:
             self.dut.api.ping()
@@ -265,16 +308,11 @@ class Stand:
                 f'плата METF {self.cfg.metf_host} не отвечает: без неё стенду '
                 f'нечем ни жать кнопку, ни читать лог\n{err}') from err
 
-        if self.log.wait_line('Startup mode:', timeout=timeout) is not None:
-            return
-
-        what = ('лог идёт, но начала сеанса в нём нет'
-                if self.log.lines else 'на UART не пришло ни строки')
-        raise AssertionError(
-            f'Ватериус не отзывается: за {timeout:.0f} с после нажатия кнопки '
-            f'{what}. Проверьте, что плата подключена к METF и запитана, и что '
-            f'к её UART не подключён программатор - он рвёт поток, и стенду '
-            f'не из чего собрать сеанс')
+        wake = self.log.wait_wake(timeout)
+        logger.info(f'стартовый лог за {wake.waited:.1f} с: {wake.dump()}')
+        if wake.state != WAKE_SESSION:
+            raise AssertionError(
+                wake.describe(f'кнопки METF (GPIO{self.cfg.button_pin})'))
 
     def identify(self, timeout: float = 180.0) -> None:
         """
@@ -291,7 +329,7 @@ class Stand:
         session = self.wait_session(timeout=timeout)
         assert self.attiny_version is not None, (
             f'в логе нет версии attiny\n{session.text}')
-        logger.info(f'устройство: attiny {self.attiny_version}, '
+        logger.info(f'стенд: Ватериус - есть: attiny {self.attiny_version}, '
                     f'ЕСП {self.version_str}, MAC {self.dut_mac or "неизвестен"}')
 
         if self.dut_mac:
