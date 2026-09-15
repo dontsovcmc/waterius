@@ -178,3 +178,58 @@ def test_J3_low_battery_refuses(stand: Any, cfg: Any) -> None:
     stand.dut.press_button()
     reported = stand.wait_session(timeout=180)
     assert reported.payload['ota_error'] == OTA_ERR_LOW_BATTERY, reported.payload
+
+
+def test_J6_md5_mismatch_is_refused(stand: Any, cfg: Any,
+                                    images: dict[str, Any]) -> None:
+    """
+    Образ с чужой контрольной суммой не записывается (#363).
+
+    Образ настоящий, из дерева, а md5 в команде неверная: загрузка идёт до
+    конца, и сверка суммы (`ota_update.cpp`, setMD5sum) обязана отвергнуть
+    образ до перезагрузки. Идёт, только когда версия в дереве та же, что в
+    устройстве: не сработай сверка - во флеш уйдёт та же прошивка.
+    """
+    want = portal_mod.tree_version(REPO_ROOT)
+    if want is None or stand.esp_version != want:
+        pytest.skip(f'на устройстве {stand.version_str}, в дереве '
+                    f'{".".join(map(str, want)) if want else "?"} - '
+                    'без совпадения версий запись испытывать нельзя')
+
+    request_ota(stand, {'firmware': dict(images['firmware'], md5='0' * 32)})
+
+    assert stand.log.wait_line('OTA: firmware update failed', timeout=900) is not None, (
+        'образ с чужой суммой не отвергнут')
+    assert not any('OTA: firmware updated OK' in line for line in stand.log.lines)
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    reported = stand.wait_session(timeout=180)
+    assert reported.payload is not None
+    assert reported.payload['ota_error'] == OTA_ERR_FW_UPDATE, reported.payload
+    assert reported.esp_version == want, 'версия сменилась: образ всё-таки записан'
+
+
+@pytest.mark.mqtt
+@pytest.mark.needs(mqtt_auto_discovery=1)
+def test_J7_ota_command_with_broken_json(stand: Any) -> None:
+    """
+    Команда обновления по MQTT с битым JSON: загрузка не начинается, retain снят.
+
+    Команду `ota` прошивка разбирает сама (`ha/subscribe.cpp`,
+    ha_fill_json_settings_data), остальные идут строкой. Битая команда не
+    должна ни запустить обновление, ни остаться в брокере до следующего сеанса.
+    """
+    assert stand.mqtt is not None
+    stand.reset_observers()
+    stand.mqtt.publish_set('ota', '{"firmware": {', retain=True)
+    try:
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180)
+        assert 'MQTT: Failed to parse OTA JSON' in session.text, session.text
+        assert 'OTA: start' not in session.text, session.text
+
+        left = [m.topic for m in stand.mqtt.fetch_retained(stand.mqtt_root)]
+        assert stand.mqtt.command_topic('ota') not in left, f'команда осталась: {left}'
+    finally:
+        stand.mqtt.clear_retained(stand.mqtt.command_topic('ota'))

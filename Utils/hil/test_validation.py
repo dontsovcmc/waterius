@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any, Iterator
 from urllib.parse import urlencode
 
@@ -118,3 +119,62 @@ def test_C7_disabled_transport_is_not_parsed(board: AtBoard) -> None:
         # Брокер обязан вернуться даже после падения: выключенным его
         # унаследует весь блок I
         assert save(board, '/api/save', mqtt_on=1) == {}
+
+
+def test_C8_valid_forms_are_accepted(board: AtBoard, cfg: Any, stand: Any) -> None:
+    """
+    Зеркало C1-C3: верное значение принимается - с запятой, с пятью целыми
+    разрядами, со схемой и путём в адресе брокера (#313, #330, #353).
+
+    Отказ здесь человек увидел бы так же, как в C1-C3, но это была бы ошибка
+    прошивки. Адрес - брокера стенда: разбор обязан снять схему и путь, и брокер
+    остаётся прежним. Показания возвращаются последними известными стенду.
+    """
+    last = stand.last_payload or {}
+    try:
+        assert save(board, '/api/save', input=1, channel_start='12,345') == {}
+        assert save(board, '/api/save', input=1, channel_start='99999.999') == {}
+        assert save(board, '/api/save', mqtt_on=1,
+                    mqtt_host=f'mqtt://{cfg.broker_host}/stand') == {}
+    finally:
+        if 'ch1' in last:
+            assert save(board, '/api/save', input=1,
+                        channel_start=f"{float(last['ch1']):.3f}") == {}
+
+
+def saved_line(stand: Any, value: str, timeout: float = 5.0) -> bool:
+    """Есть ли в логе строка `Saved` с этим значением: ответ портала пуст в обоих случаях."""
+    deadline = time.time() + timeout
+    while True:
+        stand.log.poll()
+        if any('Saved' in line and value in line for line in stand.log.lines):
+            return True
+        if time.time() >= deadline:
+            return False
+        time.sleep(0.5)
+
+
+QUERY_MARK = 'QSTRING'
+
+
+def test_C10_settings_come_only_from_the_body(board: AtBoard, stand: Any) -> None:
+    """
+    Настройка из строки запроса не сохраняется (PR #431, #440).
+
+    Иначе ссылка `/api/save?serial=...`, открытая в сети портала, меняла бы
+    настройки без формы. Признак маршрута (input) из строки читается - он
+    ничего не сохраняет (`active_point_api.cpp`, from_form).
+
+    Контроль - то же значение телом: без него тест зеленел бы и на прошивке,
+    которая серийный номер не сохраняет вовсе.
+    """
+    stand.log.clear()
+    answer = board.post(f'/api/save?input=0&serial={QUERY_MARK}', portal_mod.HOST)
+    assert answer.status == 200, answer.status
+    assert not saved_line(stand, QUERY_MARK), 'значение из строки запроса сохранено'
+
+    try:
+        assert save(board, '/api/save', input=0, serial=QUERY_MARK) == {}
+        assert saved_line(stand, QUERY_MARK), 'телом значение не сохранилось - контроль сломан'
+    finally:
+        assert save(board, '/api/save', input=0, serial='') == {}

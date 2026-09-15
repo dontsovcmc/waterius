@@ -21,6 +21,7 @@ import pytest
 
 from .constants import MASKED
 from .logwatch import MANUAL_TRANSMIT_MODE
+from .state import same_value
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session  # а сбор тестов должен работать без них
     from .stand import Stand
@@ -113,3 +114,76 @@ def test_C6_masked_password_keeps_the_old_one(stand: Stand) -> None:
         # Без пароля весь прогон дальше шёл бы без сети: возвращаем его порталом
         stand.ensure_network(force=True)
         raise
+
+
+# Значения, которые прошивка обязана отвергнуть. Разбор общий с порталом
+# (core/input.h), а путь применения свой: ответ сервера и команда HA идут
+# через apply_settings, минуя обработчики страниц портала
+INVALID = [
+    pytest.param('period_min', '0', id='period_zero'),
+    pytest.param('period_min', 'abc', id='period_text'),
+    pytest.param('period_min', '70000', id='period_overflow'),    # сохранялось 4464 (PR #378)
+    pytest.param('ch1', 'abc', id='water_reading_text'),
+    pytest.param('f1', '-1', id='factor_negative'),
+    pytest.param('ctype1', '3', id='ctype_unknown', marks=pytest.mark.xfail(
+        strict=True,
+        reason='тип входа из ответа сервера и из HA уходит в attiny без '
+               'is_valid_counter_type (active_point_api.cpp, applyInputParameter): '
+               'проверку делает только страница портала')),
+]
+
+
+@pytest.mark.parametrize('name, value', INVALID)
+def test_S4_invalid_value_is_rejected(stand: Stand, name: str, value: str) -> None:
+    """
+    Негодное значение с сервера отвергается: настройка прежняя, сеанс доигран.
+
+    Сверка - с посылкой до применения: стенд помнит последнюю, и в ней то,
+    что устройство думает о себе сейчас.
+    """
+    before = stand.last_payload
+    assert before is not None and name in before, f'в посылке нет {name}'
+
+    session = apply(stand, {name: value})
+
+    assert same_value(session.payload[name], before[name]), (
+        f'{name}={value!r} применено: было {before[name]!r}, '
+        f'стало {session.payload[name]!r}')
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    'reset_period_min_tuned зовётся и для отвергнутого period_min '
+    '(active_point_api.cpp, applyNonCheckBoxParameter)'))
+def test_S4b_rejected_period_keeps_tuning(stand: Stand) -> None:
+    """
+    Отвергнутый период не сбрасывает подстройку хода attiny.
+
+    Сброс (`config.cpp`, reset_period_min_tuned) обнуляет поправку, прогрев
+    NTP и измеренный полный период - оправдан он только настоящей сменой
+    периода. Свидетельство - строка `RESET: period_min_tuned`: числом в
+    посылке сброс виден не всегда, после свежей настройки период и так
+    равен сброшенному.
+    """
+    session = apply(stand, {'period_min': '0'})
+    assert 'RESET: period_min_tuned' not in session.text, session.text
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    'звёздочки сбрасывают кэш быстрого коннекта: сброс канала и BSSID стоит '
+    'после save_param без условия (active_point_api.cpp, applyNonCheckBoxParameter, '
+    'ветка password)'))
+def test_C6b_masked_password_keeps_fast_connect(stand: Stand) -> None:
+    """
+    Звёздочки вместо пароля не сбрасывают быстрый коннект.
+
+    Пароль прежний (C6), значит и сеть прежняя: запомненные канал и BSSID
+    сбрасывать незачем, а без них следующий сеанс идёт полным сканом.
+    """
+    apply(stand, {'password': MASKED})
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    assert session.wifi_connected, session.text
+    assert 'WIFI: begin channel:' in session.text, (
+        f'первая попытка - полным сканом: кэш сброшен\n{session.text}')

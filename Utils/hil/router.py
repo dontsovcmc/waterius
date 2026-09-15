@@ -499,6 +499,29 @@ class NatRouter:
             self.set_ap(was, restore_password)
             self.restart()
 
+    @contextmanager
+    def ssid_verbatim(self, name: str, password: str) -> Iterator[None]:
+        """
+        То же, что ssid(), для имён и паролей с пробелами и кавычками.
+
+        Аргументы уходят в кавычках. Понимает ли их консоль платы, в
+        репозитории не записано, поэтому имя сверяется с `show config` после
+        перезагрузки: искажённое имя - RouterError, а не молча другой опыт.
+        """
+        was = self.config().get('ssid', '')
+        assert was, 'роутер не сообщил имя точки: восстанавливать нечем'
+        restore_password = self._ap_password()
+        self.cmd(f'set_ap {_quoted(name)} {_quoted(password)}')
+        self.restart()
+        try:
+            got = self.config().get('ssid', '')
+            if got != name:
+                raise RouterError(f'точка приняла имя {name!r} как {got!r}')
+            yield
+        finally:
+            self.set_ap(was, restore_password)
+            self.restart()
+
     # --- ожидание клиента ------------------------------------------------
 
     def wait_client(self, mac: str, timeout: float = 120.0) -> bool:
@@ -590,6 +613,11 @@ def _strip_echo(out: str, line: str) -> str:
     if lines and lines[0].strip().endswith(line.strip()):
         lines = lines[1:]
     return '\n'.join(lines).strip()
+
+
+def _quoted(value: str) -> str:
+    """Аргумент консоли в кавычках: пробел внутри иначе делит его надвое."""
+    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
 
 
 def _parse_kv(text: str) -> dict[str, str]:

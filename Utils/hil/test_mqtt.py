@@ -19,12 +19,12 @@ MQTT, включая 2.0.44.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterator
 
 import pytest
 
 from .constants import ELECTRONIC, HEAT_UNITS, INPUT_OFF, LEAKAGE
-from .logwatch import MANUAL_TRANSMIT_MODE
+from .logwatch import MANUAL_TRANSMIT_MODE, SEND_NO_CONNECTION, SEND_OK
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
 
@@ -320,6 +320,16 @@ def test_I0b_readings_go_to_separate_topics(stand: Stand) -> None:
             f'{name}: в брокере {message.payload!r}, в посылке '
             f'{session.payload[name]!r}')
 
+    # Флаги - словами, как в посылке (#419): топик читают как есть, и 1 в одном
+    # месте при true в другом ломает любую автоматизацию
+    for name, value in session.payload.items():
+        if type(value) is not bool:
+            continue
+        message = stand.mqtt.last(f'{stand.mqtt_root}/{name}')
+        assert message is not None, f'нет топика {name}, есть: {topics}'
+        assert message.payload == ('true' if value else 'false'), (
+            f'{name}: в брокере {message.payload!r}, в посылке {value!r}')
+
     assert stand.mqtt.last(stand.mqtt_root) is None, (
         'одним объектом в корень публикуют только при включённом автодискавери')
     assert not stand.mqtt.topics('homeassistant/'), (
@@ -474,3 +484,145 @@ def test_I10_zero_readings_from_home_assistant(stand: Stand) -> None:
             f"показания не обнулились: {session.payload['ch1']}")
     finally:
         stand.mqtt.clear_retained(stand.mqtt.command_topic('ch1'))
+
+
+@pytest.mark.requires(esp='2.0.47')       # снятие своей команды без эха (#421)
+@DISCOVERY
+def test_I14_invalid_command_is_dropped(stand: Stand) -> None:
+    """
+    Негодная команда не применяется, но из брокера снимается.
+
+    Иначе она лежала бы удерживаемой и прилетала каждое пробуждение - #409,
+    только с мусором. Неизвестное имя - та же история: сообщение уже в топике
+    `/set`, и прошивка обязана его освободить.
+    """
+    assert stand.mqtt is not None
+    assert stand.last_payload is not None
+    was = stand.last_payload['period_min']
+    names = ('period_min', 'nosuch')
+
+    stand.reset_observers()
+    stand.mqtt.publish_set('period_min', 'abc', retain=True)
+    stand.mqtt.publish_set('nosuch', 1, retain=True)
+    try:
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+        assert session.applied.get('period_min') == 'abc', session.applied
+        assert session.payload is not None
+        assert session.payload['period_min'] == was, 'негодный период применён'
+
+        left = [m.topic for m in stand.mqtt.fetch_retained(stand.mqtt_root)]
+        stuck = [name for name in names if stand.mqtt.command_topic(name) in left]
+        assert not stuck, f'команды остались удерживаемыми: {stuck}'
+    finally:
+        for name in names:
+            stand.mqtt.clear_retained(stand.mqtt.command_topic(name))
+
+
+def discovery_entities(stand: Stand) -> dict[tuple[str, str], dict]:
+    """Автодискавери сеанса: (тип, имя сущности) -> конфиг."""
+    assert stand.mqtt is not None
+    entities = {}
+    for topic in stand.mqtt.topics('homeassistant/'):
+        parts = topic.split('/')          # homeassistant/<тип>/<устройство>/<имя>/config
+        message = stand.mqtt.last(topic)
+        if len(parts) == 5 and message is not None and message.payload:
+            entities[(parts[1], parts[3])] = message.json()
+    return entities
+
+
+@DISCOVERY
+def test_I15_templates_render_the_payload(stand: Stand) -> None:
+    """
+    Каждая сущность автодискавери, отрендеренная по посылке, показывает своё.
+
+    I1b проверяет, что конфиг - JSON; этот - что из него выйдет в Home
+    Assistant: шаблон читает поле своего канала (#288, #319), флаг приведён к
+    1/0 своего `stat_on` (#419), атрибуты собираются в JSON (PR #348), поле
+    есть в посылке. Рендер - `hatemplates.py`.
+    """
+    from .hatemplates import problems
+
+    assert stand.mqtt is not None
+    stand.mqtt.drain()
+    stand.reset_observers()
+    stand.dut.press_button()
+    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    root = stand.mqtt.last(stand.mqtt_root)
+    assert root is not None, 'показаний в корне нет - рендерить не по чему'
+    payload = root.json()
+
+    entities = discovery_entities(stand)
+    assert entities, 'автодискавери не опубликовано'
+    found = [problem for (kind, name), entity in sorted(entities.items())
+             for problem in problems(kind, name, entity, payload)]
+    assert not found, '\n'.join(found)
+
+
+@pytest.mark.needs(ctype0=INPUT_OFF, mqtt_auto_discovery=1)
+def test_I15b_disabled_input_publishes_only_its_type(stand: Stand) -> None:
+    """
+    Выключенный вход объявляет только свой тип, соседний - всё (#319).
+
+    #319: при выключенной горячей воде Home Assistant получал её сенсоры, а
+    холодной не видел. Тип входа публикуется и у выключенного
+    (`ha/publish_discovery.cpp`): иначе включить вход из HA было бы нечем.
+    """
+    assert stand.mqtt is not None
+    stand.mqtt.drain()
+    stand.reset_observers()
+    stand.dut.press_button()
+    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    names = {name for _, name in discovery_entities(stand)}
+    assert names, 'автодискавери не опубликовано'
+    assert {name for name in names if name.endswith('0')} == {'ctype0'}, sorted(names)
+    assert 'ch1' in names, f'у включённого входа нет показаний: {sorted(names)}'
+
+
+# Пароль брокера длиной 64 символа: столько генерирует Home Assistant (#301)
+AUTH_USER = 'waterius'
+AUTH_PASSWORD = 'Aa0' * 21 + 'Z'
+
+
+@pytest.fixture
+def auth_broker(cfg: Any) -> Iterator[Any]:
+    """Брокер с паролями на соседнем порту: основной пускает любого."""
+    from .broker import MqttBroker
+    server = MqttBroker(cfg.broker_port + 1, cfg.broker_host,
+                        users={AUTH_USER: AUTH_PASSWORD})
+    server.start()
+    try:
+        yield server
+    finally:
+        server.stop()
+
+
+@pytest.mark.requires(esp='2.0.47')       # статус брокера - строкой Alarm confirm
+def test_I16_long_mqtt_password(stand: Stand, cfg: Any, auth_broker: Any) -> None:
+    """
+    Пароль брокера в 64 символа доходит до брокера целиком (#301).
+
+    Брокер отдельный, с паролями: основной пускает любого, и обрезанный
+    пароль на нём прошёл бы незамеченным. Неверный пароль - зеркало:
+    подключение отвергнуто, а не принято как-нибудь.
+    """
+    try:
+        stand.setup(mqtt_port=auth_broker.port, mqtt_login=AUTH_USER,
+                    mqtt_password=AUTH_PASSWORD)
+        stand.reset_observers()
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+        assert 'MQTT: Connected.' in session.text, session.text
+        session.assert_confirm(mqtt=SEND_OK)
+
+        stand.setup(mqtt_password=AUTH_PASSWORD[:-1] + 'x')
+        stand.reset_observers()
+        stand.dut.press_button()
+        refused = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+        assert 'MQTT: Connect failed with state' in refused.text, refused.text
+        refused.assert_confirm(mqtt=SEND_NO_CONNECTION)
+    finally:
+        stand.setup(mqtt_port=cfg.broker_port, mqtt_login='', mqtt_password='')

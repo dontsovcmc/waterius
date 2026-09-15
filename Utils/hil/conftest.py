@@ -38,6 +38,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
                      help='снимать дамп трафика точки доступа к упавшим тестам')
     parser.addoption('--experimental', action='store_true', default=False,
                      help='гонять тесты экспериментальных функций прошивки')
+    parser.addoption('--soak', action='store_true', default=False,
+                     help='гонять многочасовой прогон (test_soak.py)')
+    parser.addoption('--soak-minutes', type=int, default=720,
+                     help='длительность многочасового прогона, минут')
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -66,6 +70,9 @@ def pytest_configure(config: pytest.Config) -> None:
         'markers',
         'experimental: функция прошивки ещё не устоялась, поведение может '
         'измениться; по умолчанию пропускается, гоняется с --experimental')
+    config.addinivalue_line(
+        'markers',
+        'soak: многочасовой прогон; занимает стенд целиком, поэтому только с --soak')
 
 
 def pytest_collection_modifyitems(config: pytest.Config,
@@ -75,6 +82,12 @@ def pytest_collection_modifyitems(config: pytest.Config,
             reason='экспериментальная функция: pytest --experimental')
         for item in items:
             if 'experimental' in item.keywords:
+                item.add_marker(skip)
+
+    if not config.getoption('--soak'):
+        skip = pytest.mark.skip(reason='многочасовой прогон: pytest --soak')
+        for item in items:
+            if 'soak' in item.keywords:
                 item.add_marker(skip)
 
     if config.getoption('--stand'):

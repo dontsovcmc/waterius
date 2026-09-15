@@ -36,6 +36,11 @@ from typing import Any, Iterator
 from loguru import logger
 
 
+# Дольше соединение без ответа не держим, даже если тест забыл выйти из
+# hanging(): поток обработчика иначе жил бы до конца прогона
+HANG_LIMIT_S = 300.0
+
+
 def self_signed(host: str, directory: Path) -> tuple[Path, Path]:
     """
     Самоподписанный сертификат на адрес приёмника.
@@ -66,6 +71,9 @@ class Receiver:
         self._reply: dict[str, Any] | None = None
         self._reply_once = True
         self._status = 200
+        self._hanging = False
+        self._release = threading.Event()
+        self.hung = 0                   # запросов, оставленных без ответа
         self._lock = threading.Lock()
         self._tls: ThreadingHTTPServer | None = None
         self._tls_thread: threading.Thread | None = None
@@ -80,6 +88,8 @@ class Receiver:
             def do_POST(self) -> None:                    # noqa: N802
                 length = int(self.headers.get('Content-Length', 0))
                 raw = self.rfile.read(length)
+                if receiver._hang():
+                    return
                 try:
                     payload = json.loads(raw)
                 except json.JSONDecodeError:
@@ -218,6 +228,36 @@ class Receiver:
     def _take_status(self) -> int:
         with self._lock:
             return self._status
+
+    @contextmanager
+    def hanging(self) -> Iterator[None]:
+        """
+        Принимать посылку и молчать, пока не выйдем из блока.
+
+        Так выглядит зависший сервер: соединение есть, ответа нет, и прошивка
+        ждёт до своего таймаута (`https_helpers.cpp`, SERVER_TIMEOUT). В
+        очередь посылка не попадает: без ответа это не доставка, а тест иначе
+        увидел бы её в `session.payload`.
+        """
+        with self._lock:
+            self._release.clear()
+            self._hanging = True
+        try:
+            yield
+        finally:
+            with self._lock:
+                self._hanging = False
+            self._release.set()
+
+    def _hang(self) -> bool:
+        """Подержать соединение без ответа, если висим. True - отвечать не надо."""
+        with self._lock:
+            hanging = self._hanging
+            if hanging:
+                self.hung += 1
+        if hanging:
+            self._release.wait(timeout=HANG_LIMIT_S)
+        return hanging
 
     # --- настройка устройства ---
 

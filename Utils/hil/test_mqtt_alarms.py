@@ -62,7 +62,7 @@ def armed(request: pytest.FixtureRequest, stand: Stand) -> Session:
     return stand.setup_alarms(channel=COLD, **settings)
 
 
-def test_I1_discovery_alarm_entities(stand: Stand, armed: Session) -> None:
+def test_I11_discovery_alarm_entities(stand: Stand, armed: Session) -> None:
     """Автодискавери содержит сущности тревог этого релиза."""
     assert stand.mqtt is not None
     stand.mqtt.drain()
@@ -115,7 +115,7 @@ def test_I3_remote_vacation_reaches_attiny(stand: Stand, armed: Session) -> None
     assert session.alarm_config[f'vol{COLD}'] == 1
 
 
-def test_I4_remote_threshold_is_recalculated(stand: Stand, armed: Session) -> None:
+def test_I12_remote_threshold_is_recalculated(stand: Stand, armed: Session) -> None:
     """
     Порог, присланный извне, обязан пересчитаться в тики.
 
@@ -180,7 +180,7 @@ def test_I5_remote_mask_change(stand: Stand, quiet: None, armed: Session) -> Non
 
 @pytest.mark.slow
 @pytest.mark.arm(ctype=LEAKAGE, period_min=PLANNED_PERIOD_MIN)
-def test_I6_remote_reset_clears_alarms(stand: Stand, quiet: None,
+def test_I13_remote_reset_clears_alarms(stand: Stand, quiet: None,
                                        armed: Session) -> None:
     """
     Кнопка «Clear alarms» в Home Assistant снимает тревоги.

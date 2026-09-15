@@ -23,30 +23,40 @@ pytestmark = [pytest.mark.stand, pytest.mark.slow]
 
 PERIOD_MIN = 5
 
+# Допуск интервала: после смены периода attiny заказывают 90 % от него
+# (period_after_user_change), к этому - длительность сеанса. Отличить 15 минут
+# от 5 (регресс PR #396) он позволяет с запасом
+H1_TOLERANCE = 0.4
 
-def test_H1_wakeup_period(stand: Stand) -> None:
+
+@pytest.mark.parametrize('period', [PERIOD_MIN, 15], ids=['5min', '15min'])
+def test_H1_wakeup_period(stand: Stand, period: int) -> None:
     """
     Период пробуждения соблюдается: устройство само выходит на связь раз в
     заданные минуты.
 
     Измеряем по факту, а не по логу: время отмеряет сторожевой таймер attiny, и
-    единственное честное доказательство - интервалы между сеансами.
+    единственное честное доказательство - интервалы между сеансами. Два
+    периода: регресс PR #396 будил устройство каждые пять минут при периоде
+    пятнадцать, и на пятиминутном его не видно.
 
     Режим «только при расходе» здесь не трогаем: выключенным его держат общие
     требования стенда, а на прошивках младше 2.0.47 такой настройки нет вовсе.
     """
-    stand.setup(period_min=PERIOD_MIN)
+    stand.setup(period_min=period)
 
     stand.reset_observers()
     stamps = []
     for _ in range(3):
-        session = stand.wait_session(timeout=12 * 60, mode=TRANSMIT_MODE)
+        session = stand.wait_session(timeout=2 * period * 60 + 120, mode=TRANSMIT_MODE)
         stamps.append(time.time())
         assert session.mode == TRANSMIT_MODE
 
+    low, high = period * (1 - H1_TOLERANCE), period * (1 + H1_TOLERANCE)
     for before, after in zip(stamps, stamps[1:]):
         minutes = (after - before) / 60
-        assert 3 <= minutes <= 7, f'интервал между сеансами {minutes:.1f} мин'
+        assert low <= minutes <= high, (
+            f'интервал между сеансами {minutes:.1f} мин при периоде {period}')
 
 
 @pytest.mark.requires(esp='2.0.47')       # младшие не печатают период attiny в лог
@@ -106,3 +116,100 @@ def test_H4_consumption_wakes_it_up(stand: Stand) -> None:
     assert idle['consumed'] == 1
     assert idle['transmit'] == 1
     assert session.payload is not None and session.payload['delta1'] > 0
+
+
+def planned_wait(period: int) -> float:
+    """Сколько ждать планового сеанса: два периода и запас на сам сеанс."""
+    return 2 * period * 60 + 120
+
+
+def assert_interval(minutes: float, period: int, what: str) -> None:
+    low, high = period * (1 - H1_TOLERANCE), period * (1 + H1_TOLERANCE)
+    assert low <= minutes <= high, f'{what}: {minutes:.1f} мин при периоде {period}'
+
+
+MANUAL_PERIOD_MIN = 10
+
+
+@pytest.mark.requires(esp='2.0.47')
+def test_H6_manual_wakeup_restarts_schedule(stand: Stand) -> None:
+    """
+    Ручное пробуждение задаёт расписание заново: следующий плановый сеанс -
+    через целый период после нажатия, а не в прежней точке (#380).
+
+    Нажатие посреди периода разводит одно и другое: прежняя точка была бы
+    через полпериода, новая - через целый.
+    """
+    stand.setup(period_min=MANUAL_PERIOD_MIN)
+    stand.reset_observers()
+    stand.wait_session(timeout=planned_wait(MANUAL_PERIOD_MIN), mode=TRANSMIT_MODE)
+
+    time.sleep(MANUAL_PERIOD_MIN * 60 / 2)
+    stand.reset_observers()
+    stand.dut.press_button()
+    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    pressed = time.time()
+
+    stand.wait_session(timeout=planned_wait(MANUAL_PERIOD_MIN), mode=TRANSMIT_MODE)
+    assert_interval((time.time() - pressed) / 60, MANUAL_PERIOD_MIN,
+                    'плановый сеанс после нажатия')
+
+
+# Сброс ЕСП позже ESP_POWERED_LONG_MSEC (5 с, Attiny85/src/Setup.h): иначе
+# attiny не отличит его от обычного включения
+RESET_AFTER_S = 8.0
+
+
+@pytest.mark.requires(attiny=40, esp='2.0.47')
+def test_H7_esp_reset_keeps_period(stand: Stand) -> None:
+    """
+    Перезагрузка ЕСП посреди сеанса: флаг перезагрузки поднят, период цел
+    (#354, #350, #242).
+
+    #242, #350: после перезагрузки ЕСП устройство переходило на период по
+    умолчанию и выходило на связь каждые 15 минут вместо часа. Флаг - слово
+    самой прошивки (`main.cpp`, строка `esp restarted:`), по нему портал
+    показывает плашку 22. Обычный сеанс того же теста - негативный контроль.
+    """
+    normal = stand.setup(period_min=PERIOD_MIN)
+    assert 'esp restarted: 0' in normal.full_text, normal.full_text
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    time.sleep(RESET_AFTER_S)
+    stand.dut.reset()
+
+    broken = stand.wait_session(timeout=180)
+    assert not broken.complete, f'сброс не попал в сеанс\n{broken.text}'
+    rebooted = stand.wait_session(timeout=180)
+    assert 'esp restarted: 1' in rebooted.full_text, rebooted.full_text
+    assert rebooted.complete, rebooted.text
+    done = time.time()
+
+    stand.wait_session(timeout=planned_wait(PERIOD_MIN), mode=TRANSMIT_MODE)
+    assert_interval((time.time() - done) / 60, PERIOD_MIN, 'плановый сеанс после сброса')
+
+
+@pytest.mark.requires(esp='2.0.47')
+def test_H8_missed_session_keeps_tuning(stand: Stand) -> None:
+    """
+    Пропущенный сеанс не ломает подстройку периода (#345, #347).
+
+    #347: после пропуска поправка считалась по двойному сну как по одному
+    периоду, и период уезжал вдвое. Правило проверяют хостовые test_wakeup,
+    здесь - настоящий пропуск: плановый сеанс без сети.
+    """
+    stand.setup(period_min=PERIOD_MIN)
+    stand.reset_observers()
+    before = stand.wait_session(timeout=planned_wait(PERIOD_MIN), mode=TRANSMIT_MODE)
+    assert before.payload is not None
+    tuned = before.payload['period_min_tuned']
+
+    with stand.net.ap_off():
+        missed = stand.wait_session(timeout=planned_wait(PERIOD_MIN), mode=TRANSMIT_MODE)
+        assert not missed.wifi_connected, missed.text
+
+    after = stand.wait_session(timeout=planned_wait(PERIOD_MIN), mode=TRANSMIT_MODE)
+    assert after.payload is not None, 'после пропуска посылки нет'
+    now = after.payload['period_min_tuned']
+    assert abs(now - tuned) <= 0.3 * tuned, f'поправка уехала после пропуска: {tuned} -> {now}'
