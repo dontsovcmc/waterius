@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .constants import CONFIRM_MQTT, LEAKAGE, SILENCE_S
+from .constants import ALARM_WAIT_S, CONFIRM_MQTT, LEAKAGE, SILENCE_S
 from .logwatch import (ALARM_MODE, SEND_NO_CONNECTION, SEND_OK, SEND_SKIPPED)
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
@@ -70,7 +70,7 @@ def test_F1_any_receiver_is_enough(stand: Stand, quiet: None) -> None:
     try:
         stand.dut.wet(channel=SENSOR, closed=True)
 
-        session = stand.wait_session(timeout=120, mode=ALARM_MODE)
+        session = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
         session.assert_alarm(wet0=1)
         session.assert_confirm(mask=0, any=1, confirmed=1)
     finally:
@@ -96,7 +96,7 @@ def test_F2_required_receiver_unreachable(stand: Stand, quiet: None) -> None:
         with stand.net.mqtt_down():
             stand.dut.wet(channel=SENSOR, closed=True)
 
-            first = stand.wait_session(timeout=180, mode=ALARM_MODE)
+            first = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
             first.assert_alarm(wet0=1)
             first.assert_confirm(mask=CONFIRM_MQTT, mqtt=SEND_NO_CONNECTION,
                                  confirmed=0)
@@ -126,7 +126,7 @@ def test_F3_disabled_receiver_drops_out(stand: Stand, quiet: None) -> None:
     try:
         stand.dut.wet(channel=SENSOR, closed=True)
 
-        session = stand.wait_session(timeout=120, mode=ALARM_MODE)
+        session = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
         session.assert_confirm(mask=CONFIRM_MQTT, mqtt=SEND_SKIPPED, any=1, confirmed=1)
 
         stand.dut.wet(channel=SENSOR, closed=False)

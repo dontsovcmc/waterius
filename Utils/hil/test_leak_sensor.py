@@ -121,7 +121,9 @@ def test_E12_type_change_clears_alarm(stand: Stand, quiet: None) -> None:
 
     try:
         stand.dut.wet(channel=0, closed=True)
-        alarm = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
+        # Любой сеанс: плановый, пришедший до конца паузы attiny после чужой
+        # тревоги, увозит эту сам, и тревожного уже не будет
+        alarm = stand.wait_session(timeout=ALARM_WAIT_S)
         alarm.assert_alarm(wet0=1)
 
         stand.setup(channel=0, ctype=NAMUR, wake=False, timeout=PLANNED_WAIT_S)

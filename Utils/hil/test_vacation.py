@@ -69,7 +69,9 @@ def test_E18_vacation_off_clears_its_alarm(stand: Stand, quiet: None) -> None:
 
     stand.reset_observers()
     stand.dut.pulse(channel=1, count=1)
-    stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE).assert_alarm(flow1=1)
+    # Любой сеанс: при периоде 5 минут плановый может увезти тревогу раньше
+    # тревожного, если attiny ещё держит паузу после прошлой тревоги
+    stand.wait_session(timeout=ALARM_WAIT_S).assert_alarm(flow1=1)
 
     off = stand.setup(vacation=0, wake=False, timeout=PLANNED_WAIT_S)
     assert off.alarm_config['vacation'] == 0
@@ -110,4 +112,4 @@ def test_E10_vacation_works_without_factor(stand: Stand, fresh_device: Any) -> N
     # не считает. В отпуске считается любой.
     stand.dut.pulses(channel=1, count=2, gap=60.0)
 
-    stand.wait_session(timeout=180, mode=ALARM_MODE).assert_alarm(flow1=1)
+    stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE).assert_alarm(flow1=1)

@@ -125,7 +125,9 @@ def test_E2_alarm_does_not_clear_itself(stand: Stand, quiet: None) -> None:
     stand.reset_observers()
 
     raise_volume_alarm(stand)
-    stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE).assert_alarm(flow1=1)
+    # Любой сеанс: при периоде 5 минут плановый может увезти тревогу раньше
+    # тревожного, если attiny ещё держит паузу после прошлой тревоги
+    stand.wait_session(timeout=ALARM_WAIT_S).assert_alarm(flow1=1)
 
     # Расход прекращён, а тревога обязана остаться. Двух плановых сеансов
     # достаточно: старое правило снимало её через двадцать секунд тишины.
