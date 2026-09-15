@@ -31,10 +31,10 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from .constants import HTTP_SEND_ATTEMPTS, PLANNED_PERIOD_MIN, PLANNED_WAIT_S
+from .constants import HTTP_SEND_ATTEMPTS
 from .logwatch import (BLYNK_CLOUD, BLYNK_CLOUD_ANSWER, BLYNK_MQTT,
                        BLYNK_ROUTER, MANUAL_TRANSMIT_MODE, SEND_BAD_ANSWER,
-                       SEND_NO_CONNECTION, SEND_OK, SEND_SKIPPED, TRANSMIT_MODE)
+                       SEND_NO_CONNECTION, SEND_OK, SEND_SKIPPED)
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session  # а сбор тестов должен работать без них
     from .stand import Stand
@@ -423,21 +423,3 @@ def test_G10_single_receiver(stand: Stand, alone: str) -> None:
                 f'брокер включён один, а в {stand.mqtt_root}/ пусто')
     finally:
         restore_receivers(stand, alone)
-
-
-@pytest.mark.slow
-@pytest.mark.needs(period_min=PLANNED_PERIOD_MIN)
-def test_G11_router_reboot_between_sessions(stand: Stand) -> None:
-    """
-    Роутер перезагрузился между сеансами - плановый сеанс снова в сети (#204).
-
-    Плановый, а не по кнопке: в #204 устройство переставало выходить на связь
-    само и оживало только от нажатия.
-    """
-    stand.router.restart()
-    stand.reset_observers()
-
-    session = stand.wait_session(timeout=PLANNED_WAIT_S, mode=TRANSMIT_MODE)
-
-    assert session.wifi_connected, f'после перезагрузки роутера сети нет\n{session.text}'
-    assert session.payload is not None, 'сеанс в сети, а посылки нет'

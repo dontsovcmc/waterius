@@ -1,5 +1,5 @@
 """
-Датчик протечки - вход типа LEAKAGE и LEAKAGE_NC (E4, E4a, E5, E12).
+Датчик протечки - вход типа LEAKAGE и LEAKAGE_NC (E4a, E5, E12).
 
 Не путать с протечкой по расходу (E3, `test_alarms.py`): там вода течёт через
 счётчик и не останавливается, и тревогу считают по импульсам. У датчика
@@ -8,7 +8,7 @@
 следующем импульсе или пробуждении.
 
 Тесты, где датчик - лишь самый быстрый способ поднять любую тревогу (доставка
-F1-F4, снятие E13 и E17, команды I5 и I13), остались при своих темах: предмет
+F1-F4, снятие E13 и E17), остались при своих темах: предмет
 проверки там не датчик. Публикация датчика в Home Assistant - I2 в
 `test_mqtt.py`.
 """
@@ -28,26 +28,6 @@ if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
 
 # Тревог до attiny 41 не существует: alarm_bits всегда 0
 pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=41)]
-
-
-@pytest.mark.needs(ctype0=LEAKAGE)
-def test_E4_leak_sensor_closes(stand: Stand, quiet: None) -> None:
-    """
-    Датчик протечки: замыкание поднимает тревогу почти мгновенно.
-
-    Единственная тревога с реакцией в пределах секунды - остальные ждут
-    следующего импульса или пробуждения.
-    """
-    stand.reset_observers()
-
-    try:
-        stand.dut.wet(channel=0, closed=True)
-        session = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
-        session.assert_alarm(wet0=1)
-    finally:
-        # Отпускаем, пока тип входа ещё датчик: в другом типе вход не
-        # опрашивается, и снять тревогу станет нечем.
-        stand.dut.wet(channel=0, closed=False)
 
 
 @pytest.mark.needs(ctype0=LEAKAGE)

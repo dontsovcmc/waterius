@@ -55,10 +55,6 @@ def pytest_configure(config: pytest.Config) -> None:
         'и проверяет, а возврат стенда делает сам модуль')
     config.addinivalue_line(
         'markers',
-        'arm(**settings): доп. настройки для фикстуры тревог; иначе тесту '
-        'пришлось бы платить за второй сеанс на живом железе')
-    config.addinivalue_line(
-        'markers',
         'requires(attiny=N, esp="X.Y.Z"): минимальные версии прошивки для теста; '
         'без указания версии тест идёт на любой')
     config.addinivalue_line(

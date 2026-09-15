@@ -3,13 +3,13 @@
 
 Отпуск - не отдельная тревога, а подмена порога: пока режим включён, порог
 объёма для attiny - один импульс, и тревогой становится любой расход
-(`core/alarm.cpp`, alarm_thresholds). Отсюда три свойства, по тесту на каждое:
-тревога на первом же импульсе (E6), работа без заданного веса импульса (E10)
-и снятие своей тревоги при выключении режима (E18; `active_point_api.cpp`,
+(`core/alarm.cpp`, alarm_thresholds). Отсюда три свойства: тревога на первом
+же импульсе (ею начинаются оба теста), работа без заданного веса импульса
+(E10) и снятие своей тревоги при выключении режима (E18; `active_point_api.cpp`,
 save_vacation).
 
-Команда отпуска из Home Assistant - I3 в `test_mqtt_alarms.py`: там предмет -
-доставка команды до attiny.
+Подменённый порог в attiny (`vol1=1`, `vacation=1`) проверяет I3 в
+`test_mqtt_alarms.py`, заодно с доставкой команды из Home Assistant.
 """
 
 from __future__ import annotations
@@ -27,29 +27,6 @@ if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
 
 # Тревог до attiny 41 не существует: alarm_bits всегда 0
 pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=41)]
-
-
-@pytest.mark.slow
-def test_E6_vacation_mode(stand: Stand, quiet: None) -> None:
-    """
-    Режим «Я уехал»: тревогой становится любой расход.
-
-    Проверяем по порогу, уехавшему в attiny, а не по настройке в посылке: порог
-    пользователя не затирается, подменяется только значение для attiny.
-    """
-    stand.setup_alarms(channel=1, factor=BASE_FACTOR, alarm_vol=VOL_LITRES,
-                       ctype=NAMUR, vacation=0)
-
-    on = stand.setup(vacation=1)
-    assert on.alarm_config['vol1'] == 1, (
-        f'в режиме «Я уехал» порог объёма - один импульс: {on.alarm_config}')
-    assert on.alarm_config['vacation'] == 1
-
-    stand.reset_observers()
-    stand.dut.pulse(channel=1, count=1)
-
-    session = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
-    session.assert_alarm(flow1=1)
 
 
 @pytest.mark.slow

@@ -107,12 +107,13 @@ i2c - прошивка или фьюзы); строки идут, а сеанс 
 
 ```python
 @pytest.mark.needs(ctype0=LEAKAGE)
-def test_E4_leak_sensor_closes(stand, quiet):
+def test_E4a_sensor_bounce_gives_one_session(stand, quiet):
     stand.reset_observers()
     stand.dut.wet(channel=0, closed=True)
 
     session = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
     session.assert_alarm(wet0=1)
+    ...
 ```
 
 Вот что делает это возможным.
@@ -381,13 +382,13 @@ already running`, а лог пуст — METF не получает ни стр�
 | #50, #113, #114, #280 | сеть с пробелом, апострофом, пароль из цифр | `test_W3_unusual_network_names` |
 | #69, #78, #339, #346 | вес «Авто», повторная настройка без определения | `test_A10_auto_factor_by_pulse_count`, `test_W1_wizard_configures_the_device` |
 | #76, #337 | замкнутый вход и кнопка | `test_D8_input_held_closed_counts_once` |
-| #88 | режим «Я уехал» | `test_E6_vacation_mode`, `test_E10_vacation_works_without_factor`, `test_E18_vacation_off_clears_its_alarm`, `test_I3_remote_vacation_reaches_attiny` |
+| #88 | режим «Я уехал» | `test_E10_vacation_works_without_factor`, `test_E18_vacation_off_clears_its_alarm`, `test_I3_remote_vacation_reaches_attiny` |
 | #108, #307 | пароль в разметке, звёздочки | `test_P5_saved_password_is_masked`, `test_C6_masked_password_keeps_the_old_one` |
 | #121, #238 | импульсы посреди сеанса | `test_D7_pulses_during_session_are_not_lost` |
 | #150, #200, #371 | дребезг, короткие замыкания | `test_D9_glitches_and_bounce_are_not_counted` |
 | #181, #224 | серийный номер, пробелы по краям | `test_S3_text_is_trimmed` |
 | #202, #389 | тревоги | блоки E и F: `test_alarms.py`, `test_leak_sensor.py`, `test_confirm.py` |
-| #204 | перестаёт выходить на связь | `test_G11_router_reboot_between_sessions`, `test_Z1_soak` |
+| #204 | перестаёт выходить на связь | `test_H8_missed_session_keeps_tuning` (плановый сеанс после пропуска снова в сети), `test_W4_router_changed_channel`, `test_Z1_soak` |
 | #222, #372 | роутер сменил канал | `test_W4_router_changed_channel` |
 | #242, #350, #354 | период и флаг после перезагрузки ЕСП | `test_H7_esp_reset_keeps_period` |
 | #282 | неверный пароль в мастере | `test_W2_wrong_password_returns_to_wifi_settings` |
@@ -397,7 +398,7 @@ already running`, а лог пуст — METF не получает ни стр�
 | #301 | пароль брокера в 64 символа | `test_I16_long_mqtt_password` |
 | #313, #330, #332, #353 | запятая, адрес брокера, показания без литров | `test_S1_readings_accept_a_comma`, `test_C1_water_readings_need_liters`, `test_C2_broker_over_tls_is_refused`, `test_C3_port_belongs_to_its_own_field`, `test_C8_valid_forms_are_accepted` |
 | #320 | без облака не уходит MQTT | `test_G10_single_receiver` |
-| #325 | ноль из HA | `test_I10_zero_readings_from_home_assistant` |
+| #325 | ноль из HA | путь показаний из HA и с сервера один (`apply_settings`) - `test_S1_readings_accept_a_comma`; ноль - хостовый `ParseDecimal.ZeroIsValid` |
 | #326 | сброс к заводским | `test_R2_settings_return_to_defaults` |
 | #331, #356 | тепло в HA | `test_I6_heat_carries_its_own_unit` |
 | #333 | электричество на красном входе | `test_D3_electricity_counts_kilowatt_hours` |

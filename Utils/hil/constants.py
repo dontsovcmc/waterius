@@ -88,7 +88,6 @@ MASKED = '********'
 # (core/types.h, ALARM_RESET_SHIFT1, ALARM_RESET_ALL)
 RESET_FLOW1 = 0x08
 RESET_WET1 = 0x20
-RESET_ALL = 0x3F
 
 # Бит маски квитанции тревоги, core/types.h: AlarmConfirm
 CONFIRM_MQTT = 4
