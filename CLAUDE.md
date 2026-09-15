@@ -166,10 +166,10 @@ Disable modules via build_flags in `platformio.ini`:
 - `-DWATERIUS_RU_DISABLED` — Exclude waterius.ru sender
 
 ### Library Versions (ESP8266)
-- ArduinoJson 7.3.1 (v7 API: `JsonDocument` without size template, `.to<JsonObject>()`)
+- ArduinoJson 7.4.3 (v7 API: `JsonDocument` without size template, `.to<JsonObject>()`)
 - PubSubClient 2.8.0
-- ESPAsyncWebServer 3.6.0 (ESP32Async fork)
-- ESPAsyncTCP 2.0.0
+- ESPAsyncWebServer 1.2.3 — fork `waterius/ESPAsyncWebServer#20230926` of me-no-dev
+- ESPAsyncTCP 1.2.2 (me-no-dev), pulled in by the web server's `library.json` as `^1.2.2`
 
 ## Development Notes
 

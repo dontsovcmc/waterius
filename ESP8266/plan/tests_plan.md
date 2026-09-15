@@ -102,7 +102,7 @@ test_framework = googletest
 test_build_src = yes
 build_src_filter = -<*> +<core/*>
 test_filter = test_*
-lib_deps = ArduinoJson@7.3.1
+lib_deps = ArduinoJson@7.4.3
 
 [env:native_classic]           ; Waterius Classic (ESP-01)
 extends = native_base

@@ -41,10 +41,10 @@ jobs:
       name: github-pages
       url: ${{ steps.pages.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Проверки
         run: |
           node simulator/test_simulator.js
@@ -53,9 +53,9 @@ jobs:
         run: |
           simulator/build.sh
           echo "$DOMAIN" > simulator/dist/CNAME
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: simulator/dist
       - id: pages
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
