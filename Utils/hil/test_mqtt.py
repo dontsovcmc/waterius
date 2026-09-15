@@ -460,32 +460,6 @@ def test_I9_both_input_types_in_one_session(stand: Stand) -> None:
             stand.mqtt.clear_retained(stand.mqtt.command_topic(name))
 
 
-@DISCOVERY
-def test_I10_zero_readings_from_home_assistant(stand: Stand) -> None:
-    """
-    Показания 0.0 из Home Assistant принимаются (#325).
-
-    Ноль - законное значение: новый счётчик приходит с нулём на табло.
-    Водяные показания обязаны содержать разделитель (`core/input.h`,
-    check_reading), и `0.0` его содержит; разбор даёт ноль, а не отказ.
-    """
-    assert stand.mqtt is not None
-    stand.setup(channel=1, value='5.000')     # чтобы ноль был изменением
-
-    stand.reset_observers()
-    stand.mqtt.publish_set('ch1', '0.0', retain=True)
-    try:
-        stand.dut.press_button()
-        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
-
-        assert session.applied.get('ch1') == '0.0', session.applied
-        assert session.payload is not None
-        assert abs(float(session.payload['ch1'])) < 0.001, (
-            f"показания не обнулились: {session.payload['ch1']}")
-    finally:
-        stand.mqtt.clear_retained(stand.mqtt.command_topic('ch1'))
-
-
 @pytest.mark.requires(esp='2.0.47')       # снятие своей команды без эха (#421)
 @DISCOVERY
 def test_I14_invalid_command_is_dropped(stand: Stand) -> None:

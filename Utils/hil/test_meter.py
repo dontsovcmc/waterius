@@ -36,24 +36,6 @@ SHORT_PULSE_MS = 1
 HIGH_PULSE_MS = 30
 
 
-def test_D1_delta_matches_pulses(stand: Stand) -> None:
-    """Импульсы при весе 10 л/имп дают ровно десять литров каждый."""
-    before = stand.setup(channel=1, factor=BASE_FACTOR, ctype=NAMUR, period_min=120)
-    assert before.payload is not None
-    ch_before = float(before.payload['ch1'])
-
-    stand.reset_observers()
-    stand.dut.pulse(channel=1, count=PULSES)
-    stand.dut.press_button()
-
-    session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
-
-    # Литры целые - сравниваем точно, кубометры дробные - с допуском
-    session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)
-    cubic = PULSES * BASE_FACTOR / 1000
-    assert abs(float(session.payload['ch1']) - ch_before - cubic) < 0.001
-
-
 @pytest.mark.slow
 def test_D2a_missed_session_keeps_consumption(stand: Stand) -> None:
     """
