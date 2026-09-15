@@ -406,6 +406,12 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
     if terminal is None:
         return
     terminal.write_line(f'    время теста: {elapsed(spent)}')
+    # Причину - сразу: сводка pytest печатает её в конце многочасового прогона
+    for when in ('setup', 'call', 'teardown'):
+        report = getattr(item, f'rep_{when}', None)
+        if report is not None and report.failed:
+            terminal.write_line(f'--- причина падения ({when}) ---')
+            terminal.write_line(report.longreprtext)
     if nextitem is None or nextitem.path != item.path:
         terminal.write_line(
             f'--- {item.path.name}: {elapsed(_file_seconds[item.path])} ---')

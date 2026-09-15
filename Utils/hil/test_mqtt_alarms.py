@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .constants import (BASE_FACTOR, COLD, LEAKAGE, NAMUR, PLANNED_PERIOD_MIN,
-                        PLANNED_WAIT_S, RESET_ALL, VOL_LITRES)
+from .constants import (ALARM_WAIT_S, BASE_FACTOR, COLD, LEAKAGE, NAMUR,
+                        PLANNED_PERIOD_MIN, PLANNED_WAIT_S, RESET_ALL, VOL_LITRES)
 from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session
@@ -166,7 +166,7 @@ def test_I5_remote_mask_change(stand: Stand, quiet: None, armed: Session) -> Non
     stand.reset_observers()
     try:
         stand.dut.wet(channel=COLD, closed=True)
-        alarm = stand.wait_session(timeout=180)
+        alarm = stand.wait_session(timeout=ALARM_WAIT_S)
         alarm.assert_alarm(wet1=1)
         alarm.assert_confirm(mask=4, confirmed=1)
     finally:
@@ -197,7 +197,7 @@ def test_I6_remote_reset_clears_alarms(stand: Stand, quiet: None,
     stand.reset_observers()
     try:
         stand.dut.wet(channel=COLD, closed=True)
-        stand.wait_session(timeout=180).assert_alarm(wet1=1)
+        stand.wait_session(timeout=ALARM_WAIT_S).assert_alarm(wet1=1)
     finally:
         stand.dut.wet(channel=COLD, closed=False)
 
