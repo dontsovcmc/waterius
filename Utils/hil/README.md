@@ -14,7 +14,7 @@
 
 | Часть | Что делает | Как подключена |
 |---|---|---|
-| **METF** (ESP32-C6 Super Mini) | Кнопка, входы счётчиков, сброс, чтение UART Ватериуса | HTTP, `metf_python_client` |
+| **METF** (ESP32-C6 Super Mini) | Кнопка, входы счётчиков, сброс платы, чтение UART Ватериуса | HTTP, `metf_python_client` |
 | **WT32-ETH01** с [esp32_nat_router](https://github.com/martin-ger/esp32_nat_router) | Точка доступа: включить, погасить, переименовать, сменить канал, зарезать трафик | Консоль по TCP, порт 2323, через Ethernet |
 | Приёмник HTTP | Ловит посылки и **присылает настройки в ответе** | `receiver.py`, поток в процессе pytest |
 | [amqtt](https://github.com/Yakifo/amqtt) | Брокер на время прогона | поднимается фикстурой в самом процессе pytest |
@@ -22,6 +22,12 @@
 
 Распиновка METF — из `Utils/waterius2_factory_test/main.py`: кнопка `GPIO1`,
 вход 1 `GPIO2`, вход 0 `GPIO3`, сброс `GPIO0`, UART Ватериуса на `Serial0`.
+
+Линия сброса заведена на вывод reset у attiny и перезагружает **всю плату**, а
+не одну ЕСП: после импульса счётчик сбросов attiny в посылке растёт, а ЕСП
+сообщает `esp restarted: 0` — для неё это обычное включение. Уронить одну ЕСП,
+оставив attiny на ходу, линией нельзя; это делает выход из режима настройки
+(`/api/turnoff` → `ESP.restart()`), на нём и стоит `test_H7`.
 
 Аплинк у WT32-ETH01 проводной, и это не прихоть. Во-первых, при аплинке по Wi-Fi
 радио одно, точка доступа обязана жить на канале роутера, и `set_ap_channel` в
@@ -339,9 +345,10 @@ already running`, а лог пуст — METF не получает ни стр�
 | [#408](https://github.com/dontsovcmc/waterius/issues/408) `mqtt_connect` возвращал успех после всех неудач | `test_G5_broker_unreachable` | ЕСП 2.0.47 |
 | [#409](https://github.com/dontsovcmc/waterius/issues/409) снятие retained-команды уходило без флага retain | `test_I4b_retained_command_is_cleared` | ЕСП 2.0.47 |
 | [#421](https://github.com/dontsovcmc/waterius/issues/421) снятие retain возвращалось по своей же подписке и затирало принятую команду | `test_I4_remote_period_min` | ЕСП 2.0.47 |
+| без номера: команда, пришедшая после применения, пропадала вместе со своей удерживаемой копией | `test_I4d_late_command_is_not_lost` | ЕСП 2.0.50 |
 | [#422](https://github.com/dontsovcmc/waterius/issues/422) устройство стирало удерживаемые показания собственного дерева | `test_I8_data_topics_are_not_cleared` | ЕСП 2.0.47 |
 
-**Минимальные версии для полного прогона: attiny 42, ЕСП 2.0.47.** Это верный
+**Минимальные версии для полного прогона: attiny 43, ЕСП 2.0.50.** Это верный
 результат, а не поломка стенда: прошивка на стенде должна быть той, которую
 собираетесь выпускать.
 
@@ -432,5 +439,4 @@ already running`, а лог пуст — METF не получает ни стр�
 |---|---|---|
 | `test_S4_invalid_value_is_rejected[ctype_unknown]` | тип входа с сервера и из HA уходит в attiny без проверки | `active_point_api.cpp`, applyInputParameter |
 | `test_S4b_rejected_period_keeps_tuning` | отвергнутый `period_min` всё равно сбрасывает подстройку | `active_point_api.cpp`, applyNonCheckBoxParameter |
-| `test_C6b_masked_password_keeps_fast_connect` | звёздочки сбрасывают кэш быстрого коннекта | там же, ветка password |
 | `test_W3_unusual_network_names[ssid_32]` | имя сети в 32 байта не сохраняется | `core/types.h`, WIFI_SSID_LEN |

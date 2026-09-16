@@ -140,6 +140,9 @@ function handlePortal(request, url) {
     var pathname = url.pathname;
 
     return getState().then(function (state) {
+        // Телефон выпал из сети Ватериуса: fetch страницы отвергается, как при
+        // обрыве Wi-Fi. У состояния из прошлых сборок поля нет - связь есть
+        if (state.portal.phone_link === false) return Response.error();
         if (pathname.indexOf('/api/') === 0) return handleApi(request, url, state);
         if (pathname === '/ssid.txt') return ssidFile(state);
 

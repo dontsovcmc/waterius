@@ -22,6 +22,11 @@ TinyDebugSerial mySerial;
 /*
 Версии прошивок
 
+43 - 2026.09.16 - dontsov
+	1. Смена типа входа - в портале настройки или командой с сервера - снимает
+	   тревогу этого входа сразу. Раньше, если датчик протечки оставался
+	   замкнутым, тревога возвращалась и висела до нажатия кнопки на корпусе.
+
 42 - 2026.09.13 - dontsov
 	Версия тестовая: в производство не уходила, поэтому номер оставлен прежним,
 	хотя формат кадра 'A' с прошлой записи сменился.
@@ -268,7 +273,9 @@ SlaveI2C slaveI2C;
 
 volatile uint32_t 		wdt_count;
 volatile CounterEvent 	event;
-volatile uint8_t		storage_write_limit = 0; 
+volatile uint8_t		storage_write_limit = 0;
+
+volatile bool			types_changed = false;
 
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR(WDT_vect)
@@ -452,10 +459,16 @@ void set_alarm_config(const uint8_t *data)
 void set_counter_types(const uint8_t *data)
 {
 	if (data[0] != info.config.types.type0)
+	{
 		alarm0.reset(ALARM_MASK);
+		types_changed = true;
+	}
 
 	if (data[1] != info.config.types.type1)
+	{
 		alarm1.reset(ALARM_MASK);
+		types_changed = true;
+	}
 
 	info.config.types.type0 = data[0];
 	info.config.types.type1 = data[1];
@@ -545,9 +558,23 @@ void setup()
 	LOG(info.data.value1);
 }
 
+// Типы от ЕСП: set_type пишет в регистры, поэтому не в обработчике i2c, а здесь
+void apply_counter_types()
+{
+	if (!types_changed)
+		return;
+
+	noInterrupts();
+	types_changed = false;
+	counter0.set_type((CounterType)info.config.types.type0);
+	counter1.set_type((CounterType)info.config.types.type1);
+	interrupts();
+}
+
 void counting_1ms(uint8_t &delay_loop_count)
 {
 	wdt_reset();
+	apply_counter_types();
 	if (delay_loop_count < 250)
 	{
 		delay_loop_count++;

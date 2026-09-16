@@ -10,10 +10,11 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from . import portal as portal_mod
 from .constants import NAMUR
 from .logwatch import MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
@@ -157,39 +158,55 @@ def test_H6_manual_wakeup_restarts_schedule(stand: Stand) -> None:
                     'плановый сеанс после нажатия')
 
 
-# Сброс ЕСП позже ESP_POWERED_LONG_MSEC (5 с, Attiny85/src/Setup.h): иначе
-# attiny не отличит его от обычного включения
-RESET_AFTER_S = 8.0
-
-
+@pytest.mark.portal
 @pytest.mark.requires(attiny=40, esp='2.0.47')
-def test_H7_esp_reset_keeps_period(stand: Stand) -> None:
+def test_H7_esp_reset_keeps_period(stand: Stand, cfg: Any) -> None:
     """
-    Перезагрузка ЕСП посреди сеанса: флаг перезагрузки поднят, период цел
+    Перезагрузка ЕСП без ведома attiny: флаг перезагрузки поднят, период цел
     (#354, #350, #242).
 
     #242, #350: после перезагрузки ЕСП устройство переходило на период по
     умолчанию и выходило на связь каждые 15 минут вместо часа. Флаг - слово
     самой прошивки (`main.cpp`, строка `esp restarted:`), по нему портал
-    показывает плашку 22. Обычный сеанс того же теста - негативный контроль.
+    показывает плашку 22. Обычный сеанс в начале теста - негативный контроль.
+
+    Перезагружаемся выходом из режима настройки, а не линией сброса стенда:
+    она заведена на вывод reset attiny и перезагружает всю плату, а тут нужна
+    одна ЕСП. Выход из портала даёт ровно это: `/api/turnoff` ставит
+    `exit_portal_flag`, и прошивка зовёт `ESP.restart()` (`main.cpp`), не
+    сказав attiny «ухожу спать». Питание остаётся поданным, attiny держит
+    взведённым ESP_POWERED_LONG, и по нему прошивка на следующей загрузке
+    узнаёт себя перезагруженной - тот же признак, что и после падения по
+    сторожевому таймеру.
+
+    Сам путь описан в `docs/setup-portal.md`, раздел «Завершение и сброс»; то,
+    что плашка о перезагрузке после него показывается штатно, - в
+    `docs/known-gaps.md`.
     """
+    if not cfg.atboard_port:
+        pytest.skip('нет AT-платы: [atboard] port в stand.ini')
+
     normal = stand.setup(period_min=PERIOD_MIN)
     assert 'esp restarted: 0' in normal.full_text, normal.full_text
 
-    stand.reset_observers()
-    stand.dut.press_button()
-    time.sleep(RESET_AFTER_S)
-    stand.dut.reset()
+    board = portal_mod.open_portal(cfg, stand)
+    try:
+        # Портал поднимался секунды, ESP_POWERED_LONG_MSEC (5 с) позади:
+        # attiny уже не отличит перезагрузку от обычного включения только по
+        # времени, а нам именно это и нужно
+        stand.reset_observers()
+        portal_mod.turnoff(board)
+    finally:
+        board.close()
 
-    broken = stand.wait_session(timeout=180)
-    assert not broken.complete, f'сброс не попал в сеанс\n{broken.text}'
     rebooted = stand.wait_session(timeout=180)
     assert 'esp restarted: 1' in rebooted.full_text, rebooted.full_text
     assert rebooted.complete, rebooted.text
     done = time.time()
 
     stand.wait_session(timeout=planned_wait(PERIOD_MIN), mode=TRANSMIT_MODE)
-    assert_interval((time.time() - done) / 60, PERIOD_MIN, 'плановый сеанс после сброса')
+    assert_interval((time.time() - done) / 60, PERIOD_MIN,
+                    'плановый сеанс после перезагрузки')
 
 
 @pytest.mark.requires(esp='2.0.47')

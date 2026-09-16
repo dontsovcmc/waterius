@@ -120,6 +120,61 @@ bool send_mqtt(const Settings &sett, JsonDocument &json_data)
     return true;
 }
 
+// Шаг опроса сокета, пока ждём опоздавшую команду
+#define MQTT_LATE_STEP_MS 10
+
+/**
+ * @brief Ждёт команды, приехавшие после применения настроек
+ *
+ * Брокер отдаёт удержанное не обязательно в первый loop(), а человек в Home
+ * Assistant может нажать переключатель ровно посреди сеанса. Применение в
+ * сеансе одно, поэтому перед закрытием даём команде шанс приехать.
+ *
+ * @param msec сколько качать сокет
+ * @return true приехала команда, надо применить ещё раз
+ */
+bool mqtt_late_commands(uint16_t msec)
+{
+    if (!mqtt_client.connected())
+    {
+        return false;
+    }
+
+    const unsigned long started = millis();
+
+    while (millis() - started < msec)
+    {
+        mqtt_client.loop();
+        delay(MQTT_LATE_STEP_MS);
+    }
+
+    return take_command_arrived();
+}
+
+/**
+ * @brief Отметить, что всё присланное сейчас будет применено
+ *
+ * Снимает признак прихода команды перед применением: всё, что приедет после
+ * этой точки, взведёт его заново и получит свой круг.
+ */
+void note_settings_applied()
+{
+    take_command_arrived();
+}
+
+/**
+ * @brief Снимает у брокера удерживаемые команды, которые уже применены
+ *
+ * Зовётся, пока сеанс с брокером ещё открыт, - иначе стирать будет нечем.
+ */
+void forget_applied_commands()
+{
+    if (mqtt_client.connected())
+    {
+        clear_applied_commands(mqtt_client);
+    }
+}
+
 /**
  * @brief Закрывает сеанс с брокером
  *

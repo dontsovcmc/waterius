@@ -293,18 +293,53 @@ void loop()
                     store_config(sett);
                 }
 
-                if (settings_received(json_settings_received))
+                /*
+                Кругов несколько: команда, приехавшая после применения, иначе
+                пролежала бы в документе до конца сеанса без всякого действия.
+                Повторное применение безопасно - в документе один ключ на
+                параметр, и побеждает последнее значение.
+                */
+                for (uint8_t pass = 0; pass < MQTT_APPLY_PASSES; pass++)
                 {
-                    apply_settings(json_settings_received, sett, data, cdata);
+                    if (settings_received(json_settings_received))
+                    {
+                        // Всё, что приедет после этой точки, попросит ещё круг
+                        note_settings_applied();
+                        apply_settings(json_settings_received, sett, data, cdata);
 
-                    // Типы входов команда меняет в attiny и в runtime_data, а
-                    // payload собирается из снимка data. Без переноса наверх
-                    // уходили бы прежние значения, и селектор в Home Assistant
-                    // отщёлкивал бы обратно (#360).
-                    apply_counter_types(data, runtime_data);
+                        // Типы входов команда меняет в attiny и в runtime_data, а
+                        // payload собирается из снимка data. Без переноса наверх
+                        // уходили бы прежние значения, и селектор в Home Assistant
+                        // отщёлкивал бы обратно (#360).
+                        apply_counter_types(data, runtime_data);
 
-                    send_data(sett, data, cdata, json_data, json_settings_received, status);
+                        send_data(sett, data, cdata, json_data, json_settings_received, status);
+                    }
+
+#ifndef MQTT_DISABLED
+                    // Ждём опоздавшую команду. Ждать незачем, если брокера нет
+                    // или мы на него не подписаны: команд не будет
+                    if (!is_mqtt(sett) || !sett.mqtt_auto_discovery
+                        || !mqtt_late_commands(MQTT_LATE_WAIT_MS))
+                    {
+                        break;
+                    }
+#else
+                    break;
+#endif
                 }
+
+#ifndef MQTT_DISABLED
+                /*
+                Команды применены - теперь их можно забыть у брокера. Снимать
+                retain раньше нельзя: удерживаемая команда - это гарантия
+                доставки, и стёртая до применения она пропадала бы совсем.
+                */
+                if (is_mqtt(sett))
+                {
+                    forget_applied_commands();
+                }
+#endif
 
                 /*
                 Сеанс с брокером закрываем здесь, а не внутри отправки: данные

@@ -81,3 +81,13 @@ uint8_t ap_channel(const uint8_t channel)
 
     return channel;
 }
+
+void forget_fast_connect_if_changed(Settings &sett, const char *before, const char *after,
+                                    const size_t size)
+{
+    if (strncmp(before, after, size) == 0)
+        return;
+
+    sett.wifi_channel = 0;
+    memset(sett.wifi_bssid, 0, sizeof(sett.wifi_bssid));
+}

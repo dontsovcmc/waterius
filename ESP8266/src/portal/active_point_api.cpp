@@ -134,13 +134,14 @@ void get_api_networks(AsyncWebServerRequest *request)
  * подключается без полного скана эфира — это секунды работы радио, главная
  * статья расхода батареи в сеансе.
  *
- * Вызывается после applySettings, а не из его цепочки: сохранение SSID и
+ * Вызывается после applySettings, а не из его цепочки: смена SSID или
  * пароля сбрасывает кэш коннекта, и при разборе в общем порядке результат
  * зависел бы от порядка полей в форме.
  *
  * Пара пишется целиком: канал без BSSID означал бы подключение к точке
  * 00:00:00:00:00:00 (см. core/wifi.h:has_bssid). Ничего не пришло или не
- * разобралось — оставляем нули, то есть полный скан.
+ * разобралось — остаётся что было: у прежней сети её пара, у новой нули
+ * (сброс при смене сети), то есть полный скан.
  *
  * @return true если пара сохранена — вызывающему нужно дописать конфигурацию:
  *         applySettings свой store_config сделал раньше.
@@ -1194,19 +1195,17 @@ void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj
     }
     else if (name == FPSTR(PARAM_SSID))
     {
+        char before[WIFI_SSID_LEN];
+        memcpy(before, sett.wifi_ssid, sizeof(before));
         save_param(p, sett.wifi_ssid, WIFI_SSID_LEN, errorsObj);
-        // Сброс кэша быстрого коннекта: канал/BSSID от прошлого роутера
-        // становятся неактуальны при смене сети — иначе первый коннект уходит
-        // на старый канал (в AP_STA портале это ещё и роняет телефон).
-        sett.wifi_channel = 0;
-        memset(sett.wifi_bssid, 0, sizeof(sett.wifi_bssid));
+        forget_fast_connect_if_changed(sett, before, sett.wifi_ssid, sizeof(before));
     }
     else if (name == FPSTR(PARAM_PASSWORD))
     {
+        char before[WIFI_PWD_LEN];
+        memcpy(before, sett.wifi_password, sizeof(before));
         save_param(p, sett.wifi_password, WIFI_PWD_LEN, errorsObj, false);
-        // См. комментарий выше: смена пароля тоже сбрасывает кэш коннекта.
-        sett.wifi_channel = 0;
-        memset(sett.wifi_bssid, 0, sizeof(sett.wifi_bssid));
+        forget_fast_connect_if_changed(sett, before, sett.wifi_password, sizeof(before));
     }
 
     else if (name == FPSTR(PARAM_WIFI_PHY_MODE))

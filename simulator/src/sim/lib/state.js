@@ -89,7 +89,11 @@
                     { ssid: 'TP-Link_Guest', level: 1, wifi_channel: 1, bssid: '5c:cf:7f:aa:bb:03' },
                 ],
             },
-            portal: { exited: false, esp_restarted: false },
+            portal: {
+                exited: false,
+                esp_restarted: false,
+                phone_link: true, // телефон в сети точки Ватериуса
+            },
         };
     }
 

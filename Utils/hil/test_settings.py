@@ -168,10 +168,7 @@ def test_S4b_rejected_period_keeps_tuning(stand: Stand) -> None:
     assert 'RESET: period_min_tuned' not in session.text, session.text
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    'звёздочки сбрасывают кэш быстрого коннекта: сброс канала и BSSID стоит '
-    'после save_param без условия (active_point_api.cpp, applyNonCheckBoxParameter, '
-    'ветка password)'))
+@pytest.mark.requires(esp='2.0.50')
 def test_C6b_masked_password_keeps_fast_connect(stand: Stand) -> None:
     """
     Звёздочки вместо пароля не сбрасывают быстрый коннект.

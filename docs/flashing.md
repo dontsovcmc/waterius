@@ -57,7 +57,7 @@ system_profiler SPUSBDataType | grep -B2 -A6 "FT232\|CP210"
 
 1. **Папка:** `-d Attiny85`
 2. **Окружение:** `-e waterius_2`
-3. **Файл на выходе:** `Attiny85/waterius_2-42.hex` — имя собирает
+3. **Файл на выходе:** `Attiny85/waterius_2-43.hex` — имя собирает
    `Attiny85/objdump.py` из окружения и `firmware_version`
    (`Attiny85/platformio.ini`); с `LOG_ON` добавляется `-log`
 
@@ -67,15 +67,15 @@ system_profiler SPUSBDataType | grep -B2 -A6 "FT232\|CP210"
 ~/.platformio/packages/tool-avrdude/bin/avrdude \
   -C ~/.platformio/packages/tool-avrdude/avrdude.conf \
   -p t85 -c usbasp -B 4 -P usb \
-  -U flash:w:"Attiny85/waterius_2-42.hex":i
+  -U flash:w:"Attiny85/waterius_2-43.hex":i
 ```
 
 ### 2.2. ЕСП
 
 1. **Папка:** `-d ESP8266`
 2. **Окружение:** `-e waterius_2`
-3. **Файлы на выходе:** `ESP8266/waterius_2-2.0.47.bin` и
-   `ESP8266/waterius_2-2.0.47-fs.bin` — имена собирает
+3. **Файлы на выходе:** `ESP8266/waterius_2-2.0.50.bin` и
+   `ESP8266/waterius_2-2.0.50-fs.bin` — имена собирает
    `ESP8266/post_compile.py` из окружения и `firmware_version`
    (`ESP8266/platformio.ini`), у образа ФС суффикс `-fs`; если в
    `ESP8266/secrets.ini` задан `WIFI_SSID`, добавляется ещё `-test`
@@ -86,8 +86,8 @@ system_profiler SPUSBDataType | grep -B2 -A6 "FT232\|CP210"
 
 ~/.platformio/penv/bin/python -m esptool --port <PORT> --baud 460800 \
   write_flash --flash_freq 40m --flash_size 4MB --flash_mode qio \
-  0x0      ESP8266/waterius_2-2.0.47.bin \
-  0x300000 ESP8266/waterius_2-2.0.47-fs.bin
+  0x0      ESP8266/waterius_2-2.0.50.bin \
+  0x300000 ESP8266/waterius_2-2.0.50-fs.bin
 ```
 
 ## 3. Классик
@@ -98,7 +98,7 @@ system_profiler SPUSBDataType | grep -B2 -A6 "FT232\|CP210"
 
 1. **Папка:** `-d Attiny85`
 2. **Окружение:** `-e attiny85`
-3. **Файл на выходе:** `Attiny85/attiny85-42.hex`
+3. **Файл на выходе:** `Attiny85/attiny85-43.hex`
 
 ```shell
 ~/.platformio/penv/bin/pio run -d Attiny85 -e attiny85
@@ -106,15 +106,15 @@ system_profiler SPUSBDataType | grep -B2 -A6 "FT232\|CP210"
 ~/.platformio/packages/tool-avrdude/bin/avrdude \
   -C ~/.platformio/packages/tool-avrdude/avrdude.conf \
   -p t85 -c usbasp -B 4 -P usb \
-  -U flash:w:"Attiny85/attiny85-42.hex":i
+  -U flash:w:"Attiny85/attiny85-43.hex":i
 ```
 
 ### 3.2. ЕСП
 
 1. **Папка:** `-d ESP8266`
 2. **Окружение:** `-e esp01_1m`
-3. **Файлы на выходе:** `ESP8266/esp01_1m-2.0.47.bin` и
-   `ESP8266/esp01_1m-2.0.47-fs.bin`
+3. **Файлы на выходе:** `ESP8266/esp01_1m-2.0.50.bin` и
+   `ESP8266/esp01_1m-2.0.50-fs.bin`
 
 ```shell
 ~/.platformio/penv/bin/pio run -d ESP8266 -e esp01_1m
@@ -122,8 +122,8 @@ system_profiler SPUSBDataType | grep -B2 -A6 "FT232\|CP210"
 
 ~/.platformio/penv/bin/python -m esptool --port <PORT> --baud 460800 \
   write_flash --flash_freq 40m --flash_size 1MB --flash_mode qio \
-  0x0     ESP8266/esp01_1m-2.0.47.bin \
-  0xBB000 ESP8266/esp01_1m-2.0.47-fs.bin
+  0x0     ESP8266/esp01_1m-2.0.50.bin \
+  0xBB000 ESP8266/esp01_1m-2.0.50-fs.bin
 ```
 
 ## 4. Окружение обязано стоять в каждой команде
@@ -144,10 +144,10 @@ system_profiler SPUSBDataType | grep -B2 -A6 "FT232\|CP210"
 **Команда без `-e` не отказывается работать — она молча собирает классик.**
 В `default_envs` у обоих проектов стоит он (`Attiny85/platformio.ini`,
 `ESP8266/platformio.ini`), так что `pio run -d Attiny85` даёт
-`attiny85-42.hex` и на Ватериусе-2 это мёртвая плата. Как она при этом
+`attiny85-43.hex` и на Ватериусе-2 это мёртвая плата. Как она при этом
 выглядит — в разборе неисправностей.
 
-Версии в именах файлов (`42`, `2.0.47`) берутся из `firmware_version` в
+Версии в именах файлов (`43`, `2.0.50`) берутся из `firmware_version` в
 `platformio.ini` каждого проекта. Подняли версию — имя файла поменялось,
 сверьтесь с выводом сборки: он печатает путь, куда положил образ.
 
@@ -187,8 +187,8 @@ Wrote  NNNNNN bytes at <адрес ФС> …  Hash of data verified.
 **«Verified» доказывает запись, а не выбор файла.** Прошивка не той платы
 пишется и сверяется так же успешно, как своя: avrdude сверяет чип с тем файлом,
 который ему дали, и о том, что файл чужой, не скажет никогда. Защищает от этого
-только одно — окружение в имени файла (`waterius_2-42.hex` против
-`attiny85-42.hex`). Поэтому раздел берётся целиком, а не собирается из кусков.
+только одно — окружение в имени файла (`waterius_2-43.hex` против
+`attiny85-43.hex`). Поэтому раздел берётся целиком, а не собирается из кусков.
 
 **Слушать UART после прошивки бессмысленно.** Питанием ЕСП распоряжается attiny
 и между сеансами держит его выключенным, а сброс по RTS сеанса не заказывает —

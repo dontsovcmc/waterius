@@ -51,4 +51,13 @@ bool has_bssid(const uint8_t bssid[6]);
 */
 uint8_t ap_channel(const uint8_t channel);
 
+/*
+Имя сети или пароль сохранены заново. Канал и BSSID принадлежат сети: сменилось
+значение - кэш сброшен, иначе первый коннект уйдёт на канал прежнего роутера (в
+портале это ещё и роняет телефон). То же значение и звёздочки вместо пароля -
+прежняя сеть: кэш остаётся, иначе следующий сеанс пошёл бы полным сканом эфира.
+*/
+void forget_fast_connect_if_changed(Settings &sett, const char *before, const char *after,
+                                    size_t size);
+
 #endif

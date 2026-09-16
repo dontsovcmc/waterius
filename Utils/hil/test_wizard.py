@@ -31,6 +31,7 @@ from loguru import logger
 from . import portal as portal_mod
 from .atboard import AtBoard, AtError
 from .constants import COLD, NAMUR, WATER_COLD
+from .test_wifi import other_channel
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal, pytest.mark.slow]
 
@@ -81,6 +82,22 @@ def find_line(stand: Any, pattern: re.Pattern[str],
 CONNECTED = '/input/1/setup.html'
 NOT_CONNECTED = '/wifi_settings.html'
 
+# Причину неудачи показывает страница Wi-Fi: прошивка подставляет номер строки
+# strings.js в fill_tr_id (`active_point.cpp`, PARAM_WIFI_CONNECT_STATUS)
+RE_CONNECT_STATUS = re.compile(r"fill_tr_id\('?(\d*)'?\s*,\s*'wifi_connect_status'\)")
+WRONG_PASSWORD_CODE = '9'   # S_WL_WRONG_PASSWORD, «Ошибка подключения: Некорректный пароль»
+
+
+def connect_status_code(board: AtBoard) -> str:
+    """Номер строки, которой страница Wi-Fi объяснит пользователю неудачу."""
+    answer = board.get(NOT_CONNECTED, portal_mod.HOST)
+    assert answer.status == 200, f'{NOT_CONNECTED}: {answer.status}'
+    match = RE_CONNECT_STATUS.search(answer.text)
+    onload = re.search(r'<body[^>]*', answer.text)
+    assert match, (f'на {NOT_CONNECTED} нет подстановки статуса подключения: '
+                   f'{onload.group(0)[:200] if onload else answer.text[:200]}')
+    return match.group(1)
+
 
 def networks_list(board: AtBoard, timeout: float = 60.0) -> list[dict[str, Any]]:
     """Список сетей портала. Скан асинхронный: до его конца портал честно отдаёт пустой."""
@@ -96,32 +113,41 @@ def networks_list(board: AtBoard, timeout: float = 60.0) -> list[dict[str, Any]]
     return networks
 
 
-def start_connect(board: AtBoard) -> None:
-    """Начать подключение. Обрыв здесь - часть сценария: точка уходит на канал роутера (K2)."""
+def start_connect(board: AtBoard) -> bool:
+    """
+    Начать подключение. Обрыв здесь - часть сценария: точка уходит на канал
+    роутера (K2). Возвращает, был ли обрыв.
+    """
     try:
         board.get('/api/start_connect?wizard=true', portal_mod.HOST)
     except AtError as err:
         logger.info(f'портал оборвал подключение, так и задумано: {err}')
+        return True
+    return False
 
 
-def wait_redirect(board: AtBoard, want: set[str], timeout: float = 120.0) -> str | None:
+def wait_redirect(board: AtBoard, want: set[str],
+                  timeout: float = 120.0) -> tuple[str | None, bool]:
     """
-    Итог подключения, как его увидит страница. Пока идёт подключение, портал
-    отвечает без адреса; с точки, переехавшей на канал роутера, AT-плата
-    слетает - возвращаемся и спрашиваем снова, как это делает страница (K2).
+    Итог подключения, как его увидит страница, и терялась ли по дороге точка.
+    Пока идёт подключение, портал отвечает без адреса; с точки, переехавшей на
+    канал роутера, AT-плата слетает - возвращаемся и спрашиваем снова, как это
+    делает страница (K2).
     """
     redirect = None
+    lost = False
     deadline = time.time() + timeout
     while time.time() < deadline and redirect not in want:
         try:
             redirect = api(board, '/api/connect_status').get('redirect')
         except AtError:
+            lost = True
             logger.info('точка переехала на канал роутера, возвращаемся')
             time.sleep(3)
             board.join(board.portal_ssid)
             continue
         time.sleep(2)
-    return redirect
+    return redirect, lost
 
 
 @pytest.fixture
@@ -172,7 +198,7 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
 
     start_connect(board)
 
-    redirect = wait_redirect(board, {CONNECTED})
+    redirect, _ = wait_redirect(board, {CONNECTED})
     assert redirect == CONNECTED, (
         f'мастер не увидел подключения к сети: {redirect}')
 
@@ -224,10 +250,10 @@ WRONG_PASSWORD = 'hil-wrong-password'
 def test_W2_wrong_password_returns_to_wifi_settings(board: AtBoard, cfg: Any,
                                                     stand: Any) -> None:
     """
-    Неверный пароль сети: мастер возвращает на страницу Wi-Fi, портал жив, и
-    верный пароль после этого подключает (#282).
+    Неверный пароль сети: мастер возвращает на страницу Wi-Fi, та называет
+    причину - «Некорректный пароль», а не общую ошибку подключения, портал жив,
+    и верный пароль после этого подключает (#282).
 
-    Кода ошибки портал не отдаёт - только адрес возврата, его и проверяем.
     Верный пароль сохраняется заново в любом исходе: с неверным устройство
     потеряло бы стенд до конца прогона.
     """
@@ -236,17 +262,99 @@ def test_W2_wrong_password_returns_to_wifi_settings(board: AtBoard, cfg: Any,
         assert save(board, '/api/save_connect', ssid=ssid, password=WRONG_PASSWORD,
                     wizard='true') == {}
         start_connect(board)
-        redirect = wait_redirect(board, {CONNECTED, NOT_CONNECTED})
+        redirect, _ = wait_redirect(board, {CONNECTED, NOT_CONNECTED})
         assert redirect == NOT_CONNECTED, f'с неверным паролем мастер пошёл дальше: {redirect}'
+        # Читается сразу: после удачного подключения подстановка уже другая
+        code = connect_status_code(board)
 
         assert save(board, '/api/save_connect', ssid=ssid, password=cfg.ap_password,
                     wizard='true') == {}
         start_connect(board)
-        redirect = wait_redirect(board, {CONNECTED})
+        redirect, _ = wait_redirect(board, {CONNECTED})
         assert redirect == CONNECTED, f'верный пароль после неверного не подключил: {redirect}'
+
+        assert code == WRONG_PASSWORD_CODE, (
+            f'с неверным паролем страница Wi-Fi покажет строку {code!r} из strings.js, '
+            f'а не «Некорректный пароль» ({WRONG_PASSWORD_CODE})')
     finally:
         assert save(board, '/api/save_connect', ssid=ssid,
                     password=cfg.ap_password) == {}
+
+
+def find_network(board: AtBoard, ssid: str,
+                 timeout: float = 90.0) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    """
+    Сеть по имени и последний увиденный список. Запрос после выдачи списка
+    запускает новый скан (`active_point_api.cpp`, get_api_networks), так что
+    повтор находит и сеть, поднявшуюся позже скана на старте портала.
+    """
+    seen: list[dict[str, Any]] = []
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        seen = networks_list(board, timeout=max(5.0, deadline - time.time()))
+        ours = next((net for net in seen if net['ssid'] == ssid), None)
+        if ours:
+            return ours, seen
+        time.sleep(3)
+    return None, seen
+
+
+def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
+    """
+    Роутер на другом канале, чем точка портала: на шаге подключения точка
+    уходит на канал роутера, телефон теряет её, возвращается - и мастер доходит
+    до конца (K2).
+
+    Точка поднимается на канале из настроек, то есть прошлого подключения
+    (`active_point.cpp`, ap_channel), поэтому канал роутера меняется до входа
+    в портал.
+    """
+    if not cfg.atboard_port:
+        pytest.skip('нет AT-платы: [atboard] port в stand.ini')
+    payload = stand.last_payload or {}
+    assert 'channel' in payload, 'канал роутера узнать не из чего: нет посылки со связью'
+    old = int(payload['channel'])
+    new = other_channel(old)
+    ssid = stand.ap_ssid
+
+    with stand.router.channel(new):
+        router_channel = stand.router.config().get('channel')
+        ap_on = stand.router.ap_enabled()
+        assert router_channel == str(new) and ap_on, (
+            f'роутер не перешёл на канал {new}: канал {router_channel}, точка {ap_on}')
+
+        with portal_mod.session(cfg, stand) as board:
+            started = find_line(stand, portal_mod.RE_AP_STARTED)
+            assert started, 'нет строки о запуске точки портала'
+            assert int(started.group(1)) == old, (
+                f'точка портала поднялась на канале {started.group(1)}, а не на канале '
+                f'прошлого подключения {old}: сценарий со сменой канала не воспроизведён')
+
+            ours, seen = find_network(board, ssid)
+            assert ours, (
+                f'сети стенда {ssid} нет в списке и после повторных сканов: '
+                f'{[(net["ssid"], net["wifi_channel"]) for net in seen]}; '
+                f'роутер: канал {stand.router.config().get("channel")}, '
+                f'точка {stand.router.ap_enabled()}')
+            assert int(ours['wifi_channel']) == new, (
+                f"в списке сеть стенда на канале {ours['wifi_channel']}, роутер на {new}")
+
+            answer = portal_mod.post_json(board, '/api/save_connect', ssid=ssid,
+                                          password=cfg.ap_password,
+                                          wifi_channel=ours['wifi_channel'],
+                                          bssid=ours['bssid'], wizard='true')
+            assert not answer.get('errors'), answer
+            # error=0 - S_ANOTHER_CHANNEL: страница подключения заранее предупредит,
+            # что телефон может потерять связь с Ватериусом
+            assert 'error=0' in answer.get('redirect', ''), (
+                f'смена канала не отмечена, предупреждения не будет: {answer}')
+            dropped = start_connect(board)
+            redirect, lost = wait_redirect(board, {CONNECTED})
+
+            assert dropped or lost, (
+                f'AT-плата ни разу не потеряла точку: точка не ушла с канала {old} на {new}')
+            assert redirect == CONNECTED, (
+                f'после смены канала мастер не увидел подключения: {redirect}')
 
 
 def hex_digits(mac: str) -> str:
