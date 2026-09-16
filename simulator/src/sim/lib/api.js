@@ -141,8 +141,9 @@
                                  state.sett.factor1, state.sett.factor1);
     }
 
-    /* Сброс кэша быстрого коннекта: канал и BSSID от прошлого роутера. */
-    function forgetFastConnect(state) {
+    /* Порт core/wifi.cpp:forget_fast_connect_if_changed - кэш принадлежит сети. */
+    function forgetFastConnectIfChanged(state, before, after) {
+        if (before === after) return;
         state.sett.wifi_channel = 0;
         state.wifi.bssid = [0, 0, 0, 0, 0, 0];
     }
@@ -150,7 +151,7 @@
     /*
      * Канал и BSSID выбранной сети из скрытых полей формы: зная пару, ЕСП
      * подключается без полного скана эфира. Зовётся после applySettings, а не
-     * из его цепочки: сохранение SSID сбрасывает кэш коннекта.
+     * из его цепочки: смена SSID или пароля сбрасывает кэш коннекта.
      */
     function saveFastConnect(params, state) {
         var channelParam = findParam(params, P().PARAM_WIFI_CHANNEL);
@@ -285,11 +286,13 @@
         } else if (name === P().PARAM_NTP_SERVER) {
             saveText(p, state, 'ntp_server', D.HOST_LEN, errors);
         } else if (name === P().PARAM_SSID) {
+            var ssidBefore = state.sett.wifi_ssid;
             saveText(p, state, 'wifi_ssid', D.WIFI_SSID_LEN, errors);
-            forgetFastConnect(state); // сеть сменилась - канал и BSSID больше не годятся
+            forgetFastConnectIfChanged(state, ssidBefore, state.sett.wifi_ssid);
         } else if (name === P().PARAM_PASSWORD) {
+            var passwordBefore = state.sett.wifi_password;
             saveText(p, state, 'wifi_password', D.WIFI_PWD_LEN, errors, false);
-            forgetFastConnect(state);
+            forgetFastConnectIfChanged(state, passwordBefore, state.sett.wifi_password);
         } else if (name === P().PARAM_WIFI_PHY_MODE) {
             saveUint8(p, state, 'wifi_phy_mode', errors, true);
         } else if (name === P().PARAM_COMPANY) {

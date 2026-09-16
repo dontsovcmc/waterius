@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from .constants import BASE_FACTOR, ELECTRO, ELECTRONIC, ELECTRONIC_HIGH, NAMUR
+from . import portal as portal_mod
+from .constants import (BASE_FACTOR, COLD, ELECTRO, ELECTRONIC,
+                        ELECTRONIC_HIGH, NAMUR)
 from .logwatch import MANUAL_TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
@@ -295,3 +297,89 @@ def test_D9_glitches_and_bounce_are_not_counted(stand: Stand) -> None:
     stand.dut.press_button()
     stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE).assert_delta(
         channel=1, liters=BASE_FACTOR)
+
+
+# Короче подтверждения discrete() (IMPULSE_CONFIRM_MS = 50): механическому
+# входу это дребезг, электронному - обычный импульс
+NAMUR_SHORT_MS = 50
+
+# Длинное замыкание: опрос раз в 250 мс и переспрос через 50 мс укладываются
+# внутрь с запасом. Триста миллисекунд легли бы на саму границу - переспрос
+# пришёлся бы уже на отпущенный вход, и тест мигал бы на исправной прошивке
+NAMUR_LONG_MS = 500
+
+# «Не посчитан» обязано значить «не посчитан», а не «ещё не успел»: ждём
+# заведомо дольше опроса, переспроса и трёх пустых опросов подряд
+SETTLE_S = 3.0
+
+
+def input_impulses(board: Any) -> int:
+    """Сколько импульсов вход насчитал с начала сеанса настройки."""
+    body = portal_mod.get_json(board, f'/api/status/{COLD}')
+    assert 'error' not in body, f'нет связи с attiny: {body}'
+    return int(body['impulses'])
+
+
+def choose_type(board: Any, ctype: int) -> None:
+    """Выбрать тип входа так, как это делает человек в портале."""
+    answer = portal_mod.post_json(board, '/api/save_input_type',
+                                  input=COLD, ctype=ctype)
+    assert not answer.get('errors'), answer
+
+
+@pytest.mark.portal
+@pytest.mark.requires(attiny=43)
+def test_D10_input_type_applies_without_leaving_portal(stand: Stand) -> None:
+    """
+    Выбранный в портале тип входа начинает действовать сразу, не дожидаясь
+    следующего пробуждения.
+
+    Так это и выглядит у человека при первичной настройке: он выбирает
+    «Электронный», остаётся на странице определения счётчика и подаёт импульсы.
+    До attiny 43 тип доезжал до счётчика только со следующим витком главного
+    цикла, а до тех пор вход считался по-старому: короткие импульсы газового
+    счётчика не ловились весь сеанс настройки - до десяти минут.
+
+    Проверяется не ответ API, а факт счёта. Заявленный тип портал берёт у
+    attiny, и та отдаёт его сразу (`set_counter_types`), так что на вид всё
+    применилось бы и на сломанной прошивке.
+    """
+    if not stand.cfg.atboard_port:
+        pytest.skip('нет AT-платы: [atboard] port в stand.ini')
+
+    with portal_mod.session(stand.cfg, stand) as board:
+        choose_type(board, NAMUR)
+
+        before = input_impulses(board)
+        stand.dut.pulse(channel=COLD, count=1, width_ms=NAMUR_SHORT_MS)
+        time.sleep(SETTLE_S)
+        assert input_impulses(board) == before, (
+            f'механический вход посчитал замыкание {NAMUR_SHORT_MS} мс')
+
+        stand.dut.pulse(channel=COLD, count=1, width_ms=NAMUR_LONG_MS)
+        time.sleep(SETTLE_S)
+        assert input_impulses(board) == before + 1, (
+            'механический вход не посчитал длинное замыкание')
+
+        choose_type(board, ELECTRONIC)
+
+        before = input_impulses(board)
+        stand.dut.pulse(channel=COLD, count=PULSES, width_ms=SHORT_PULSE_MS)
+        time.sleep(SETTLE_S)
+        assert input_impulses(board) == before + PULSES, (
+            f'электронный вход не посчитал импульсы {SHORT_PULSE_MS} мс: тип '
+            'не дошёл до счётчика, пока идёт сеанс настройки')
+
+        choose_type(board, NAMUR)
+
+        before = input_impulses(board)
+        stand.dut.pulse(channel=COLD, count=1, width_ms=NAMUR_SHORT_MS)
+        time.sleep(SETTLE_S)
+        assert input_impulses(board) == before, (
+            f'вернули механический, а замыкание {NAMUR_SHORT_MS} мс всё ещё '
+            'считается импульсом: прежний тип остался в счётчике')
+
+        stand.dut.pulse(channel=COLD, count=1, width_ms=NAMUR_LONG_MS)
+        time.sleep(SETTLE_S)
+        assert input_impulses(board) == before + 1, (
+            'после возврата к механическому длинное замыкание не считается')

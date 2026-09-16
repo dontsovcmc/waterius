@@ -117,3 +117,31 @@ TEST(ApChannel, RealChannelIsKept)
     EXPECT_EQ(ap_channel(6), 6);
     EXPECT_EQ(ap_channel(13), 13);
 }
+
+// Лишний сброс кэша не ломает подключение, а тихо стоит полного скана эфира в
+// каждом следующем сеансе - на батарейках это заметно
+static Settings with_fast_connect()
+{
+    Settings sett;
+    const uint8_t bssid[6] = {0x1C, 0xC3, 0xAB, 0x3A, 0xD3, 0x11};
+    sett.wifi_channel = 6;
+    memcpy(sett.wifi_bssid, bssid, sizeof(bssid));
+    return sett;
+}
+
+TEST(ForgetFastConnect, SameValueKeepsCache)
+{
+    // Звёздочки вместо пароля и повторно сохранённое то же имя сети
+    Settings sett = with_fast_connect();
+    forget_fast_connect_if_changed(sett, "home", "home", WIFI_SSID_LEN);
+    EXPECT_EQ(sett.wifi_channel, 6);
+    EXPECT_TRUE(has_bssid(sett.wifi_bssid));
+}
+
+TEST(ForgetFastConnect, ChangedValueResetsCache)
+{
+    Settings sett = with_fast_connect();
+    forget_fast_connect_if_changed(sett, "home", "work", WIFI_SSID_LEN);
+    EXPECT_EQ(sett.wifi_channel, 0);
+    EXPECT_FALSE(has_bssid(sett.wifi_bssid));
+}

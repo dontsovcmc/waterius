@@ -18,6 +18,72 @@ extern AttinyData data;
 extern AttinyData runtime_data;
 extern CalculatedData cdata;
 
+/*
+Команды, которые приняты, но ещё не применены.
+
+Удерживаемая команда - это гарантия доставки: пока она лежит у брокера,
+пропущенный сеанс означает отсрочку, а не потерю. Поэтому снимаем retain не при
+получении, а после применения (clear_applied_commands): иначе команда,
+приехавшая в конце сеанса, исчезала бы у брокера, так и не подействовав.
+
+Восемь - с запасом: столько разных параметров за один сеанс не присылают. А
+переполнение безопасно: незапомненная команда останется удерживаемой и приедет
+в следующий раз.
+*/
+#define MAX_PENDING_COMMANDS 8
+static String pending_commands[MAX_PENDING_COMMANDS];
+static uint8_t pending_count = 0;
+
+/*
+Признак «пришла команда». Флаг, а не размер документа: повторная команда тем же
+параметром документ не растит - ключ в нём один, - а применить её надо.
+*/
+static volatile bool command_arrived = false;
+
+/**
+ * @brief Забрать признак прихода команды, сбросив его
+ */
+bool take_command_arrived()
+{
+    const bool was = command_arrived;
+    command_arrived = false;
+    return was;
+}
+
+static void remember_command(const String &topic)
+{
+    for (uint8_t i = 0; i < pending_count; i++)
+    {
+        if (pending_commands[i] == topic)
+        {
+            return;
+        }
+    }
+
+    if (pending_count < MAX_PENDING_COMMANDS)
+    {
+        pending_commands[pending_count++] = topic;
+    }
+}
+
+/**
+ * @brief Забыть у брокера команды, которые уже применены
+ *
+ * Зовётся после применения и повторной отправки данных, пока сеанс с брокером
+ * ещё открыт.
+ *
+ * @param mqtt_client клиент MQTT
+ */
+void clear_applied_commands(PubSubClient &mqtt_client)
+{
+    for (uint8_t i = 0; i < pending_count; i++)
+    {
+        clear_retained(mqtt_client, pending_commands[i]);
+        pending_commands[i] = String();
+    }
+    pending_count = 0;
+}
+
 /**
  * @brief Обновление настроек по сообщению MQTT
  *
@@ -87,13 +153,28 @@ void mqtt_callback(Settings &sett, JsonDocument &json_settings_received, PubSubC
     }
     LOG_INFO(F("MQTT: CALLBACK: Message payload: ") << payload);
 
-    // Снимаем retain только со своих команд: подписка накрывает и топики
-    // показаний, а стирать их нельзя - из них Home Assistant берёт значения
-    // сразу после перезапуска (#422)
-    if (ha_fill_json_settings_data(topic, payload, json_settings_received))
+    // Трогаем только свои команды: подписка накрывает и топики показаний, а
+    // стирать их нельзя - из них Home Assistant берёт значения сразу после
+    // перезапуска (#422)
+    if (!ha_fill_json_settings_data(topic, payload, json_settings_received))
+    {
+        return;
+    }
+
+    /*
+    Команду обновления снимаем сразу, не откладывая. Обновление выполняется уже
+    после закрытия сеанса с брокером и заканчивается перезагрузкой, так что
+    снять её потом будет нечем, а оставленная удерживаемой она запускала бы
+    обновление на каждом пробуждении.
+    */
+    if (topic.endsWith(F("/ota/set")))
     {
         clear_retained(mqtt_client, topic);
+        return;
     }
+
+    command_arrived = true;
+    remember_command(topic);
 }
 
 /**

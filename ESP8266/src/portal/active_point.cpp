@@ -486,7 +486,7 @@ void on_root(AsyncWebServerRequest *request)
         if (wifi_connect_status == WL_CONNECT_FAILED || wifi_connect_status == WL_CONNECTION_LOST || wifi_connect_status == WL_WRONG_PASSWORD)
         {
             LOG_INFO(F("> captive_portal_error.html"));
-            send_page(request, "/captive_portal_error.html", nullptr);
+            send_page(request, "/captive_portal_error.html", processor);
         }
         else if (wifi_connect_status == WL_CONNECTED)
         {
@@ -630,7 +630,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
                { send_page(request, "/captive_portal_start.html", nullptr); });
 
     server->on("/captive_portal_error.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { send_page(request, "/captive_portal_error.html", nullptr); });
+               { send_page(request, "/captive_portal_error.html", processor); });
 
     server->on("/captive_portal_connected.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { send_page(request, "/captive_portal_connected.html", nullptr); });

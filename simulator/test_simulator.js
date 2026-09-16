@@ -178,10 +178,18 @@ function testWizard() {
     if (state.sett.wifi_channel !== 1) problems.push('канал быстрого коннекта не сохранён');
     if (!SimCore.hasBssid(state.wifi.bssid)) problems.push('bssid быстрого коннекта не сохранён');
 
-    // Мусор в паре - полный скан, а не половина адреса
-    const broken = call('/api/save_connect', {
+    // Та же сеть с мусором в паре: кэш принадлежит сети, прежняя верная пара остаётся
+    const same = call('/api/save_connect', {
         ssid: 'MyHome', password: 'secret123',
         wifi_channel: '1', bssid: 'не-адрес',
+    });
+    if (state.sett.wifi_channel !== 1 || !SimCore.hasBssid(state.wifi.bssid)) problems.push('та же сеть сбросила кэш коннекта');
+    if (same.json.redirect !== '/api/start_connect') problems.push('канал не менялся, а смена отмечена: ' + JSON.stringify(same.json));
+
+    // Другая сеть с мусором в паре - полный скан, а не половина адреса
+    const broken = call('/api/save_connect', {
+        ssid: 'Keenetic-1234', password: 'secret123',
+        wifi_channel: '11', bssid: 'не-адрес',
     });
     if (state.sett.wifi_channel !== 0) problems.push('битый bssid оставил канал');
     if (broken.json.redirect !== '/api/start_connect?error=0') problems.push('смена канала не отмечена: ' + JSON.stringify(broken.json));

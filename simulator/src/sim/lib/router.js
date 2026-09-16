@@ -10,6 +10,7 @@
     var PAGES = {
         '/about.html': 'about.html',
         '/alarms.html': 'alarms.html',
+        '/captive_portal_error.html': 'captive_portal_error.html',
         '/finish.html': 'finish.html',
         '/index.html': 'index.html',
         '/logs.html': 'logs.html',

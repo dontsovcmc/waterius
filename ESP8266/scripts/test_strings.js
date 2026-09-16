@@ -231,6 +231,28 @@ function page(name) {
     return fs.readFileSync(path.join(DATA_DIR, name), 'utf8');
 }
 
+test('страница, которая зовёт функцию из common.js или strings.js, подключает этот скрипт', () => {
+    // Без скрипта обработчик падает с ReferenceError, а страница выглядит живой
+    const owners = {};
+    for (const file of ['common.js', 'strings.js']) {
+        const text = fs.readFileSync(path.join(DATA_DIR, 'static', file), 'utf8');
+        for (const m of text.matchAll(/^function ([A-Za-z_]\w*)/gm)) owners[m[1]] = file;
+    }
+
+    const problems = [];
+    for (const name of PAGES) {
+        const html = page(name);
+        const handlers = Array.from(html.matchAll(/\son[a-z]+="([^"]*)"/g), m => m[1]).join('\n');
+        for (const [fn, file] of Object.entries(owners)) {
+            const called = new RegExp('\\b' + fn + '\\s*\\(').test(handlers);
+            if (called && !html.includes('src="/static/' + file + '"')) {
+                problems.push(name + ': зовёт ' + fn + '(), а ' + file + ' не подключён');
+            }
+        }
+    }
+    assert.deepStrictEqual(problems, []);
+});
+
 test('на странице тревог у каждого поля есть подпись и обработчик', () => {
     /*
     Подписи на странице тревог литеральные: речь только о воде, и единицы

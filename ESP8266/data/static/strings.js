@@ -423,5 +423,6 @@ function tr_text(id) {
 
 function fill_tr_id(status, id) {
     var q = document.getElementById(id);
-    q.innerHTML = tr(status);
+    // Пустой код - подключено, объяснять нечего: Number('') дал бы строку 0
+    q.innerHTML = (status === '' || status === undefined) ? '' : tr(status);
 }

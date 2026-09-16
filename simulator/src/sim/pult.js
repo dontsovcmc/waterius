@@ -252,6 +252,7 @@ function draw() {
     fill('attiny-voltage', state.attiny.voltage);
     el('attiny-link').checked = state.attiny.link;
     el('esp-restarted').checked = state.portal.esp_restarted;
+    el('phone-link').checked = state.portal.phone_link !== false;
     el('session-note').textContent = 'Сеансов настройки: ' + state.attiny.setup_started_counter +
         (state.portal.exited ? '. Портал выключен кнопкой «Готово» — нажмите кнопку Ватериуса.' : '');
     el('dump').textContent = JSON.stringify(state, null, 2);
@@ -277,6 +278,9 @@ function bind() {
     });
     el('esp-restarted').addEventListener('change', function (event) {
         send({ type: 'patch', state: { portal: { esp_restarted: event.target.checked } } });
+    });
+    el('phone-link').addEventListener('change', function (event) {
+        send({ type: 'patch', state: { portal: { phone_link: event.target.checked } } });
     });
     el('wifi-outcome').addEventListener('change', function (event) {
         send({ type: 'patch', state: { wifi: { outcome: event.target.value } } });

@@ -175,6 +175,48 @@ def test_I4b_retained_command_is_cleared(stand: Stand) -> None:
         f'команда осталась в брокере удерживаемой: {left}')
 
 
+# Поздняя команда: любое значение, отличное от эталона - в BASELINE av1 ноль
+LATE_VALUE = 50
+
+
+@pytest.mark.requires(esp='2.0.50')
+@DISCOVERY
+def test_I4d_late_command_is_not_lost(stand: Stand) -> None:
+    """
+    Команда, пришедшая после применения настроек, не теряется.
+
+    Применение в сеансе одно, а сокет брокера качается и после него - при
+    повторной отправке данных и при отключении. До 2.0.50 команда, попавшая в
+    это окно, разбиралась, стиралась у брокера как удерживаемая и не
+    применялась: в Home Assistant переключатель показывал успех, а устройство
+    просыпалось с прежней настройкой, и повторить было нечем.
+
+    Момент ловим по логу: строка `Apply setting:` означает, что первое
+    применение позади. Ранние настройки шлёт приёмник, а не брокер, - так
+    порядок задан жёстко, без гонки двух источников.
+    """
+    assert stand.mqtt is not None
+
+    stand.reset_observers()
+    stand.receiver.reply_settings({'period_min': OTHER_PERIOD_MIN})
+    stand.dut.press_button()
+
+    applied = stand.log.wait_line('Apply setting:', timeout=180, poll_interval=0.05)
+    assert applied is not None, 'первое применение не состоялось - проверять нечего'
+
+    stand.mqtt.publish_set('av1', LATE_VALUE)
+
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    assert session.applied.get('av1') == str(LATE_VALUE), (
+        f'поздняя команда потеряна: {session.applied}\n{session.text}')
+
+    # Снята она должна быть только после применения - иначе потеря была бы
+    # безвозвратной: копии у брокера больше нет
+    left = [m.topic for m in stand.mqtt.fetch_retained(stand.mqtt_root)]
+    assert stand.mqtt.command_topic('av1') not in left, (
+        f'применённая команда осталась удерживаемой: {left}')
+
+
 @DISCOVERY
 def test_I7_retain_flag(stand: Stand) -> None:
     """
@@ -289,7 +331,13 @@ def test_I1b_discovery_json_is_valid(stand: Stand) -> None:
             entity = json.loads(message.payload)
         except ValueError as error:
             raise AssertionError(f'{topic}: не JSON ({error}): {message.payload}')
-        assert entity.get('stat_t'), f'{topic}: нет топика состояния'
+        # Кнопка состояния не имеет, она шлёт команду: у неё обязателен cmd_t
+        # (selftest/test_hatemplates.py, test_button_has_no_state)
+        component = topic.split('/')[1]
+        if component == 'button':
+            assert entity.get('cmd_t'), f'{topic}: нет топика команды'
+        else:
+            assert entity.get('stat_t'), f'{topic}: нет топика состояния'
         assert entity.get('uniq_id'), f'{topic}: нет уникального идентификатора'
 
 

@@ -80,7 +80,7 @@ def test_E5_normally_closed_sensor_detects_cut_wire(stand: Stand, quiet: None) -
 
 
 @pytest.mark.slow
-@pytest.mark.requires(attiny=42)
+@pytest.mark.requires(attiny=43)
 @pytest.mark.needs(ctype0=LEAKAGE, period_min=PLANNED_PERIOD_MIN)
 def test_E12_type_change_clears_alarm(stand: Stand, quiet: None) -> None:
     """

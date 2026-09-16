@@ -154,7 +154,10 @@ async function run() {
         await wizard(page, origin);
         await alarms(page, origin);
         await placeholders(page, origin);
+        await lostLink(page, origin);
         check('на страницах мастера нет ошибок в скриптах', crashes);
+        await pagesOutsideWizard(page, origin);
+        await wrongPassword(page, origin);
     } finally {
         await browser.close();
         server.close();
@@ -276,6 +279,111 @@ async function placeholders(page, origin) {
     }
 
     check('на экране не осталось плейсхолдеров', problems);
+}
+
+async function sim(page, command) {
+    await page.evaluate((body) => fetch('/sim-api/cmd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).then((res) => res.json()), command);
+}
+
+// Мастер до шага подключения: сеть из списка, пароль, «Сохранить»
+async function toConnectStep(page, origin) {
+    await page.goto(origin + '/captive_portal_start.html');
+    await page.click('text=Начать');
+    await page.waitForURL(/wifi_list\.html/, { timeout: 10000 });
+    const network = page.locator('.wifi-list a.link-row').first();
+    await network.waitFor({ timeout: 10000 });
+    await network.click();
+    await page.waitForURL(/wifi_password\.html/, { timeout: 10000 });
+    await page.fill('#password', 'secret123');
+    await page.click('button[type=submit]');
+    await page.waitForURL(/wifi_connect\.html/, { timeout: 10000 });
+}
+
+/*
+Точка Ватериуса ушла на канал роутера, и телефон выпал из её сети (K2). Страница
+обязана сказать об этом окном и сама закрыть его, когда связь вернулась. Обрыв
+делается на шаге подключения: на устройстве он случается именно там.
+*/
+async function lostLink(page, origin) {
+    const problems = [];
+    await sim(page, { type: 'reset' });
+    await toConnectStep(page, origin);
+
+    await sim(page, { type: 'patch', state: { portal: { phone_link: false } } });
+    const box = page.locator('.modal.show');
+    try {
+        await box.waitFor({ timeout: 15000 });
+        const text = (await box.innerText()).replace(/\s+/g, ' ');
+        if (!text.includes('Нет связи с Ватериусом')) problems.push('в окне нет заголовка: ' + text);
+        if (!text.includes('waterius-')) problems.push('окно не говорит, к какой сети вернуться: ' + text);
+    } catch (err) {
+        problems.push('связь пропала, а окна «Нет связи с Ватериусом» нет');
+    }
+
+    await sim(page, { type: 'patch', state: { portal: { phone_link: true } } });
+    try {
+        await page.waitForURL(/input\/1\/setup\.html/, { timeout: 30000 });
+    } catch (err) {
+        problems.push('связь вернулась, а мастер не пошёл дальше: ' + new URL(page.url()).pathname);
+    }
+
+    check('связь пропала на шаге подключения: окно и возврат', problems);
+}
+
+/*
+Страницы вне шагов мастера: те, что телефон открывает сам, едва подключившись к
+точке (captive portal), и настройка Wi-Fi из меню. Идут после удачного
+подключения: причины неудачи тогда нет, и её подстановка пустая.
+*/
+async function pagesOutsideWizard(page, origin) {
+    const problems = [];
+    const crashes = [];
+    const onError = (err) => crashes.push(err.message);
+    page.on('pageerror', onError);
+
+    for (const url of ['/captive_portal_start.html', '/captive_portal_connected.html',
+                       '/captive_portal_error.html', '/wifi_settings.html']) {
+        const before = crashes.length;
+        await page.goto(origin + url, { waitUntil: 'load' });
+        await page.waitForTimeout(500);
+        crashes.slice(before).forEach((message) => problems.push(url + ': ' + message));
+    }
+
+    page.off('pageerror', onError);
+    check('страницы вне мастера открываются без ошибок в скриптах', problems);
+}
+
+/*
+Неверный пароль: причину называют и страница Wi-Fi, куда возвращает мастер, и
+страница ошибки, которую телефон открывает сам.
+*/
+async function wrongPassword(page, origin) {
+    const problems = [];
+    await sim(page, { type: 'reset' });
+    await sim(page, { type: 'patch', state: { wifi: { outcome: 'wrong_password' } } });
+    await toConnectStep(page, origin);
+
+    const reason = async (url) => {
+        const text = (await page.locator('#wifi_connect_status').innerText()).trim();
+        if (!text.includes('Некорректный пароль')) problems.push(url + ': причина «' + text + '»');
+    };
+
+    try {
+        await page.waitForURL(/wifi_settings\.html/, { timeout: 30000 });
+        await reason('/wifi_settings.html');
+    } catch (err) {
+        problems.push('с неверным паролем мастер не вернулся на страницу Wi-Fi: ' +
+                      new URL(page.url()).pathname);
+    }
+
+    await page.goto(origin + '/captive_portal_error.html', { waitUntil: 'load' });
+    await reason('/captive_portal_error.html');
+
+    check('неверный пароль назван на странице Wi-Fi и на странице ошибки', problems);
 }
 
 run().then(() => {

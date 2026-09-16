@@ -154,6 +154,28 @@ async function run() {
         impulses.attiny.impulses1 === 5 ? null : 'импульсов ' + impulses.attiny.impulses1 + ', ждали 5',
     ].filter(Boolean));
 
+    const phoneLink = (link) => ask(worker, '/sim-api/cmd', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'patch', state: { portal: { phone_link: link } } }),
+    });
+
+    await phoneLink(false);
+    const lostApi = await ask(worker, '/api/connect_status');
+    const lostPage = await ask(worker, '/wifi_connect.html');
+    const pultAlive = await ask(worker, '/sim-api/state');
+    check('без связи с телефоном портал молчит, а пульт отвечает', [
+        lostApi.type === 'error' ? null : '/api/connect_status ответил кодом ' + lostApi.status,
+        lostPage.type === 'error' ? null : '/wifi_connect.html отдан с кодом ' + lostPage.status,
+        pultAlive.status === 200 ? null : 'пульт: код ' + pultAlive.status,
+    ].filter(Boolean));
+
+    await phoneLink(true);
+    const back = await ask(worker, '/api/connect_status');
+    check('связь вернулась - портал снова отвечает', [
+        back.status === 200 ? null : '/api/connect_status: код ' + back.status + ', тип ' + back.type,
+    ].filter(Boolean));
+
     console.log(failed ? '\nпровалено проверок: ' + failed : '\nвсе проверки пройдены');
     process.exit(failed ? 1 : 0);
 }
