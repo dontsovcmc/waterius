@@ -62,7 +62,7 @@ python3 -m pytest Utils/hil --stand               # всё, включая ча�
 python3 -m pytest Utils/hil --stand --durations=0 # то же, со сводкой времени по фазам в конце
 python3 -m pytest Utils/hil --stand --pcap -k G4  # с дампом трафика к упавшим
 python3 -m pytest Utils/hil --stand --experimental # и экспериментальные функции
-python3 -m pytest Utils/hil --stand --soak -k Z1   # многочасовой прогон, --soak-minutes=720
+python3 -m pytest Utils/hil --stand --soak -k Z1   # длинный прогон, по умолчанию --soak-minutes=60
 ```
 
 Без `--stand` тесты железа пропускаются, а `selftest/` проверяется где угодно —

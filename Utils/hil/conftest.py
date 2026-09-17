@@ -39,9 +39,11 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption('--experimental', action='store_true', default=False,
                      help='гонять тесты экспериментальных функций прошивки')
     parser.addoption('--soak', action='store_true', default=False,
-                     help='гонять многочасовой прогон (test_soak.py)')
-    parser.addoption('--soak-minutes', type=int, default=720,
-                     help='длительность многочасового прогона, минут')
+                     help='гонять длинный прогон (test_soak.py)')
+    parser.addoption('--soak-minutes', type=int, default=60,
+                     help='длительность длинного прогона, минут: по умолчанию 60 - это '
+                          '12 сеансов, чтобы набор укладывался в один заход; '
+                          'для редких суточных дефектов ставят сотни')
 
 
 def pytest_configure(config: pytest.Config) -> None:
