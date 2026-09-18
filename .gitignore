@@ -43,3 +43,6 @@ simulator/dist
 # Браузерные проверки симулятора
 simulator/node_modules/
 simulator/package-lock.json
+
+# Логи прогонов стенда
+Utils/hil/logs/
