@@ -18,7 +18,7 @@ import time
 from typing import TYPE_CHECKING, Any, Mapping
 
 from loguru import logger
-from metf_python_client import METFClient
+from .metf import Metf
 
 from .config import StandConfig
 from .clock import BoardClock
@@ -86,7 +86,7 @@ GLOBAL_PARAMS = {
 class Stand:
     """Фасад над всем железом стенда."""
 
-    def __init__(self, cfg: StandConfig, api: METFClient, router: NatRouter,
+    def __init__(self, cfg: StandConfig, api: Metf, router: NatRouter,
                  receiver: Receiver, mqtt: 'MqttWatch | None') -> None:
         self.cfg = cfg
         self.api = api
@@ -113,7 +113,7 @@ class Stand:
 
     @classmethod
     def create(cls, cfg: StandConfig, mqtt: 'MqttWatch | None' = None) -> 'Stand':
-        api = METFClient(cfg.metf_host)
+        api = Metf(cfg.metf_host)
         try:
             api.ping()
             api.serial_begin()

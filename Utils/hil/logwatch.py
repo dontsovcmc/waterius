@@ -22,7 +22,12 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+import requests
 from loguru import logger
+
+# Осечка связи, а не отказ платы. Свой список, а не импорт из metf.py: разбор
+# лога проверяется без железа, и тянуть сюда клиент METF незачем
+NETWORK_ERRORS = (requests.RequestException, OSError)
 
 # Начало настоящей строки лога: MM:SS:mmm (Logging.h, LOG_FORMAT_TIME).
 LINE_START = re.compile(r'^\d{2}:\d{2}:\d{3}')
@@ -453,7 +458,8 @@ class LogWatcher:
         METF считает потери с последнего `flush()`, то есть значение
         накопительное, и смысл имеет только его прирост за окно наблюдения.
         Клиент 0.3 метода не знает, прошивка младше 5 не отвечает JSON - в обоих
-        случаях проверка выключается один раз, с объяснением в логе.
+        случаях проверка выключается один раз, с объяснением в логе. Обрыв связи
+        к таким причинам не относится: он временный, и проверку не гасит.
         """
         if self._can_stat is False:
             return None
@@ -465,8 +471,15 @@ class LogWatcher:
             self._can_stat = False
             return None
         except Exception as err:                     # прошивка младше 5 или плата молчит
-            logger.warning(f'METF не отдал /read/stat, потери лога не проверяются: {err}')
-            self._can_stat = False
+            # Выключаем проверку только если причина постоянная. Обрыв связи
+            # временный: METF ходит по радио и отваливается, а раньше одна
+            # такая осечка молча гасила проверку потерь до конца прогона
+            if not isinstance(err, NETWORK_ERRORS):
+                logger.warning(
+                    f'METF не отдал /read/stat, потери лога не проверяются: {err}')
+                self._can_stat = False
+            else:
+                logger.warning(f'METF не отдал /read/stat в этот раз: {err}')
             return None
         self._can_stat = True
         return dropped

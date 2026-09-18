@@ -146,6 +146,21 @@ def pytest_configure(config: pytest.Config) -> None:   # pytest_configure - жд
         'soak: многочасовой прогон; занимает стенд целиком, поэтому только с --soak')
 
 
+@pytest.hookimpl(tryfirst=True)
+def pytest_exception_interact(node: Any, call: Any, report: Any) -> None:
+    """
+    METF замолчал надолго - останавливаем прогон целиком.
+
+    Без платы стенд не может ни нажать кнопку, ни прочитать лог, поэтому
+    продолжать бессмысленно: каждый следующий тест выдаст тот же traceback.
+    Один раз это стоило часа прогона и 23 одинаковых ошибок подряд.
+    """
+    from .metf import MetfGone
+
+    if call.excinfo is not None and isinstance(call.excinfo.value, MetfGone):
+        pytest.exit(str(call.excinfo.value), returncode=1)
+
+
 def pytest_collection_modifyitems(config: pytest.Config,
                                   items: list[pytest.Item]) -> None:
     if not config.getoption('--experimental'):
