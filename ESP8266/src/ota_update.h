@@ -8,7 +8,6 @@
 #include "voltage.h"
 
 #define OTA_MIN_VOLTAGE_MV 3300
-#define OTA_USB_VOLTAGE_THRESHOLD_MV 4600
 
 bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &sett, Voltage &voltage);
 

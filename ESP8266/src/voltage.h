@@ -3,10 +3,8 @@
 
 #include "setup.h"
 #include "Logging.h"
+#include "core/power.h"
 
-#define LOW_BATTERY_DIFF_MV 50 // надо еще учесть качество замеров (компаратора у ESP)
-#define ALERT_POWER_DIFF_MV 100
-#define BATTERY_LOW_THRESHOLD_MV 2900
 #define MAX_PROBES 20
 
 class Voltage
