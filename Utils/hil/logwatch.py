@@ -53,6 +53,27 @@ BLYNK_MQTT = 4
 BLYNK_CONFIG = 5
 BLYNK_CLOUD_ANSWER = 6
 
+BLYNK_NAMES = {
+    BLYNK_LOW_VOLTAGE: 'низкое питание',
+    BLYNK_ROUTER: 'нет роутера',
+    BLYNK_CLOUD: 'облако или свой сервер',
+    BLYNK_MQTT: 'брокер',
+    BLYNK_CONFIG: 'настройки',
+    BLYNK_CLOUD_ANSWER: 'ответ облака',
+}
+
+# Коды про отправку. Отделены от остальных, потому что проверки отправки
+# сверялись с «моргания нет вовсе», а низкое питание (код 1) - беда стенда, и
+# от неё падали тесты с текстом про получателей, которые были ни при чём
+SENDING_BLYNKS = (BLYNK_ROUTER, BLYNK_CLOUD, BLYNK_MQTT, BLYNK_CLOUD_ANSWER)
+
+
+def blynk_name(code: int | None) -> str:
+    """Код моргания словами: в тексте падения «3» ничего не объясняет."""
+    if code is None:
+        return 'молчит'
+    return f'код {code} ({BLYNK_NAMES.get(code, "неизвестный")})'
+
 RE_MODE = re.compile(r'Startup mode: (\d)')
 RE_ATTINY_VER = re.compile(r'attiny firmware ver: (\d+)')
 RE_ESP_VER = re.compile(r'Firmware ver: (\d+)\.(\d+)\.(\d+)')
