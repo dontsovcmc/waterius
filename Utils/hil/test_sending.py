@@ -33,7 +33,8 @@ import pytest
 
 from .constants import HTTP_SEND_ATTEMPTS
 from .logwatch import (BLYNK_CLOUD, BLYNK_CLOUD_ANSWER, BLYNK_MQTT,
-                       BLYNK_ROUTER, MANUAL_TRANSMIT_MODE, SEND_BAD_ANSWER,
+                       BLYNK_ROUTER, SENDING_BLYNKS, blynk_name,
+                       MANUAL_TRANSMIT_MODE, SEND_BAD_ANSWER,
                        SEND_NO_CONNECTION, SEND_OK, SEND_SKIPPED)
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session  # а сбор тестов должен работать без них
@@ -107,8 +108,10 @@ def test_G1_all_three_channels(stand: Stand) -> None:
     session.assert_confirm(waterius=SEND_OK, http=SEND_OK, mqtt=SEND_OK)
     assert session.payload is not None, 'приёмник не получил посылку'
 
-    # Успех не моргается ни на одной модели (main.cpp), значит и строки нет
-    assert session.blynk is None, f'удачный сеанс собрался моргать: {session.blynk}'
+    # Успех не моргается ни на одной модели (main.cpp). Спрашиваем про коды
+    # отправки: код питания говорит о стенде, и про него предупреждает сам стенд
+    assert session.blynk not in SENDING_BLYNKS, (
+        f'удачный сеанс собрался моргать: {blynk_name(session.blynk)}')
 
     assert stand.mqtt is not None
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
@@ -414,7 +417,9 @@ def test_G10_single_receiver(stand: Stand, alone: str) -> None:
 
         session.assert_confirm(**{name.removesuffix('_on'): SEND_OK if name == alone
                                   else SEND_SKIPPED for name in RECEIVERS})
-        assert session.blynk is None, f'выключенный получатель - не ошибка\n{session.text}'
+        assert session.blynk not in SENDING_BLYNKS, (
+            f'выключенный получатель - не ошибка, а плата моргает: '
+            f'{blynk_name(session.blynk)}\n{session.text}')
         if alone == 'http_on':
             assert session.payload is not None, 'свой сервер включён, а посылки нет'
         else:
