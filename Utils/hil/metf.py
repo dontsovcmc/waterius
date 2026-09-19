@@ -11,6 +11,11 @@ METF - клиент Wi-Fi домашней сети, и тот же эфир т�
 Отсюда два правила. Короткая осечка - это повтор, а не падение. Долгое молчание
 платы - это конец прогона сразу, с внятным текстом: без METF стенд всё равно
 ничего не может, и час одинаковых ошибок никому не нужен.
+
+Третье правило - про то, что повторять нельзя. Повтор осмыслен, только если
+запрос заведомо не доехал: плата отказала в соединении или не ответила на SYN.
+`ReadTimeout` означает обратное - запрос ушёл, ответа нет, - и для `/pulse` это
+принципиально: импульс мог быть выдан, и повтор нажмёт кнопку второй раз.
 """
 
 from __future__ import annotations
@@ -29,6 +34,11 @@ DEAD_AFTER_S = 60.0          # столько молчания - и прогон
 # Что считаем осечкой связи, а не ошибкой вызова: таймауты, обрыв соединения,
 # «host is down» от стека. Всё остальное - ошибка теста, её не глушим
 NETWORK_ERRORS = (requests.RequestException, OSError)
+
+# Что можно повторять: соединение не установилось, значит плата запроса не
+# видела. `ConnectTimeout` - наследник `ConnectionError`, поэтому попадает сюда,
+# а `ReadTimeout` - нет, и это ровно то поведение, которое нужно
+SAFE_TO_REPEAT = (requests.ConnectionError,)
 
 
 class MetfGone(Exception):
@@ -59,13 +69,36 @@ class Metf:
             return target
 
         def call(*args: Any, **kwargs: Any) -> Any:
-            return self._retry(name, target, *args, **kwargs)
+            return self._retry(name, target, args, kwargs)
 
         call.__name__ = name
         return call
 
+    def pulse(self, pin: int, value: int, duration_ms: int) -> None:
+        """
+        Выдержка на самой плате: `POST /pulse` (протокол v4).
+
+        Клиент 0.4 этого метода не знает, поэтому зовём эндпоинт напрямую - но
+        через общий `_retry`, иначе самое частое действие стенда (нажатие
+        кнопки, импульсы счётчиков) остаётся единственным без повторов. Так и
+        было: девять ошибок прогона пришли отсюда.
+
+        Повторяется только отказ соединения: см. `SAFE_TO_REPEAT`. Ответ плата
+        шлёт после окончания импульса, поэтому таймаут - выдержка плюс запас.
+        """
+        root = self._api._root
+        session = self._api._sess
+        answer = self._retry(
+            'pulse', session.post,
+            (f'{root}/pulse',),
+            {'data': {'pin': pin, 'value': value, 'duration_ms': duration_ms},
+             'timeout': max(5.0, duration_ms / 1000.0 + 5.0)},
+            repeatable=SAFE_TO_REPEAT)
+        answer.raise_for_status()
+
     def _retry(self, name: str, target: Callable[..., Any],
-               *args: Any, **kwargs: Any) -> Any:
+               args: tuple[Any, ...], kwargs: dict[str, Any],
+               repeatable: tuple[type[BaseException], ...] = NETWORK_ERRORS) -> Any:
         pause = self._pause
         last: Exception | None = None
         for attempt in range(1, self._attempts + 1):
@@ -73,7 +106,11 @@ class Metf:
                 answer = target(*args, **kwargs)
             except NETWORK_ERRORS as err:
                 last = err
-                self._note_failure(name, err, attempt)
+                again = isinstance(err, repeatable)
+                self._note_failure(name, err, attempt,
+                                   self._attempts if again else 1)
+                if not again:
+                    break
                 if attempt < self._attempts:
                     time.sleep(pause)
                     pause *= 2
@@ -84,7 +121,8 @@ class Metf:
         assert last is not None
         raise last
 
-    def _note_failure(self, name: str, err: Exception, attempt: int) -> None:
+    def _note_failure(self, name: str, err: Exception,
+                      attempt: int, attempts: int) -> None:
         now = time.time()
         if self._down_since is None:
             self._down_since = now
@@ -93,8 +131,12 @@ class Metf:
             raise MetfGone(
                 f'стенд: METF {self._host} молчит {silent:.0f} с - прогон остановлен. '
                 f'Последняя ошибка на {name}(): {err}')
-        logger.warning(f'METF: {name}() - {type(err).__name__}, '
-                       f'попытка {attempt} из {self._attempts}: {err}')
+        if attempts == 1:
+            logger.warning(f'METF: {name}() - {type(err).__name__}, '
+                           f'повторять нельзя: {err}')
+        else:
+            logger.warning(f'METF: {name}() - {type(err).__name__}, '
+                           f'попытка {attempt} из {attempts}: {err}')
 
     def _note_success(self) -> None:
         if self._down_since is None:
