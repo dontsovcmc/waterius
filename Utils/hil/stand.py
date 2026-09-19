@@ -15,6 +15,7 @@ retain. MQTT-путь проверяется отдельными тестами
 from __future__ import annotations
 
 import time
+import warnings
 from typing import TYPE_CHECKING, Any, Mapping
 
 from loguru import logger
@@ -83,6 +84,14 @@ GLOBAL_PARAMS = {
 }
 
 
+# Порог прошивки: `ESP8266/src/voltage.h`, ALERT_POWER_DIFF_MV
+ALERT_POWER_DIFF_MV = 100
+
+
+class StandPowerWarning(UserWarning):
+    """Питание стенда просело настолько, что прошивка сочла батарейки севшими."""
+
+
 class Stand:
     """Фасад над всем железом стенда."""
 
@@ -94,6 +103,7 @@ class Stand:
         self.receiver = receiver
         self.mqtt = mqtt
         self.log = LogWatcher(api)
+        self._power_warned = False
         self.dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin)
         # Время устройству отдаёт та же плата: тесты синхронизации не должны
         # зависеть ни от интернета, ни от серверов на машине с прогоном
@@ -204,8 +214,32 @@ class Stand:
         if self.mqtt:
             session.mqtt = [(m.topic, m.payload, m.retain) for m in self.mqtt.history]
 
+        if session.payload is not None:
+            self._check_power(session.payload)
+
         logger.info(f'сеанс: mode={session.mode}, посылок {len(session.payloads)}')
         return session
+
+    def _check_power(self, payload: Mapping[str, Any]) -> None:
+        """
+        Просадка питания - беда стенда, а не прошивки.
+
+        Прошивка считает батарейки севшими, если замеры за сеанс разошлись на
+        100 мВ (`ESP8266/src/voltage.h`, ALERT_POWER_DIFF_MV), и моргает кодом
+        1 - у питаемого от стенда устройства это говорит о кабеле и источнике.
+        Предупреждение одно на прогон: оно про стенд, а не про тест.
+        """
+        if not payload.get('voltage_low') or self._power_warned:
+            return
+        self._power_warned = True
+        diff_mv = round(float(payload.get('voltage_diff') or 0.0) * 1000)
+        text = (f'стенд: питание устройства просело на {diff_mv} мВ за сеанс при '
+                f'пороге прошивки {ALERT_POWER_DIFF_MV} мВ '
+                f'(напряжение {payload.get("voltage")} В). Прошивка считает это '
+                f'разряженными батарейками и моргает кодом 1. Лечится питанием: '
+                f'короче кабель, отдельный источник, ёмкость по питанию платы')
+        logger.warning(text)
+        warnings.warn(text, StandPowerWarning, stacklevel=2)
 
     def wait_asleep(self, timeout: float = 60.0) -> bool:
         """
