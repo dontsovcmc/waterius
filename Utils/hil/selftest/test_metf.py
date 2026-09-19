@@ -28,7 +28,10 @@ class Clock:
 
 
 class FakeAnswer:
-    """Ответ платы: стенду от него нужен только `raise_for_status`."""
+    """Ответ платы: стенду нужны `raise_for_status` и код - `202` у `/pulse`."""
+
+    def __init__(self, status_code: int = 202) -> None:
+        self.status_code = status_code
 
     def raise_for_status(self) -> None:
         return None
@@ -37,16 +40,18 @@ class FakeAnswer:
 class FakeSession:
     """`requests.Session` на минималках: помнит запросы и падает по заказу."""
 
-    def __init__(self, failures: int = 0, error: Exception | None = None) -> None:
+    def __init__(self, failures: int = 0, error: Exception | None = None,
+                 status_code: int = 202) -> None:
         self.failures = failures
         self.error = error or requests.ConnectionError('host is down')
+        self.status_code = status_code
         self.posts: list[tuple[str, dict, float]] = []
 
     def post(self, url: str, data: dict, timeout: float) -> FakeAnswer:
         self.posts.append((url, data, timeout))
         if len(self.posts) <= self.failures:
             raise self.error
-        return FakeAnswer()
+        return FakeAnswer(self.status_code)
 
 
 class FakeClient:
@@ -145,3 +150,31 @@ def test_нажатие_кнопки_идёт_через_обёртку(
     dut._led_ok = False           # индикатора у заглушки нет, он тут не проверяется
     dut.press_button()
     assert len(session.posts) == 2, 'нажатие прошло мимо повторов'
+
+
+def test_выдержку_импульса_ждёт_стенд(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """
+    Плата отвечает сразу, и конец импульса - забота клиента. Не подождать
+    значит тронуть ещё занятую линию: следующий импульс сольётся с этим.
+    """
+    session = FakeSession()
+    api = board(monkeypatch, FakeClient(failures=0, session=session))
+    started = clock.now
+    api.pulse(pin=1, value=0, duration_ms=2000)
+    assert clock.now - started == pytest.approx(2.0), (
+        'стенд не выдержал паузу до конца импульса')
+
+
+def test_старая_прошивка_платы_видна_сразу(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """
+    До протокола 8 плата отвечала концом импульса, и ответ опаздывал на четверть
+    секунды. Промолчать об этом - значит отдать прогон с поехавшими паузами и
+    падениями там, где прошивка Ватериуса ни при чём.
+    """
+    session = FakeSession(status_code=200)
+    api = board(monkeypatch, FakeClient(failures=0, session=session))
+    with pytest.raises(metf.MetfTooOld) as err:
+        api.pulse(pin=1, value=0, duration_ms=500)
+    assert 'протокол' in str(err.value)
