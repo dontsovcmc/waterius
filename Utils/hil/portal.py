@@ -366,7 +366,7 @@ if __name__ == '__main__':
     import time
 
     from loguru import logger
-    from metf_python_client import METFClient
+    from .metf import Metf
 
     from .config import load
     from .dut import Dut
@@ -388,7 +388,7 @@ if __name__ == '__main__':
 
     ssid = args.ssid
     if args.press or not ssid:
-        api = METFClient(cfg.metf_host)
+        api = Metf(cfg.metf_host)
         dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin)
         log = LogWatcher(api)
         if args.press:

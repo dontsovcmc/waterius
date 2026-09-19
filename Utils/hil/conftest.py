@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator
@@ -29,22 +30,96 @@ if TYPE_CHECKING:                       # только для подсказок
 # железа и без этих зависимостей. Поэтому импорт - внутри фикстур.
 
 
+class _Tee:
+    """
+    Пишет в терминал и в файл сразу.
+
+    Подменяет файл у терминального писателя pytest, поэтому в лог попадает всё,
+    что видно на экране: строки тестов, сводка, traceback.
+    """
+
+    def __init__(self, stream: Any, log: Any) -> None:
+        self._stream = stream
+        self._log = log
+
+    def write(self, data: str) -> int:
+        self._log.write(data)
+        return self._stream.write(data)
+
+    def flush(self) -> None:
+        self._log.flush()
+        self._stream.flush()
+
+    def isatty(self) -> bool:
+        return bool(self._stream.isatty())
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._stream, name)
+
+
+def _open_log(config: pytest.Config) -> Path | None:
+    """
+    Завести лог прогона. По умолчанию - всегда, без флагов и без `tee`.
+
+    Прогон стенда идёт часами, и единственный способ понять, что он делает
+    сейчас и на чём умер, - лог на диске. Пишется построчно, поэтому оборванный
+    прогон сохраняет всё, что успел напечатать. Три источника в одном файле:
+    вывод pytest, loguru (сам стенд) и стандартный logging (клиент METF).
+    """
+    where = config.getoption('--stand-log')
+    if where == 'off':
+        return None
+
+    path = Path(where) if where else (
+        Path(__file__).parent / 'logs' / time.strftime('hil-%Y%m%d-%H%M%S.log'))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    log = path.open('w', buffering=1, encoding='utf-8')
+    config.add_cleanup(log.close)
+
+    reporter = config.pluginmanager.get_plugin('terminalreporter')
+    if reporter is not None:
+        reporter._tw._file = _Tee(reporter._tw._file, log)
+
+    sink = logger.add(log, level='INFO', colorize=False,
+                      format='{time:HH:mm:ss} | {level: <7} | {message}')
+    config.add_cleanup(lambda: logger.remove(sink))
+
+    handler = logging.StreamHandler(log)
+    handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)-7s | %(message)s',
+                                           datefmt='%H:%M:%S'))
+    logging.getLogger().addHandler(handler)
+    config.add_cleanup(lambda: logging.getLogger().removeHandler(handler))
+    return path
+
+
+def pytest_report_header(config: pytest.Config) -> str | None:
+    path = getattr(config, '_stand_log', None)
+    return f'лог прогона: {path}' if path else None
+
+
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption('--stand', action='store_true', default=False,
                      help='гонять тесты на собранном стенде')
     parser.addoption('--stand-config', default=None,
                      help='путь к stand.ini')
+    parser.addoption('--stand-log', default=None,
+                     help='файл лога прогона; по умолчанию Utils/hil/logs/hil-<дата>.log, '
+                          '"off" - не писать')
     parser.addoption('--pcap', action='store_true', default=False,
                      help='снимать дамп трафика точки доступа к упавшим тестам')
     parser.addoption('--experimental', action='store_true', default=False,
                      help='гонять тесты экспериментальных функций прошивки')
     parser.addoption('--soak', action='store_true', default=False,
-                     help='гонять многочасовой прогон (test_soak.py)')
-    parser.addoption('--soak-minutes', type=int, default=720,
-                     help='длительность многочасового прогона, минут')
+                     help='гонять длинный прогон (test_soak.py)')
+    parser.addoption('--soak-minutes', type=int, default=60,
+                     help='длительность длинного прогона, минут: по умолчанию 60 - это '
+                          '12 сеансов, чтобы набор укладывался в один заход; '
+                          'для редких суточных дефектов ставят сотни')
 
 
-def pytest_configure(config: pytest.Config) -> None:
+@pytest.hookimpl(trylast=True)               # терминальный репортер создаётся в своём
+def pytest_configure(config: pytest.Config) -> None:   # pytest_configure - ждём его
+    config._stand_log = _open_log(config)       # type: ignore[attr-defined]
     config.addinivalue_line('markers', 'stand: требует собранного стенда')
     config.addinivalue_line('markers', 'slow: идёт десятки минут')
     config.addinivalue_line('markers', 'mqtt: нужен брокер (amqtt из requirements.txt)')
@@ -69,6 +144,21 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         'markers',
         'soak: многочасовой прогон; занимает стенд целиком, поэтому только с --soak')
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_exception_interact(node: Any, call: Any, report: Any) -> None:
+    """
+    METF замолчал надолго - останавливаем прогон целиком.
+
+    Без платы стенд не может ни нажать кнопку, ни прочитать лог, поэтому
+    продолжать бессмысленно: каждый следующий тест выдаст тот же traceback.
+    Один раз это стоило часа прогона и 23 одинаковых ошибок подряд.
+    """
+    from .metf import MetfGone
+
+    if call.excinfo is not None and isinstance(call.excinfo.value, MetfGone):
+        pytest.exit(str(call.excinfo.value), returncode=1)
 
 
 def pytest_collection_modifyitems(config: pytest.Config,
