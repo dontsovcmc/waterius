@@ -22,12 +22,14 @@
 
 from __future__ import annotations
 
+import errno
 import json
 import queue
 import ssl
 import subprocess
 import tempfile
 import threading
+import time
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -39,6 +41,12 @@ from loguru import logger
 # Дольше соединение без ответа не держим, даже если тест забыл выйти из
 # hanging(): поток обработчика иначе жил бы до конца прогона
 HANG_LIMIT_S = 300.0
+
+# Сколько ждать, пока чужой слушатель отпустит порт https. Полминуты - это
+# заведомо больше, чем живёт случайный сосед, и заведомо меньше, чем стоит
+# держать прогон ради одного теста
+BIND_WAIT_S = 30.0
+BIND_RETRY_S = 1.0
 
 
 def self_signed(host: str, directory: Path) -> tuple[Path, Path]:
@@ -158,11 +166,35 @@ class Receiver:
         cert, key = self_signed(self.cert_host, Path(self._certs.name))
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(cert, key)
-        self._tls = ThreadingHTTPServer((host or self._host, port), self._handler)
+        self._tls = self._bind_tls(host or self._host, port)
         self._tls.socket = context.wrap_socket(self._tls.socket, server_side=True)
         self._tls_thread = threading.Thread(target=self._tls.serve_forever, daemon=True)
         self._tls_thread.start()
         logger.info(f'приёмник слушает https {self._tls.server_address}')
+
+    def _bind_tls(self, host: str, port: int) -> ThreadingHTTPServer:
+        """
+        Занять порт https, пережив чужого соседа.
+
+        `SO_REUSEADDR` приёмник ставит сам, поэтому `Address already in use`
+        здесь значит не остаток прошлого прогона, а живого слушателя на том же
+        порту. Прогон 20.09: G8 упал на этом ровно один раз, а через полчаса
+        порт был свободен и никем не занят - то есть сосед приходил и уходил.
+        Ждём его недолго, а не сдаёмся первой же ошибкой; если не ушёл -
+        говорим прямо, что искать, потому что сам стенд тут ни при чём.
+        """
+        deadline = time.time() + BIND_WAIT_S
+        while True:
+            try:
+                return ThreadingHTTPServer((host, port), self._handler)
+            except OSError as err:
+                if err.errno != errno.EADDRINUSE or time.time() >= deadline:
+                    raise OSError(
+                        f'порт {port} занят не стендом и не освободился за '
+                        f'{BIND_WAIT_S:.0f} с: посмотрите, кто его держит '
+                        f'(lsof -nP -iTCP:{port} -sTCP:LISTEN)') from err
+                logger.warning(f'порт {port} занят, жду освобождения')
+                time.sleep(BIND_RETRY_S)
 
     def stop(self) -> None:
         self._server.shutdown()

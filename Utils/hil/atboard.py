@@ -77,6 +77,8 @@ class AtBoard:
         self.ser = serial.Serial(port, baud, timeout=0.1)
         self.buf = b''
         self._passive = False
+        self.ssid: str | None = None       # сеть, в которую плата вошла последней
+        self.password = ''
         time.sleep(0.3)
         self.ser.reset_input_buffer()
 
@@ -191,6 +193,7 @@ class AtBoard:
         answer = self.cmd(f'AT+CWJAP="{ssid}","{password}"', timeout=timeout)
         if 'OK' not in answer:
             raise AtError(f'не удалось подключиться к {ssid}: {answer}')
+        self.ssid, self.password = ssid, password   # куда возвращаться после обрыва
         self._passive = False
         self._ensure_passive()
         return self.ip()
@@ -226,11 +229,13 @@ class AtBoard:
                      f'Content-Length: {len(body)}\r\n')
         request = head.encode() + b'\r\n' + body
 
-        self._drain()
-        self.ser.write(f'AT+CIPSTART="TCP","{host}",80\r\n'.encode())
-        answer = self._until((b'OK\r\n', b'ERROR\r\n'), 10).decode('utf-8', 'replace')
+        answer = self._start(host)
         if 'OK' not in answer:
-            raise AtError(f'нет соединения с {host}: {answer}')
+            note = self._recover()
+            logger.warning(f'соединение с {host} не открылось: {note}; повторяю')
+            answer = self._start(host)
+            if 'OK' not in answer:
+                raise AtError(f'нет соединения с {host} ({note}): {answer}')
 
         # Дальше - без задержек: сервер закрывает молчащего клиента через 3 с.
         self.ser.write(f'AT+CIPSEND={len(request)}\r\n'.encode())
@@ -244,6 +249,50 @@ class AtBoard:
         except AtError:
             pass                                  # сервер обычно закрывает сам
         return _parse(raw)
+
+    def _start(self, host: str) -> str:
+        """Одна попытка открыть соединение. Отдаёт ответ платы как есть."""
+        self._drain()
+        self.ser.write(f'AT+CIPSTART="TCP","{host}",80\r\n'.encode())
+        return self._until((b'OK\r\n', b'ERROR\r\n'), 10).decode('utf-8', 'replace')
+
+    def _recover(self) -> str:
+        """
+        Разобраться, почему не открылось соединение, и починить, если есть чем.
+
+        Причину плата называет сама, гадать не о чем. `AT+CWSTATE?` не равный
+        2 - станция осталась без точки: точка портала живёт, только пока
+        Ватериус в режиме настройки, и держится она одним клиентом. Состояние 2
+        при отказе `AT+CIPSTART` значит обратное - адрес есть, а единственное
+        соединение занято прошлым запросом, и закрыть его некому: `AT+CIPCLOSE`
+        после ответа сервера уже отвечал `ERROR`, потому что сервер закрыл сам.
+
+        Цена вопроса - прогон 20.09: в блоке P связь пропала на семнадцатой
+        странице, и все четыре теста блока упали с одним и тем же `ERROR`, ни
+        разу не попытавшись вернуться. Отчёт при этом молчал о том, что плата
+        вне сети.
+        """
+        try:
+            state = self.cmd('AT+CWSTATE?', timeout=5)
+        except AtError as err:
+            return f'плата не сказала своего состояния: {err}'
+        m = RE_STATE.search(state)
+        code = int(m.group(1)) if m else -1
+
+        if code == STATE_GOT_IP:
+            try:
+                self.cmd('AT+CIPCLOSE', timeout=5)
+            except AtError:
+                pass
+            return f'станция в сети (CWSTATE={code}), закрыл прошлое соединение'
+
+        if not self.ssid:
+            return f'станция вне сети (CWSTATE={code}), а точка неизвестна'
+        try:
+            ip = self.join(self.ssid, self.password)
+        except AtError as err:
+            return f'станция вне сети (CWSTATE={code}), вернуться не вышло: {err}'
+        return f'станция была вне сети (CWSTATE={code}), вернулась с адресом {ip}'
 
     def _receive(self, timeout: float) -> bytes:
         raw = b''
