@@ -6,6 +6,7 @@
 #include <avr/power.h>
 #include "Power.h"
 #include "electronic.h"
+#include "wet.h"
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_1 
     // Значения компаратора с pull-up резистором ~30кОм.
@@ -43,6 +44,9 @@
 #endif
 
 #define DELAY_PIN_READY_US 30
+// Датчик протечки: источник в сотни килоом заряжает ёмкость кабеля медленнее
+// геркона, поэтому перед измерением ждём дольше.
+#define DELAY_WET_READY_US 500
 #define IMPULSE_CONFIRM_MS 50  // подтверждение импульса: пауза перед повторным чтением входа
 
 enum CounterState
@@ -63,8 +67,10 @@ enum CounterType
     NAMUR = 0,          // механический: геркон, сухой контакт, namur
     ELECTRONIC = 2,     // электронный выход, импульс — замыкание на минус
     ELECTRONIC_HIGH = 4, // электронный выход, импульс — подъём линии (issue #379)
-    LEAKAGE = 5,        // датчик протечки: замыкание - тревога, а не импульс (issue #202)
-    LEAKAGE_NC = 6,     // нормально-замкнутый датчик: тревога - размыкание (issue #202)
+    LEAKAGE = 5,        // датчик протечки: проводимость - тревога, а не импульс,
+                        // вода это десятки и сотни килоом, см. wet.h (issue #202)
+    LEAKAGE_NC = 6,     // нормально-замкнутый датчик: норма - замкнутый шлейф
+                        // (0 Ом или 5к6), тревога - сопротивление выше (issue #202)
     NONE = 0xFF
 };
 
@@ -86,7 +92,8 @@ struct CounterB
     uint8_t         levels;     // уровни входа
     bool            on_pulse;   // 
 
-    uint16_t        adc;        // уровень замкнутого входа
+    uint16_t        adc;        // уровень входа: у датчика протечки пишется всегда,
+                                //  у остальных типов - при замыкании
     CounterState    state;      // состояние входа
     CounterType     type;       // тип выхода счетчика
     ElectronicInput input;      // счёт импульсов электронного выхода
@@ -169,13 +176,14 @@ struct CounterB
         return true;
     }
 
-    // Одно чтение входа: включить pull-up, измерить (ADC для NAMUR), вернуть "замкнуто?"
+    // Одно чтение входа: включить pull-up, измерить (ADC у NAMUR и датчика
+    // протечки), вернуть "замкнуто?"
     inline bool is_closed()
     {
         PORTB |= _BV(_pin);                 // Включить pull-up
-        delayMicroseconds(DELAY_PIN_READY_US);
         if (type == CounterType::NAMUR)
         {
+            delayMicroseconds(DELAY_PIN_READY_US);
             uint16_t a = aRead();
             state = value2state(a);
             if (state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE)
@@ -183,8 +191,23 @@ struct CounterB
                 adc = a;
             }
         }
+        else if (type == CounterType::LEAKAGE || type == CounterType::LEAKAGE_NC)
+        {
+            /*
+            Вода - это сопротивление в десятки и сотни килоом, а не замыкание
+            контактов: уровень пина такого не видит, решение берём с АЦП.
+            Порог свой у каждого типа, разбор в wet.h. Уровень пишем всегда:
+            по нему на стенде видно состояние датчика, а не только факт
+            срабатывания.
+            */
+            delayMicroseconds(DELAY_WET_READY_US);
+            adc = aRead();
+            const uint16_t limit = (type == CounterType::LEAKAGE) ? LIMIT_WET : LIMIT_WET_NC;
+            state = adc_below(adc, limit) ? CounterState::CLOSE : CounterState::OPEN;
+        }
         else
         {
+            delayMicroseconds(DELAY_PIN_READY_US);
             state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
             if ((state == CounterState::CLOSE) && !on_pulse)
             {
