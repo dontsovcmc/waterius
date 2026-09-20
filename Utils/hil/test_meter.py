@@ -106,14 +106,25 @@ def test_D3_electricity_counts_kilowatt_hours(stand: Stand, channel: int) -> Non
                          factor=per_kwh, value='100')
     assert before.payload is not None
     kwh_before = float(before.payload[f'ch{channel}'])
+    imp_before = int(before.payload[f'imp{channel}'])
 
     stand.reset_observers()
     stand.dut.pulse(channel=channel, count=per_kwh)
     stand.dut.press_button()
     session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
+    # Счётчик импульсов attiny приезжает в той же посылке (`json.cpp`, imp0), и
+    # без него расхождение в киловатт-часах ничего не говорит: непонятно, то ли
+    # прошивка посчитала не так, то ли импульс не дошёл до входа. Прогон 20.09
+    # дал ровно такой немой отчёт - 100,9 вместо 101,0, и причина осталась
+    # неизвестной
     got = float(session.payload[f'ch{channel}'])
-    assert abs(got - kwh_before - 1.0) < 0.001, f'было {kwh_before}, стало {got}'
+    counted = int(session.payload[f'imp{channel}']) - imp_before
+    assert counted == per_kwh, (
+        f'до входа дошло {counted} импульсов из {per_kwh}: считает не прошивка, '
+        f'а стенд не довёл импульс. Показания: было {kwh_before}, стало {got}')
+    assert abs(got - kwh_before - 1.0) < 0.001, (
+        f'было {kwh_before}, стало {got}; импульсов attiny насчитал {counted}')
     session.assert_delta(channel=channel, liters=1)
 
 
