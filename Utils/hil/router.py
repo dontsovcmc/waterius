@@ -153,7 +153,19 @@ class TcpTransport:
                 time.sleep(2.0)
 
     def write_line(self, line: str) -> None:
-        self._sock.sendall(line.encode() + b'\r\n')
+        """
+        Отправить команду, подняв консоль заново, если она успела оборваться.
+
+        Плата закрывает сокет и сама по себе - за многочасовой прогон это
+        случается. Повтор здесь безопасен: отправить не удалось, значит до
+        роутера не дошло ничего, и команда не выполнится дважды.
+        """
+        try:
+            self._sock.sendall(line.encode() + b'\r\n')
+        except OSError:
+            logger.warning('консоль роутера оборвалась, поднимаю заново')
+            self.reconnect()
+            self._sock.sendall(line.encode() + b'\r\n')
 
     def read_idle(self, timeout: float, idle: float) -> str:
         deadline = time.time() + timeout
@@ -164,6 +176,15 @@ class TcpTransport:
                 data = self._sock.recv(4096)
             except socket.timeout:
                 data = b''
+            except OSError as err:
+                # Консоль умерла на середине ответа. Ответ потерян, и выдать
+                # обрывок значит соврать о состоянии роутера, - поэтому
+                # поднимаем сокет ради следующих команд и говорим прямо.
+                self.reconnect()
+                raise RouterError(
+                    'консоль роутера оборвалась на середине ответа; '
+                    'связь восстановлена, но эту команду придётся повторить'
+                ) from err
             if data:
                 chunks.append(data)
                 last = time.time()
