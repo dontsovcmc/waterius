@@ -66,6 +66,9 @@ class Receiver:
                  cert_host: str = '127.0.0.1') -> None:
         self.payloads: queue.Queue[dict[str, Any]] = queue.Queue()
         self.history: list[dict[str, Any]] = []
+        # Тела, которые не разобрались: обрыв передачи на середине бывает и на
+        # исправном стенде, и молчать о нём нельзя
+        self.broken: list[bytes] = []
         self.tls_hits = 0
         self._files: dict[str, bytes] = {}
         self._reply: dict[str, Any] | None = None
@@ -93,10 +96,14 @@ class Receiver:
                 try:
                     payload = json.loads(raw)
                 except json.JSONDecodeError:
+                    # Нечитаемое тело - не посылка. Пустой словарь уезжал в
+                    # сеанс наравне с настоящими, становился последним, и тест
+                    # падал на KeyError вместо разговора об обрыве передачи.
                     logger.warning(f'приёмник: не JSON: {raw[:200]!r}')
-                    payload = {}
-
-                receiver._remember(payload, isinstance(self.connection, ssl.SSLSocket))
+                    receiver._remember_broken(raw)
+                else:
+                    receiver._remember(payload,
+                                       isinstance(self.connection, ssl.SSLSocket))
                 status = receiver._take_status()
                 body = receiver._take_reply() if status == 200 else b'{}'
 
@@ -176,6 +183,16 @@ class Receiver:
                 self.tls_hits += 1
         self.payloads.put(payload)
 
+    def _remember_broken(self, raw: bytes) -> None:
+        with self._lock:
+            self.broken.append(raw)
+
+    def take_broken(self) -> list[bytes]:
+        """Забрать нечитаемые тела, накопившиеся с прошлого раза."""
+        with self._lock:
+            broken, self.broken = self.broken, []
+        return broken
+
     def wait_payload(self, timeout: float = 60.0) -> dict[str, Any] | None:
         try:
             return self.payloads.get(timeout=timeout)
@@ -185,6 +202,7 @@ class Receiver:
     def drain(self) -> None:
         while not self.payloads.empty():
             self.payloads.get_nowait()
+        self.take_broken()
 
     # --- раздача файлов ---
 
