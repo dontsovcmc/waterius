@@ -23,7 +23,8 @@ from .metf import Metf
 
 from .config import StandConfig
 from .clock import BoardClock
-from .constants import BASE_FACTOR, LEAKAGE_NC, NAMUR, WATER_COLD, WATER_HOT
+from .constants import (BASE_FACTOR, BUTTON_SESSION_WAIT_S, LEAKAGE_NC, NAMUR,
+                        WAKE_SETTLE_S, WATER_COLD, WATER_HOT)
 from .state import merge, same_value, unmet
 from .dut import Dut
 from .logwatch import MANUAL_TRANSMIT_MODE, WAKE_SESSION, LogWatcher, Session
@@ -205,6 +206,13 @@ class Stand:
             if payload is None:
                 break
             session.payloads.append(payload)
+
+        broken = self.receiver.take_broken()
+        assert not broken, (
+            f'приёмник получил {len(broken)} нечитаемое тело посылки: передача '
+            f'оборвалась на середине, и о состоянии устройства этот сеанс не '
+            f'говорит ничего. Начало первого: {broken[0][:200]!r}')
+
         if session.payloads:
             session.payload = session.payloads[-1]
             self.last_payload = session.payload
@@ -711,11 +719,19 @@ class Stand:
         raise AssertionError(f'тревоги {left} не снялись кнопкой')
 
     def read_state(self) -> None:
-        """Узнать состояние коротким нажатием: сеанс привозит и посылку, и конфиг."""
+        """
+        Узнать состояние коротким нажатием: сеанс привозит и посылку, и конфиг.
+
+        Зовётся там, где неизвестно, чем кончил предыдущий тест, - в том числе
+        сразу после портального блока, где плата только что доиграла сеанс.
+        Отсюда выдержка перед нажатием: нажатие вплотную к снятию питания до
+        attiny не доходит.
+        """
         logger.info('состояние устройства неизвестно, читаем коротким нажатием')
+        time.sleep(WAKE_SETTLE_S)
         self.reset_observers()
         self.dut.press_button()
-        self.wait_session(timeout=180)
+        self.wait_session(timeout=BUTTON_SESSION_WAIT_S)
 
     def forget_state(self) -> None:
         """
