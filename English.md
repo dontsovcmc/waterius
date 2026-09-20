@@ -12,7 +12,7 @@ Full article on [Hackster.io](https://www.hackster.io/dontsovcmc/waterius-4bfaba
 - data to your TCP server
 - low voltage detector (experimental)
 - alarms: high flow, continuous flow, stopped consumption, floor water sensor (experimental,
-  see [Alarms.md](Alarms.md) — in Russian)
+  see [Alarms.md](Alarms.md), in Russian)
 
 Values saved in ATtiny EEPROM cycle buffer (~2 millions cycles). "Software ESD protection".
 

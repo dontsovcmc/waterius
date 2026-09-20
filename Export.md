@@ -258,7 +258,7 @@ waterius/12380568/rssi -69
 | `counter_name0`, `counter_name1` | `cname0`, `cname1` | целое число, см. `cnameX` | `waterius/12380568/cname0/set` | `0` | >=1.0.2 |
 | `counter_type0`, `counter_type1` | `ctype0`, `ctype1` | целое число, см. `ctypeX` | `waterius/12380568/ctype0/set` | `5` | >=1.0.2 |
 
-#### Тревоги — экспериментальная функция
+#### Тревоги (функции экспериментальные)
 
 Подробности — [Alarms.md](Alarms.md). Ноль в любом пороге выключает тревогу.
 
