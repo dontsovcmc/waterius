@@ -28,12 +28,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from .constants import (ALARM_WAIT_S, BASE_FACTOR, LEAKAGE, NAMUR, PLANNED_PERIOD_MIN,
-                        PLANNED_WAIT_S, RESET_WET1, VOL_LITRES, VOL_PULSES)
+from . import portal as portal_mod
+from .constants import (ALARM_WAIT_S, BASE_FACTOR, LEAKAGE, MSG_ALARM_WET, NAMUR,
+                        PLANNED_PERIOD_MIN, PLANNED_WAIT_S, RESET_WET0, RESET_WET1,
+                        VOL_LITRES, VOL_PULSES)
 from .logwatch import ALARM_MODE, MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand      # а сбор тестов должен работать без них
@@ -198,6 +200,71 @@ def test_E13_button_clears_both_channels(stand: Stand, quiet: None) -> None:
     stand.dut.press_button()
     cleared = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
     cleared.assert_alarm(wet0=0, wet1=0)
+
+
+def wet_plates(board: Any) -> list[dict[str, Any]]:
+    """Плашки про датчик протечки с главной страницы портала."""
+    answer = portal_mod.get_json(board, '/api/main_status')
+    return [m for m in answer if m.get('error') == MSG_ALARM_WET]
+
+
+@pytest.mark.portal
+@pytest.mark.requires(attiny=45, esp='2.0.51')
+@pytest.mark.needs(ctype0=LEAKAGE)
+def test_E19_alarm_survives_until_the_portal(cfg: Any, stand: Stand,
+                                             quiet: None) -> None:
+    """
+    Тревога доживает до портала, снимается там - и устройство снова говорит.
+
+    Тест на дефект Ватериуса-2. Кнопка там одна на два действия, а attiny видит
+    только факт нажатия: длительность меряет ЕСП (`button.h`, ButtonB2). Пока
+    снятие стояло в ветке SHORT самой attiny, оно срабатывало и на долгом
+    нажатии - том самом, которым открывают портал. Тревога гасла раньше, чем
+    ЕСП успевала прочитать флаги, и плашку со снятием на главной нельзя было
+    увидеть в принципе.
+
+    Второе следствие того же дефекта - молчание. Пока тревога висит, новая на
+    том же входе не поднимается (`alarm.h`, raise), а снять её было нечем:
+    плашки нет, кнопка гасит молча. Владелец замыкал датчик снова и снова, а
+    устройство не выходило на связь.
+
+    Поэтому три шага, и каждый обязателен: тревога дожила, снялась из портала,
+    датчик сработал заново. Первых двух без третьего мало - снятие в портале
+    можно изобразить и не доведя маску до attiny.
+
+    Датчик перед порталом сушим намеренно: тогда плашка может взяться только от
+    пережившей тревоги, а не от свежей, поднятой замкнутым входом.
+    """
+    if not cfg.atboard_port:
+        pytest.skip('нужна AT-плата: [atboard] port в stand.ini')
+
+    stand.reset_observers()
+    try:
+        stand.dut.wet(channel=0, closed=True)
+        stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE).assert_alarm(wet0=1)
+        stand.dut.wet(channel=0, closed=False)
+
+        with portal_mod.session(cfg, stand) as board:
+            plates = wet_plates(board)
+            assert plates, (
+                'на главной портала нет плашки о датчике протечки: тревога не '
+                'дожила до портала - её сняло нажатие, которым портал и открыли')
+
+            plate = plates[0]
+            assert plate.get('input') == 0, f'плашка не про красный вход: {plate}'
+            assert plate.get('reset') == RESET_WET0, (
+                f'ссылка снимет не то: маска {plate.get("reset")}, '
+                f'ожидали {RESET_WET0}')
+
+            portal_mod.post_json(board, '/api/save_alarms', alarm_reset=RESET_WET0)
+            assert not wet_plates(board), 'плашка осталась после снятия'
+
+        # Тревога снята по-настоящему, в attiny: иначе датчик молчал бы и дальше
+        stand.reset_observers()
+        stand.dut.wet(channel=0, closed=True)
+        stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE).assert_alarm(wet0=1)
+    finally:
+        stand.dut.wet(channel=0, closed=False)
 
 
 @pytest.mark.slow

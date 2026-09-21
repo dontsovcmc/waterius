@@ -148,7 +148,24 @@ void loop()
             подтверждение, долгое открывает портал, и тревога обязана дожить
             до плашки на главной.
             */
-            alarm_reset_mask |= alarm_reset_by_button(mode);
+            const uint8_t by_button = alarm_reset_by_button(mode);
+            if (by_button)
+            {
+                alarm_reset_mask |= by_button;
+
+                /*
+                Снимок гасим сразу, не дожидаясь кадра 'A': из него собирается
+                посылка этого сеанса (json.cpp), а кадр уедет только в конце.
+                Иначе нажатие кнопки привозило бы снятую тревогу ещё раз - на
+                Классике, где снимает сама attiny, такого не бывает.
+
+                Кадр не уехал - маска остаётся до следующего сеанса, и он
+                привезёт настоящее состояние attiny: расхождение само себя
+                чинит.
+                */
+                data.attiny_flags = alarm_flags_after_reset(data.attiny_flags, by_button);
+                runtime_data.attiny_flags = data.attiny_flags;
+            }
         }
         if (mode == SETUP_MODE) // Если режим "Настройка"
         {
