@@ -462,3 +462,31 @@ TEST(AlarmDelivered, BrokenSecondCloudDoesNotBlockAny)
     EXPECT_TRUE(alarm_delivered(CONFIRM_ANY, status));
     EXPECT_FALSE(alarm_delivered(CONFIRM_HTTP, status));
 }
+
+/*
+Снятие тревог кнопкой на Ватериусе-2.
+
+Там кнопка одна на два действия, и attiny видит только факт нажатия: сколько
+его держали, знает лишь ЕСП. Поэтому решение принимается здесь, и цена ошибки
+несимметрична - лишнее снятие незаметно гасит аварию, о которой человек так и
+не узнает.
+*/
+TEST(AlarmButton, ShortPressClearsEverything)
+{
+    // Короткое нажатие - подтверждение: человек подошёл к устройству
+    EXPECT_EQ(alarm_reset_by_button(MANUAL_TRANSMIT_MODE), ALARM_RESET_ALL);
+}
+
+TEST(AlarmButton, LongPressKeepsAlarmForThePortal)
+{
+    // Долгое нажатие открывает портал: тревога обязана дожить до плашки на
+    // главной, иначе снимать будет нечего
+    EXPECT_EQ(alarm_reset_by_button(SETUP_MODE), 0);
+}
+
+TEST(AlarmButton, ScheduledWakeUpClearsNothing)
+{
+    // Кнопку не трогали - снимать нечего ни в плановом сеансе, ни в тревожном
+    EXPECT_EQ(alarm_reset_by_button(TRANSMIT_MODE), 0);
+    EXPECT_EQ(alarm_reset_by_button(ALARM_MODE), 0);
+}

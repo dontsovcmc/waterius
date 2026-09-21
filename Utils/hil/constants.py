@@ -87,7 +87,12 @@ MASKED = '********'
 # Маска снятия тревог в кадре 'A': биты 0-2 - канал 0, биты 3-5 - канал 1
 # (core/types.h, ALARM_RESET_SHIFT1, ALARM_RESET_ALL)
 RESET_FLOW1 = 0x08
+RESET_WET0 = 0x04
 RESET_WET1 = 0x20
+
+# Код сообщения о датчике протечки на главной портала: ESP8266/data/static/
+# strings.js, S_ALARM_WET. Портал шлёт номер, а текст подставляет страница
+MSG_ALARM_WET = '29'
 
 # Бит маски квитанции тревоги, core/types.h: AlarmConfirm
 CONFIRM_MQTT = 4
