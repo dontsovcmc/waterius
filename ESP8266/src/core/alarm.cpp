@@ -180,3 +180,8 @@ bool alarm_delivered(const uint8_t mask, const SessionStatus &status)
     }
     return all_ok;
 }
+
+uint8_t alarm_reset_by_button(const uint8_t mode)
+{
+    return (mode == MANUAL_TRANSMIT_MODE) ? ALARM_RESET_ALL : 0;
+}
