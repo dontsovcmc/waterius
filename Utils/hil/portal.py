@@ -96,6 +96,73 @@ PAGE_SINCE: dict[str, tuple[int, int, int]] = {
 API_URLS = ('/api/main_status', '/api/status/0', '/api/status/1', '/api/networks')
 
 
+# Проверочные адреса ОС: (имя, путь, код, Location), зеркало active_point.cpp.
+# Окно портала всплывает, только если вместо эталона ОС (204, «Success») пришёл редирект
+PORTAL_URL = f'http://{HOST}'
+PROBES: tuple[tuple[str, str, int, str | None], ...] = (
+    ('connectivitycheck.gstatic.com', '/generate_204', 302, PORTAL_URL),      # Android
+    ('captive.apple.com', '/hotspot-detect.html', 302, PORTAL_URL),           # iOS, macOS
+    ('www.msftncsi.com', '/ncsi.txt', 302, PORTAL_URL),                       # Windows
+    ('www.msftconnecttest.com', '/redirect', 302, PORTAL_URL),                # Windows
+    ('www.msftconnecttest.com', '/connecttest.txt', 302, 'http://logout.net'),  # Windows 11
+    ('detectportal.firefox.com', '/canonical.html', 302, PORTAL_URL),         # Firefox
+    ('detectportal.firefox.com', '/success.txt', 302, PORTAL_URL),            # Firefox
+    ('wpad', '/wpad.dat', 404, None),     # Windows спрашивает прокси без конца, если не 404
+)
+
+# Имён нет в прошивке: DNS портала обязан ловить любое
+FOREIGN_NAMES = ('connectivitycheck.gstatic.com', 'captive.apple.com',
+                 'example.com', 'waterius.ru')
+
+# Посадочные страницы `/` (active_point.cpp, on_root)
+LANDING_CONFIGURED = 'captive_portal.html'
+LANDING_START = 'captive_portal_start.html'
+LANDING_ERROR = 'captive_portal_error.html'
+LANDING_CONNECTED = 'captive_portal_connected.html'
+
+# Плашки /api/main_status, которые бывают только при factor1 == AUTO - том же
+# признаке, по которому on_root выбирает страницу (get_api_main_status)
+NEED_SETUP_CODES = {'2', '3'}
+# при ошибке подключения про factor1 прошивка молчит
+CONNECT_ERROR_CODE = '1'
+
+
+def needs_setup(board: AtBoard) -> bool | None:
+    """
+    Не настроен ли холодный вход - тот же признак, по которому `on_root`
+    выбирает посадочную страницу, но прочитанный из другого ответа.
+    None - по ответу не понять: при ошибке подключения прошивка его не сообщает.
+    """
+    codes = {str(item.get('error')) for item in get_json(board, '/api/main_status')}
+    if codes & NEED_SETUP_CODES:
+        return True
+    if CONNECT_ERROR_CODE in codes:
+        return None
+    return False
+
+
+def landing_matches(body: bytes, name: str, data_dir: Path) -> bool:
+    """
+    Тело ответа - это файл `name` из образа. Плейсхолдеры файла допускают
+    любую подстановку: у страницы ошибки есть процессор.
+    """
+    want = (data_dir / name).read_text(encoding='utf-8')
+    parts = RE_PLACEHOLDER.split(want)
+    pattern = '[^<>]*'.join(re.escape(part) for part in parts)
+    return re.fullmatch(pattern, body.decode('utf-8', 'replace'), re.S) is not None
+
+
+def landing_page(board: AtBoard, data_dir: Path, host: str = HOST) -> str | None:
+    """Какую из посадочных страниц отдал `/`; None - ни одну."""
+    answer = board.get('/', host)
+    if answer.status != 200:
+        return None
+    for name in (LANDING_CONFIGURED, LANDING_START, LANDING_ERROR, LANDING_CONNECTED):
+        if landing_matches(answer.body, name, data_dir):
+            return name
+    return None
+
+
 class PortalError(Exception):
     pass
 

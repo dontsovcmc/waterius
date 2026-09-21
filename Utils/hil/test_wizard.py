@@ -30,10 +30,12 @@ from loguru import logger
 
 from . import portal as portal_mod
 from .atboard import AtBoard, AtError
-from .constants import COLD, NAMUR, WATER_COLD
+from .constants import COLD, NAMUR, REPO_ROOT, WATER_COLD
 from .test_wifi import other_channel
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal, pytest.mark.slow]
+
+DATA = REPO_ROOT / 'ESP8266' / 'data'
 
 
 # Отличается и от базового веса стенда, и от спецзначений «Авто» (3) и «как у
@@ -256,8 +258,13 @@ def test_W2_wrong_password_returns_to_wifi_settings(board: AtBoard, cfg: Any,
 
     Верный пароль сохраняется заново в любом исходе: с неверным устройство
     потеряло бы стенд до конца прогона.
+
+    Заодно K1d: окно captive portal, открытое заново после неудачи, попадает
+    на `/`, и ненастроенное устройство обязано показать там страницу ошибки
+    (`active_point.cpp`, on_root), а настроенное - обычный вход.
     """
     ssid = stand.ap_ssid
+    fresh = portal_mod.needs_setup(board)
     try:
         assert save(board, '/api/save_connect', ssid=ssid, password=WRONG_PASSWORD,
                     wizard='true') == {}
@@ -266,6 +273,7 @@ def test_W2_wrong_password_returns_to_wifi_settings(board: AtBoard, cfg: Any,
         assert redirect == NOT_CONNECTED, f'с неверным паролем мастер пошёл дальше: {redirect}'
         # Читается сразу: после удачного подключения подстановка уже другая
         code = connect_status_code(board)
+        landing = portal_mod.landing_page(board, DATA)
 
         assert save(board, '/api/save_connect', ssid=ssid, password=cfg.ap_password,
                     wizard='true') == {}
@@ -276,6 +284,11 @@ def test_W2_wrong_password_returns_to_wifi_settings(board: AtBoard, cfg: Any,
         assert code == WRONG_PASSWORD_CODE, (
             f'с неверным паролем страница Wi-Fi покажет строку {code!r} из strings.js, '
             f'а не «Некорректный пароль» ({WRONG_PASSWORD_CODE})')
+        if fresh is not None:
+            want = portal_mod.LANDING_ERROR if fresh else portal_mod.LANDING_CONFIGURED
+            assert landing == want, (
+                f'после неверного пароля / отдал {landing or "не посадочную страницу"} '
+                f'вместо {want}')
     finally:
         assert save(board, '/api/save_connect', ssid=ssid,
                     password=cfg.ap_password) == {}
