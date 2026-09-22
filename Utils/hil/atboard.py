@@ -43,6 +43,8 @@ CHUNK = 1024                 # столько байт забираем за о�
 RE_STATE = re.compile(r'\+CWSTATE:(\d+)')
 RE_IP = re.compile(r'\+CIPSTA:ip:"([\d.]+)"')
 RE_RECVLEN = re.compile(r'\+CIPRECVLEN:(\d+)')
+# ESP-AT пишет адрес в кавычках; без кавычек тоже принимаем
+RE_DOMAIN = re.compile(r'\+CIPDOMAIN:"?([0-9A-Fa-f.:]+)"?')
 # Нулевой кусок в конце chunked-ответа. Длина куска пишется в поле фиксированной
 # ширины и добивается пробелами, поэтому концом служит "0   \r\n\r\n".
 RE_LAST_CHUNK = re.compile(rb'(?:^|\r\n)0[ \t]*\r\n\r\n$')
@@ -203,6 +205,25 @@ class AtBoard:
         if not m:
             raise AtError('плата не сообщила свой адрес')
         return m.group(1)
+
+    def resolve(self, name: str) -> str:
+        """
+        Адрес имени по DNS, который плата получила по DHCP.
+
+        Своего DNS у платы нет: пока DHCP его не выдал, AT-прошивка спрашивает
+        208.67.222.222 (документация ESP-AT, `AT+CIPDNS`). Поэтому ответ
+        показывает, куда имя отправит любой другой клиент этой сети - телефон
+        в том числе.
+        """
+        answer = self.cmd(f'AT+CIPDOMAIN="{name}"', timeout=15)
+        m = RE_DOMAIN.search(answer)
+        if not m:
+            raise AtError(f'имя {name} не разрешилось: {answer.strip()}')
+        return m.group(1)
+
+    def dns(self) -> str:
+        """Какой DNS плата сейчас спрашивает - для сообщений об ошибке."""
+        return self.cmd('AT+CIPDNS?', timeout=5).strip()
 
     # --- HTTP ---
 

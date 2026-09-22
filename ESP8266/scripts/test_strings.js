@@ -253,6 +253,15 @@ test('страница, которая зовёт функцию из common.js 
     assert.deepStrictEqual(problems, []);
 });
 
+test('посадочные страницы captive portal обходятся без JavaScript', () => {
+    // Их открывает окно captive portal, а на айфоне оно скрипты не выполняет
+    // (active_point.cpp). Страница ошибки - известное исключение: причину пишет fill_tr_id
+    const KNOWN = ['captive_portal_error.html'];
+    const withScript = PAGES.filter(name => name.startsWith('captive_portal')
+                                            && /<script\b/i.test(page(name)));
+    assert.deepStrictEqual(withScript, KNOWN);
+});
+
 test('на странице тревог у каждого поля есть подпись и обработчик', () => {
     /*
     Подписи на странице тревог литеральные: речь только о воде, и единицы
