@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import time
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 
 from loguru import logger
 
@@ -52,6 +52,12 @@ RESET_MS = 100
 # Нужен не тестам, а человеку у стенда: если прогон убили посреди нажатия,
 # никакой teardown уже не отработает, и оставшийся гореть светодиод -
 # единственный способ это увидеть. Цвет - RRGGBB, как в примерах METF.
+# Как часто вычитывать лог в паузе между импульсами и за сколько до импульса
+# перестать: опрос платы стоит около 15 мс, а ритм импульсов сравнивается с
+# порогом тревоги
+PUMP_INTERVAL_S = 1.0
+PUMP_TAIL_S = 0.25
+
 LED_PRESSED = '00FF00'
 LED_OFF = '000000'
 LED_BRIGHTNESS = 40
@@ -61,12 +67,15 @@ class Dut:
     """Воздействия на Ватериус через плату METF."""
 
     def __init__(self, api: Any, button_pin: int, ch0_pin: int, ch1_pin: int,
-                 reset_pin: int) -> None:
+                 reset_pin: int, idle: Callable[[], None] | None = None) -> None:
         self.api = api
         self.button_pin = button_pin
         self.reset_pin = reset_pin
         self._ch = {0: ch0_pin, 1: ch1_pin}
         self._led_ok: bool | None = None    # есть ли на плате индикатор
+        # Чем заняться в долгой паузе между импульсами: стенд отдаёт сюда
+        # вычитывание лога, см. _wait
+        self._idle = idle
 
     def init(self) -> None:
         """Все линии в высокоомное состояние: стенд не должен мешать устройству."""
@@ -182,11 +191,40 @@ class Dut:
         pin = self._ch[channel]
         start = time.time()
         for i in range(count):
-            target = start + i * gap
+            self._wait(start + i * gap)
+            self._low(pin, width_ms)
+
+    def _wait(self, target: float) -> None:
+        """
+        Дождаться момента target, не оставляя лог устройства без присмотра.
+
+        Пауза между импульсами - это минуты, а кольцо METF вмещает полтора
+        сеанса (511 строк). Устройство за такую паузу успевает проснуться по
+        расписанию и напечатать сотни строк, и пока пауза была одним sleep,
+        кольцо переполнялось: тест падал не на своей проверке, а на «лог
+        неполон, утверждать по нему нечего».
+
+        Последние PUMP_TAIL_S до импульса не вычитываем: один опрос платы стоит
+        десяток миллисекунд, а ритм импульсов в тестах расхода сравнивается с
+        порогом. Дедлайн абсолютный, так что съеденное время не накапливается.
+        """
+        if self._idle is None:
             delay = target - time.time()
             if delay > 0:
                 time.sleep(delay)
-            self._low(pin, width_ms)
+            return
+
+        while True:
+            delay = target - time.time()
+            if delay <= PUMP_TAIL_S:
+                if delay > 0:
+                    time.sleep(delay)
+                return
+            self._idle()
+            # Ещё раз: опрос занял время, и до импульса могло остаться меньше
+            delay = min(PUMP_INTERVAL_S, target - time.time() - PUMP_TAIL_S)
+            if delay > 0:
+                time.sleep(delay)
 
     def pulses_every(self, channel: int, interval: float, minutes: float,
                      width_ms: int = IMPULSE_WIDTH_MS) -> int:

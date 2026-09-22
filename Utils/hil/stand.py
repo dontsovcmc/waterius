@@ -105,7 +105,10 @@ class Stand:
         self.mqtt = mqtt
         self.log = LogWatcher(api)
         self._power_warned = False
-        self.dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin)
+        # Паузы между импульсами тоже вычитывают лог: иначе кольцо METF
+        # переполняется плановым сеансом, и тест падает на неполном логе
+        self.dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin,
+                       idle=self.log.poll)
         # Время устройству отдаёт та же плата: тесты синхронизации не должны
         # зависеть ни от интернета, ни от серверов на машине с прогоном
         self.clock = BoardClock(cfg.metf_host)
