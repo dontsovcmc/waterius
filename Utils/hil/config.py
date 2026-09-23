@@ -42,6 +42,13 @@ class StandConfig:
     receiver_port: int
     receiver_tls_port: int    # тот же приёмник по https, для проверки G8
 
+    # Бэкенд waterius.site.back для сквозных тестов «устройство -> сервер».
+    # Пусто - такие тесты пропускаются. Только локальный или dev2: тесты меняют
+    # состояние устройства в базе.
+    cloud_url: str
+    cloud_token: str
+    cloud_device_key: str
+
     # AT-плата: HTTP-клиент в сети портала Ватериуса
     atboard_port: str
 
@@ -49,6 +56,17 @@ class StandConfig:
     broker_host: str
     broker_port: int
     mqtt_topic: str
+
+    @property
+    def cloud_data_url(self) -> str:
+        """
+        Ручка приёма показаний бэкенда.
+
+        Устройству она прописывается как «свой сервер»: прошивка применяет
+        настройки из ответа любого получателя, поэтому команда снятия тревоги
+        доедет тем же путём, что и от стендового приёмника.
+        """
+        return f'{self.cloud_url}/api/source/waterius/'
 
     @property
     def http_url(self) -> str:
@@ -94,6 +112,9 @@ def load(path: str | os.PathLike[str] | None = None) -> StandConfig:
         receiver_host=get('receiver', 'host', '192.168.4.2'),
         receiver_port=int(get('receiver', 'port', '8000')),
         receiver_tls_port=int(get('receiver', 'tls_port', '8443')),
+        cloud_url=get('cloud', 'url', '').rstrip('/'),
+        cloud_token=get('cloud', 'token', ''),
+        cloud_device_key=get('cloud', 'device_key', ''),
         atboard_port=get('atboard', 'port', ''),
         broker_host=get('broker', 'host', '192.168.4.2'),
         broker_port=int(get('broker', 'port', '1883')),

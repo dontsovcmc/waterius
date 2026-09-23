@@ -437,7 +437,7 @@ already running`, а лог пуст — METF не получает ни стр�
 | #121, #238 | импульсы посреди сеанса | `test_D7_pulses_during_session_are_not_lost` |
 | #150, #200, #371 | дребезг, короткие замыкания | `test_D9_glitches_and_bounce_are_not_counted` |
 | #181, #224 | серийный номер, пробелы по краям | `test_S3_text_is_trimmed` |
-| #202, #389 | тревоги | блоки E и F: `test_alarms.py`, `test_leak_sensor.py`, `test_confirm.py` |
+| #202, #389 | тревоги | блоки E и F: `test_alarms.py`, `test_leak_sensor.py`, `test_confirm.py`; блок Y — стык с сервером: `test_cloud_alarms.py` |
 | #204 | перестаёт выходить на связь | `test_H8_missed_session_keeps_tuning` (плановый сеанс после пропуска снова в сети), `test_W4_router_changed_channel`, `test_Z1_soak` |
 | #222, #372 | роутер сменил канал | `test_W4_router_changed_channel` |
 | #242, #350, #354 | период и флаг после перезагрузки ЕСП | `test_H7_esp_reset_keeps_period` |
