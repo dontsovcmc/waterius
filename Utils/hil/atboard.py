@@ -227,34 +227,37 @@ class AtBoard:
 
     # --- HTTP ---
 
-    def get(self, path: str, host: str, timeout: float = 30.0) -> Response:
-        return self.request('GET', path, host, timeout=timeout)
+    def get(self, path: str, host: str, timeout: float = 30.0,
+            port: int = 80) -> Response:
+        return self.request('GET', path, host, timeout=timeout, port=port)
 
     def post(self, path: str, host: str, body: bytes = b'',
-             timeout: float = 30.0) -> Response:
+             timeout: float = 30.0, port: int = 80) -> Response:
         """
         POST; тело - x-www-form-urlencoded, как у форм портала.
 
         Значения настроек прошивка берёт только из тела (`active_point_api.cpp`,
         from_form), строкой запроса едут лишь признаки маршрута - input, wizard.
         """
-        return self.request('POST', path, host, body=body, timeout=timeout)
+        return self.request('POST', path, host, body=body, timeout=timeout,
+                            port=port)
 
     def request(self, method: str, path: str, host: str, body: bytes = b'',
-                timeout: float = 30.0) -> Response:
+                timeout: float = 30.0, port: int = 80) -> Response:
         self._ensure_passive()
-        head = (f'{method} {path} HTTP/1.1\r\nHost: {host}\r\n'
+        hostname = host if port == 80 else f'{host}:{port}'
+        head = (f'{method} {path} HTTP/1.1\r\nHost: {hostname}\r\n'
                 'User-Agent: waterius-hil\r\nConnection: close\r\n')
         if method != 'GET':
             head += ('Content-Type: application/x-www-form-urlencoded\r\n'
                      f'Content-Length: {len(body)}\r\n')
         request = head.encode() + b'\r\n' + body
 
-        answer = self._start(host)
+        answer = self._start(host, port)
         if 'OK' not in answer:
             note = self._recover()
             logger.warning(f'соединение с {host} не открылось: {note}; повторяю')
-            answer = self._start(host)
+            answer = self._start(host, port)
             if 'OK' not in answer:
                 raise AtError(f'нет соединения с {host} ({note}): {answer}')
 
@@ -271,10 +274,10 @@ class AtBoard:
             pass                                  # сервер обычно закрывает сам
         return _parse(raw)
 
-    def _start(self, host: str) -> str:
+    def _start(self, host: str, port: int = 80) -> str:
         """Одна попытка открыть соединение. Отдаёт ответ платы как есть."""
         self._drain()
-        self.ser.write(f'AT+CIPSTART="TCP","{host}",80\r\n'.encode())
+        self.ser.write(f'AT+CIPSTART="TCP","{host}",{port}\r\n'.encode())
         return self._until((b'OK\r\n', b'ERROR\r\n'), 10).decode('utf-8', 'replace')
 
     def _recover(self) -> str:

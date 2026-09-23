@@ -178,3 +178,158 @@ def test_старая_прошивка_платы_видна_сразу(
     with pytest.raises(metf.MetfTooOld) as err:
         api.pulse(pin=1, value=0, duration_ms=500)
     assert 'протокол' in str(err.value)
+
+
+class FakeBoard:
+    """Плата, отвечающая заданным состоянием на `/version` и `/wifi`."""
+
+    def __init__(self, version: int = 10, **wifi: object) -> None:
+        self.version = version
+        self.wifi = {'state': 'online', 'mode': 'sta', 'connected': True,
+                     'ssid': 'dav', 'source': 'build', 'rssi': -62,
+                     'ap_up': False, 'problem': 'none', 'hw_error': False}
+        self.wifi.update(wifi)
+        self.gets: list[str] = []
+
+    def get(self, url: str, timeout: float) -> FakeRead:
+        self.gets.append(url)
+        if url.endswith('/version'):
+            return FakeRead(text=str(self.version))
+        if url.endswith('/wifi'):
+            return FakeRead(payload=self.wifi)
+        raise AssertionError(f'неожиданный запрос {url}')
+
+
+class FakeRead:
+    """Ответ на чтение: текст версии или JSON состояния."""
+
+    def __init__(self, text: str = '', payload: dict | None = None) -> None:
+        self.text = text
+        self._payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict:
+        assert self._payload is not None
+        return self._payload
+
+
+@pytest.fixture
+def warnings(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Предупреждения стенда списком: проверяем не только отказы, но и слова."""
+    said: list[str] = []
+    monkeypatch.setattr(metf.logger, 'warning', said.append)
+    monkeypatch.setattr(metf.logger, 'info', lambda text: None)
+    return said
+
+
+def inspected(monkeypatch: pytest.MonkeyPatch, plate: FakeBoard,
+              stand_ssid: str = 'waterius_stand', stand_channel: int = 0) -> str:
+    api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
+    return metf.check(api, '192.0.2.1', stand_ssid, stand_channel)
+
+
+def test_досмотр_валит_прошивку_младше_восьмого_протокола(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """
+    Старую плату надо ловить на старте, а не по кривым паузам между импульсами:
+    до восьмого протокола ответ приходил после конца импульса и опаздывал на
+    четверть секунды.
+    """
+    with pytest.raises(metf.MetfTooOld, match='протокол'):
+        inspected(monkeypatch, FakeBoard(version=7))
+
+
+def test_досмотр_валит_плату_на_точке_стенда(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """
+    Управляющий канал не должен лежать на том, что тесты ломают: первое же
+    выключение точки уносит вместе с устройством и саму METF. Отказ обязан
+    называть лекарство - иначе плату придётся доставать пробросом порта.
+    """
+    with pytest.raises(metf.MetfOnStandAp) as err:
+        inspected(monkeypatch, FakeBoard(ssid='waterius_stand'))
+    assert 'action=forget' in str(err.value)
+
+
+def test_досмотр_пропускает_плату_в_домашней_сети(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """Здоровая плата не должна ни падать, ни жаловаться."""
+    summary = inspected(monkeypatch, FakeBoard())
+    assert 'протокол 10' in summary and 'обрывы: none' in summary
+    assert warnings == []
+
+
+def test_слабый_сигнал_остаётся_предупреждением(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """
+    Прогон на -78 дБм разваливался на сетевых тестах, но отказывать здесь
+    нельзя: запас сигнала - повод предупредить, а не повод не пустить к железу.
+    """
+    summary = inspected(monkeypatch, FakeBoard(rssi=-78))
+    assert '-78' in summary
+    assert any('-78' in line for line in warnings), warnings
+
+
+def test_запомненная_сеть_названа_предупреждением(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """
+    Запомненная порталом сеть перекрывает зашитую при сборке и переживает
+    перезагрузку: после прерванного прогона плата вернётся не туда, где её
+    ищет stand.ini.
+    """
+    inspected(monkeypatch, FakeBoard(source='saved'))
+    assert any('forget' in line for line in warnings), warnings
+
+
+def test_поднятая_точка_платы_видна_с_причиной(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """Своя точка METF означает потерю сети; причину протокол 10 говорит словами."""
+    inspected(monkeypatch, FakeBoard(ap_up=True, problem='dropped'))
+    assert any('dropped' in line for line in warnings), warnings
+
+
+def test_девятый_протокол_досматривается_без_причины_обрыва(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """Поле `problem` появилось в десятом: на девятом его нет, и врать о нём нельзя."""
+    summary = inspected(monkeypatch, FakeBoard(version=9))
+    assert 'обрывы' not in summary and 'протокол 9' in summary
+
+
+def test_восьмой_протокол_не_спрашивают_о_сети(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """До девятого ручки `/wifi` нет вовсе - запрос к ней ответит 404."""
+    plate = FakeBoard(version=8)
+    summary = inspected(monkeypatch, plate)
+    assert summary == 'протокол 8'
+    assert not any(url.endswith('/wifi') for url in plate.gets), plate.gets
+
+
+def test_перекрывающиеся_каналы_названы_причиной(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """
+    Точка стенда на 6, домашняя сеть на 4 - замер 23 сентября 2026. Так и было:
+    сегменты гибли, тела посылок приходили обрезанными, чтение лога проваливалось
+    на секунду. Стенд обязан называть это сам, иначе ищут дефект прошивки.
+    """
+    inspected(monkeypatch, FakeBoard(channel=4), stand_channel=6)
+    assert any('перекрываются' in line for line in warnings), warnings
+
+
+def test_разнесённые_каналы_молчат(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """1 и 6 не перекрываются - жаловаться не на что."""
+    inspected(monkeypatch, FakeBoard(channel=1), stand_channel=6)
+    assert warnings == []
+
+
+def test_общий_канал_не_считается_бедой(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """
+    На общем канале платы слышат друг друга и делят эфир по очереди. Это хуже
+    разнесённых каналов по скорости, но не рвёт передачи, а ругаться на то, что
+    само по себе не ломает прогон, - значит приучить не читать предупреждения.
+    """
+    inspected(monkeypatch, FakeBoard(channel=6), stand_channel=6)
+    assert warnings == []

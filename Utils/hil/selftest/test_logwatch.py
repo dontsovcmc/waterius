@@ -303,6 +303,42 @@ def test_потеря_строк_валит_тест_а_не_прячется() 
         watcher.wait_session(timeout=1.0)
 
 
+class StallingApi(CountingApi):
+    """METF, отлучившаяся посреди окна наблюдения: потеря объясняется отлучкой."""
+
+    def __init__(self, text: str, dropped: list[int], seconds: float) -> None:
+        super().__init__(text, dropped)
+        self._seconds = seconds
+        self._stall: tuple[float, float] | None = None
+
+    def serial_read(self) -> str:
+        # Отлучка случается внутри окна - иначе она к этой потере не относится
+        self._stall = (time.time(), self._seconds)
+        return super().serial_read()
+
+    def stall_since(self, mark: float) -> tuple[float, float] | None:
+        return self._stall if self._stall and self._stall[0] >= mark else None
+
+
+def test_потеря_после_отлучки_платы_названа_отлучкой() -> None:
+    """
+    Кольцо METF держит треть секунды потока, а связь с платой идёт по радио:
+    односекундная отлучка съедает лог целиком. Молчать об этом - значит послать
+    человека искать поломку в прошивке устройства, которое всё сделало верно.
+    """
+    watcher = LogWatcher(StallingApi(through_ring(SESSION_ALARM), [0, 17], 1.1))
+    with pytest.raises(AssertionError, match='1.1 с'):
+        watcher.wait_session(timeout=1.0)
+
+
+def test_потеря_без_отлучки_ни_на_кого_не_кивает() -> None:
+    """Связь не пропадала - значит причина другая, и выдумывать её нельзя."""
+    watcher = LogWatcher(CountingApi(through_ring(SESSION_ALARM), [0, 17]))
+    with pytest.raises(AssertionError) as err:
+        watcher.wait_session(timeout=1.0)
+    assert 'связь с METF пропадала' not in str(err.value)
+
+
 def test_целый_лог_проверку_проходит() -> None:
     """Счётчик не вырос - сеанс отдаётся как обычно."""
     watcher = LogWatcher(CountingApi(through_ring(SESSION_ALARM), [4]))

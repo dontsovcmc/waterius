@@ -34,7 +34,7 @@ from .constants import (
 )
 from .dut import Dut
 from .logwatch import MANUAL_TRANSMIT_MODE, WAKE_SESSION, LogWatcher, Session
-from .metf import Metf
+from .metf import Metf, check as metf_check
 from .net import Net
 from .receiver import Receiver
 from .state import merge, same_value, unmet
@@ -169,8 +169,8 @@ class Stand:
             raise AssertionError(
                 f'стенд: METF {cfg.metf_host} отвечает, но не открыла UART '
                 f'устройства: читать лог нечем\n{err}') from err
-        logger.info(f'стенд: METF {cfg.metf_host} - есть'
-                    + (f' (отозвалась через {waited:.0f} с)' if waited else ''))
+        if waited:
+            logger.info(f'стенд: METF {cfg.metf_host} отозвалась через {waited:.0f} с')
 
         router_at = cfg.router_port or cfg.router_host
         try:
@@ -181,6 +181,13 @@ class Stand:
             raise AssertionError(
                 f'стенд: WT32-ETH01 {router_at} - нет: консоль не отвечает\n{err}') from err
         logger.info(f'стенд: WT32-ETH01 {router_at} - есть, {version}')
+
+        # Досмотр METF идёт после роутера: имя точки стенда спрашивается у него,
+        # а без имени не проверить главного - что управляющий канал не лежит на
+        # том, что тесты ломают
+        ap = router.config()
+        metf_check(api, cfg.metf_host, cfg.ap_ssid or ap.get('ssid', ''),
+                   int(ap.get('channel', 0) or 0))
 
         # Прошлый прогон мог умереть с выключенной точкой или правилом фильтра.
         # restore() чинит это после теста, а identify() идёт раньше первого
@@ -246,10 +253,16 @@ class Stand:
             session.payloads.append(payload)
 
         broken = self.receiver.take_broken()
+        # К обрыву прикладываем взгляд самого устройства: сколько оно собиралось
+        # отправить и что получило в ответ. Без этих строк отказ говорит только
+        # «тело неполное», и виноватого ищут наугад - сеть, приёмник, прошивка
         assert not broken, (
             f'приёмник получил {len(broken)} нечитаемое тело посылки: передача '
             f'оборвалась на середине, и о состоянии устройства этот сеанс не '
-            f'говорит ничего. Начало первого: {broken[0][:200]!r}')
+            f'говорит ничего. Начало первого: {broken[0][:200]!r}\n'
+            f'Что об этой отправке говорит устройство:\n'
+            + '\n'.join(line for line in session.text.splitlines()
+                        if 'HTTP' in line or 'WATR' in line))
 
         if session.payloads:
             session.payload = session.payloads[-1]
@@ -558,22 +571,28 @@ class Stand:
         занят чужим брокером, не пускает сеть), и тогда весь блок I падал бы по
         причине, к прошивке отношения не имеющей.
 
-        Возвращает True, если пришлось настраивать.
+        Топик задаём всегда, а не только когда в брокере тихо. По началу топика
+        устройство на заводских настройках неотличимо от настроенного: его
+        топик по умолчанию - `<корень>/<номер чипа>/` (`config.cpp`, начальные
+        настройки), то есть тот же префикс. Стенд считал, что всё в порядке, а
+        тест ждал показаний в корне и падал на пустом месте: в брокере лежало
+        `waterius/6827706`. Прочитать топик неоткуда - в лог прошивка его не
+        печатает, - значит единственный честный путь - назначить свой и
+        убедиться строкой `Saved:`, что он принят (это делает setup).
+
+        Возвращает True, если брокер есть и устройство в него направлено.
         """
         if self.mqtt is None:
             return False
 
         root = self.mqtt_root
-        message = self.mqtt.wait_prefix(root, timeout=0)
-        if message is not None:
-            logger.info(f'устройство публикует в брокер стенда: {message.topic}')
-            return False
 
         config = self.device_config
-        logger.warning(
-            f'устройство не публикует в брокер стенда: MQTT '
+        logger.info(
+            f'переводим устройство в брокер стенда {self.cfg.broker_host}:'
+            f'{self.cfg.broker_port}, топик «{root}» (сейчас MQTT '
             f'{"ON" if config.get("mqtt_on") == "1" else "OFF"}, '
-            f'{config.get("mqtt_host") or "?"}:{config.get("mqtt_port") or "?"}')
+            f'{config.get("mqtt_host") or "?"}:{config.get("mqtt_port") or "?"})')
 
         # mqtt_on обязан идти первым: адрес, порт и топик прошивка принимает
         # только при включённом MQTT (active_point_api.cpp,

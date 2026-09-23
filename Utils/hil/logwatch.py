@@ -438,6 +438,7 @@ class LogWatcher:
         # мусор в lines не попадают, а при отказе показывать надо и их
         self.raw = ''
         self._can_stat: bool | None = None      # None - ещё не спрашивали
+        self._mark_at: float | None = None      # начало окна наблюдения потерь
 
     def poll(self) -> None:
         """Забрать накопленное с платы и склеить разрезанные строки."""
@@ -507,6 +508,7 @@ class LogWatcher:
 
     def loss_mark(self) -> int | None:
         """Снимок счётчика перед ожиданием - опора для `assert_no_loss`."""
+        self._mark_at = time.time()
         return self._dropped()
 
     def assert_no_loss(self, mark: int | None, context: str) -> None:
@@ -526,7 +528,29 @@ class LogWatcher:
         assert lost <= 0, (
             f'METF потерял {lost} строк лога за {context}: кольцо переполнилось, '
             f'и лог неполон - утверждать по нему нечего. Читайте чаще или '
-            f'соберите прошивку платы с большим ASB_BUFFER_BYTES')
+            f'соберите прошивку платы с большим ASB_BUFFER_BYTES'
+            f'{self._why_lost()}')
+
+    def _why_lost(self) -> str:
+        """
+        Приписка о том, кто виноват в потере, если это известно.
+
+        Кольцо METF держит 511 строк, а прошивка Ватериуса печатает пачками до
+        полутора тысяч строк в секунду (замер 23 сентября 2026): треть секунды
+        без чтения - и лог неполон. Отлучка платы такой длины случается сама по
+        себе на слабом сигнале, и без этой приписки её ищут в прошивке
+        устройства, хотя устройство тут ни при чём.
+        """
+        stall = getattr(self.api, 'stall_since', None)
+        if stall is None or self._mark_at is None:
+            return ''
+        gap = stall(self._mark_at)
+        if gap is None:
+            return ''
+        when, seconds = gap
+        return (f'. В этом окне связь с METF пропадала на {seconds:.1f} с '
+                f'({time.strftime("%H:%M:%S", time.localtime(when))}) - за это '
+                f'время кольцо и переполнилось: виноват стенд, а не прошивка')
 
     def wait_session(self, timeout: float, mode: int | None = None,
                      poll_interval: float = 0.1) -> Session | None:
