@@ -26,12 +26,11 @@ from typing import TYPE_CHECKING, Any
 import pytest
 import requests
 
-from .constants import (ALARM_WAIT_S, LEAKAGE, PLANNED_PERIOD_MIN,
-                        PLANNED_WAIT_S)
+from .constants import ALARM_WAIT_S, LEAKAGE, PLANNED_PERIOD_MIN, PLANNED_WAIT_S
 from .logwatch import ALARM_MODE, TRANSMIT_MODE
 
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
-    from .stand import Stand      # а сбор тестов должен работать без них
+    from .stand import Stand  # а сбор тестов должен работать без них
 
 pytestmark = pytest.mark.stand
 

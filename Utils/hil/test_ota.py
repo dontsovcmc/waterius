@@ -27,8 +27,14 @@ import pytest
 from loguru import logger
 
 from . import portal as portal_mod
-from .constants import (OTA_ERR_FW_UPDATE, OTA_ERR_LOW_BATTERY, OTA_ERR_NONE,
-                        OTA_MIN_VOLTAGE_MV, REPO_ROOT, WATERIUS_MODEL_2)
+from .constants import (
+    OTA_ERR_FW_UPDATE,
+    OTA_ERR_LOW_BATTERY,
+    OTA_ERR_NONE,
+    OTA_MIN_VOLTAGE_MV,
+    REPO_ROOT,
+    WATERIUS_MODEL_2,
+)
 
 pytestmark = [pytest.mark.stand, pytest.mark.slow]
 

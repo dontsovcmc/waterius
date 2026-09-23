@@ -56,7 +56,7 @@ class FakeConsole:
         while not self._stop.is_set():
             try:
                 data = conn.recv(4096)
-            except socket.timeout:
+            except TimeoutError:
                 continue
             except OSError:
                 return

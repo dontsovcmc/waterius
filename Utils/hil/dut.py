@@ -16,8 +16,9 @@ HTTP-запроса на каждый фронт на интервал нама�
 from __future__ import annotations
 
 import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
-from typing import Any, Callable, Iterator
+from typing import Any
 
 from loguru import logger
 

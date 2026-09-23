@@ -24,8 +24,14 @@ from typing import Any
 import pytest
 
 from . import portal as portal_mod
-from .constants import (AUTO_FACTOR_FEW, AUTO_FACTOR_MANY, AUTO_IMPULSE_FACTOR,
-                        AUTO_LIMIT, COLD, NAMUR)
+from .constants import (
+    AUTO_FACTOR_FEW,
+    AUTO_FACTOR_MANY,
+    AUTO_IMPULSE_FACTOR,
+    AUTO_LIMIT,
+    COLD,
+    NAMUR,
+)
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal, pytest.mark.reset]
 

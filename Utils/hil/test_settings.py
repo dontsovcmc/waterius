@@ -22,6 +22,7 @@ import pytest
 from .constants import MASKED
 from .logwatch import MANUAL_TRANSMIT_MODE
 from .state import same_value
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session  # а сбор тестов должен работать без них
     from .stand import Stand

@@ -15,11 +15,11 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from . import portal as portal_mod
-from .constants import (BASE_FACTOR, COLD, ELECTRO, ELECTRONIC,
-                        ELECTRONIC_HIGH, NAMUR)
+from .constants import BASE_FACTOR, COLD, ELECTRO, ELECTRONIC, ELECTRONIC_HIGH, NAMUR
 from .logwatch import MANUAL_TRANSMIT_MODE
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
-    from .stand import Stand      # а сбор тестов должен работать без них
+    from .stand import Stand  # а сбор тестов должен работать без них
 
 pytestmark = pytest.mark.stand
 
@@ -226,8 +226,8 @@ def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
     stand.setup(channel=1, factor=BASE_FACTOR, ctype=NAMUR, period_min=120)
     stand.reset_observers()
 
-    train = threading.Thread(target=stand.dut.pulses, kwargs=dict(
-        channel=1, count=DURING_PULSES, gap=DURING_GAP_S))
+    train = threading.Thread(target=stand.dut.pulses, kwargs={
+        'channel': 1, 'count': DURING_PULSES, 'gap': DURING_GAP_S})
     train.start()
     try:
         time.sleep(PRESS_AFTER_S)

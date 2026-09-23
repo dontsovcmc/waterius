@@ -16,20 +16,29 @@ from __future__ import annotations
 
 import time
 import warnings
-from typing import TYPE_CHECKING, Any, Mapping
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
-from .metf import Metf
 
-from .config import StandConfig
 from .clock import BoardClock
-from .constants import (BASE_FACTOR, BUTTON_SESSION_WAIT_S, LEAKAGE_NC, NAMUR,
-                        WAKE_SETTLE_S, WATER_COLD, WATER_HOT)
-from .state import merge, same_value, unmet
+from .config import StandConfig
+from .constants import (
+    BASE_FACTOR,
+    BUTTON_SESSION_WAIT_S,
+    LEAKAGE_NC,
+    NAMUR,
+    WAKE_SETTLE_S,
+    WATER_COLD,
+    WATER_HOT,
+)
 from .dut import Dut
 from .logwatch import MANUAL_TRANSMIT_MODE, WAKE_SESSION, LogWatcher, Session
+from .metf import Metf
 from .net import Net
 from .receiver import Receiver
+from .state import merge, same_value, unmet
+
 if TYPE_CHECKING:                     # paho нужен только тестам MQTT, а стенд
     from .mqttwatch import MqttWatch  # должен подниматься и без брокера
 from .router import NatRouter, connect
@@ -88,6 +97,31 @@ GLOBAL_PARAMS = {
 # Порог прошивки: `ESP8266/src/voltage.h`, ALERT_POWER_DIFF_MV
 ALERT_POWER_DIFF_MV = 100
 
+# Сколько опрашиваем METF, прежде чем считать её пропавшей. На слабой связи
+# плата переподключается сама, и одна осечка не значит ничего.
+METF_WAIT_S = 30.0
+METF_POLL_S = 3.0
+
+
+def _wait_metf(api: Metf, host: str) -> float:
+    """Дождаться METF. Вернуть, сколько ждали; 0 - отозвалась сразу."""
+    started = time.monotonic()
+    deadline = started + METF_WAIT_S
+    last: Exception | None = None
+    while True:
+        try:
+            api.ping()
+        except Exception as err:
+            last = err
+            if time.monotonic() >= deadline:
+                raise AssertionError(
+                    f'стенд: METF {host} не отозвалась за {METF_WAIT_S:.0f} с: '
+                    f'без неё нечем ни жать кнопку, ни читать лог. Последняя '
+                    f'ошибка\n{last}') from last
+            time.sleep(METF_POLL_S)
+            continue
+        return 0.0 if last is None else time.monotonic() - started
+
 
 class StandPowerWarning(UserWarning):
     """Питание стенда просело настолько, что прошивка сочла батарейки севшими."""
@@ -97,7 +131,7 @@ class Stand:
     """Фасад над всем железом стенда."""
 
     def __init__(self, cfg: StandConfig, api: Metf, router: NatRouter,
-                 receiver: Receiver, mqtt: 'MqttWatch | None') -> None:
+                 receiver: Receiver, mqtt: MqttWatch | None) -> None:
         self.cfg = cfg
         self.api = api
         self.router = router
@@ -126,16 +160,17 @@ class Stand:
     # --- жизненный цикл ---
 
     @classmethod
-    def create(cls, cfg: StandConfig, mqtt: 'MqttWatch | None' = None) -> 'Stand':
+    def create(cls, cfg: StandConfig, mqtt: MqttWatch | None = None) -> Stand:
         api = Metf(cfg.metf_host)
+        waited = _wait_metf(api, cfg.metf_host)
         try:
-            api.ping()
             api.serial_begin()
         except Exception as err:
             raise AssertionError(
-                f'стенд: METF {cfg.metf_host} - нет: без неё нечем ни жать '
-                f'кнопку, ни читать лог\n{err}') from err
-        logger.info(f'стенд: METF {cfg.metf_host} - есть')
+                f'стенд: METF {cfg.metf_host} отвечает, но не открыла UART '
+                f'устройства: читать лог нечем\n{err}') from err
+        logger.info(f'стенд: METF {cfg.metf_host} - есть'
+                    + (f' (отозвалась через {waited:.0f} с)' if waited else ''))
 
         router_at = cfg.router_port or cfg.router_host
         try:
@@ -441,8 +476,8 @@ class Stand:
 
     def _setup_via_portal(self, ssid: str, url: str) -> None:
         """Режим настройки, форма портала через AT-плату, выход из режима."""
-        from .atboard import AtBoard
         from . import portal
+        from .atboard import AtBoard
 
         self.log.clear()
         self.dut.hold_button()

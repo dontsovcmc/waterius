@@ -30,9 +30,10 @@ import re
 import socket
 import threading
 import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Callable, Iterator, Protocol
+from typing import Protocol
 
 import serial
 from loguru import logger
@@ -48,6 +49,8 @@ CMD_TIMEOUT = 4.0
 
 # Смена канала и SSID требуют перезагрузки: точка пропадает на эти секунды.
 RESTART_WAIT = 12.0
+# Со страной `01` прошивка разрешает 1-11: см. set_ap_channel
+MAX_AP_CHANNEL = 11
 
 # Списки фильтра, как их называет прошивка (`acl` без аргументов)
 ACL_LISTS = ('from_esp', 'to_esp', 'from_ap', 'to_ap')
@@ -174,7 +177,7 @@ class TcpTransport:
         while time.time() < deadline:
             try:
                 data = self._sock.recv(4096)
-            except socket.timeout:
+            except TimeoutError:
                 data = b''
             except OSError as err:
                 # Консоль умерла на середине ответа. Ответ потерян, и выдать
@@ -196,7 +199,7 @@ class TcpTransport:
         try:
             while self._sock.recv(4096):
                 pass
-        except (socket.timeout, OSError):
+        except (TimeoutError, OSError):
             pass
 
     def close(self) -> None:
@@ -320,7 +323,14 @@ class NatRouter:
         Перезагрузка. После неё в порт летит мусор бутлоадера, поэтому ждём
         и ресинхронизируемся отдельной командой - иначе ответ на следующую
         команду приедет вперемешку с баннером.
+
+        Факт перезагрузки судим по аптайму, а не по живому соединению: плата
+        уходит молча, не закрывая сокет, и запись в полуоткрытый проходит
+        успешно - данные просто ложатся в буфер. Сравниваем не с прежним
+        аптаймом, а с тем, каким он стал бы без перезагрузки: команда сразу
+        после прошлого ребута иначе выглядит невыполненной.
         """
+        before = self.uptime()
         try:
             self._t.write_line('restart')
         except OSError:
@@ -331,7 +341,21 @@ class NatRouter:
             reconnect()                # сетевая консоль умирает вместе с платой
         else:
             self._t.drain()
-        self.version()
+        self.version()                 # готовность консоли - по ответу, а не по порту
+        after = self.uptime()
+        if before is not None and after is not None and after >= before + wait:
+            raise RouterError(
+                f'роутер не перезагрузился: аптайм {after:.0f} с, а без '
+                f'перезагрузки был бы примерно {before + wait:.0f} с. Команда '
+                f'`restart` осталась лежать неприменённой')
+
+    def uptime(self) -> float | None:
+        """Аптайм из `show status` в секундах. None - строки в ответе нет."""
+        m = re.search(r'Uptime:\s*(\d+):(\d\d):(\d\d)', self.show('status'))
+        if m is None:
+            return None
+        hours, minutes, seconds = (int(part) for part in m.groups())
+        return hours * 3600.0 + minutes * 60.0 + seconds
 
     # --- точка доступа ---------------------------------------------------
 
@@ -351,7 +375,20 @@ class NatRouter:
         self.cmd(f'set_ap {ssid} {password}')
 
     def set_ap_channel(self, channel: int) -> None:
-        """0 - авто, 1..13 - фиксированный. Только сборка с аплинком Ethernet."""
+        """
+        0 - авто, 1..11 - фиксированный. Только сборка с аплинком Ethernet.
+
+        Число проверяем здесь, а не надеемся на прошивку: она принимает его
+        молча, кладёт в NVS и применяет при следующем старте. Со страной `01`
+        разрешены 1-11, и на 12-13 `ESP_ERROR_CHECK` роняет плату в abort()
+        ещё до старта консолей - команду отдать будет уже нечем, лечится
+        только прошивальщиком (стенд metf этим переболел).
+        """
+        if channel not in range(0, MAX_AP_CHANNEL + 1):
+            raise RouterError(
+                f'канал {channel}: со страной 01 роутер принимает 0 (авто) и '
+                f'1-{MAX_AP_CHANNEL}. Больший он запишет в NVS и при следующем '
+                f'старте уйдёт в петлю перезагрузки без консоли')
         self.cmd(f'set_ap_channel {channel}')
 
     def set_tx_power(self, dbm: int) -> None:
@@ -372,9 +409,9 @@ class NatRouter:
     def dhcp_reservations(self) -> dict[str, str]:
         """MAC -> адрес, как их печатает `show mappings`."""
         out = self.show('mappings')
-        return dict(
-            (m.group(1).lower(), m.group(2))
-            for m in re.finditer(r'([0-9a-fA-F:]{17})\s*->\s*(\d+\.\d+\.\d+\.\d+)', out))
+        return {
+            m.group(1).lower(): m.group(2)
+            for m in re.finditer(r'([0-9a-fA-F:]{17})\s*->\s*(\d+\.\d+\.\d+\.\d+)', out)}
 
     def client_stats(self, enabled: bool = True) -> None:
         self.cmd(f'client_stats {"enable" if enabled else "disable"}')
@@ -607,7 +644,7 @@ class NatRouter:
                     while not stop.is_set():
                         try:
                             data = s.recv(8192)
-                        except socket.timeout:
+                        except TimeoutError:
                             continue
                         if not data:
                             break

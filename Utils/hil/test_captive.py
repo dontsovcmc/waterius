@@ -21,7 +21,8 @@ JavaScript рисует страницы, - это `04_not-tested.md`, §7. Чт
 
 from __future__ import annotations
 
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 import pytest
 

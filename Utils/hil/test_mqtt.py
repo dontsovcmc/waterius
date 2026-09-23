@@ -19,14 +19,16 @@ MQTT, включая 2.0.44.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any, Iterator
+from collections.abc import Iterator
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from .constants import ELECTRONIC, HEAT_UNITS, INPUT_OFF, LEAKAGE
 from .logwatch import MANUAL_TRANSMIT_MODE, SEND_NO_CONNECTION, SEND_OK
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
-    from .stand import Stand      # а сбор тестов должен работать без них
+    from .stand import Stand  # а сбор тестов должен работать без них
 
 pytestmark = [pytest.mark.stand, pytest.mark.mqtt]
 
@@ -330,7 +332,8 @@ def test_I1b_discovery_json_is_valid(stand: Stand) -> None:
         try:
             entity = json.loads(message.payload)
         except ValueError as error:
-            raise AssertionError(f'{topic}: не JSON ({error}): {message.payload}')
+            raise AssertionError(
+                f'{topic}: не JSON ({error}): {message.payload}') from error
         # Кнопка состояния не имеет, она шлёт команду: у неё обязателен cmd_t
         # (selftest/test_hatemplates.py, test_button_has_no_state)
         component = topic.split('/')[1]

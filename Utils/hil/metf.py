@@ -21,7 +21,8 @@ METF - клиент Wi-Fi домашней сети, и тот же эфир т�
 from __future__ import annotations
 
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import requests
 from loguru import logger
