@@ -20,11 +20,19 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from .constants import (ALARM_WAIT_S, LEAKAGE, LEAKAGE_NC, NAMUR, PLANNED_PERIOD_MIN,
-                        PLANNED_WAIT_S, SILENCE_S)
+from .constants import (
+    ALARM_WAIT_S,
+    LEAKAGE,
+    LEAKAGE_NC,
+    NAMUR,
+    PLANNED_PERIOD_MIN,
+    PLANNED_WAIT_S,
+    SILENCE_S,
+)
 from .logwatch import ALARM_MODE
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
-    from .stand import Stand      # а сбор тестов должен работать без них
+    from .stand import Stand  # а сбор тестов должен работать без них
 
 # Тревог до attiny 41 не существует: alarm_bits всегда 0
 pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=41)]

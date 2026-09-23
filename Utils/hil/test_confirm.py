@@ -28,9 +28,10 @@ from typing import TYPE_CHECKING
 import pytest
 
 from .constants import ALARM_WAIT_S, CONFIRM_MQTT, LEAKAGE, SILENCE_S
-from .logwatch import (ALARM_MODE, SEND_NO_CONNECTION, SEND_OK, SEND_SKIPPED)
+from .logwatch import ALARM_MODE, SEND_NO_CONNECTION, SEND_OK, SEND_SKIPPED
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
-    from .stand import Stand      # а сбор тестов должен работать без них
+    from .stand import Stand  # а сбор тестов должен работать без них
 
 # Вся группа поднимает тревогу, чтобы получить квитанцию: до attiny 41 её нет.
 pytestmark = [pytest.mark.stand, pytest.mark.mqtt,

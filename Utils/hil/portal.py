@@ -24,11 +24,11 @@ import hashlib
 import json
 import re
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator
-
+from typing import Any
 from urllib.parse import urlencode
 
 from loguru import logger
@@ -215,7 +215,8 @@ def _save(board: AtBoard, path: str, host: str, **params: str) -> dict:
     try:
         data = json.loads(answer.text)
     except ValueError as err:
-        raise PortalError(f'{path}: ответ не JSON ({err}): {answer.text[:120]}')
+        raise PortalError(
+            f'{path}: ответ не JSON ({err}): {answer.text[:120]}') from err
     if data.get('errors'):
         raise PortalError(f'{path}: прошивка не приняла настройки: {data["errors"]}')
     return data
@@ -433,11 +434,11 @@ if __name__ == '__main__':
     import time
 
     from loguru import logger
-    from .metf import Metf
 
     from .config import load
     from .dut import Dut
     from .logwatch import LogWatcher
+    from .metf import Metf
 
     parser = argparse.ArgumentParser(description='обход портала через AT-плату')
     parser.add_argument('--port', default='/dev/cu.usbserial-0001',

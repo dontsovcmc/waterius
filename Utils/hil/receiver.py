@@ -30,13 +30,13 @@ import subprocess
 import tempfile
 import threading
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from loguru import logger
-
 
 # Дольше соединение без ответа не держим, даже если тест забыл выйти из
 # hanging(): поток обработчика иначе жил бы до конца прогона
@@ -146,7 +146,9 @@ class Receiver:
 
         self._handler = Handler
         self._host = host
-        self._server = ThreadingHTTPServer((host, port), Handler)
+        # Тот же приём, что и для https: порт занимает сосед по машине, и
+        # прогон иначе падает на `Errno 48` ещё до первого теста
+        self._server = self._bind(host, port)
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
 
     def start(self) -> None:
@@ -166,15 +168,15 @@ class Receiver:
         cert, key = self_signed(self.cert_host, Path(self._certs.name))
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(cert, key)
-        self._tls = self._bind_tls(host or self._host, port)
+        self._tls = self._bind(host or self._host, port)
         self._tls.socket = context.wrap_socket(self._tls.socket, server_side=True)
         self._tls_thread = threading.Thread(target=self._tls.serve_forever, daemon=True)
         self._tls_thread.start()
         logger.info(f'приёмник слушает https {self._tls.server_address}')
 
-    def _bind_tls(self, host: str, port: int) -> ThreadingHTTPServer:
+    def _bind(self, host: str, port: int) -> ThreadingHTTPServer:
         """
-        Занять порт https, пережив чужого соседа.
+        Занять порт, пережив чужого соседа.
 
         `SO_REUSEADDR` приёмник ставит сам, поэтому `Address already in use`
         здесь значит не остаток прошлого прогона, а живого слушателя на том же

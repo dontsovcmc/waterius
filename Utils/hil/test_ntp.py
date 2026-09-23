@@ -25,16 +25,17 @@ from __future__ import annotations
 
 import re
 import time
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Iterator
+from collections.abc import Iterator
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from .constants import (DEFAULT_NTP_SERVER, NTP_POOL_SIZE, NTP_WARMUP_SYNCS,
-                        START_VALID_TIME)
+from .constants import DEFAULT_NTP_SERVER, NTP_POOL_SIZE, NTP_WARMUP_SYNCS, START_VALID_TIME
 from .logwatch import TRANSMIT_MODE
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
-    from .stand import Stand      # а сбор тестов должен работать без них
+    from .stand import Stand  # а сбор тестов должен работать без них
 
 pytestmark = [pytest.mark.stand, pytest.mark.requires(esp='2.0.47')]
 
@@ -58,7 +59,7 @@ def payload_epoch(payload: dict[str, Any]) -> int:
     """Метка времени посылки в секундах unix."""
     stamp = payload['timestamp']
     return int(datetime.strptime(stamp, '%Y-%m-%dT%H:%M:%S%z')
-               .astimezone(timezone.utc).timestamp())
+               .astimezone(UTC).timestamp())
 
 
 def pool_names(lines: list[str]) -> list[str]:
@@ -227,8 +228,7 @@ def test_N5_unreachable_server_freezes_the_tuning(stand: Stand, clock: Any) -> N
     stamp = payload_epoch(start.payload)
 
     with stand.net.ntp_down():
-        failures = 0
-        for _ in range(3):
+        for failures in range(1, 4):      # номер неудачи, он же их счёт
             stand.reset_observers()
             stand.dut.press_button()
             session = stand.wait_session(timeout=180)
@@ -237,7 +237,6 @@ def test_N5_unreachable_server_freezes_the_tuning(stand: Stand, clock: Any) -> N
             assert 'NTP: sync failed' in session.text, (
                 'время взять было неоткуда, а прошивка сочла синхронизацию '
                 'удачной\n' + session.text)
-            failures += 1
 
             assert session.payload['period_min_tuned'] == tuned, (
                 f'период подстроился по оценочному времени: было {tuned}, '

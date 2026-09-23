@@ -25,6 +25,7 @@ import pytest
 
 from .constants import BASE_FACTOR, COLD, NAMUR, VOL_LITRES
 from .logwatch import MANUAL_TRANSMIT_MODE
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session
     from .stand import Stand

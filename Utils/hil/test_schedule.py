@@ -17,8 +17,9 @@ import pytest
 from . import portal as portal_mod
 from .constants import NAMUR
 from .logwatch import MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
-    from .stand import Stand      # а сбор тестов должен работать без них
+    from .stand import Stand  # а сбор тестов должен работать без них
 
 pytestmark = [pytest.mark.stand, pytest.mark.slow]
 
@@ -56,7 +57,7 @@ def test_H1_wakeup_period(stand: Stand) -> None:
         assert session.mode == TRANSMIT_MODE
 
     low, high = period * (1 - H1_TOLERANCE), period * (1 + H1_TOLERANCE)
-    for before, after in zip(stamps, stamps[1:]):
+    for before, after in zip(stamps, stamps[1:], strict=False):
         minutes = (after - before) / 60
         assert low <= minutes <= high, (
             f'интервал между сеансами {minutes:.1f} мин при периоде {period}')

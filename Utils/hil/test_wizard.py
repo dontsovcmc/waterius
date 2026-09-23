@@ -22,7 +22,8 @@ from __future__ import annotations
 import json
 import re
 import time
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 from urllib.parse import urlencode
 
 import pytest

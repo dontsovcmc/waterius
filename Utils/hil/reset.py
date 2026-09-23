@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from . import portal as portal_mod
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .atboard import AtBoard  # а сбор тестов должен работать без них
     from .logwatch import Session

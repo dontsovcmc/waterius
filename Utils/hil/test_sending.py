@@ -32,10 +32,20 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from .constants import HTTP_SEND_ATTEMPTS
-from .logwatch import (BLYNK_CLOUD, BLYNK_CLOUD_ANSWER, BLYNK_MQTT,
-                       BLYNK_ROUTER, SENDING_BLYNKS, blynk_name,
-                       MANUAL_TRANSMIT_MODE, SEND_BAD_ANSWER,
-                       SEND_NO_CONNECTION, SEND_OK, SEND_SKIPPED)
+from .logwatch import (
+    BLYNK_CLOUD,
+    BLYNK_CLOUD_ANSWER,
+    BLYNK_MQTT,
+    BLYNK_ROUTER,
+    MANUAL_TRANSMIT_MODE,
+    SEND_BAD_ANSWER,
+    SEND_NO_CONNECTION,
+    SEND_OK,
+    SEND_SKIPPED,
+    SENDING_BLYNKS,
+    blynk_name,
+)
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session  # а сбор тестов должен работать без них
     from .stand import Stand
@@ -375,7 +385,7 @@ def switch_receivers(stand: Stand, **flags: int) -> Session:
 def restore_receivers(stand: Stand, alone: str) -> None:
     """Вернуть всех трёх получателей через того, кто остался включён."""
     if alone == 'http_on':
-        switch_receivers(stand, **{name: 1 for name in RECEIVERS})
+        switch_receivers(stand, **dict.fromkeys(RECEIVERS, 1))
         return
 
     assert stand.mqtt is not None

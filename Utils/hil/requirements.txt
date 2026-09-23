@@ -6,3 +6,4 @@ pyserial>=3.5
 paho-mqtt>=2.0
 amqtt>=0.12
 jinja2>=3.1                 # I15: шаблоны автодискавери рендерятся, как их рендерит Home Assistant
+ruff>=0.5                   # линтер стенда: ruff check Utils/hil

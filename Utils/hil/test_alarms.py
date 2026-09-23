@@ -33,12 +33,23 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from . import portal as portal_mod
-from .constants import (ALARM_WAIT_S, BASE_FACTOR, LEAKAGE, MSG_ALARM_WET, NAMUR,
-                        PLANNED_PERIOD_MIN, PLANNED_WAIT_S, RESET_WET0, RESET_WET1,
-                        VOL_LITRES, VOL_PULSES)
+from .constants import (
+    ALARM_WAIT_S,
+    BASE_FACTOR,
+    LEAKAGE,
+    MSG_ALARM_WET,
+    NAMUR,
+    PLANNED_PERIOD_MIN,
+    PLANNED_WAIT_S,
+    RESET_WET0,
+    RESET_WET1,
+    VOL_LITRES,
+    VOL_PULSES,
+)
 from .logwatch import ALARM_MODE, MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
-    from .stand import Stand      # а сбор тестов должен работать без них
+    from .stand import Stand  # а сбор тестов должен работать без них
 
 # Тревог до attiny 41 не существует: alarm_bits всегда 0, а send_alarm_config
 # выходит на первой строке - вся группа бессмысленна.

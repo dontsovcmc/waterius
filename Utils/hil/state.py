@@ -18,7 +18,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 # Поля посылки и конфига, названные не так, как параметр прошивки. Требования
 # пишутся именами параметров - теми, что уходят в ответе сервера.

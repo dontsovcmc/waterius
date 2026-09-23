@@ -47,7 +47,7 @@ class MqttBroker:
     @staticmethod
     def available() -> bool:
         try:
-            import amqtt.broker           # noqa: F401
+            import amqtt.broker  # noqa: F401
         except ImportError:
             return False
         return True

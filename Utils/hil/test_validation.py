@@ -21,15 +21,23 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 from urllib.parse import urlencode
 
 import pytest
 
 from . import portal as portal_mod
 from .atboard import AtBoard
-from .constants import (ALARM_STOP_MAX_HOURS, ERR_LENGTH, ERR_NO_COMMA,
-                        ERR_PORT_IN_HOST, ERR_TLS, ERR_VALUE, SERIAL_LEN)
+from .constants import (
+    ALARM_STOP_MAX_HOURS,
+    ERR_LENGTH,
+    ERR_NO_COMMA,
+    ERR_PORT_IN_HOST,
+    ERR_TLS,
+    ERR_VALUE,
+    SERIAL_LEN,
+)
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal]
 

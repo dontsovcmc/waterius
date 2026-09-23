@@ -14,17 +14,15 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from loguru import logger
 
 if TYPE_CHECKING:                       # только для подсказок типов
-    from .broker import MqttBroker
-    from .mqttwatch import MqttWatch
-    from .router import RouterState
-    from .stand import Stand
+    pass
 
 # Модули стенда тянут pyserial и paho-mqtt, а разбор лога проверяется без
 # железа и без этих зависимостей. Поэтому импорт - внутри фикстур.
@@ -111,6 +109,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
                      help='гонять тесты экспериментальных функций прошивки')
     parser.addoption('--soak', action='store_true', default=False,
                      help='гонять длинный прогон (test_soak.py)')
+    parser.addoption('--reverse', action='store_true', default=False,
+                     help='гонять набор задом наперёд: так ловится зависимость '
+                          'по порядку, которая в прямом прогоне не видна')
     parser.addoption('--soak-minutes', type=int, default=60,
                      help='длительность длинного прогона, минут: по умолчанию 60 - это '
                           '12 сеансов, чтобы набор укладывался в один заход; '
@@ -175,6 +176,11 @@ def pytest_collection_modifyitems(config: pytest.Config,
         for item in items:
             if 'soak' in item.keywords:
                 item.add_marker(skip)
+
+    if config.getoption('--reverse'):
+        # Зависимость по порядку - каждый восьмой нестабильный тест в природе,
+        # и в прямом прогоне она сидит в зелёном наборе до любой перестановки.
+        items.reverse()
 
     if config.getoption('--stand'):
         return
@@ -346,9 +352,9 @@ def firmware_versions(request: pytest.FixtureRequest) -> None:
         pytest.skip(f'нужна attiny {need_attiny}, на стенде {stand.attiny_version}')
 
     need_esp = marker.kwargs.get('esp')
-    if need_esp is not None:
-        if stand.esp_version is None or stand.esp_version < _version(need_esp):
-            pytest.skip(f'нужна ЕСП {need_esp}, на стенде {stand.version_str}')
+    if need_esp is not None and (stand.esp_version is None
+                                 or stand.esp_version < _version(need_esp)):
+        pytest.skip(f'нужна ЕСП {need_esp}, на стенде {stand.version_str}')
 
 
 def needs(node: pytest.Item) -> dict[str, Any]:
@@ -436,7 +442,7 @@ def quiet(stand: Any, device_baseline: None) -> Iterator[None]:
     доложило о ней и внепланового сеанса больше не даст.
     """
     stand.assert_no_alarms()
-    yield
+    return
 
 
 @pytest.hookimpl(hookwrapper=True)

@@ -11,8 +11,17 @@ from __future__ import annotations
 
 import time
 
-from ..logwatch import (ALARM_MODE, LogWatcher, TRANSMIT_MODE, WAKE_NO_ATTINY,
-                        WAKE_SESSION, WAKE_SILENT, WAKE_STUCK)
+import pytest
+
+from ..logwatch import (
+    ALARM_MODE,
+    TRANSMIT_MODE,
+    WAKE_NO_ATTINY,
+    WAKE_SESSION,
+    WAKE_SILENT,
+    WAKE_STUCK,
+    LogWatcher,
+)
 
 # Префикс из Logging.h при включённом LOG_FREE_HEAP: MM:SS:mmm-KKK/FF%  INFO  :
 PREFIX = '01:23:456-025/03%  INFO  : '
@@ -290,12 +299,8 @@ def test_потеря_строк_валит_тест_а_не_прячется() 
     """
     watcher = LogWatcher(CountingApi(through_ring(SESSION_ALARM), [0, 17]))
 
-    try:
+    with pytest.raises(AssertionError, match='17'):
         watcher.wait_session(timeout=1.0)
-    except AssertionError as err:
-        assert '17' in str(err), err
-    else:
-        raise AssertionError('потерю строк пропустили молча')
 
 
 def test_целый_лог_проверку_проходит() -> None:

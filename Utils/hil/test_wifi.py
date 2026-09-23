@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from .logwatch import MANUAL_TRANSMIT_MODE
+
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session  # а сбор тестов должен работать без них
     from .stand import Stand
@@ -25,7 +26,14 @@ ATTEMPT = 'WIFI: Attempt #'
 
 
 def other_channel(current: int) -> int:
-    """Канал заведомо не соседний: пересечение полос не должно помогать."""
+    """
+    Канал заведомо не соседний: пересечение полос не должно помогать.
+
+    Числа выбраны рассуждением, а не замером, и это долг: на чужом стенде
+    канал может оказаться глухим - сильный сосед, и устройство не увидит сеть
+    вовсе. Тогда тест проверяет удачу, а не прошивку. Замер: сколько сканов из
+    скольких видят точку на этом канале (грабли стенда metf, docs/testspec).
+    """
     return 11 if current <= 6 else 1
 
 
