@@ -372,6 +372,8 @@ bool publish_discovery_channel_entities(PubSubClient &mqtt_client,
         {ENTITY_CHANNEL_ALARM_FLOW, ChannelEntity::ALARM_STATE},
         {ENTITY_CHANNEL_ALARM_LEAK, ChannelEntity::ALARM_STATE},
         {ENTITY_CHANNEL_ALARM_STOP, ChannelEntity::ALARM_STATE},
+        {ENTITY_CHANNEL_RETIRED_AF, ChannelEntity::RETIRED},
+        {ENTITY_CHANNEL_RETIRED_AL, ChannelEntity::RETIRED},
     };
 
     // Атрибуты - только у сенсора показаний

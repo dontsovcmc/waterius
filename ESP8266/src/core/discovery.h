@@ -41,6 +41,7 @@ enum class ChannelEntity : uint8_t
     RESOURCE,       // cname
     ALARM_CONFIG,   // av, ar, ah, as
     ALARM_STATE,    // alarm_flow, alarm_leak, alarm_stop
+    RETIRED,        // af, al: были в сборках dev 2.0.47, у брокеров могли остаться
 };
 
 /*

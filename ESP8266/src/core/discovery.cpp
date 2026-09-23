@@ -48,6 +48,8 @@ bool channel_entity_wanted(uint8_t counter_type, ChannelEntity entity)
     case ChannelEntity::INPUT_TYPE:
         // Иначе включить выключенный вход из HA было бы нечем
         return true;
+    case ChannelEntity::RETIRED:
+        return false;
     case ChannelEntity::WET:
         return counter_type == CounterType::LEAKAGE || counter_type == CounterType::LEAKAGE_NC;
     default:

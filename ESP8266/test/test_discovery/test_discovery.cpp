@@ -106,6 +106,10 @@ namespace
         ChannelEntity::SERIAL_NUMBER, ChannelEntity::FACTOR, ChannelEntity::RESOURCE,
         ChannelEntity::ALARM_CONFIG, ChannelEntity::ALARM_STATE,
     };
+
+    const uint8_t ALL_TYPES[] = {CounterType::NAMUR, CounterType::ELECTRONIC,
+                                 CounterType::ELECTRONIC_HIGH, CounterType::LEAKAGE,
+                                 CounterType::LEAKAGE_NC, CounterType::NONE};
 }
 
 TEST(ChannelEntities, InputTypeIsAlwaysPublished)
@@ -152,4 +156,11 @@ TEST(ChannelEntities, DisabledInputHasOnlyType)
         EXPECT_EQ(channel_entity_wanted(CounterType::NONE, e), e == ChannelEntity::INPUT_TYPE)
             << "группа " << (int)e;
     }
+}
+
+TEST(ChannelEntities, RetiredEntitiesAreNeverWanted)
+{
+    // af и al заменены на av/ar/ah: у брокеров их надо удалять при любом типе входа
+    for (uint8_t t : ALL_TYPES)
+        EXPECT_FALSE(channel_entity_wanted(t, ChannelEntity::RETIRED)) << (int)t;
 }

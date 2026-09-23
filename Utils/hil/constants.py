@@ -124,6 +124,10 @@ BUTTON_SESSION_WAIT_S = 20.0
 PLANNED_PERIOD_MIN = 5
 PLANNED_WAIT_S = 15 * 60
 
+# setup.h: BRAND_NAME. Имя устройства в топиках автообнаружения -
+# `<бренд>-<esp_id>` (utils.cpp, get_device_name)
+BRAND_NAME = 'waterius'
+
 # core/types.h: WATERIUS_MODEL_2
 WATERIUS_MODEL_2 = 2
 

@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from .constants import (
+    BRAND_NAME,
     ELECTRONIC,
     HEAT_GCAL,
     HEAT_UNITS,
@@ -752,6 +753,35 @@ def test_I18_changed_input_type_removes_stale_entities(stand: Stand) -> None:
     assert not stale, f'сущности счётчика остались у брокера: {stale}'
     assert config_topic(after, 'sensor', 'ch1') is not None, (
         f'соседний вход потерял показания: {after}')
+
+
+# Пороги тревог первых сборок dev 2.0.47 - их заменили av/ar/ah
+RETIRED = ('af0', 'af1', 'al0', 'al1')
+
+
+@pytest.mark.requires(esp='2.0.51')
+@DISCOVERY
+def test_I21_retired_entities_are_removed(stand: Stand) -> None:
+    """
+    Сущности af и al удаляются у брокера при публикации автообнаружения.
+
+    Их публиковали сборки dev 2.0.47, а тестировщики dev могли оставить у своего
+    брокера удерживаемые конфиги: в HA это пороги, которые больше ничего не
+    меняют. Конфиги кладём сами - как лежали бы они после такой сборки.
+    """
+    assert stand.mqtt is not None
+    assert stand.last_payload is not None
+    device = f"{BRAND_NAME}-{stand.last_payload['esp_id']}"
+    planted = [f'{DISCOVERY_ROOT}/number/{device}/{name}/config' for name in RETIRED]
+    for topic in planted:
+        stand.mqtt.publish_retained(topic, '{"name": "retired"}')
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    left = [topic for topic in planted if topic in retained_configs(stand)]
+    assert not left, f'устаревшие сущности остались у брокера: {left}'
 
 
 @pytest.mark.slow
