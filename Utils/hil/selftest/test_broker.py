@@ -10,26 +10,19 @@ Assistant, а удерживаемое сообщение видно тольк�
 
 from __future__ import annotations
 
-import socket
 import time
 from collections.abc import Iterator
 
 import pytest
 
 from ..broker import MqttBroker
+from . import free_port
 
 if not MqttBroker.available():
     pytest.skip('нет amqtt: pip install -r Utils/hil/requirements.txt',
                 allow_module_level=True)
 
 TOPIC = 'waterius/stand'
-
-
-def free_port() -> int:
-    """Порт, который сейчас никто не слушает: 1883 может быть занят прогоном."""
-    with socket.socket() as sock:
-        sock.bind(('127.0.0.1', 0))
-        return int(sock.getsockname()[1])
 
 
 @pytest.fixture

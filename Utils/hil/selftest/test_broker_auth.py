@@ -8,7 +8,6 @@ I16 опирается на поведение amqtt, а не на докуме�
 
 from __future__ import annotations
 
-import socket
 import time
 
 import pytest
@@ -17,15 +16,10 @@ mqtt = pytest.importorskip('paho.mqtt.client')
 pytest.importorskip('amqtt')
 
 from ..broker import MqttBroker  # noqa: E402
+from . import free_port  # noqa: E402
 
 USER = 'waterius'
 PASSWORD = 'Aa0' * 21 + 'Z'          # 64 символа: столько генерирует HA (#301)
-
-
-def free_port() -> int:
-    with socket.socket() as sock:
-        sock.bind(('127.0.0.1', 0))
-        return sock.getsockname()[1]
 
 
 @pytest.fixture(scope='module')

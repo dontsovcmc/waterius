@@ -24,8 +24,16 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from .constants import ELECTRONIC, HEAT_UNITS, INPUT_OFF, LEAKAGE
-from .logwatch import MANUAL_TRANSMIT_MODE, SEND_NO_CONNECTION, SEND_OK
+from .constants import (
+    ELECTRONIC,
+    HEAT_GCAL,
+    HEAT_UNITS,
+    INPUT_OFF,
+    LEAKAGE,
+    PLANNED_PERIOD_MIN,
+    PLANNED_WAIT_S,
+)
+from .logwatch import MANUAL_TRANSMIT_MODE, SEND_NO_CONNECTION, SEND_OK, TRANSMIT_MODE
 
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand  # а сбор тестов должен работать без них
@@ -36,6 +44,14 @@ pytestmark = [pytest.mark.stand, pytest.mark.mqtt]
 # нём прошивка подписывается на команды (`senders/sender_mqtt.h`)
 DISCOVERY = pytest.mark.needs(mqtt_auto_discovery=1)
 NO_DISCOVERY = pytest.mark.needs(mqtt_auto_discovery=0)
+
+# Дерево автообнаружения у брокера: конфиги там удерживаемые, и стенд их
+# между тестами не чистит - чистит сам тест, которому важно, что лежит
+DISCOVERY_ROOT = 'homeassistant'
+
+# Сущности входа 0, которых у датчика протечки быть не должно
+COUNTER_ONLY = ('ch0', 'f0', 'serial0', 'cname0', 'av0', 'ar0', 'ah0', 'as0',
+                'alarm_flow0', 'alarm_leak0', 'alarm_stop0')
 
 # Сущности автодискавери, которые прошивка публикует независимо от тревог
 # (`ha/publish_discovery.cpp`). Тип в топике важен не меньше имени: `number`
@@ -57,8 +73,13 @@ def config_topic(topics: list[str], entity_type: str, entity_id: str) -> str | N
     """Топик автодискавери сущности: `homeassistant/<тип>/<устройство>/<имя>/config`."""
     tail = f'/{entity_id}/config'
     return next((t for t in topics
-                 if t.startswith(f'homeassistant/{entity_type}/') and t.endswith(tail)),
+                 if t.startswith(f'{DISCOVERY_ROOT}/{entity_type}/') and t.endswith(tail)),
                 None)
+
+
+def configs_named(topics: list[str], names: tuple[str, ...]) -> list[str]:
+    """Топики конфигов сущностей с такими именами, любого типа."""
+    return [topic for topic in topics for name in names if topic.endswith(f'/{name}/config')]
 
 
 @DISCOVERY
@@ -108,7 +129,7 @@ def test_I1_discovery_base_entities(stand: Stand) -> None:
     stand.dut.press_button()
     stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    topics = stand.mqtt.topics('homeassistant/')
+    topics = stand.mqtt.topics(f'{DISCOVERY_ROOT}/')
     assert topics, 'автодискавери не опубликовано'
 
     for entity_type, entity_id in BASE_ENTITIES:
@@ -323,7 +344,7 @@ def test_I1b_discovery_json_is_valid(stand: Stand) -> None:
     stand.dut.press_button()
     stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    topics = stand.mqtt.topics('homeassistant/')
+    topics = stand.mqtt.topics(f'{DISCOVERY_ROOT}/')
     assert topics, 'автодискавери не опубликовано'
 
     for topic in topics:
@@ -396,9 +417,9 @@ def test_I0b_readings_go_to_separate_topics(stand: Stand) -> None:
 
     assert stand.mqtt.last(stand.mqtt_root) is None, (
         'одним объектом в корень публикуют только при включённом автодискавери')
-    assert not stand.mqtt.topics('homeassistant/'), (
+    assert not stand.mqtt.topics(f'{DISCOVERY_ROOT}/'), (
         f'автодискавери выключено, а топики опубликованы: '
-        f'{stand.mqtt.topics("homeassistant/")}')
+        f'{stand.mqtt.topics(DISCOVERY_ROOT + "/")}')
 
 
 @NO_DISCOVERY
@@ -448,16 +469,13 @@ def test_I2_leak_sensor_publishes_only_its_state(stand: Stand) -> None:
     stand.dut.press_button()
     stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    topics = stand.mqtt.topics('homeassistant/')
+    topics = stand.mqtt.topics(f'{DISCOVERY_ROOT}/')
     assert topics, 'автодискавери не опубликовано'
 
     assert config_topic(topics, 'select', 'ctype0') is not None, topics
     assert config_topic(topics, 'binary_sensor', 'alarm_wet0') is not None, topics
 
-    pointless = ('ch0', 'f0', 'serial0', 'av0', 'ar0', 'ah0', 'as0',
-                 'alarm_flow0', 'alarm_leak0', 'alarm_stop0')
-    left = [topic for topic in topics
-            for name in pointless if topic.endswith(f'/{name}/config')]
+    left = configs_named(topics, COUNTER_ONLY)
     assert not left, f'у датчика протечки объявлено лишнее: {left}'
 
     # Соседний вход - обычный счётчик, и его сущности на месте: проверка
@@ -480,7 +498,7 @@ def test_I6_heat_carries_its_own_unit(stand: Stand, resource: int) -> None:
     stand.dut.press_button()
     stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    topics = stand.mqtt.topics('homeassistant/')
+    topics = stand.mqtt.topics(f'{DISCOVERY_ROOT}/')
     topic = config_topic(topics, 'sensor', 'ch0')
     assert topic is not None, topics
 
@@ -562,7 +580,7 @@ def discovery_entities(stand: Stand) -> dict[tuple[str, str], dict]:
     """Автодискавери сеанса: (тип, имя сущности) -> конфиг."""
     assert stand.mqtt is not None
     entities = {}
-    for topic in stand.mqtt.topics('homeassistant/'):
+    for topic in stand.mqtt.topics(f'{DISCOVERY_ROOT}/'):
         parts = topic.split('/')          # homeassistant/<тип>/<устройство>/<имя>/config
         message = stand.mqtt.last(topic)
         if len(parts) == 5 and message is not None and message.payload:
@@ -664,3 +682,135 @@ def test_I16_long_mqtt_password(stand: Stand, cfg: Any, auth_broker: Any) -> Non
         refused.assert_confirm(mqtt=SEND_NO_CONNECTION)
     finally:
         stand.setup(mqtt_port=cfg.broker_port, mqtt_login='', mqtt_password='')
+
+
+def retained_configs(stand: Stand) -> dict[str, str]:
+    """Удерживаемые конфиги автообнаружения: топик -> тело. Пустые брокер не хранит."""
+    assert stand.mqtt is not None
+    # Удерживаемое локальный брокер отдаёт за доли секунды: пяти секунд по умолчанию не нужно
+    return {m.topic: m.payload for m in stand.mqtt.fetch_retained(DISCOVERY_ROOT, timeout=1.0)
+            if m.payload}
+
+
+@pytest.mark.requires(esp='2.0.51')
+@DISCOVERY
+def test_I17_discovery_is_retained_without_retain_flag(stand: Stand) -> None:
+    """
+    Конфиги автообнаружения удерживаются брокером и при выключенном retain.
+
+    Home Assistant читает конфиги у брокера при своём старте, а спящее
+    устройство переслать их по его просьбе не может. Без retain после
+    перезапуска HA сущности пропадали до нажатия кнопки. Показания при этом
+    по-прежнему публикуются по настройке - это проверяет зеркальный I7b.
+    """
+    stand.setup(mqtt_retain=0)
+    assert stand.mqtt is not None
+    stand.mqtt.clear_retained_tree(DISCOVERY_ROOT)
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    topics = list(retained_configs(stand))
+    for entity_type, entity_id in BASE_ENTITIES:
+        assert config_topic(topics, entity_type, entity_id) is not None, (
+            f'конфиг {entity_type}/{entity_id} не удержан брокером, удержаны: {topics}')
+
+    left = [m.topic for m in stand.mqtt.fetch_retained(stand.mqtt_root, timeout=1.0)]
+    assert stand.mqtt_root not in left, (
+        f'показания удержаны при mqtt_retain=0: {left}')
+
+
+
+@pytest.mark.requires(esp='2.0.51')
+@DISCOVERY
+def test_I18_changed_input_type_removes_stale_entities(stand: Stand) -> None:
+    """
+    Вход стал датчиком протечки - сущности счётчика удалены из Home Assistant.
+
+    Удалить сущность можно только пустым конфигом с retain (спецификация HA
+    MQTT Discovery). Без него показания, вес и пороги входа оставались у
+    брокера и в HA навсегда, хотя I2 и видел, что в свежем автообнаружении их
+    нет: он смотрит только на то, что опубликовано, а не на то, что осталось.
+    """
+    assert stand.mqtt is not None
+    stand.mqtt.clear_retained_tree(DISCOVERY_ROOT)
+    stand.reset_observers()
+    stand.dut.press_button()
+    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    before = list(retained_configs(stand))
+    assert config_topic(before, 'sensor', 'ch0') is not None, (
+        f'у счётчика нет показаний - удалять нечего: {before}')
+
+    stand.setup(channel=0, ctype=LEAKAGE)
+
+    after = list(retained_configs(stand))
+    assert config_topic(after, 'select', 'ctype0') is not None, after
+    assert config_topic(after, 'binary_sensor', 'alarm_wet0') is not None, after
+    stale = configs_named(after, COUNTER_ONLY)
+    assert not stale, f'сущности счётчика остались у брокера: {stale}'
+    assert config_topic(after, 'sensor', 'ch1') is not None, (
+        f'соседний вход потерял показания: {after}')
+
+
+@pytest.mark.slow
+@pytest.mark.requires(esp='2.0.51')
+@pytest.mark.needs(mqtt_auto_discovery=1, period_min=PLANNED_PERIOD_MIN)
+def test_I19_planned_session_republishes_changed_discovery(stand: Stand) -> None:
+    """
+    Ресурс входа сменился вне кнопки - автообнаружение переотправлено в том же сеансе.
+
+    Настройку меняет сервер или Home Assistant в плановом сеансе, а
+    автообнаружение публиковалось только по кнопке. Сущность оставалась
+    прежней: канал, ставший теплом, жил в HA водой в m³ до нажатия кнопки.
+    """
+    assert stand.last_payload is not None
+    assert stand.last_payload['cname0'] != HEAT_GCAL, 'ресурс уже тот - проверять нечего'
+
+    session = stand.setup(channel=0, cname=HEAT_GCAL, wake=False, timeout=PLANNED_WAIT_S)
+    assert session.mode == TRANSMIT_MODE, f'сеанс не плановый: mode={session.mode}'
+
+    assert stand.mqtt is not None
+    topics = stand.mqtt.topics(f'{DISCOVERY_ROOT}/')
+    topic = config_topic(topics, 'sensor', 'ch0')
+    assert topic is not None, f'в плановом сеансе автообнаружение не переотправлено: {topics}'
+    message = stand.mqtt.last(topic)
+    assert message is not None
+    assert message.json().get('unit_of_meas') == HEAT_UNITS[HEAT_GCAL], message.payload
+
+
+@pytest.fixture
+def cutting_broker(cfg: Any) -> Iterator[Any]:
+    """Брокер, рвущий соединение на первом конфиге автообнаружения."""
+    from .broker import CuttingBroker
+    server = CuttingBroker(cfg.broker_port + 2, cfg.broker_host)
+    server.start()
+    try:
+        yield server
+    finally:
+        server.stop()
+
+
+@pytest.mark.requires(esp='2.0.51')
+@DISCOVERY
+def test_I20_lost_broker_is_not_reported_as_delivered(stand: Stand, cfg: Any,
+                                                      cutting_broker: Any) -> None:
+    """
+    Брокер оборвал сеанс посреди публикаций - доставка по MQTT не засчитана.
+
+    Статус MQTT решает, подтверждать ли attiny тревогу и сдвигать ли точку
+    отсчёта дельты. Прошивка проверяла только, открыт ли сокет перед первой
+    публикацией, и засчитывала сеанс, в котором показания до брокера не дошли.
+    """
+    try:
+        stand.setup(mqtt_port=cutting_broker.port)
+        stand.reset_observers()
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+        assert 'MQTT: Connected.' in session.text, session.text
+        assert cutting_broker.cut.is_set(), 'брокер не порвал соединение - проверять нечего'
+        session.assert_confirm(mqtt=SEND_NO_CONNECTION)
+    finally:
+        stand.setup(mqtt_port=cfg.broker_port)

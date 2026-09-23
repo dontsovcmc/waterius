@@ -32,10 +32,9 @@
 #include "ha/publish_data.h"
 #include "ha/publish_discovery.h"
 #include "ha/subscribe.h"
+#include "core/blink.h"
+#include "core/discovery.h"
 #include "utils.h"
-
-extern AttinyData data;
-extern CalculatedData cdata;
 
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
@@ -78,46 +77,81 @@ bool connect_and_subscribe_mqtt(Settings &sett, JsonDocument &json_settings_rece
 }
 
 /**
- * @brief Отправляет показания на укзанный сервер MQTT и создает discovery топик HomeAssistant
+ * @brief Публикует автообнаружение, если опубликованное устарело
+ *
+ * Отпечаток опубликованного сбрасывают настройка и кнопка (main.cpp), поэтому
+ * здесь одно правило: изменилось то, из чего собраны конфиги, - публикуем.
+ *
+ * @param sett настройки, в них запоминается отпечаток опубликованного
+ * @param data данные attiny
+ * @param topic корневой топик
+ */
+void sync_discovery(Settings &sett, const AttinyData &data, const String &topic)
+{
+    if (!sett.mqtt_auto_discovery)
+    {
+        // Включат снова - опубликуем сразу, а не по кнопке
+        sett.discovery_signature = 0;
+        return;
+    }
+
+    String discovery_topic = sett.mqtt_discovery_topic;
+    remove_trailing_slash(discovery_topic);
+
+    const DiscoveryState state = {FIRMWARE_VERSION, data.version, data.model,
+                                  data.counter_type0, data.counter_type1,
+                                  sett.counter0_name, sett.counter1_name,
+                                  topic.c_str(), discovery_topic.c_str()};
+    const uint32_t signature = discovery_signature(state);
+    if (signature == sett.discovery_signature)
+    {
+        return;
+    }
+
+    // Недоехавший конфиг переотправится в следующем сеансе
+    if (publish_discovery(mqtt_client, topic, discovery_topic, data, sett))
+    {
+        sett.discovery_signature = signature;
+    }
+    else
+    {
+        LOG_ERROR(F("MQTT: Discovery not published"));
+    }
+    mqtt_client.loop();
+}
+
+/**
+ * @brief Отправляет показания на указанный сервер MQTT и создает discovery топик HomeAssistant
  *
  * @param sett настройки
- * @param data показания
- * @param cdata расчитанные показатели
+ * @param data данные attiny
  * @param json_data json документ c показаниями
- * @param auto_discovery если true то будет добавляться топик для автоконфигурации
  *
- * @returns true если успешно отправлены данные и false если не отправлено
+ * @returns SEND_OK если показания опубликованы целиком
  */
-bool send_mqtt(const Settings &sett, JsonDocument &json_data)
+SendStatus send_mqtt(Settings &sett, const AttinyData &data, JsonDocument &json_data)
 {
     unsigned long start_time = millis();
     String mqtt_topic = sett.mqtt_topic;
     remove_trailing_slash(mqtt_topic);
 
+    // Подключается connect_and_subscribe_mqtt: здесь отказ - всегда потеря связи
     if (!mqtt_client.connected())
     {
         LOG_ERROR(F("MQTT: Not connected"));
-        return false;
+        return SEND_NO_CONNECTION;
     }
 
     mqtt_client.loop();
-    // autodiscovery после настройки и по нажатию на кнопку
-    if (sett.mqtt_auto_discovery && ((sett.mode == SETUP_MODE) ||
-                                     (sett.mode == MANUAL_TRANSMIT_MODE)))
-    {
-        String mqtt_discovery_topic = sett.mqtt_discovery_topic;
-        remove_trailing_slash(mqtt_discovery_topic);
-        publish_discovery(mqtt_client, mqtt_topic, mqtt_discovery_topic, data, sett);
-        mqtt_client.loop();
-    }
+    sync_discovery(sett, data, mqtt_topic);
 
-    // публикация показаний в MQTT
-    publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
+    const bool published = publish_data(mqtt_client, mqtt_topic, json_data,
+                                        sett.mqtt_auto_discovery, sett.mqtt_retain);
 
     mqtt_client.loop();
 
     LOG_INFO(F("MQTT: Publish finished. ") << millis() - start_time << F(" milliseconds elapsed"));
-    return true;
+    return published ? SEND_OK : SEND_NO_CONNECTION;
 }
 
 // Шаг опроса сокета, пока ждём опоздавшую команду

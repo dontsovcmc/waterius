@@ -17,15 +17,10 @@ import socket
 import pytest
 
 from ..receiver import Receiver
+from . import free_port
 
 BODY = b'{"delta0":0,"ch0":100.09,'          # обрезано на середине
 FULL = b'{"delta0":0,"ch0":100.09}'
-
-
-def free_port() -> int:
-    with socket.socket() as sock:
-        sock.bind(('127.0.0.1', 0))
-        return sock.getsockname()[1]
 
 
 @pytest.fixture
