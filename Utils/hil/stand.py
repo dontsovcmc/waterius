@@ -34,7 +34,8 @@ from .constants import (
 )
 from .dut import Dut
 from .logwatch import MANUAL_TRANSMIT_MODE, WAKE_SESSION, LogWatcher, Session
-from .metf import Metf, check as metf_check
+from .metf import Metf
+from .metf import check as metf_check
 from .net import Net
 from .receiver import Receiver
 from .state import merge, same_value, unmet
@@ -253,16 +254,28 @@ class Stand:
             session.payloads.append(payload)
 
         broken = self.receiver.take_broken()
-        # К обрыву прикладываем взгляд самого устройства: сколько оно собиралось
+        # Оборванное тело валит тест, только если целого в этом сеансе так и не
+        # пришло. Прошивка отправляет трижды (`https_helpers.cpp`, Attempt #N),
+        # и повтор после обрыва - её правильное поведение, а не дефект: обрыв
+        # рождается в эфире стенда (05_air-and-loss.md), а не в устройстве.
+        # Требовать «ни одного обрыва» значило бы держать прогон заложником
+        # своей же сети; молчать о нём тоже нельзя - отсюда предупреждение.
+        #
+        # К отказу прикладываем взгляд самого устройства: сколько оно собиралось
         # отправить и что получило в ответ. Без этих строк отказ говорит только
-        # «тело неполное», и виноватого ищут наугад - сеть, приёмник, прошивка
-        assert not broken, (
-            f'приёмник получил {len(broken)} нечитаемое тело посылки: передача '
-            f'оборвалась на середине, и о состоянии устройства этот сеанс не '
-            f'говорит ничего. Начало первого: {broken[0][:200]!r}\n'
-            f'Что об этой отправке говорит устройство:\n'
-            + '\n'.join(line for line in session.text.splitlines()
-                        if 'HTTP' in line or 'WATR' in line))
+        # «тело неполное», и виноватого ищут наугад - сеть, приёмник, прошивка.
+        if broken:
+            sending = '\n'.join(line for line in session.text.splitlines()
+                                 if 'HTTP' in line or 'WATR' in line)
+            assert session.payloads, (
+                f'приёмник получил {len(broken)} нечитаемое тело посылки и ни '
+                f'одного целого: передача оборвалась на середине, и о состоянии '
+                f'устройства этот сеанс не говорит ничего. '
+                f'Начало первого: {broken[0][:200]!r}\n'
+                f'Что об этой отправке говорит устройство:\n{sending}')
+            logger.warning(
+                f'обрыв тела посылки ({len(broken)} шт.), но повтор дошёл целым: '
+                f'эфир стенда теряет пакет, устройство отработало верно')
 
         if session.payloads:
             session.payload = session.payloads[-1]

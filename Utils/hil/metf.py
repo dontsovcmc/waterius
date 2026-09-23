@@ -97,7 +97,7 @@ class Metf:
         self._dead_after = dead_after
         self._down_since: float | None = None
         # Последняя отлучка платы: когда и на сколько. По ней объясняются
-        # потери лога - кольцо METF держит доли секунды потока (см. README)
+        # потери лога - кольцо METF вмещает примерно один сеанс (см. README)
         self.last_stall: tuple[float, float] | None = None
 
     def __getattr__(self, name: str) -> Any:
