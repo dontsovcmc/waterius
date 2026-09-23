@@ -107,13 +107,27 @@ class Receiver:
                     # Нечитаемое тело - не посылка. Пустой словарь уезжал в
                     # сеанс наравне с настоящими, становился последним, и тест
                     # падал на KeyError вместо разговора об обрыве передачи.
-                    logger.warning(f'приёмник: не JSON: {raw[:200]!r}')
+                    #
+                    # Обе длины в один ряд: они делят обрыв надвое. Пришло
+                    # меньше объявленного - оборвалась передача; поровну -
+                    # устройство само объявило короткое тело, и виновата
+                    # прошивка, а не сеть
+                    logger.warning(
+                        f'приёмник: не JSON, объявлено {length} Б, принято '
+                        f'{len(raw)} Б{" по TLS" if isinstance(self.connection, ssl.SSLSocket) else ""}'
+                        f': {raw[:200]!r}')
                     receiver._remember_broken(raw)
+                    # Разовый ответ с настройками достаётся следующей попытке, а
+                    # не этой: устройство не дочитало ответ на оборванную
+                    # отправку (`-3` в его логе) и повторит её, а настройки
+                    # успели бы уйти в никуда. Так и было: прошивка получала на
+                    # повторе пустой ответ, стенд винил её в неприменении.
+                    status, body = 200, b'{}'
                 else:
                     receiver._remember(payload,
                                        isinstance(self.connection, ssl.SSLSocket))
-                status = receiver._take_status()
-                body = receiver._take_reply() if status == 200 else b'{}'
+                    status = receiver._take_status()
+                    body = receiver._take_reply() if status == 200 else b'{}'
 
                 self.send_response(status)
                 self.send_header('Content-Type', 'application/json')

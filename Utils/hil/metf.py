@@ -41,6 +41,27 @@ NETWORK_ERRORS = (requests.RequestException, OSError)
 # а `ReadTimeout` - нет, и это ровно то поведение, которое нужно
 SAFE_TO_REPEAT = (requests.ConnectionError,)
 
+# Версии протокола платы: `GET /version`, разбор - в `docs/api.md` репозитория
+# metf. Стенд опирается на три рубежа
+PULSE_PROTOCOL = 8       # `/pulse` отвечает распиской, выдержку держит стенд
+WIFI_PROTOCOL = 9        # `/wifi`: плату можно увести в другую сеть без пайки
+PROBLEM_PROTOCOL = 10    # `problem`: причина обрыва словами, а не кодом ядра
+
+# Ниже этого запаса связь с платой рвётся под нагрузкой эфира, а тесты её ломают
+# намеренно. Замеры прогонов: на -68 дБм прогон живой, на -72...-82 METF
+# отваливалась и уносила с собой весь хвост
+WEAK_RSSI = -70
+
+# Каналы 2,4 ГГц шириной 20 МГц стоят через 5 МГц, поэтому не перекрываются
+# только 1, 6 и 11. Частичное перекрытие хуже общего канала: на общем платы
+# слышат друг друга и делят эфир по очереди, а на соседнем - не слышат и бьют
+# одновременно, отчего пакеты гибнут
+CHANNEL_GAP = 5
+
+# Чтение состояния платы: короткий запрос, повторяемый без последствий
+GET_TIMEOUT_S = 5.0
+
+
 # Ответ на `/pulse` - расписка о приёме, он не ждёт конца выдержки: медиана
 # замера 16 мс. Пять секунд с запасом хватит и на шаткую связь
 PULSE_ANSWER_TIMEOUT_S = 5.0
@@ -52,6 +73,10 @@ class MetfGone(Exception):
 
 class MetfTooOld(Exception):
     """На плате прошивка старше той, на которую рассчитан стенд."""
+
+
+class MetfOnStandAp(Exception):
+    """METF сидит на точке стенда - на той самой, которую тесты гасят."""
 
 
 class Metf:
@@ -71,6 +96,9 @@ class Metf:
         self._pause = pause
         self._dead_after = dead_after
         self._down_since: float | None = None
+        # Последняя отлучка платы: когда и на сколько. По ней объясняются
+        # потери лога - кольцо METF вмещает примерно один сеанс (см. README)
+        self.last_stall: tuple[float, float] | None = None
 
     def __getattr__(self, name: str) -> Any:
         target = getattr(self._api, name)
@@ -126,6 +154,26 @@ class Metf:
                 f'паузы между импульсами поедут. Обновите прошивку платы.')
         time.sleep(duration_ms / 1000.0)
 
+    def version(self) -> int:
+        """Версия протокола платы (`GET /version`)."""
+        return int(self._get('version').text.strip())
+
+    def wifi(self) -> dict[str, Any]:
+        """
+        Состояние сети платы (`GET /wifi`, протокол 9).
+
+        Пароль плата не отдаёт. До девятого протокола ручки нет вовсе - там
+        сеть выбиралась только сборкой, и спрашивать нечего.
+        """
+        return self._get('wifi').json()
+
+    def _get(self, path: str) -> Any:
+        root = self._api._root
+        answer = self._retry(f'GET /{path}', self._api._sess.get,
+                             (f'{root}/{path}',), {'timeout': GET_TIMEOUT_S})
+        answer.raise_for_status()
+        return answer
+
     def _retry(self, name: str, target: Callable[..., Any],
                args: tuple[Any, ...], kwargs: dict[str, Any],
                repeatable: tuple[type[BaseException], ...] = NETWORK_ERRORS) -> Any:
@@ -171,5 +219,90 @@ class Metf:
     def _note_success(self) -> None:
         if self._down_since is None:
             return
-        logger.warning(f'METF: связь вернулась через {time.time() - self._down_since:.1f} с')
+        silent = time.time() - self._down_since
+        self.last_stall = (self._down_since, silent)
+        logger.warning(f'METF: связь вернулась через {silent:.1f} с')
         self._down_since = None
+
+    def stall_since(self, mark: float) -> tuple[float, float] | None:
+        """Отлучка платы после момента `mark`, если она была."""
+        if self.last_stall and self.last_stall[0] >= mark:
+            return self.last_stall
+        return None
+
+
+def check(api: Metf, host: str, stand_ssid: str = '', stand_channel: int = 0) -> str:
+    """
+    Досмотр платы перед прогоном: протокол, сеть, запас сигнала.
+
+    Возвращает строку для лога прогона. Две беды считаются смертельными и
+    останавливают запуск, остальное идёт предупреждением: прогон стоит начинать
+    только с платой, которой можно верить, но лишний отказ у железа дороже.
+
+    Смертельно первое: протокол младше восьмого. Там `/pulse` отвечал концом
+    импульса, ответ опаздывал на четверть секунды (замер - в `Metf.pulse`), и
+    паузы между импульсами едут молча - падать будут тесты счётчиков, а виновата
+    будет плата.
+
+    Смертельно второе: плата сидит на точке стенда. Управляющий канал не должен
+    идти по тому, что тесты ломают: первое же `ap_off` уносит вместе с
+    устройством и саму METF, а прогон встаёт с ошибками, в которых прошивка
+    Ватериуса ни при чём. Так и было - плата осталась на `waterius_stand` после
+    прерванного прогона и вернулась только через проброс порта на роутере.
+    """
+    version = api.version()
+    if version < PULSE_PROTOCOL:
+        raise MetfTooOld(
+            f'стенд: METF {host} отвечает протоколом {version}, нужен '
+            f'{PULSE_PROTOCOL} и выше: до восьмого плата держала ответ до конца '
+            f'импульса, и паузы между импульсами поедут на четверть секунды. '
+            f'Обновите прошивку платы (README, «Прошивка METF»).')
+
+    if version < WIFI_PROTOCOL:
+        logger.info(f'стенд: METF {host} - есть, протокол {version}')
+        return f'протокол {version}'
+
+    net = api.wifi()
+    ssid = str(net.get('ssid', ''))
+    if stand_ssid and ssid == stand_ssid:
+        raise MetfOnStandAp(
+            f'стенд: METF {host} сидит на точке стенда «{ssid}» - на той самой, '
+            f'которую тесты гасят и перенастраивают. Верните плату в домашнюю '
+            f'сеть: curl -d action=forget http://{host}/wifi')
+
+    parts = [f'протокол {version}', f'сеть «{ssid}»']
+    rssi = net.get('rssi')
+    if rssi is not None:
+        parts.append(f'{rssi} дБм')
+    if version >= PROBLEM_PROTOCOL:
+        parts.append(f'обрывы: {net.get("problem", "?")}')
+    summary = ', '.join(parts)
+    logger.info(f'стенд: METF {host} - есть, {summary}')
+
+    # Сеть из прошивки плата берёт, только пока не запомнила другую. Запомненная
+    # переживает перезагрузку, и после прерванного прогона плата вернётся не
+    # туда, где её ищет stand.ini
+    if net.get('source') == 'saved':
+        logger.warning(
+            f'METF: сеть «{ssid}» запомнена порталом платы и перекрывает '
+            f'зашитую при сборке. Снять: curl -d action=forget http://{host}/wifi')
+    if isinstance(rssi, int) and rssi <= WEAK_RSSI:
+        logger.warning(
+            f'METF: запас сигнала {rssi} дБм - при таком плата отваливается на '
+            f'сетевых тестах и уносит с собой весь хвост прогона')
+    if net.get('ap_up'):
+        logger.warning(
+            'METF: поднята своя точка доступа - плата недавно теряла сеть '
+            f'(причина: {net.get("problem", "?")})')
+    if net.get('hw_error'):
+        logger.warning('METF: плата сообщает об отказе железа (hw_error)')
+
+    home = net.get('channel')
+    if stand_channel and isinstance(home, int) and 0 < abs(home - stand_channel) < CHANNEL_GAP:
+        logger.warning(
+            f'эфир: точка стенда на канале {stand_channel}, домашняя сеть - на '
+            f'{home}. Каналы перекрываются, и это хуже общего канала: платы не '
+            f'слышат друг друга и передают одновременно. Отсюда потерянные '
+            f'сегменты, оборванные тела посылок и провалы чтения лога. '
+            f'Разведите каналы (1, 6, 11) или уведите Мак в провод')
+    return summary

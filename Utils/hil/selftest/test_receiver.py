@@ -82,3 +82,48 @@ def test_целое_тело_остаётся_посылкой(receiver: Receive
 
     assert receiver.wait_payload(timeout=2.0) == {'delta0': 0, 'ch0': 100.09}
     assert receiver.take_broken() == []
+
+
+def answer(receiver: Receiver, body: bytes, length: int | None = None) -> bytes:
+    """POST с чтением ответа: нужен там, где проверяется само тело ответа."""
+    declared = len(body) if length is None else length
+    head = (f'POST /data HTTP/1.1\r\nHost: stand\r\n'
+            f'Content-Type: application/json\r\n'
+            f'Content-Length: {declared}\r\n\r\n').encode()
+    with socket.create_connection(('127.0.0.1', port_of(receiver)), timeout=5.0) as sock:
+        sock.sendall(head + body)
+        sock.shutdown(socket.SHUT_WR)
+        got = b''
+        while True:
+            chunk = sock.recv(4096)
+            if not chunk:
+                break
+            got += chunk
+    return got
+
+
+def test_настройки_достаются_повтору_а_не_обрыву(receiver: Receiver) -> None:
+    """
+    Разовый ответ с настройками не тратится на посылку, тело которой не доехало.
+
+    Устройство на оборванной отправке не дочитывает ответ (`-3` в его логе) и
+    повторяет её. Настройки, отданные первой попытке, уходили в никуда: на
+    повторе прошивка получала пустое тело, и стенд винил её в том, что она
+    ничего не применила.
+    """
+    receiver.reply_settings({'period_min': 5})
+
+    post(receiver, BODY, length=len(BODY) + 200)
+    assert receiver.take_broken(), 'тело должно было прийти оборванным'
+
+    assert b'"period_min": 5' in answer(receiver, FULL), (
+        'настройки истрачены на посылку, которой устройство не получило'
+    )
+
+
+def test_настройки_уходят_целой_посылке_один_раз(receiver: Receiver) -> None:
+    """Разовый ответ на то и разовый: повторная отправка того же сеанса - пустая."""
+    receiver.reply_settings({'period_min': 5})
+
+    assert b'"period_min": 5' in answer(receiver, FULL)
+    assert b'"period_min"' not in answer(receiver, FULL)
