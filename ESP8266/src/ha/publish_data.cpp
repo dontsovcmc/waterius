@@ -58,19 +58,24 @@ bool publish_data(PubSubClient &mqtt_client, String &topic, JsonDocument &json_d
     unsigned long start = millis();
     bool ok;
 
+    unsigned int topics;
+
     if (auto_discovery)
     {
-        LOG_INFO(F("MQTT: Publish data to single topic"));
         // в один топик если настроена интеграция HomeAssistant
         ok = publish_data_to_single_topic(mqtt_client, topic, json_data, retain);
+        topics = 1;
     }
     else
     {
-        LOG_INFO(F("MQTT: Publish data to multiple topics"));
         // в оотдельные топики
         ok = publish_data_to_multiple_topics(mqtt_client, topic, json_data, retain);
+        topics = json_data.as<JsonObject>().size();
     }
 
-    LOG_INFO(F("MQTT: Publish data finished. ") << millis() - start << F(" milliseconds elapsed"));
+    // Итог вместо заголовка: сколько топиков и за сколько - этого хватает,
+    // чтобы понять, куда ушло время сеанса
+    LOG_INFO(F("MQTT: Publish data finished: ") << topics << F(" topics, ")
+                                                << millis() - start << F(" ms"));
     return ok;
 }
