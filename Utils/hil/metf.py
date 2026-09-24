@@ -178,6 +178,12 @@ class Metf:
              'timeout': PULSE_ANSWER_TIMEOUT_S},
             repeatable=SAFE_TO_REPEAT)
         answer.raise_for_status()
+        # Нажатие кнопки и импульсы счётчиков идут этой ручкой, и до сих пор
+        # самое частое действие стенда не оставляло в логе следа: по отказу
+        # «сеанс не пришёл» нельзя было отличить «нажатие не доехало» от
+        # «устройство не проснулось». Расписка платы пишется вместе с выводом.
+        logger.info(f'линия {pin} -> {value} на {duration_ms} мс: расписка '
+                    f'{answer.status_code}')
         if answer.status_code != 202:
             raise MetfTooOld(
                 f'стенд: METF {self._host} ответила на /pulse кодом '
