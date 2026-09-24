@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
+from .air import check as air_check
 from .clock import BoardClock
 from .config import StandConfig
 from .constants import (
@@ -128,6 +129,28 @@ class StandPowerWarning(UserWarning):
     """Питание стенда просело настолько, что прошивка сочла батарейки севшими."""
 
 
+def _ensure_ap_channel(router: NatRouter, want: int) -> dict[str, str]:
+    """
+    Поставить точку стенда на её канал и вернуть настройки роутера.
+
+    Перезапуск роутера стоит около минуты, поэтому он делается, только когда
+    канал и правда разъехался: NVS переживает и падение прогона, и отключение
+    питания.
+    """
+    ap = router.config()
+    now = int(ap.get('channel', 0) or 0)
+    if not want or now == want:
+        return ap
+    logger.warning(f'точка стенда стоит на канале {now}, а её место - {want}: переставляю')
+    router.set_ap_channel(want)
+    router.restart()
+    ap = router.config()
+    got = int(ap.get('channel', 0) or 0)
+    assert got == want, (
+        f'роутер не встал на канал {want}: после перезапуска он говорит {got}')
+    return ap
+
+
 class Stand:
     """Фасад над всем железом стенда."""
 
@@ -183,12 +206,18 @@ class Stand:
                 f'стенд: WT32-ETH01 {router_at} - нет: консоль не отвечает\n{err}') from err
         logger.info(f'стенд: WT32-ETH01 {router_at} - есть, {version}')
 
+        # Канал закрепляется до досмотра: эфир решает судьбу прогона, а
+        # «как осталось с прошлого раза» - не настройка. Тесты W4 и W5 уводят
+        # точку на запасной канал и возвращают; если прогон умер посреди них,
+        # здесь точка и вернётся на своё место.
+        ap = _ensure_ap_channel(router, cfg.ap_channel)
+
         # Досмотр METF идёт после роутера: имя точки стенда спрашивается у него,
         # а без имени не проверить главного - что управляющий канал не лежит на
         # том, что тесты ломают
-        ap = router.config()
-        metf_check(api, cfg.metf_host, cfg.ap_ssid or ap.get('ssid', ''),
-                   int(ap.get('channel', 0) or 0))
+        ap_ssid = cfg.ap_ssid or ap.get('ssid', '')
+        metf_check(api, cfg.metf_host, ap_ssid, int(ap.get('channel', 0) or 0))
+        air_check(ap_ssid, int(ap.get('channel', 0) or 0), cfg.ap_bandwidth)
 
         # Прошлый прогон мог умереть с выключенной точкой или правилом фильтра.
         # restore() чинит это после теста, а identify() идёт раньше первого
@@ -267,6 +296,7 @@ class Stand:
             session.payloads.append(payload)
 
         broken = self.receiver.take_broken()
+        session.broken = len(broken)
         # Оборванное тело валит тест, только если целого в этом сеансе так и не
         # пришло. Прошивка отправляет трижды (`https_helpers.cpp`, Attempt #N),
         # и повтор после обрыва - её правильное поведение, а не дефект: обрыв

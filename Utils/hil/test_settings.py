@@ -40,7 +40,8 @@ def apply(stand: Stand, settings: dict[str, Any]) -> Session:
     missing = [name for name in settings if name not in session.applied]
     assert not missing, (
         f'прошивка не применила {missing}; в логе: {session.applied}\n{session.text}')
-    assert len(session.payloads) >= 2, 'после применения данные должны уйти повторно'
+    assert len(session.payloads) >= 2, (
+        'после применения данные должны уйти повторно' + session.air_note)
     assert session.payload is not None
     return session
 

@@ -10,7 +10,7 @@ BSSID и первую попытку делает по ним (`wifi_helpers.cpp
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -25,16 +25,21 @@ pytestmark = [pytest.mark.stand, pytest.mark.slow]
 ATTEMPT = 'WIFI: Attempt #'
 
 
-def other_channel(current: int) -> int:
+def other_channel(cfg: Any, current: int) -> int:
     """
-    Канал заведомо не соседний: пересечение полос не должно помогать.
+    Запасной канал для смены канала - из настроек стенда, а не из правила.
 
-    Числа выбраны рассуждением, а не замером, и это долг: на чужом стенде
-    канал может оказаться глухим - сильный сосед, и устройство не увидит сеть
-    вовсе. Тогда тест проверяет удачу, а не прошивку. Замер: сколько сканов из
-    скольких видят точку на этом канале (грабли стенда metf, docs/testspec).
+    Раньше номер выбирался формулой «11, если сейчас не больше 6». Это был
+    долг: на чужом стенде канал мог оказаться глухим - сильный сосед, и
+    устройство не увидит сеть вовсе, а тест проверит удачу. Теперь оба канала
+    стоят в stand.ini, выбраны по скану эфира и перебиваются аргументом
+    --ap-channel-other.
     """
-    return 11 if current <= 6 else 1
+    other = int(cfg.ap_channel_other)
+    assert other != current, (
+        f'запасной канал {other} совпал с рабочим: смене канала некуда идти. '
+        f'Поправьте ap_channel_other в stand.ini или --ap-channel-other')
+    return other
 
 
 @pytest.mark.requires(esp='2.0.47')
@@ -45,7 +50,7 @@ def test_W4_router_changed_channel(stand: Stand) -> None:
     """
     assert stand.last_payload is not None
     old = int(stand.last_payload['channel'])
-    new = other_channel(old)
+    new = other_channel(stand.cfg, old)
 
     with stand.router.channel(new):
         stand.reset_observers()
