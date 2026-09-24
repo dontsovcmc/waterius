@@ -277,6 +277,33 @@ def test_принятая_настройка_не_значит_сохранён�
     assert session.saved['mqtt_host'] == '192.168.50.252'
 
 
+class BlindApi(FakeApi):
+    """METF, которая не отвечает вовсе: стенд не видит ни строки."""
+
+    def serial_read(self) -> str:
+        raise ConnectionError('host is down')
+
+
+def test_слепой_стенд_не_судит_об_устройстве() -> None:
+    """
+    METF молчала всё окно - о пробуждении Ватериуса сказать нечего.
+
+    Прежде стенд писал «Ватериус не проснулся» и отправлял искать кнопку,
+    питание и программатор, хотя устройство было исправно, а слеп был он сам.
+    """
+    watcher = LogWatcher(BlindApi(''))
+    with pytest.raises(AssertionError, match='стенд ослеп'):
+        watcher.wait_wake(timeout=0.3)
+
+
+def test_молчание_при_живой_связи_остаётся_приговором() -> None:
+    """METF отвечает, а на UART пусто - это уже про устройство."""
+    watcher = LogWatcher(FakeApi(''))
+    wake = watcher.wait_wake(timeout=0.3)
+    assert wake.state == WAKE_SILENT
+    assert 'не проснулся' in wake.describe('кнопки')
+
+
 class CountingApi(FakeApi):
     """METF со счётчиком потерь: `dropped` растёт по заданному списку."""
 
@@ -328,6 +355,31 @@ def test_потеря_после_отлучки_платы_названа_отл
     """
     watcher = LogWatcher(StallingApi(through_ring(SESSION_ALARM), [0, 17], 1.1))
     with pytest.raises(AssertionError, match='1.1 с'):
+        watcher.wait_session(timeout=1.0)
+
+
+class RebootedApi(CountingApi):
+    """METF, перезагрузившаяся посреди окна наблюдения."""
+
+    def __init__(self, text: str, dropped: list[int]) -> None:
+        super().__init__(text, dropped)
+        self._reboot: float | None = None
+
+    def serial_read(self) -> str:
+        self._reboot = time.time()
+        return super().serial_read()
+
+    def reboot_since(self, mark: float) -> float | None:
+        return self._reboot if self._reboot and self._reboot >= mark else None
+
+
+def test_потеря_после_перезагрузки_платы_названа_перезагрузкой() -> None:
+    """
+    Перезагрузка METF объясняет пустое кольцо сама по себе: плата очищает его
+    при старте. Без этой приписки потерю ищут в прошивке устройства.
+    """
+    watcher = LogWatcher(RebootedApi(through_ring(SESSION_ALARM), [0, 17]))
+    with pytest.raises(AssertionError, match='METF перезагружалась'):
         watcher.wait_session(timeout=1.0)
 
 

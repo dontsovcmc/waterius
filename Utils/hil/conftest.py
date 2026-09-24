@@ -237,13 +237,15 @@ def bring_up(step: Callable[[], Any], what: str) -> Any:
     уносит весь прогон целиком. Так и вышло: отлучка платы на 1,1 с переполнила
     кольцо лога, и 45 медленных тестов не начались вовсе.
 
-    Повторяется только потеря лога - она про стенд. Отказ по делу (устройство
-    не отвечает, сеть чужая) летит сразу, как раньше.
+    Повторяется только то, что случилось со стендом: потеря лога и слепота,
+    когда METF не отдала ни одного чтения. Отказ по делу - устройство молчит
+    при живой связи, сеть чужая - летит сразу, как раньше.
     """
     try:
         return step()
     except AssertionError as err:
-        if 'METF потерял' not in str(err) and 'чтение лога оборвалось' not in str(err):
+        beda = ('METF потерял', 'чтение лога оборвалось', 'стенд ослеп')
+        if not any(mark in str(err) for mark in beda):
             raise
         logger.warning(f'подъём стенда: {what} сорвался на потере лога, повторяю\n{err}')
         return step()
@@ -253,6 +255,8 @@ def bring_up(step: Callable[[], Any], what: str) -> Any:
 def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     from .stand import Stand
     device = Stand.create(cfg, mqtt)    # METF и роутер: без них дальше нечем
+    global _metf
+    _metf = device.api
     device.check_atboard()     # до первого теста, а не на сороковой минуте
     bring_up(device.identify, 'опрос устройства')    # версии и MAC - до первого теста
     bring_up(device.ensure_network, 'сеть стенда')   # в чужой сети стенд бесполезен
@@ -336,6 +340,18 @@ def clean_dut(request: pytest.FixtureRequest) -> Iterator[None]:
         yield
     finally:
         device.release_lines()
+
+
+# Тесты, в которых плата-манипулятор перезагружалась: имя -> сколько раз. Нужны
+# и сразу (припиской к отказу), и в конце прогона сводкой: перезагрузка METF
+# объясняет пустое кольцо, выключенный сервер времени и отпущенные выводы, и
+# упавший рядом с ней тест - повод смотреть на стенд, а не на прошивку.
+_reboots: dict[str, int] = {}
+
+# Клиент METF, пока живёт стенд. Счётчик перезагрузок снимается хуком вокруг
+# всего теста, а не фикстурой: тест, упавший в подготовке, до фикстуры не
+# доходит - а именно в подготовке перезагрузка и мешает чаще всего.
+_metf: Any = None
 
 
 def _version(text: str) -> tuple[int, ...]:
@@ -524,7 +540,12 @@ def pytest_runtest_logreport(report: pytest.TestReport) -> None:
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
     """После теста - его время, после последнего теста файла - время файла."""
+    before = _metf.reboots if _metf is not None else 0
     yield
+    if _metf is not None and _metf.reboots > before:
+        _reboots[item.nodeid] = _metf.reboots - before
+        logger.warning(f'METF перезагружалась во время теста {item.name}: '
+                       f'{_metf.reboots - before} раз')
     spent = _test_seconds.pop(item.nodeid, 0.0)
     _file_seconds[item.path] = _file_seconds.get(item.path, 0.0) + spent
 
@@ -538,6 +559,15 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
         if report is not None and report.failed:
             terminal.write_line(f'--- причина падения ({when}) ---')
             terminal.write_line(report.longreprtext)
+            if item.nodeid in _reboots:
+                terminal.write_line(
+                    f'--- во время теста METF перезагружалась '
+                    f'({_reboots[item.nodeid]} раз): отказ может быть про стенд, '
+                    f'а не про Ватериус ---')
     if nextitem is None or nextitem.path != item.path:
         terminal.write_line(
             f'--- {item.path.name}: {elapsed(_file_seconds[item.path])} ---')
+    if nextitem is None and _reboots:
+        terminal.write_line('--- METF перезагружалась в тестах ---')
+        for nodeid, times in _reboots.items():
+            terminal.write_line(f'    {nodeid}: {times}')
