@@ -328,7 +328,7 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
     payload = stand.last_payload or {}
     assert 'channel' in payload, 'канал роутера узнать не из чего: нет посылки со связью'
     old = int(payload['channel'])
-    new = other_channel(old)
+    new = other_channel(cfg, old)
     ssid = stand.ap_ssid
 
     with stand.router.channel(new):

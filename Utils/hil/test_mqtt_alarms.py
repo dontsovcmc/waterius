@@ -104,7 +104,8 @@ def test_I3_remote_vacation_reaches_attiny(stand: Stand, armed: Session) -> None
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert session.applied.get('vac') == '1', f'команда не применена: {session.applied}'
-    assert len(session.payloads) >= 2, 'после применения данные должны уйти повторно'
+    assert len(session.payloads) >= 2, (
+        'после применения данные должны уйти повторно' + session.air_note)
     assert session.payload is not None
     assert session.payload['vac'] is True
     assert session.alarm_config is not None

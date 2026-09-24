@@ -143,7 +143,8 @@ def test_I4_remote_period_min(stand: Stand) -> None:
 
     assert session.applied.get('period_min') == str(OTHER_PERIOD_MIN), (
         f'команда не применена: {session.applied}')
-    assert len(session.payloads) >= 2, 'после применения данные должны уйти повторно'
+    assert len(session.payloads) >= 2, (
+        'после применения данные должны уйти повторно' + session.air_note)
     assert session.payload is not None
     assert session.payload['period_min'] == OTHER_PERIOD_MIN
 

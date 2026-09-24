@@ -103,6 +103,14 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption('--stand-log', default=None,
                      help='файл лога прогона; по умолчанию Utils/hil/logs/hil-<дата>.log, '
                           '"off" - не писать')
+    parser.addoption('--ap-channel', type=int, default=None,
+                     help='канал точки стенда; по умолчанию из stand.ini. Эфир решает '
+                          'судьбу прогона: канал держат дальше пяти от домашней сети')
+    parser.addoption('--ap-channel-other', type=int, default=None,
+                     help='запасной канал для тестов смены канала (W4, W5)')
+    parser.addoption('--ap-bandwidth', type=int, default=None,
+                     help='полоса, которую точка обязана вещать, МГц: стенд сверяет '
+                          'её со сканом эфира и говорит о расхождении')
     parser.addoption('--pcap', action='store_true', default=False,
                      help='снимать дамп трафика точки доступа к упавшим тестам')
     parser.addoption('--experimental', action='store_true', default=False,
@@ -192,8 +200,15 @@ def pytest_collection_modifyitems(config: pytest.Config,
 
 @pytest.fixture(scope='session')
 def cfg(request: pytest.FixtureRequest) -> Any:
+    """Настройки стенда; каналы и полосу можно перебить аргументом прогона."""
+    import dataclasses
+
     from . import config as stand_config
-    return stand_config.load(request.config.getoption('--stand-config'))
+    loaded = stand_config.load(request.config.getoption('--stand-config'))
+    asked = {name: request.config.getoption(f'--{name.replace("_", "-")}')
+             for name in ('ap_channel', 'ap_channel_other', 'ap_bandwidth')}
+    given = {name: value for name, value in asked.items() if value is not None}
+    return dataclasses.replace(loaded, **given) if given else loaded
 
 
 @pytest.fixture(scope='session')
@@ -237,17 +252,20 @@ def bring_up(step: Callable[[], Any], what: str) -> Any:
     уносит весь прогон целиком. Так и вышло: отлучка платы на 1,1 с переполнила
     кольцо лога, и 45 медленных тестов не начались вовсе.
 
-    Повторяется только то, что случилось со стендом: потеря лога и слепота,
-    когда METF не отдала ни одного чтения. Отказ по делу - устройство молчит
-    при живой связи, сеть чужая - летит сразу, как раньше.
+    Повторяется только то, что случилось со стендом: потеря лога, слепота,
+    когда METF не отдала ни одного чтения, и сеанс, целое тело которого не
+    доехало - о состоянии устройства такой сеанс не говорит ничего, это его
+    собственные слова. Отказ по делу - устройство молчит при живой связи, сеть
+    чужая - летит сразу, как раньше.
     """
     try:
         return step()
     except AssertionError as err:
-        beda = ('METF потерял', 'чтение лога оборвалось', 'стенд ослеп')
+        beda = ('METF потерял', 'чтение лога оборвалось', 'стенд ослеп',
+                'не говорит ничего')
         if not any(mark in str(err) for mark in beda):
             raise
-        logger.warning(f'подъём стенда: {what} сорвался на потере лога, повторяю\n{err}')
+        logger.warning(f'подъём стенда: {what} сорвался на беде стенда, повторяю\n{err}')
         return step()
 
 
@@ -257,11 +275,14 @@ def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     device = Stand.create(cfg, mqtt)    # METF и роутер: без них дальше нечем
     global _metf
     _metf = device.api
+    global _stand
+    _stand = device
     device.check_atboard()     # до первого теста, а не на сороковой минуте
     bring_up(device.identify, 'опрос устройства')    # версии и MAC - до первого теста
     bring_up(device.ensure_network, 'сеть стенда')   # в чужой сети стенд бесполезен
     bring_up(device.ensure_mqtt, 'брокер стенда')    # если он поднялся
     bring_up(device.ensure_clock, 'часы платы')      # иначе время придёт из интернета
+    _log_air('первый тест')   # у первого файла улик иначе нет: стенд встал позже хука
     try:
         yield device
     finally:
@@ -352,6 +373,39 @@ _reboots: dict[str, int] = {}
 # всего теста, а не фикстурой: тест, упавший в подготовке, до фикстуры не
 # доходит - а именно в подготовке перезагрузка и мешает чаще всего.
 _metf: Any = None
+
+# Сам стенд, пока он жив: нужен для улик про эфир перед каждым файлом тестов.
+_stand: Any = None
+
+# Файл, перед которым улики уже сняты: снимаем один раз на файл, а не на тест -
+# опрос METF идёт по тому же радио, о котором мы и собираем улики.
+_air_at: Any = None
+
+
+def _log_air(where: str) -> None:
+    """
+    Записать, кого и как слышно, перед файлом тестов.
+
+    Отказ обязан приносить улику, а главная улика стенда - уровень сигнала:
+    оборванные тела посылок и провалы чтения лога рождаются в эфире и выглядят
+    дефектом прошивки (05_air-and-loss.md). Задним числом эти числа взять
+    неоткуда, поэтому они пишутся всегда, а не только к падению.
+    """
+    if _stand is None:
+        return
+    parts = []
+    try:
+        net = _stand.api.wifi()
+        parts.append(f'METF {net.get("rssi")} дБм (сеть «{net.get("ssid")}», '
+                     f'канал {net.get("channel")})')
+    except Exception as err:                 # опрос по радио: сам может не дойти
+        parts.append(f'METF о себе не сказала ({type(err).__name__})')
+    payload = _stand.last_payload or {}
+    if 'rssi' in payload:
+        parts.append(f'Ватериус {payload["rssi"]} дБм на канале '
+                     f'{payload.get("channel")}, ошибок связи '
+                     f'{payload.get("wifi_connect_errors")} - из последней посылки')
+    logger.info(f'эфир перед {where}: ' + '; '.join(parts))
 
 
 def _version(text: str) -> tuple[int, ...]:
@@ -540,6 +594,10 @@ def pytest_runtest_logreport(report: pytest.TestReport) -> None:
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
     """После теста - его время, после последнего теста файла - время файла."""
+    global _air_at
+    if item.path != _air_at:
+        _air_at = item.path
+        _log_air(item.path.name)
     before = _metf.reboots if _metf is not None else 0
     yield
     if _metf is not None and _metf.reboots > before:

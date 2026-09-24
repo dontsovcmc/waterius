@@ -149,7 +149,8 @@ def test_G1b_resend_after_settings_reaches_broker(stand: Stand) -> None:
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert session.applied.get('period_min') == str(RESEND_PERIOD_MIN), session.applied
-    assert len(session.payloads) >= 2, 'после применения данные должны уйти повторно'
+    assert len(session.payloads) >= 2, (
+        'после применения данные должны уйти повторно' + session.air_note)
     assert 'MQTT: Not connected' not in session.text, session.text
     session.assert_confirm(mqtt=SEND_OK)
 
@@ -309,7 +310,8 @@ def test_G7_server_answers_500(stand: Stand) -> None:
     # считает её недоставленной - в этом весь сценарий
     assert session.http_codes.count(500) == HTTP_SEND_ATTEMPTS, session.http_codes
     assert len(session.payloads) == HTTP_SEND_ATTEMPTS, (
-        f'посылок дошло {len(session.payloads)}, попыток {HTTP_SEND_ATTEMPTS}')
+        f'посылок дошло {len(session.payloads)}, попыток {HTTP_SEND_ATTEMPTS}'
+        + session.air_note)
 
 
 @pytest.mark.requires(esp='2.0.47')

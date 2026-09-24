@@ -510,3 +510,12 @@ def test_отказ_показывает_всё_прочитанное() -> None
     message = wake.describe('кнопки')
     for line in WAKE_NO_ATTINY_LOG:
         assert line in message, f'нет строки {line!r}:\n{message}'
+
+
+def test_оборванные_тела_приписываются_к_отказу() -> None:
+    """Недосчитанная посылка обязана называть обрыв: это эфир, а не прошивка."""
+    from ..logwatch import Session
+
+    assert Session().air_note == ''
+    note = Session(broken=3).air_note
+    assert '3' in note and 'оборванными' in note and '05_air-and-loss.md' in note

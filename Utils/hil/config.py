@@ -32,6 +32,14 @@ class StandConfig:
     router_password: str
     ap_ssid: str          # пусто - спросим у самой точки доступа
     ap_password: str      # у роутера не прочитать: show config печатает звёздочки
+    # Канал точки стенда закреплён, а не оставлен на «как получилось»: эфир
+    # решает судьбу прогона (05_air-and-loss.md). Запасной нужен тестам смены
+    # канала - они уводят точку на него и возвращают обратно.
+    ap_channel: int
+    ap_channel_other: int
+    # Полоса, которую мы считаем правильной. 20 МГц: ESP8266 шире не умеет, а
+    # 40 МГц занимают пять каналов вместо одного и бьют по соседям.
+    ap_bandwidth: int
 
     # Ватериус в сети точки доступа
     dut_mac: str
@@ -107,6 +115,9 @@ def load(path: str | os.PathLike[str] | None = None) -> StandConfig:
         router_password=get('router', 'password', ''),
         ap_ssid=get('router', 'ap_ssid', ''),
         ap_password=get('router', 'ap_password', ''),
+        ap_channel=int(get('router', 'ap_channel', '11')),
+        ap_channel_other=int(get('router', 'ap_channel_other', '1')),
+        ap_bandwidth=int(get('router', 'ap_bandwidth', '20')),
         dut_mac=get('dut', 'mac', ''),
         dut_ip=get('dut', 'ip', '192.168.4.100'),
         receiver_host=get('receiver', 'host', '192.168.4.2'),
