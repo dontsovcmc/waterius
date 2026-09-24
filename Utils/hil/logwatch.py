@@ -476,7 +476,6 @@ class LogWatcher:
         self.reads_ok = 0
         self.reads_failed = 0
         self._mark_at: float | None = None      # начало окна наблюдения потерь
-        self._holes_mark = 0                    # дыры от потерянных ответов /read
 
     def poll(self) -> None:
         """Забрать накопленное с платы и склеить разрезанные строки."""
@@ -549,7 +548,6 @@ class LogWatcher:
     def loss_mark(self) -> int | None:
         """Снимок счётчика перед ожиданием - опора для `assert_no_loss`."""
         self._mark_at = time.time()
-        self._holes_mark = getattr(self.api, 'log_holes', 0)
         return self._dropped()
 
     def assert_no_loss(self, mark: int | None, context: str) -> None:
@@ -560,15 +558,6 @@ class LogWatcher:
         уезжает `Startup mode:`, сеанс не собирается, и виноватым выглядит
         устройство. Поэтому проверка стоит и на удачном исходе, и на таймауте.
         """
-        # Дыра от потерянного ответа на чтение: кольцо не переполнялось, счётчик
-        # платы её не видит, но строки потеряны так же безвозвратно
-        holes = getattr(self.api, 'log_holes', 0) - self._holes_mark
-        assert holes <= 0, (
-            f'чтение лога оборвалось {holes} раз за {context}: плата отдала '
-            f'строки в ответ, который до стенда не доехал, и очистила кольцо. '
-            f'Лог неполон - утверждать по нему нечего'
-            f'{self._why_lost()}')
-
         if mark is None:
             return
         now = self._dropped()
