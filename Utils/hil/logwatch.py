@@ -438,6 +438,10 @@ class LogWatcher:
         # мусор в lines не попадают, а при отказе показывать надо и их
         self.raw = ''
         self._can_stat: bool | None = None      # None - ещё не спрашивали
+        # Удачные и неудачные чтения лога. По ним видно, слеп ли стенд: пока
+        # METF не отвечает, пустой лог не говорит об устройстве ничего
+        self.reads_ok = 0
+        self.reads_failed = 0
         self._mark_at: float | None = None      # начало окна наблюдения потерь
         self._holes_mark = 0                    # дыры от потерянных ответов /read
 
@@ -446,8 +450,10 @@ class LogWatcher:
         try:
             chunk = self.api.serial_read()
         except Exception as err:                     # плата могла не ответить
+            self.reads_failed += 1
             logger.warning(f'METF не отдал лог: {err}')
             return
+        self.reads_ok += 1
         if not chunk:
             return
         self.raw += chunk
@@ -622,12 +628,22 @@ class LogWatcher:
         исход; таймаут - только для молчания.
         """
         mark = self.loss_mark()
+        reads, reads_failed = self.reads_ok, self.reads_failed
         started = time.time()
         while True:
             self.poll()
             waited = time.time() - started
             state = self._wake_state()
             if state is None and waited >= timeout:
+                # Молчание на UART - приговор устройству, и выносить его, не
+                # прочитав ни разу, нельзя: пока METF не отвечала, о Ватериусе
+                # не известно ничего. Прежде стенд в этом случае писал
+                # «Ватериус не проснулся» и советовал искать кнопку, питание и
+                # программатор - при исправном устройстве.
+                assert self.reads_ok > reads, (
+                    f'стенд ослеп: за {waited:.1f} с METF ни разу не отдала лог '
+                    f'({self.reads_failed - reads_failed} неудачных чтений), '
+                    f'поэтому о пробуждении Ватериуса сказать нечего')
                 state = WAKE_STUCK if self.lines else WAKE_SILENT
             if state is not None:
                 if state == WAKE_NO_ATTINY:

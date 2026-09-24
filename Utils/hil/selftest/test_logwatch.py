@@ -277,6 +277,33 @@ def test_принятая_настройка_не_значит_сохранён�
     assert session.saved['mqtt_host'] == '192.168.50.252'
 
 
+class BlindApi(FakeApi):
+    """METF, которая не отвечает вовсе: стенд не видит ни строки."""
+
+    def serial_read(self) -> str:
+        raise ConnectionError('host is down')
+
+
+def test_слепой_стенд_не_судит_об_устройстве() -> None:
+    """
+    METF молчала всё окно - о пробуждении Ватериуса сказать нечего.
+
+    Прежде стенд писал «Ватериус не проснулся» и отправлял искать кнопку,
+    питание и программатор, хотя устройство было исправно, а слеп был он сам.
+    """
+    watcher = LogWatcher(BlindApi(''))
+    with pytest.raises(AssertionError, match='стенд ослеп'):
+        watcher.wait_wake(timeout=0.3)
+
+
+def test_молчание_при_живой_связи_остаётся_приговором() -> None:
+    """METF отвечает, а на UART пусто - это уже про устройство."""
+    watcher = LogWatcher(FakeApi(''))
+    wake = watcher.wait_wake(timeout=0.3)
+    assert wake.state == WAKE_SILENT
+    assert 'не проснулся' in wake.describe('кнопки')
+
+
 class CountingApi(FakeApi):
     """METF со счётчиком потерь: `dropped` растёт по заданному списку."""
 
