@@ -579,14 +579,20 @@ def test_I14_invalid_command_is_dropped(stand: Stand) -> None:
 
 
 def discovery_entities(stand: Stand) -> dict[tuple[str, str], dict]:
-    """Автодискавери сеанса: (тип, имя сущности) -> конфиг."""
-    assert stand.mqtt is not None
+    """
+    Автообнаружение у брокера: (тип, имя сущности) -> конфиг.
+
+    Источник - удерживаемые конфиги, а не услышанное в эфире: Home Assistant
+    читает их у брокера при своём старте, и судить о сущностях надо по тому же
+    месту. Прошивка публикует заново только при смене отпечатка
+    (`core/discovery.h`), поэтому сеанс, в котором ничего не изменилось, живой
+    публикации не даёт - а сущности у брокера при этом на месте и верны.
+    """
     entities = {}
-    for topic in stand.mqtt.topics(f'{DISCOVERY_ROOT}/'):
+    for topic, payload in retained_configs(stand).items():
         parts = topic.split('/')          # homeassistant/<тип>/<устройство>/<имя>/config
-        message = stand.mqtt.last(topic)
-        if len(parts) == 5 and message is not None and message.payload:
-            entities[(parts[1], parts[3])] = message.json()
+        if len(parts) == 5:
+            entities[(parts[1], parts[3])] = json.loads(payload)
     return entities
 
 

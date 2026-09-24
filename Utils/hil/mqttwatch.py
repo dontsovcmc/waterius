@@ -50,9 +50,33 @@ class MqttWatch:
         self._client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
                                    client_id=f'hil-{int(time.time())}')
         self._client.on_message = self._on_message
+        self._client.on_connect = self._on_connect
+        self._client.on_disconnect = self._on_disconnect
+        self._connects = 0
         self._client.connect(host, port, keepalive=30)
-        self._client.subscribe('#')
         self._client.loop_start()
+
+    def _on_connect(self, client: Any, _userdata: Any, _flags: Any,
+                    _reason: Any, _properties: Any = None) -> None:
+        """
+        Подписаться заново - в том числе после переподключения.
+
+        Подписка живёт внутри соединения: клиент с чистой сессией теряет её при
+        обрыве, а paho переподключается сам и молча. Прежде подписка стояла
+        один раз в конструкторе, и после первого же обрыва наблюдатель глох до
+        конца прогона: устройство публиковало, в его логе стояло
+        «Published succesfully», а стенд писал «в брокере пусто» и винил прошивку.
+        """
+        client.subscribe('#')
+        self._connects += 1
+        if self._connects > 1:
+            logger.warning('MQTT: наблюдатель переподключился и подписался заново - '
+                           'сообщения за время обрыва потеряны')
+
+    def _on_disconnect(self, _client: Any, _userdata: Any, _flags: Any = None,
+                       reason: Any = None, _properties: Any = None) -> None:
+        if reason:                       # 0 - это наш собственный disconnect()
+            logger.warning(f'MQTT: наблюдатель потерял брокер ({reason})')
 
     def _on_message(self, _client: Any, _userdata: Any, msg: mqtt.MQTTMessage) -> None:
         message = Message(msg.topic, msg.payload.decode(errors='replace'), bool(msg.retain))
@@ -98,7 +122,10 @@ class MqttWatch:
         client.connect(self.host, self.port, keepalive=30)
         # Одного фильтра достаточно: `#` покрывает и сам корень, куда
         # прошивка кладёт показания одним объектом (MQTT 3.1.1, 4.7.1.2).
-        client.subscribe(f'{root}/#', qos=1)
+        # qos=0: удерживаемое читается разово, а на qos=1 брокер ждёт PUBACK и
+        # ругается в лог, когда подписчик уже отключился (amqtt: «Timeout
+        # waiting for PUBACK»)
+        client.subscribe(f'{root}/#', qos=0)
         client.loop_start()
         time.sleep(timeout)
         client.loop_stop()
@@ -114,8 +141,21 @@ class MqttWatch:
         return None
 
     def topics(self, prefix: str = '') -> list[str]:
+        """
+        Топики, которые сейчас существуют: удалённые не в счёт.
+
+        Пустая нагрузка - это удаление, а не значение: так спецификация HA MQTT
+        Discovery убирает сущность, и так же брокер снимает удерживаемое
+        сообщение. Раньше стенд считал такой топик живым, и прошивка, честно
+        удалившая сущности счётчика у датчика протечки, получала от теста
+        «объявлено лишнее», а пустой конфиг - «не JSON».
+        """
         with self._lock:
-            return sorted({m.topic for m in self.history if m.topic.startswith(prefix)})
+            last: dict[str, str] = {}
+            for m in self.history:
+                if m.topic.startswith(prefix):
+                    last[m.topic] = m.payload
+        return sorted(topic for topic, payload in last.items() if payload)
 
     def drain(self) -> None:
         with self._lock:

@@ -166,7 +166,10 @@ class Stand:
         # Паузы между импульсами тоже вычитывают лог: иначе кольцо METF
         # переполняется плановым сеансом, и тест падает на неполном логе
         self.dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin,
-                       idle=self.log.poll)
+                       idle=self.log.poll, settle=self.settle_before_press)
+        # Когда кончился последний увиденный сеанс: по нему отмеряется выдержка
+        # перед нажатием кнопки
+        self._session_at = 0.0
         # Время устройству отдаёт та же плата: тесты синхронизации не должны
         # зависеть ни от интернета, ни от серверов на машине с прогоном
         self.clock = BoardClock(cfg.metf_host)
@@ -384,8 +387,29 @@ class Stand:
             f'ожидали тишину {timeout:.0f} с (mode={mode}), но сеанс состоялся\n'
             + '\n'.join(self.log.lines[-40:]))
 
+    def settle_before_press(self) -> None:
+        """
+        Не жать кнопку вплотную к концу сеанса.
+
+        Линия кнопки у Ватериуса-2 общая с i2c и выводом GPIO2 ЕСП
+        (`Attiny85/src/main.cpp`), и нажатие в момент снятия питания до attiny
+        не доходит: стенд жмёт впустую и ждёт своего сеанса до таймаута. Прежде
+        выдержка стояла в одном месте - `read_state`, - а `setup()` и тесты
+        жали сразу, и прогон терял тест на ровном месте: «сеанс не пришёл за
+        180 с» при живом устройстве, которое за всё окно не напечатало ни
+        строки.
+
+        Ждём не всегда, а ровно недостающее: если с конца сеанса уже прошло
+        больше, пауза нулевая.
+        """
+        left = WAKE_SETTLE_S - (time.time() - self._session_at)
+        if left > 0:
+            logger.info(f'выдержка перед нажатием: {left:.1f} с после сеанса')
+            time.sleep(left)
+
     def _remember(self, session: Session) -> None:
         """Запомнить то, что устройство рассказало о себе в этом сеансе."""
+        self._session_at = time.time()
         if session.attiny_version is not None:
             self.attiny_version = session.attiny_version
         if session.esp_version is not None:
