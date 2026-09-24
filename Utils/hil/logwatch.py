@@ -685,6 +685,28 @@ class LogWatcher:
         self.assert_no_loss(mark, f'ожидание сеанса {timeout:.0f} с')
         return None
 
+    def wait_start(self, timeout: float) -> bool:
+        """
+        Дождаться первых строк на UART устройства.
+
+        По кнопке устройство просыпается сразу, поэтому тишина здесь - отказ
+        самого устройства, а не повод ждать дальше. Слепоту стенда с ней путать
+        нельзя: пока METF не отдала ни одного чтения, о Ватериусе не известно
+        ничего, и приговор выносить нечем.
+        """
+        reads, failed = self.reads_ok, self.reads_failed
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            self.poll()
+            if self.lines:
+                return True
+            time.sleep(POLL_INTERVAL)
+        assert self.reads_ok > reads, (
+            f'стенд ослеп: за {timeout:.1f} с METF ни разу не отдала лог '
+            f'({self.reads_failed - failed} неудачных чтений), поэтому о '
+            f'пробуждении Ватериуса сказать нечего')
+        return False
+
     def wait_line(self, text: str, timeout: float,
                   poll_interval: float = 0.5) -> float | None:
         """
