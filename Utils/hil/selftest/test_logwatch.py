@@ -496,3 +496,49 @@ def test_оборванные_тела_приписываются_к_отказ�
     assert Session().air_note == ''
     note = Session(broken=3).air_note
     assert '3' in note and 'оборванными' in note and '05_air-and-loss.md' in note
+
+
+def сеанс_с_публикацией() -> object:
+    """Лог сеанса так, как его печатает прошивка: строка на топик и итог."""
+    from ..logwatch import Session
+
+    return Session(lines=[
+        fw('MQTT: Connected.'),
+        fw('MQTT: pub waterius/ch0 size=5 retain=1 heap=34560'),
+        fw('MQTT: pub waterius/ch1 size=6 retain=1 heap=34544'),
+        fw('MQTT: Publish failed: waterius/voltage (socket)', level='ERROR'),
+        fw('MQTT: Publish data finished: 83 topics, 2406 ms'),
+    ])
+
+
+def test_публикации_разбираются_по_логу() -> None:
+    """
+    Взгляд самой прошивки на то, что она опубликовала: по нему отличают
+    «устройство не опубликовало» от «брокер не получил».
+    """
+    session = сеанс_с_публикацией()
+
+    assert session.mqtt_published == [
+        ('waterius/ch0', 5, True),
+        ('waterius/ch1', 6, True),
+    ]
+    assert session.mqtt_failed == [('waterius/voltage', 'socket')]
+    assert session.mqtt_done == (83, 2406)
+
+
+def test_приписка_называет_взгляд_устройства() -> None:
+    note = сеанс_с_публикацией().mqtt_note
+
+    assert '83 топиках' in note and '2406 мс' in note
+    assert 'waterius/voltage' in note, note
+
+
+def test_молчащий_лог_не_обвиняет_прошивку() -> None:
+    """
+    Прошивка старше одной строки на публикацию ничего такого не печатает -
+    и утверждать по пустому списку нечего.
+    """
+    from ..logwatch import Session
+
+    note = Session(lines=[fw('MQTT: Connected.')]).mqtt_note
+    assert 'ничего не сказало' in note and 'старше' in note

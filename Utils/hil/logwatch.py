@@ -89,6 +89,13 @@ RE_ALARM_CONFIRM = re.compile(
 RE_IDLE_MIN = re.compile(r'Idle min: (\d+)/(\d+), stop: ([01])/([01])')
 RE_IDLE_SEND = re.compile(r'Idle: consumed=([01]), silence_min=(\d+), transmit=([01])')
 RE_HTTP_CODE = re.compile(r'HTTP: Response code: (-?\d+)')
+
+# Публикация в MQTT глазами самой прошивки: по строке на топик и итог. Нужны,
+# чтобы отличить «устройство не опубликовало» от «брокер не получил»: раньше
+# отказ говорил только про брокер, и виноватым выглядело устройство.
+RE_MQTT_PUB = re.compile(r'MQTT: pub (\S+) size=(\d+) retain=([01])')
+RE_MQTT_DONE = re.compile(r'MQTT: Publish data finished: (\d+) topics, (\d+) ms')
+RE_MQTT_FAIL = re.compile(r'MQTT: Publish failed: (\S+) \(([^)]*)\)')
 # Код ошибки, который прошивка собралась моргать (wleds.cpp, blynk_error).
 # Успех не моргается вовсе, поэтому строки в удачном сеансе нет.
 RE_BLYNK = re.compile(r'Blynk: code=(\d+)')
@@ -391,6 +398,54 @@ class Session:
     @property
     def http_codes(self) -> list[int]:
         return [int(x) for x in RE_HTTP_CODE.findall(self.text)]
+
+    @property
+    def mqtt_published(self) -> list[tuple[str, int, bool]]:
+        """
+        Что прошивка доложила об опубликованном: топик, размер, retain.
+
+        Это её собственный взгляд, а не взгляд брокера, и в этом вся польза:
+        при расхождении сразу видно, чья беда. Прошивка старше одной строки на
+        публикацию ничего такого не печатает - тогда список пуст, и утверждать
+        по нему нечего.
+        """
+        return [(topic, int(size), flag == '1')
+                for topic, size, flag in RE_MQTT_PUB.findall(self.text)]
+
+    @property
+    def mqtt_failed(self) -> list[tuple[str, str]]:
+        """Топики, о которых прошивка сказала, что публикация не удалась."""
+        return RE_MQTT_FAIL.findall(self.text)
+
+    @property
+    def mqtt_done(self) -> tuple[int, int] | None:
+        """Итог публикации показаний: сколько топиков и за сколько миллисекунд."""
+        m = RE_MQTT_DONE.search(self.text)
+        return (int(m.group(1)), int(m.group(2))) if m else None
+
+    @property
+    def mqtt_note(self) -> str:
+        """
+        Приписка к отказу про MQTT: что об этом говорит само устройство.
+
+        Отказ «в брокере пусто» без неё обвиняет прошивку в том, что могло быть
+        бедой стенда - потерей подписки, обрывом связи с брокером.
+        """
+        published = self.mqtt_published
+        if not published and self.mqtt_done is None:
+            return ('\nУстройство о публикации ничего не сказало: либо оно не '
+                    'дошло до MQTT, либо на нём прошивка старше строки '
+                    '«MQTT: pub»')
+        parts = []
+        if self.mqtt_done is not None:
+            topics, ms = self.mqtt_done
+            parts.append(f'устройство отчиталось о {topics} топиках за {ms} мс')
+        if published:
+            parts.append(f'в логе {len(published)} публикаций, последняя - '
+                         f'{published[-1][0]}')
+        if self.mqtt_failed:
+            parts.append(f'неудачные: {self.mqtt_failed}')
+        return '\nЧто говорит устройство: ' + '; '.join(parts)
 
     @property
     def period_attiny(self) -> int | None:

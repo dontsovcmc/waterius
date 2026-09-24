@@ -697,7 +697,8 @@ class Stand:
                 f'устройство не опубликовало ничего в {root}/ на '
                 f'{self.cfg.broker_host}:{self.cfg.broker_port}. '
                 f'Подключение к брокеру: '
-                f'{"есть" if "MQTT: Connected." in session.text else "нет"}\n'
+                f'{"есть" if "MQTT: Connected." in session.text else "нет"}'
+                f'{session.mqtt_note}\n'
                 f'{session.text}')
 
         logger.info(f'устройство переведено в брокер стенда: {message.topic}')
