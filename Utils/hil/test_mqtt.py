@@ -344,6 +344,19 @@ def test_I1b_discovery_json_is_valid(stand: Stand) -> None:
         assert entity.get('uniq_id'), f'{topic}: нет уникального идентификатора'
 
 
+def missing(name: str, session: Any, topics: list[str]) -> str:
+    """
+    Отказ про отсутствующий топик делит вину по логу устройства.
+
+    Прошивка печатает строку на каждую публикацию (`ha/publish.cpp`), поэтому
+    видно сразу: топика нет, потому что устройство его не публиковало, или
+    потому что сообщение не доехало до брокера стенда.
+    """
+    said = [line for line in session.text.splitlines() if f'/{name}' in line]
+    return (f'нет топика {name}. Устройство про него говорит: '
+            f'{said or "ни слова"}. Доехало {len(topics)} топиков: {topics}')
+
+
 @NO_DISCOVERY
 def test_I0b_readings_go_to_separate_topics(stand: Stand) -> None:
     """
@@ -366,7 +379,7 @@ def test_I0b_readings_go_to_separate_topics(stand: Stand) -> None:
     # прошивки и у python разное, и тест мигал бы на верных данных
     for name in ('imp0', 'imp1', 'rssi', 'version_esp', 'period_min'):
         message = stand.mqtt.last(f'{stand.mqtt_root}/{name}')
-        assert message is not None, f'нет топика {name}, есть: {topics}'
+        assert message is not None, missing(name, session, topics)
         assert message.payload == str(session.payload[name]), (
             f'{name}: в брокере {message.payload!r}, в посылке '
             f'{session.payload[name]!r}')
@@ -377,7 +390,7 @@ def test_I0b_readings_go_to_separate_topics(stand: Stand) -> None:
         if type(value) is not bool:
             continue
         message = stand.mqtt.last(f'{stand.mqtt_root}/{name}')
-        assert message is not None, f'нет топика {name}, есть: {topics}'
+        assert message is not None, missing(name, session, topics)
         assert message.payload == ('true' if value else 'false'), (
             f'{name}: в брокере {message.payload!r}, в посылке {value!r}')
 

@@ -339,6 +339,29 @@ def test_потеря_без_отлучки_ни_на_кого_не_кивает
     assert 'связь с METF пропадала' not in str(err.value)
 
 
+class HolyApi(CountingApi):
+    """METF, у которой ответ на одно чтение потерялся по дороге."""
+
+    def __init__(self, text: str, dropped: list[int]) -> None:
+        super().__init__(text, dropped)
+        self.log_holes = 0
+
+    def serial_read(self) -> str:
+        self.log_holes = 1          # ответ не доехал, кольцо плата уже очистила
+        return super().serial_read()
+
+
+def test_потерянный_ответ_на_чтение_валит_тест() -> None:
+    """
+    Кольцо не переполнялось, счётчик потерь платы чист - и всё же лог дырявый:
+    строки уехали в ответ, который до стенда не дошёл. Промолчать значит
+    утверждать о сеансе по обрезанному логу.
+    """
+    watcher = LogWatcher(HolyApi(through_ring(SESSION_ALARM), [0]))
+    with pytest.raises(AssertionError, match='чтение лога оборвалось'):
+        watcher.wait_session(timeout=1.0)
+
+
 def test_целый_лог_проверку_проходит() -> None:
     """Счётчик не вырос - сеанс отдаётся как обычно."""
     watcher = LogWatcher(CountingApi(through_ring(SESSION_ALARM), [4]))

@@ -333,3 +333,40 @@ def test_общий_канал_не_считается_бедой(
     """
     inspected(monkeypatch, FakeBoard(channel=6), stand_channel=6)
     assert warnings == []
+
+
+class SilentReader:
+    """Плата, которая приняла `GET /read`, но ответа не прислала."""
+
+    def __init__(self, error: Exception | None = None) -> None:
+        self.error = error or requests.ReadTimeout('no answer')
+        self.gets = 0
+
+    def get(self, url: str, timeout: float) -> FakeRead:
+        self.gets += 1
+        raise self.error
+
+
+def test_чтение_лога_не_повторяется_после_таймаута(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """
+    Плата осушает кольцо, отдавая ответ. Ответ не доехал - строки потеряны, и
+    повтор вернёт уже следующие: в логе окажется дыра, о которой никто не знает.
+    """
+    plate = SilentReader()
+    api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
+    with pytest.raises(requests.ReadTimeout):
+        api.serial_read()
+    assert plate.gets == 1, 'чтение лога повторять нельзя'
+    assert api.log_holes == 1, 'дыра в логе не посчитана'
+
+
+def test_отказ_соединения_при_чтении_дырой_не_считается(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """Соединение не открылось - плата запроса не видела, кольцо цело."""
+    plate = SilentReader(requests.ConnectionError('host is down'))
+    api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
+    with pytest.raises(requests.ConnectionError):
+        api.serial_read()
+    assert plate.gets == 3, 'отказ соединения повторить можно и нужно'
+    assert api.log_holes == 0, 'целый лог объявлен дырявым'

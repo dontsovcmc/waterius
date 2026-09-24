@@ -215,6 +215,12 @@ DURING_GAP_S = 2.0
 PRESS_AFTER_S = 4.0
 
 
+def counted(session: Any) -> str:
+    """Строки attiny о счёте второго входа - чем платить за разбор потери."""
+    return ' | '.join(line.split(': ', 1)[-1] for line in session.text.splitlines()
+                      if 'impulses1' in line) or 'в логе нет строк impulses1'
+
+
 def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
     """
     Импульсы посреди сеанса не теряются и не удваиваются (#121, #238).
@@ -242,9 +248,13 @@ def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
 
     assert first.payload is not None and second.payload is not None
     got = first.payload['delta1'] + second.payload['delta1']
+    # Счётчик attiny в отказ: он делит вину. Насчитала attiny все импульсы -
+    # прирост потеряла ЕСП; насчитала меньше - импульс не доехал до платы, и
+    # виноват стенд или дребезг, а не прошивка
     assert got == DURING_PULSES * BASE_FACTOR, (
         f"приросты {first.payload['delta1']} + {second.payload['delta1']}, "
-        f'подано {DURING_PULSES} импульсов по {BASE_FACTOR} л')
+        f'подано {DURING_PULSES} импульсов по {BASE_FACTOR} л\n'
+        f'счёт attiny: {counted(first)} -> {counted(second)}')
 
 
 PRESSES_WHILE_CLOSED = 4
