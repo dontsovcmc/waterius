@@ -200,7 +200,7 @@ class FakeBoard:
             hook(answer)
         return answer
 
-    def __init__(self, version: int = 11, **wifi: object) -> None:
+    def __init__(self, version: int = 12, **wifi: object) -> None:
         self.version = version
         self.hooks: dict[str, list] = {'response': []}
         self.uptimes: list[int] = []
@@ -279,7 +279,7 @@ def test_досмотр_пропускает_плату_в_домашней_се
         monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
     """Здоровая плата не должна ни падать, ни жаловаться."""
     summary = inspected(monkeypatch, FakeBoard())
-    assert 'протокол 11' in summary and 'обрывы: none' in summary
+    assert 'протокол 12' in summary and 'обрывы: none' in summary
     assert warnings == []
 
 
@@ -312,20 +312,17 @@ def test_поднятая_точка_платы_видна_с_причиной(
     assert any('dropped' in line for line in warnings), warnings
 
 
-def test_девятый_протокол_досматривается_без_причины_обрыва(
-        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
-    """Поле `problem` появилось в десятом: на девятом его нет, и врать о нём нельзя."""
-    summary = inspected(monkeypatch, FakeBoard(version=9))
-    assert 'обрывы' not in summary and 'протокол 9' in summary
-
-
-def test_восьмой_протокол_не_спрашивают_о_сети(
-        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
-    """До девятого ручки `/wifi` нет вовсе - запрос к ней ответит 404."""
-    plate = FakeBoard(version=8)
-    summary = inspected(monkeypatch, plate)
-    assert summary == 'протокол 8'
-    assert not any(url.endswith('/wifi') for url in plate.gets), plate.gets
+@pytest.mark.parametrize('version', [8, 11])
+def test_прошивка_младше_двенадцатой_к_прогону_не_допускается(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str],
+        version: int) -> None:
+    """
+    До двенадцатого протокола чтение лога шло без подтверждения: не доехавший
+    ответ уносил строки, и тест падал на неполном логе не там, где сломалось.
+    Держать ради этого второй путь чтения дороже, чем прошить плату.
+    """
+    with pytest.raises(metf.MetfTooOld, match=f'протокол {version}'):
+        inspected(monkeypatch, FakeBoard(version=version))
 
 
 def test_перекрывающиеся_каналы_названы_причиной(
@@ -360,39 +357,39 @@ def test_общий_канал_не_считается_бедой(
 class SilentReader:
     """Плата, которая приняла `GET /read`, но ответа не прислала."""
 
-    def __init__(self, error: Exception | None = None) -> None:
+    def __init__(self, error: Exception | None = None, answers: int = 0,
+                 seq: int | None = None) -> None:
         self.error = error or requests.ReadTimeout('no answer')
         self.gets = 0
+        self.acks: list[str] = []      # что стенд подтверждал в каждом запросе
+        self.answers = answers         # сколько ответов отдать до молчания
+        self.seq = seq                 # номер окна; None - плата протокола 11
         self.hooks: dict[str, list] = {'response': []}
 
-    def get(self, url: str, timeout: float) -> FakeRead:
+    def get(self, url: str, params: dict | None = None,
+            timeout: float = 0) -> FakeRead:
         self.gets += 1
+        self.acks.append(str((params or {}).get('ack')))
+        if self.answers > 0:
+            self.answers -= 1
+            answer = FakeRead(text='строка\n')
+            if self.seq is not None:
+                answer.headers['X-Log-Seq'] = str(self.seq)
+            return answer
         raise self.error
 
 
-def test_чтение_лога_не_повторяется_после_таймаута(
+def test_чтение_лога_повторяется_после_таймаута(
         monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
     """
-    Плата осушает кольцо, отдавая ответ. Ответ не доехал - строки потеряны, и
-    повтор вернёт уже следующие: в логе окажется дыра, о которой никто не знает.
+    Плата придерживает отданное до подтверждения, поэтому не доехавший ответ
+    ничего не стоит: повторить чтение можно и нужно.
     """
     plate = SilentReader()
     api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
     with pytest.raises(requests.ReadTimeout):
         api.serial_read()
-    assert plate.gets == 1, 'чтение лога повторять нельзя'
-    assert api.log_holes == 1, 'дыра в логе не посчитана'
-
-
-def test_отказ_соединения_при_чтении_дырой_не_считается(
-        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
-    """Соединение не открылось - плата запроса не видела, кольцо цело."""
-    plate = SilentReader(requests.ConnectionError('host is down'))
-    api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
-    with pytest.raises(requests.ConnectionError):
-        api.serial_read()
-    assert plate.gets == 3, 'отказ соединения повторить можно и нужно'
-    assert api.log_holes == 0, 'целый лог объявлен дырявым'
+    assert plate.gets == 3, 'чтение лога обязано повторяться'
 
 
 def test_уменьшившийся_аптайм_это_перезагрузка(
@@ -431,19 +428,18 @@ def test_растущий_аптайм_молчит(
     assert warnings == []
 
 
-def test_старая_прошивка_платы_не_ломает_клиента(
+def test_ответ_без_аптайма_не_ломает_клиента(
         monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
     """
-    До одиннадцатого протокола заголовка нет вовсе. Стенд обязан работать и
-    так - иначе обновление платы становится условием запуска.
+    Заголовка может не оказаться у отдельного ответа (ошибка, чужой прокси).
+    Клиенту от этого плохеть нельзя: он просто не узнает о перезагрузке.
     """
-    plate = FakeBoard(version=10)
+    plate = FakeBoard()
+    plate.uptimes = []              # ни один ответ аптайма не несёт
     api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
 
-    assert api.version() == 10
+    assert api.version() == 12
     assert api.reboots == 0 and api.uptime_ms is None
-    assert any('не говорит свой аптайм' in line
-               for line in (warnings + [metf.check(api, '192.0.2.1')])), warnings
 
 
 def test_перезагрузка_до_метки_не_считается_свежей(
@@ -456,3 +452,35 @@ def test_перезагрузка_до_метки_не_считается_све
     api.version()
 
     assert api.reboot_since(clock.now + 1) is None
+
+
+def test_подтверждение_делает_чтение_повторяемым(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """
+    Плата протокола 12 придерживает отданное до подтверждения, поэтому
+    потерянный ответ ничего не стоит: тот же запрос отдаёт то же окно.
+    """
+    plate = SilentReader(answers=1, seq=7)
+    api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
+
+    assert api.serial_read() == 'строка\n'
+    assert plate.acks == ['0'], 'первое чтение ничего не подтверждает'
+
+    with pytest.raises(requests.ReadTimeout):
+        api.serial_read()
+    assert plate.gets == 4, 'чтение с подтверждением обязано повторяться'
+    assert plate.acks[1:] == ['7', '7', '7'], 'повтор просит то же окно'
+
+
+def test_ответ_без_номера_окна_это_отказ(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """
+    Досмотр перед прогоном требует протокол 12, так что номер окна обязан быть.
+    Его отсутствие значит, что плату подменили на ходу, - молчать нельзя:
+    подтверждать станет нечем, и строки начнут теряться.
+    """
+    plate = SilentReader(answers=1, seq=None)
+    api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
+
+    with pytest.raises(AssertionError, match='номер окна'):
+        api.serial_read()
