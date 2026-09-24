@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -228,15 +228,36 @@ def mqtt(cfg: Any, broker: Any) -> Iterator[Any]:
         watch.close()
 
 
+def bring_up(step: Callable[[], Any], what: str) -> Any:
+    """
+    Шаг подъёма стенда, переживающий одну осечку связи с METF.
+
+    Это не обезболивающее для мигающих тестов, а разница в цене: шаги подъёма
+    ничего не утверждают о прошивке и повторяются без последствий, а их отказ
+    уносит весь прогон целиком. Так и вышло: отлучка платы на 1,1 с переполнила
+    кольцо лога, и 45 медленных тестов не начались вовсе.
+
+    Повторяется только потеря лога - она про стенд. Отказ по делу (устройство
+    не отвечает, сеть чужая) летит сразу, как раньше.
+    """
+    try:
+        return step()
+    except AssertionError as err:
+        if 'METF потерял' not in str(err) and 'чтение лога оборвалось' not in str(err):
+            raise
+        logger.warning(f'подъём стенда: {what} сорвался на потере лога, повторяю\n{err}')
+        return step()
+
+
 @pytest.fixture(scope='session')
 def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     from .stand import Stand
     device = Stand.create(cfg, mqtt)    # METF и роутер: без них дальше нечем
     device.check_atboard()     # до первого теста, а не на сороковой минуте
-    device.identify()          # версии и MAC - у самого устройства, до первого теста
-    device.ensure_network()    # и сеть: в чужой стенд бесполезен
-    device.ensure_mqtt()       # и брокер, если он поднялся
-    device.ensure_clock()      # и время: иначе оно приходит из интернета
+    bring_up(device.identify, 'опрос устройства')    # версии и MAC - до первого теста
+    bring_up(device.ensure_network, 'сеть стенда')   # в чужой сети стенд бесполезен
+    bring_up(device.ensure_mqtt, 'брокер стенда')    # если он поднялся
+    bring_up(device.ensure_clock, 'часы платы')      # иначе время придёт из интернета
     try:
         yield device
     finally:
