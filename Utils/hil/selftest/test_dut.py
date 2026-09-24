@@ -53,10 +53,10 @@ def clock(monkeypatch: pytest.MonkeyPatch) -> Clock:
     return fake
 
 
-def make(clock: Clock, idle=None) -> tuple[dut_mod.Dut, FakeApi]:
+def make(clock: Clock, idle=None, settle=None) -> tuple[dut_mod.Dut, FakeApi]:
     api = FakeApi(clock)
     board = dut_mod.Dut(api, button_pin=1, ch0_pin=2, ch1_pin=3, reset_pin=4,
-                        idle=idle)
+                        idle=idle, settle=settle)
     board._led_ok = False                 # индикатора у заглушки нет
     return board, api
 
@@ -96,3 +96,26 @@ def test_без_вычитывателя_ведёт_себя_как_раньше
     board.pulses(channel=0, count=2, gap=60.0, width_ms=500)
 
     assert [round(t - api.lows[0]) for t in api.lows] == [0, 60]
+
+
+def test_выдержка_идёт_до_нажатия(clock: Clock) -> None:
+    """
+    Нажатие вплотную к концу сеанса до attiny не доходит: линия кнопки у
+    Ватериуса-2 общая с i2c и выводом ЕСП. Выдержку отмеряет стенд, но ждать
+    она обязана до того, как линия прижата, - иначе ждать уже нечего.
+    """
+    было: list[str] = []
+    board, api = make(clock, settle=lambda: было.append(f'выдержка {clock.now}'))
+
+    board.press_button()
+
+    assert было, 'выдержки перед нажатием не было'
+    прижали = api.lows[0]
+    выждали = float(было[0].split()[1])
+    assert выждали <= прижали, 'выдержка кончилась позже, чем прижали линию'
+
+
+def test_без_выдержки_нажатие_работает_как_прежде(clock: Clock) -> None:
+    """Стенд может не давать выдержки вовсе: тогда нажатие идёт сразу."""
+    board, _ = make(clock)
+    board.press_button()                # не должно упасть
