@@ -255,6 +255,8 @@ def bring_up(step: Callable[[], Any], what: str) -> Any:
 def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     from .stand import Stand
     device = Stand.create(cfg, mqtt)    # METF и роутер: без них дальше нечем
+    global _metf
+    _metf = device.api
     device.check_atboard()     # до первого теста, а не на сороковой минуте
     bring_up(device.identify, 'опрос устройства')    # версии и MAC - до первого теста
     bring_up(device.ensure_network, 'сеть стенда')   # в чужой сети стенд бесполезен
@@ -346,29 +348,10 @@ def clean_dut(request: pytest.FixtureRequest) -> Iterator[None]:
 # упавший рядом с ней тест - повод смотреть на стенд, а не на прошивку.
 _reboots: dict[str, int] = {}
 
-
-@pytest.fixture(autouse=True)
-def metf_reboots(request: pytest.FixtureRequest) -> Iterator[None]:
-    """
-    Отметить перезагрузку METF, случившуюся во время теста.
-
-    Прогон при этом не прерывается: перезагрузка не мешает тесту пройти, а
-    когда мешает - об этом сказано прямо, вместо того чтобы искать вину в
-    прошивке Ватериуса.
-    """
-    if 'stand' not in request.keywords or not request.config.getoption('--stand'):
-        yield
-        return
-
-    api = request.getfixturevalue('stand').api
-    was = api.reboots
-    try:
-        yield
-    finally:
-        if api.reboots > was:
-            _reboots[request.node.nodeid] = api.reboots - was
-            logger.warning(f'METF перезагружалась во время теста '
-                           f'{request.node.name}: {api.reboots - was} раз')
+# Клиент METF, пока живёт стенд. Счётчик перезагрузок снимается хуком вокруг
+# всего теста, а не фикстурой: тест, упавший в подготовке, до фикстуры не
+# доходит - а именно в подготовке перезагрузка и мешает чаще всего.
+_metf: Any = None
 
 
 def _version(text: str) -> tuple[int, ...]:
@@ -557,7 +540,12 @@ def pytest_runtest_logreport(report: pytest.TestReport) -> None:
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
     """После теста - его время, после последнего теста файла - время файла."""
+    before = _metf.reboots if _metf is not None else 0
     yield
+    if _metf is not None and _metf.reboots > before:
+        _reboots[item.nodeid] = _metf.reboots - before
+        logger.warning(f'METF перезагружалась во время теста {item.name}: '
+                       f'{_metf.reboots - before} раз')
     spent = _test_seconds.pop(item.nodeid, 0.0)
     _file_seconds[item.path] = _file_seconds.get(item.path, 0.0) + spent
 
