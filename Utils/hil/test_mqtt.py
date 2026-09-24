@@ -128,10 +128,10 @@ def test_I1_discovery_base_entities(stand: Stand) -> None:
 
     stand.reset_observers()
     stand.dut.press_button()
-    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     topics = stand.mqtt.topics(f'{DISCOVERY_ROOT}/')
-    assert topics, 'автодискавери не опубликовано'
+    assert topics, f'автодискавери не опубликовано{session.mqtt_note}'
 
     for entity_type, entity_id in BASE_ENTITIES:
         assert config_topic(topics, entity_type, entity_id) is not None, (
@@ -344,10 +344,10 @@ def test_I1b_discovery_json_is_valid(stand: Stand) -> None:
 
     stand.reset_observers()
     stand.dut.press_button()
-    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     topics = stand.mqtt.topics(f'{DISCOVERY_ROOT}/')
-    assert topics, 'автодискавери не опубликовано'
+    assert topics, f'автодискавери не опубликовано{session.mqtt_note}'
 
     for topic in topics:
         message = stand.mqtt.last(topic)
@@ -396,7 +396,8 @@ def test_I0b_readings_go_to_separate_topics(stand: Stand) -> None:
 
     assert session.payload is not None, 'приёмник не получил посылку'
     topics = stand.mqtt.topics(stand.mqtt_root)
-    assert topics, f'в брокере пусто, пришло: {stand.mqtt.topics()}'
+    assert topics, (f'в брокере пусто, пришло: {stand.mqtt.topics()}'
+                    f'{session.mqtt_note}')
 
     # Целые и строки, без плавающей точки: её текстовое представление у
     # прошивки и у python разное, и тест мигал бы на верных данных
@@ -469,10 +470,10 @@ def test_I2_leak_sensor_publishes_only_its_state(stand: Stand) -> None:
     stand.mqtt.drain()
     stand.reset_observers()
     stand.dut.press_button()
-    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     topics = stand.mqtt.topics(f'{DISCOVERY_ROOT}/')
-    assert topics, 'автодискавери не опубликовано'
+    assert topics, f'автодискавери не опубликовано{session.mqtt_note}'
 
     assert config_topic(topics, 'select', 'ctype0') is not None, topics
     assert config_topic(topics, 'binary_sensor', 'alarm_wet0') is not None, topics
@@ -638,10 +639,10 @@ def test_I15b_disabled_input_publishes_only_its_type(stand: Stand) -> None:
     stand.mqtt.drain()
     stand.reset_observers()
     stand.dut.press_button()
-    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     names = {name for _, name in discovery_entities(stand)}
-    assert names, 'автодискавери не опубликовано'
+    assert names, f'автодискавери не опубликовано{session.mqtt_note}'
     assert {name for name in names if name.endswith('0')} == {'ctype0'}, sorted(names)
     assert 'ch1' in names, f'у включённого входа нет показаний: {sorted(names)}'
 

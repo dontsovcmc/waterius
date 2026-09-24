@@ -126,7 +126,7 @@ def test_G1_all_three_channels(stand: Stand) -> None:
     assert stand.mqtt is not None
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
         f'в брокере нет ни одного топика {stand.mqtt_root}/, '
-        f'пришло: {stand.mqtt.topics()}')
+        f'пришло: {stand.mqtt.topics()}{session.mqtt_note}')
 
 
 @pytest.mark.mqtt
@@ -437,6 +437,7 @@ def test_G10_single_receiver(stand: Stand, alone: str) -> None:
         else:
             assert session.payload is None, 'свой сервер выключен, а посылка пришла'
             assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
-                f'брокер включён один, а в {stand.mqtt_root}/ пусто')
+                f'брокер включён один, а в {stand.mqtt_root}/ пусто'
+                f'{session.mqtt_note}')
     finally:
         restore_receivers(stand, alone)

@@ -18,16 +18,12 @@
  */
 bool publish(PubSubClient &mqtt_client, const String &topic, const String &payload, bool retain)
 {
-    LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-    LOG_INFO(F("MQTT: Publish Topic: ") << topic);
-    LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
     LOG_DEBUG(F("MQTT: Payload: ") << payload);
-    LOG_INFO(F("MQTT: Retain: ") << retain);
 
     const unsigned int len = payload.length();
     if (!mqtt_client.beginPublish(topic.c_str(), len, retain))
     {
-        LOG_ERROR(F("MQTT: Publish failed: no connection"));
+        LOG_ERROR(F("MQTT: Publish failed: ") << topic << F(" (no connection)"));
         return false;
     }
 
@@ -36,11 +32,17 @@ bool publish(PubSubClient &mqtt_client, const String &topic, const String &paylo
 
     if (!sent)
     {
-        LOG_ERROR(F("MQTT: Publish failed"));
+        LOG_ERROR(F("MQTT: Publish failed: ") << topic << F(" (socket)"));
         return false;
     }
 
-    LOG_INFO(F("MQTT: Published succesfully"));
+    // Одна строка на публикацию вместо пяти, и после отправки: она же и есть
+    // подтверждение. Без автообнаружения каждое поле уходит своим топиком, и
+    // сеанс на 83 поля (а с настройками - дважды) не помещался в кольцо лога
+    // стенда: 830 строк при 511
+    LOG_INFO(F("MQTT: pub ") << topic << F(" size=") << len
+                             << F(" retain=") << retain
+                             << F(" heap=") << ESP.getFreeHeap());
     return true;
 }
 
@@ -61,7 +63,7 @@ bool clear_retained(PubSubClient &mqtt_client, const String &topic)
 
     if (!mqtt_client.publish(topic.c_str(), "", true))
     {
-        LOG_ERROR(F("MQTT: Publish failed"));
+        LOG_ERROR(F("MQTT: Publish failed: ") << topic << F(" (clear retained)"));
         return false;
     }
     return true;
