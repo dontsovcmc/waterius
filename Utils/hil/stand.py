@@ -207,6 +207,19 @@ class Stand:
         router.client_stats(True)
         return stand
 
+    def release_lines(self) -> None:
+        """
+        Отпустить линии METF после теста, пережив её отлучку.
+
+        Плата отвечает по радио и пропадает на секунды сама по себе. Прежде
+        уборка падала на первом же отказе, и упавший тест получал вдогонку
+        ошибку в teardown - а линии оставались прижатыми к земле на весь
+        оставшийся прогон. Ждём схождения и только потом отпускаем; не
+        дождались - отказ по делу: следующему тесту плата нужна не меньше.
+        """
+        _wait_metf(self.api, self.cfg.metf_host)
+        self.dut.init()
+
     def close(self) -> None:
         self.receiver.stop()
         self.router.close()

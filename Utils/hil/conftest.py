@@ -314,7 +314,7 @@ def clean_dut(request: pytest.FixtureRequest) -> Iterator[None]:
     try:
         yield
     finally:
-        device.dut.init()
+        device.release_lines()
 
 
 def _version(text: str) -> tuple[int, ...]:
