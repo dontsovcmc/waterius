@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 import requests
 
@@ -28,10 +30,11 @@ class Clock:
 
 
 class FakeAnswer:
-    """Ответ платы: стенду нужны `raise_for_status` и код - `202` у `/pulse`."""
+    """Ответ платы: стенду нужны `raise_for_status`, код и заголовки."""
 
-    def __init__(self, status_code: int = 202) -> None:
+    def __init__(self, status_code: int = 202, uptime: int | None = None) -> None:
         self.status_code = status_code
+        self.headers = {} if uptime is None else {'X-Uptime-Ms': str(uptime)}
 
     def raise_for_status(self) -> None:
         return None
@@ -46,12 +49,20 @@ class FakeSession:
         self.error = error or requests.ConnectionError('host is down')
         self.status_code = status_code
         self.posts: list[tuple[str, dict, float]] = []
+        # Крючки ответа - как у настоящей сессии: через них клиент ловит аптайм
+        self.hooks: dict[str, list] = {'response': []}
 
     def post(self, url: str, data: dict, timeout: float) -> FakeAnswer:
         self.posts.append((url, data, timeout))
         if len(self.posts) <= self.failures:
             raise self.error
-        return FakeAnswer(self.status_code)
+        return self.hooked(FakeAnswer(self.status_code))
+
+    def hooked(self, answer: Any) -> Any:
+        """Ответ через крючки сессии - так же, как это делает requests."""
+        for hook in self.hooks['response']:
+            hook(answer)
+        return answer
 
 
 class FakeClient:
@@ -183,8 +194,16 @@ def test_старая_прошивка_платы_видна_сразу(
 class FakeBoard:
     """Плата, отвечающая заданным состоянием на `/version` и `/wifi`."""
 
-    def __init__(self, version: int = 10, **wifi: object) -> None:
+    def hooked(self, answer: Any) -> Any:
+        """Ответ через крючки сессии - так же, как это делает requests."""
+        for hook in self.hooks['response']:
+            hook(answer)
+        return answer
+
+    def __init__(self, version: int = 11, **wifi: object) -> None:
         self.version = version
+        self.hooks: dict[str, list] = {'response': []}
+        self.uptimes: list[int] = []
         self.wifi = {'state': 'online', 'mode': 'sta', 'connected': True,
                      'ssid': 'dav', 'source': 'build', 'rssi': -62,
                      'ap_up': False, 'problem': 'none', 'hw_error': False}
@@ -193,19 +212,22 @@ class FakeBoard:
 
     def get(self, url: str, timeout: float) -> FakeRead:
         self.gets.append(url)
+        uptime = self.uptimes.pop(0) if self.uptimes else None
         if url.endswith('/version'):
-            return FakeRead(text=str(self.version))
+            return self.hooked(FakeRead(text=str(self.version), uptime=uptime))
         if url.endswith('/wifi'):
-            return FakeRead(payload=self.wifi)
+            return self.hooked(FakeRead(payload=self.wifi, uptime=uptime))
         raise AssertionError(f'неожиданный запрос {url}')
 
 
 class FakeRead:
     """Ответ на чтение: текст версии или JSON состояния."""
 
-    def __init__(self, text: str = '', payload: dict | None = None) -> None:
+    def __init__(self, text: str = '', payload: dict | None = None,
+                 uptime: int | None = None) -> None:
         self.text = text
         self._payload = payload
+        self.headers = {} if uptime is None else {'X-Uptime-Ms': str(uptime)}
 
     def raise_for_status(self) -> None:
         return None
@@ -257,7 +279,7 @@ def test_досмотр_пропускает_плату_в_домашней_се
         monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
     """Здоровая плата не должна ни падать, ни жаловаться."""
     summary = inspected(monkeypatch, FakeBoard())
-    assert 'протокол 10' in summary and 'обрывы: none' in summary
+    assert 'протокол 11' in summary and 'обрывы: none' in summary
     assert warnings == []
 
 
@@ -341,6 +363,7 @@ class SilentReader:
     def __init__(self, error: Exception | None = None) -> None:
         self.error = error or requests.ReadTimeout('no answer')
         self.gets = 0
+        self.hooks: dict[str, list] = {'response': []}
 
     def get(self, url: str, timeout: float) -> FakeRead:
         self.gets += 1
@@ -370,3 +393,66 @@ def test_отказ_соединения_при_чтении_дырой_не_с�
         api.serial_read()
     assert plate.gets == 3, 'отказ соединения повторить можно и нужно'
     assert api.log_holes == 0, 'целый лог объявлен дырявым'
+
+
+def test_уменьшившийся_аптайм_это_перезагрузка(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """
+    Аптайм меньше прошлого - плата стартовала заново. Отличить перезагрузку от
+    занятости больше нечем, а последствия у неё заметные: кольцо лога пусто,
+    сервер времени выключен, выводы вернулись во вход.
+    """
+    plate = FakeBoard()
+    plate.uptimes = [90_000, 1_200]
+    api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
+    mark = clock.now
+
+    api.version()
+    assert api.reboots == 0, 'первый ответ сравнивать не с чем'
+    api.version()
+
+    assert api.reboots == 1, 'перезагрузка не замечена'
+    assert api.reboot_since(mark) is not None
+    assert any('перезагрузилась' in line for line in warnings), warnings
+
+
+def test_растущий_аптайм_молчит(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """Плата работает без перерыва - говорить не о чем."""
+    plate = FakeBoard()
+    plate.uptimes = [1_000, 2_000, 3_000]
+    api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
+
+    for _ in range(3):
+        api.version()
+
+    assert api.reboots == 0
+    assert api.reboot_since(0.0) is None
+    assert warnings == []
+
+
+def test_старая_прошивка_платы_не_ломает_клиента(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """
+    До одиннадцатого протокола заголовка нет вовсе. Стенд обязан работать и
+    так - иначе обновление платы становится условием запуска.
+    """
+    plate = FakeBoard(version=10)
+    api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
+
+    assert api.version() == 10
+    assert api.reboots == 0 and api.uptime_ms is None
+    assert any('не говорит свой аптайм' in line
+               for line in (warnings + [metf.check(api, '192.0.2.1')])), warnings
+
+
+def test_перезагрузка_до_метки_не_считается_свежей(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
+    """`reboot_since` отвечает про окно теста, а не про весь прогон."""
+    plate = FakeBoard()
+    plate.uptimes = [90_000, 1_200]
+    api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
+    api.version()
+    api.version()
+
+    assert api.reboot_since(clock.now + 1) is None

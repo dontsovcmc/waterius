@@ -46,6 +46,12 @@ SAFE_TO_REPEAT = (requests.ConnectionError,)
 PULSE_PROTOCOL = 8       # `/pulse` отвечает распиской, выдержку держит стенд
 WIFI_PROTOCOL = 9        # `/wifi`: плату можно увести в другую сеть без пайки
 PROBLEM_PROTOCOL = 10    # `problem`: причина обрыва словами, а не кодом ядра
+UPTIME_PROTOCOL = 11     # заголовок `X-Uptime-Ms`: по нему видно перезагрузку платы
+
+# Заголовок с аптаймом платы (`docs/api.md` репозитория metf). Плата ставит его
+# на каждый ответ, поэтому ловим его на уровне сессии - иначе пришлось бы
+# перехватывать каждый вызов клиента по отдельности
+UPTIME_HEADER = 'X-Uptime-Ms'
 
 # Ниже этого запаса связь с платой рвётся под нагрузкой эфира, а тесты её ломают
 # намеренно. Замеры прогонов: на -68 дБм прогон живой, на -72...-82 METF
@@ -113,6 +119,13 @@ class Metf:
         # Сколько раз ответ на `GET /read` потерялся по дороге: столько дыр в
         # логе, о которых счётчик потерь платы не знает - кольцо не переполнялось
         self.log_holes = 0
+        # Аптайм платы и её перезагрузки. Перезагрузка объясняет разом пустое
+        # кольцо лога, выключенный сервер времени и отпущенные выводы, поэтому
+        # тест, упавший рядом с ней, - повод смотреть на стенд, а не на прошивку
+        self.uptime_ms: int | None = None
+        self.reboots = 0
+        self.last_reboot: float | None = None
+        self._api._sess.hooks['response'].append(self._note_uptime)
 
     def __getattr__(self, name: str) -> Any:
         target = getattr(self._api, name)
@@ -167,6 +180,41 @@ class Metf:
                 f'протокола 8. Выдержку она отмеряет ответом, а не телом, и '
                 f'паузы между импульсами поедут. Обновите прошивку платы.')
         time.sleep(duration_ms / 1000.0)
+
+    def _note_uptime(self, response: Any, *args: Any, **kwargs: Any) -> None:
+        """
+        Заметить перезагрузку платы по её аптайму в заголовке каждого ответа.
+
+        Перехват стоит на сессии `requests`, а не в наших методах: половина
+        вызовов уходит в `METFClient` мимо обёртки, и заголовок с них иначе не
+        увидеть.
+
+        Уменьшение - единственный признак: отличить перезагрузку от занятости
+        больше нечем, а `offline_s` в `/wifi` считается и с потери сети, и с
+        загрузки. Раз в 49 суток непрерывной работы `millis()` переполнится, и
+        перезагрузка окажется ложной - столько стенд не живёт.
+        """
+        raw = response.headers.get(UPTIME_HEADER)
+        if raw is None:
+            return                       # прошивка платы старше одиннадцатой
+        try:
+            now = int(raw)
+        except ValueError:
+            return
+        was = self.uptime_ms
+        self.uptime_ms = now
+        if was is not None and now < was:
+            self.reboots += 1
+            self.last_reboot = time.time()
+            logger.warning(
+                f'METF перезагрузилась: аптайм {was} -> {now} мс. Кольцо лога '
+                f'пусто, сервер времени выключен, выводы вернулись во вход')
+
+    def reboot_since(self, mark: float) -> float | None:
+        """Когда плата перезагружалась после момента `mark`, если перезагружалась."""
+        if self.last_reboot is not None and self.last_reboot >= mark:
+            return self.last_reboot
+        return None
 
     def serial_read(self) -> str:
         """
@@ -309,6 +357,12 @@ def check(api: Metf, host: str, stand_ssid: str = '', stand_channel: int = 0) ->
             f'стенд: METF {host} сидит на точке стенда «{ssid}» - на той самой, '
             f'которую тесты гасят и перенастраивают. Верните плату в домашнюю '
             f'сеть: curl -d action=forget http://{host}/wifi')
+
+    if version < UPTIME_PROTOCOL:
+        logger.warning(
+            f'METF: протокол {version} - плата не говорит свой аптайм '
+            f'({UPTIME_HEADER} с {UPTIME_PROTOCOL}-го), её перезагрузки стенду '
+            f'не видны, и упавший тест не с чем сверить')
 
     parts = [f'протокол {version}', f'сеть «{ssid}»']
     rssi = net.get('rssi')

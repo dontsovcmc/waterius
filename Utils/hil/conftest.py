@@ -340,6 +340,37 @@ def clean_dut(request: pytest.FixtureRequest) -> Iterator[None]:
         device.release_lines()
 
 
+# Тесты, в которых плата-манипулятор перезагружалась: имя -> сколько раз. Нужны
+# и сразу (припиской к отказу), и в конце прогона сводкой: перезагрузка METF
+# объясняет пустое кольцо, выключенный сервер времени и отпущенные выводы, и
+# упавший рядом с ней тест - повод смотреть на стенд, а не на прошивку.
+_reboots: dict[str, int] = {}
+
+
+@pytest.fixture(autouse=True)
+def metf_reboots(request: pytest.FixtureRequest) -> Iterator[None]:
+    """
+    Отметить перезагрузку METF, случившуюся во время теста.
+
+    Прогон при этом не прерывается: перезагрузка не мешает тесту пройти, а
+    когда мешает - об этом сказано прямо, вместо того чтобы искать вину в
+    прошивке Ватериуса.
+    """
+    if 'stand' not in request.keywords or not request.config.getoption('--stand'):
+        yield
+        return
+
+    api = request.getfixturevalue('stand').api
+    was = api.reboots
+    try:
+        yield
+    finally:
+        if api.reboots > was:
+            _reboots[request.node.nodeid] = api.reboots - was
+            logger.warning(f'METF перезагружалась во время теста '
+                           f'{request.node.name}: {api.reboots - was} раз')
+
+
 def _version(text: str) -> tuple[int, ...]:
     return tuple(int(part) for part in str(text).split('.'))
 
@@ -540,6 +571,15 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
         if report is not None and report.failed:
             terminal.write_line(f'--- причина падения ({when}) ---')
             terminal.write_line(report.longreprtext)
+            if item.nodeid in _reboots:
+                terminal.write_line(
+                    f'--- во время теста METF перезагружалась '
+                    f'({_reboots[item.nodeid]} раз): отказ может быть про стенд, '
+                    f'а не про Ватериус ---')
     if nextitem is None or nextitem.path != item.path:
         terminal.write_line(
             f'--- {item.path.name}: {elapsed(_file_seconds[item.path])} ---')
+    if nextitem is None and _reboots:
+        terminal.write_line('--- METF перезагружалась в тестах ---')
+        for nodeid, times in _reboots.items():
+            terminal.write_line(f'    {nodeid}: {times}')

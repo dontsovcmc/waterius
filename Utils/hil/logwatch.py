@@ -559,16 +559,27 @@ class LogWatcher:
         пропадает сама по себе. Без этой приписки отлучку ищут в прошивке
         устройства, хотя устройство тут ни при чём.
         """
+        if self._mark_at is None:
+            return ''
+
+        beda = []
+        reboot = getattr(self.api, 'reboot_since', None)
+        when = reboot(self._mark_at) if reboot else None
+        if when is not None:
+            beda.append(f'METF перезагружалась в '
+                        f'{time.strftime("%H:%M:%S", time.localtime(when))} - '
+                        f'кольцо она при этом очищает')
+
         stall = getattr(self.api, 'stall_since', None)
-        if stall is None or self._mark_at is None:
+        gap = stall(self._mark_at) if stall else None
+        if gap is not None:
+            since, seconds = gap
+            beda.append(f'связь с METF пропадала на {seconds:.1f} с '
+                        f'({time.strftime("%H:%M:%S", time.localtime(since))})')
+
+        if not beda:
             return ''
-        gap = stall(self._mark_at)
-        if gap is None:
-            return ''
-        when, seconds = gap
-        return (f'. В этом окне связь с METF пропадала на {seconds:.1f} с '
-                f'({time.strftime("%H:%M:%S", time.localtime(when))}) - за это '
-                f'время кольцо и переполнилось: виноват стенд, а не прошивка')
+        return (f'. В этом окне {"; ".join(beda)} - виноват стенд, а не прошивка')
 
     def wait_session(self, timeout: float, mode: int | None = None,
                      poll_interval: float = 0.1) -> Session | None:

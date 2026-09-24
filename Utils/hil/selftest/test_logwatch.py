@@ -358,6 +358,31 @@ def test_потеря_после_отлучки_платы_названа_отл
         watcher.wait_session(timeout=1.0)
 
 
+class RebootedApi(CountingApi):
+    """METF, перезагрузившаяся посреди окна наблюдения."""
+
+    def __init__(self, text: str, dropped: list[int]) -> None:
+        super().__init__(text, dropped)
+        self._reboot: float | None = None
+
+    def serial_read(self) -> str:
+        self._reboot = time.time()
+        return super().serial_read()
+
+    def reboot_since(self, mark: float) -> float | None:
+        return self._reboot if self._reboot and self._reboot >= mark else None
+
+
+def test_потеря_после_перезагрузки_платы_названа_перезагрузкой() -> None:
+    """
+    Перезагрузка METF объясняет пустое кольцо сама по себе: плата очищает его
+    при старте. Без этой приписки потерю ищут в прошивке устройства.
+    """
+    watcher = LogWatcher(RebootedApi(through_ring(SESSION_ALARM), [0, 17]))
+    with pytest.raises(AssertionError, match='METF перезагружалась'):
+        watcher.wait_session(timeout=1.0)
+
+
 def test_потеря_без_отлучки_ни_на_кого_не_кивает() -> None:
     """Связь не пропадала - значит причина другая, и выдумывать её нельзя."""
     watcher = LogWatcher(CountingApi(through_ring(SESSION_ALARM), [0, 17]))
