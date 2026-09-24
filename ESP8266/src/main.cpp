@@ -177,6 +177,12 @@ void loop()
         sett.mode = mode;
         LOG_INFO(F("Startup mode: ") << mode);
 
+        // Настройка и кнопка - просьба пересобрать устройство в Home Assistant
+        if (mode == SETUP_MODE || mode == MANUAL_TRANSMIT_MODE)
+        {
+            sett.discovery_signature = 0;
+        }
+
         // Пробуждение по таймеру — ещё один проспанный период. Считаем их,
         // потому что время между синхронизациями неизвестно, а число
         // заказанных периодов известно точно (#357).

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import socket
 import tempfile
 import threading
 from pathlib import Path
@@ -234,3 +235,116 @@ class MqttBroker:
         if self._secrets is not None:
             self._secrets.cleanup()
             self._secrets = None
+
+
+class CuttingBroker:
+    """
+    Брокер, который рвёт соединение на первой публикации в заданное дерево.
+
+    Нужен, чтобы проверить честность статуса MQTT: сокет у Ватериуса открыт,
+    подключение и подписка прошли, а публикации посреди сеанса уже не доходят.
+    amqtt так не умеет, поэтому здесь минимальный сервер MQTT 3.1.1 на сокете:
+    CONNECT, SUBSCRIBE, UNSUBSCRIBE, PINGREQ и PUBLISH с QoS 0 - всё, что
+    посылает PubSubClient прошивки.
+    """
+
+    def __init__(self, port: int, host: str = '', cut_prefix: str = 'homeassistant/') -> None:
+        self.port = port
+        self.host = host or '127.0.0.1'
+        self.cut_prefix = cut_prefix
+        # Взводится, когда соединение порвано: тест отличает «брокер сработал»
+        # от «устройство до публикации не дошло»
+        self.cut = threading.Event()
+        self._server: socket.socket | None = None
+        self._thread: threading.Thread | None = None
+
+    def start(self) -> None:
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind(('0.0.0.0', self.port))
+        server.listen(4)
+        server.settimeout(0.5)
+        self._server = server
+        self._thread = threading.Thread(target=self._serve, name='mqtt-cutting', daemon=True)
+        self._thread.start()
+        logger.info(f'рвущий брокер слушает {self.host}:{self.port}, рвёт на {self.cut_prefix}')
+
+    def stop(self) -> None:
+        server, self._server = self._server, None
+        if server is not None:
+            server.close()
+        if self._thread is not None:
+            self._thread.join(timeout=5)
+            self._thread = None
+
+    def _serve(self) -> None:
+        while self._server is not None:
+            try:
+                conn, _ = self._server.accept()
+            except (TimeoutError, OSError):
+                continue
+            with conn:
+                self._talk(conn)
+
+    def _talk(self, conn: socket.socket) -> None:
+        conn.settimeout(30)
+        try:
+            while True:
+                packet = _read_packet(conn)
+                if packet is None:
+                    return
+                kind, body = packet
+                if kind == 0x10:                                   # CONNECT
+                    conn.sendall(b'\x20\x02\x00\x00')
+                elif kind == 0x82:                                 # SUBSCRIBE
+                    count = _count_filters(body[2:])
+                    conn.sendall(bytes([0x90, 2 + count]) + body[:2] + bytes(count))
+                elif kind == 0xA2:                                 # UNSUBSCRIBE
+                    conn.sendall(b'\xb0\x02' + body[:2])
+                elif kind == 0xC0:                                 # PINGREQ
+                    conn.sendall(b'\xd0\x00')
+                elif kind == 0xE0:                                 # DISCONNECT
+                    return
+                elif kind >> 4 == 3:                               # PUBLISH
+                    size = int.from_bytes(body[:2], 'big')
+                    topic = body[2:2 + size].decode(errors='replace')
+                    if topic.startswith(self.cut_prefix):
+                        logger.info(f'рвущий брокер: рву соединение на {topic}')
+                        self.cut.set()
+                        conn.shutdown(socket.SHUT_RDWR)
+                        return
+        except OSError:
+            return
+
+
+def _read_packet(conn: socket.socket) -> tuple[int, bytes] | None:
+    """Пакет MQTT: первый байт заголовка и тело. None - клиент ушёл."""
+    head = conn.recv(1)
+    if not head:
+        return None
+    length, shift = 0, 0
+    while True:
+        byte = conn.recv(1)
+        if not byte:
+            return None
+        length |= (byte[0] & 0x7F) << shift
+        if not byte[0] & 0x80:
+            break
+        shift += 7
+    body = b''
+    while len(body) < length:
+        chunk = conn.recv(length - len(body))
+        if not chunk:
+            return None
+        body += chunk
+    return head[0], body
+
+
+def _count_filters(payload: bytes) -> int:
+    """Сколько фильтров в теле SUBSCRIBE после идентификатора пакета."""
+    count = 0
+    while payload:
+        size = int.from_bytes(payload[:2], 'big')
+        payload = payload[3 + size:]                 # + байт запрошенного QoS
+        count += 1
+    return count

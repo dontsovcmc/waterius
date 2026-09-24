@@ -12,7 +12,7 @@ status.waterius, status.http, status.mqtt. Отсюда светодиод уз�
 закончился сеанс (облачных двоих сводит core/blink.h:cloud_status), а
 core/alarm.h:alarm_delivered - докладывать ли attiny о доставке тревоги.
 */
-void send_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data, JsonDocument &json_settings, SessionStatus &status);
+void send_data(Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data, JsonDocument &json_settings, SessionStatus &status);
 bool settings_received(const JsonDocument &json_settings_received);
 
 inline bool has_ota(const JsonDocument &json_settings_received)

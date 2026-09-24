@@ -45,6 +45,8 @@ TEST(SettingsLayout, NewFieldsLiveInTheReservedTail)
     EXPECT_LT(offsetof(Settings, send_on_consumption), 960u);
     EXPECT_GE(offsetof(Settings, alarm_confirm), 882u);
     EXPECT_LT(offsetof(Settings, alarm_confirm), 960u);
+    EXPECT_GT(offsetof(Settings, discovery_signature), offsetof(Settings, alarm_confirm));
+    EXPECT_LT(offsetof(Settings, discovery_signature), 960u);
 }
 
 TEST(SettingsLayout, RepurposedReservedByteStayedInPlace)
@@ -103,4 +105,13 @@ TEST(SettingsDefaults, AlarmConfirmAcceptsAnyRecipient)
 
     EXPECT_EQ(sett.alarm_confirm, CONFIRM_ANY);
     EXPECT_EQ(CONFIRM_ANY, 0);
+}
+
+TEST(SettingsDefaults, DiscoveryIsRepublishedAfterUpgrade)
+{
+    // Ноль - "ничего не опубликовано": первый сеанс после обновления
+    // переотправит конфиги Home Assistant
+    Settings sett;
+
+    EXPECT_EQ(sett.discovery_signature, 0u);
 }

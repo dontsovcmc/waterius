@@ -5,7 +5,7 @@
 #include "senders/sender_mqtt.h"
 
 
-void send_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data, JsonDocument &json_settings, SessionStatus &status)
+void send_data(Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data, JsonDocument &json_settings, SessionStatus &status)
 {
     // Формироуем JSON
     get_json_data(sett, data, cdata, json_data);
@@ -36,18 +36,13 @@ void send_data(const Settings &sett, const AttinyData &data, const CalculatedDat
 #ifndef MQTT_DISABLED
     if (is_mqtt(sett))
     {
-        if (send_mqtt(sett, json_data))
+        SendStatus mqtt_status = send_mqtt(sett, data, json_data);
+        if (mqtt_status == SEND_OK)
         {
             LOG_INFO(F("MQTT: Send OK"));
-            status.mqtt = merge_status(status.mqtt, SEND_OK);
             status.delivered_any = true;
         }
-        else
-        {
-            // Подключение к брокеру делает connect_and_subscribe_mqtt, сюда
-            // приходим уже с готовым клиентом: не отправилось — значит связь
-            status.mqtt = merge_status(status.mqtt, SEND_NO_CONNECTION);
-        }
+        status.mqtt = merge_status(status.mqtt, mqtt_status);
     }
     else
     {

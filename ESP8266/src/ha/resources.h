@@ -343,6 +343,17 @@ static const char *const ENTITY_CHANNEL_ALARM_WET[MQTT_PARAM_COUNT] PROGMEM =
     {s_binary_sensor, s_alarm_wet_name, s_alarm_wet, "", s_moisture, "", "", "", ""};
 static const char *const ENTITY_CHANNEL_ALARM_STOP_CFG[MQTT_PARAM_COUNT] PROGMEM =
     {s_number, s_as_name, s_as, "", "", s_hour, s_config, s_icon_water_off, s_format50z};      // asN Часов без расхода
+/*
+Пороги тревог первых сборок dev 2.0.47, их заменили av/ar/ah. Нужны только
+тип и имя: по ним прошивка удаляет сущности, оставшиеся у брокеров.
+*/
+static const char s_af[] PROGMEM = "af";
+static const char s_al[] PROGMEM = "al";
+static const char *const ENTITY_CHANNEL_RETIRED_AF[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, "", s_af, "", "", "", "", "", ""};
+static const char *const ENTITY_CHANNEL_RETIRED_AL[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, "", s_al, "", "", "", "", "", ""};
+
 static const char *const ENTITY_CHANNEL_ALARM_STOP[MQTT_PARAM_COUNT] PROGMEM =
     {s_binary_sensor, s_alarm_stop_name, s_alarm_stop, "", s_problem, "", "", s_icon_water_off, ""};
 

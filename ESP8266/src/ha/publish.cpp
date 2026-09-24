@@ -1,156 +1,47 @@
 #include "publish.h"
 #include "Logging.h"
-#include "setup.h"
 #include <PubSubClient.h>
-#include <ArduinoJson.h>
-
-extern Settings sett;
 
 /**
- * @brief Публикация топика в MQTT в различных режимах
+ * @brief Публикация топика в MQTT
+ *
+ * Без промежуточного буфера: сообщение может быть больше буфера клиента.
+ * QoS 0, поэтому «опубликовано» значит «записано в сокет целиком» -
+ * подтверждения от брокера нет. endPublish у PubSubClient 2.8 всегда
+ * возвращает 1, судить о результате по нему нельзя.
  *
  * @param mqtt_client клиент MQTT
  * @param topic строка с топиком
  * @param payload содержимое топика
- * @param mode режим публикации, режим по умолчанию PUBLISH_MODE_BIG
+ * @param retain флаг retain
+ * @return true сообщение ушло в сокет целиком
  */
-void publish(PubSubClient &mqtt_client, const String &topic, const String &payload, const int mode)
-{
-    switch (mode)
-    {
-    case PUBLISH_MODE_SIMPLE:
-        publish_simple(mqtt_client, topic, payload);
-        break;
-    case PUBLISH_MODE_CHUNKED:
-        publish_chunked(mqtt_client, topic, payload);
-        break;
-    case PUBLISH_MODE_BIG:
-    default:
-        publish_big(mqtt_client, topic, payload);
-    }
-}
-
-/**
- * @brief Публикация топика в MQTT по частям,
- * используется в случае если очень много информации
- *
- * @param mqtt_client клиент MQTT
- * @param topic строка с топиком
- * @param payload содержимое топика
- */
-void publish_chunked(PubSubClient &mqtt_client, 
-                     const String &topic, 
-                     const String &payload, 
-                     const unsigned int chunk_size)
+bool publish(PubSubClient &mqtt_client, const String &topic, const String &payload, bool retain)
 {
     LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
     LOG_INFO(F("MQTT: Publish Topic: ") << topic);
     LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
     LOG_DEBUG(F("MQTT: Payload: ") << payload);
+    LOG_INFO(F("MQTT: Retain: ") << retain);
 
-    unsigned int len = payload.length();
-    const uint8_t *buf = (const uint8_t *)payload.c_str();
+    const unsigned int len = payload.length();
+    if (!mqtt_client.beginPublish(topic.c_str(), len, retain))
+    {
+        LOG_ERROR(F("MQTT: Publish failed: no connection"));
+        return false;
+    }
 
-    if (mqtt_client.beginPublish(topic.c_str(), len, (bool)sett.mqtt_retain))
-    {
-        while (len > 0)
-        {
-            if (len >= chunk_size)
-            {
-                mqtt_client.write(buf, chunk_size);
-                buf += chunk_size;
-                len -= chunk_size;
-                LOG_INFO(F("MQTT: Sended chunk size: ") << chunk_size);
-            }
-            else
-            {
-                mqtt_client.write(buf, len);
-                LOG_INFO(F("MQTT: Sended chunk size: ") << len);
-                break;
-            }
-        }
-        if (mqtt_client.endPublish())
-        {
-            LOG_INFO(F("MQTT: Published succesfully"));
-        }
-        else
-        {
-            LOG_ERROR(F("MQTT: Publish failed"));
-        }
-    }
-    else
-    {
-        LOG_ERROR(F("MQTT: Client not connected."));
-    }
-}
+    const bool sent = mqtt_client.print(payload.c_str()) == len;
+    mqtt_client.endPublish();
 
-/**
- * @brief Публикация топика в MQTT (основной метод)
- * не использует промежуточных буферов,
- * сообщение может иметь размер больше 250 байт
- *
- * @param mqtt_client клиент MQTT
- * @param topic строка с топиком
- * @param payload содержимое топика
- */
-void publish_big(PubSubClient &mqtt_client, 
-                 const String &topic, 
-                 const String &payload)
-{
-    LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-    LOG_INFO(F("MQTT: Publish Topic: ") << topic);
-    LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
-    LOG_DEBUG(F("MQTT: Payload: ") << payload);
+    if (!sent)
+    {
+        LOG_ERROR(F("MQTT: Publish failed"));
+        return false;
+    }
 
-    unsigned int len = payload.length();
-    LOG_INFO(F("MQTT: Retain: ") << sett.mqtt_retain);
-    if (mqtt_client.beginPublish(topic.c_str(), len, (bool)sett.mqtt_retain))
-    {
-        if (mqtt_client.print(payload.c_str()) == len)
-        {
-            LOG_INFO(F("MQTT: Published succesfully"));
-        }
-        else
-        {
-            LOG_ERROR(F("MQTT: Publish failed"));
-        }
-
-        mqtt_client.endPublish();
-    }
-    else
-    {
-        LOG_ERROR(F("MQTT: Client not connected."));
-    }
-}
-/**
- * @brief Публикация топика в MQTT если сообщение меньше 250 символов
- *
- * @param mqtt_client клиент MQTT
- * @param topic строка с топиком
- * @param payload содержимое топика
- */
-void publish_simple(PubSubClient &mqtt_client, const String &topic, const String &payload)
-{
-    LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-    LOG_INFO(F("MQTT: Publish Topic: ") << topic);
-    LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
-    LOG_DEBUG(F("MQTT: Payload: ") << payload);
-
-    if (mqtt_client.connected())
-    {
-        if (mqtt_client.publish(topic.c_str(), payload.c_str(), (bool)sett.mqtt_retain))
-        {
-            LOG_INFO(F("MQTT: Published succesfully"));
-        }
-        else
-        {
-            LOG_ERROR(F("MQTT: Publish failed"));
-        }
-    }
-    else
-    {
-        LOG_ERROR(F("MQTT: Client not connected."));
-    }
+    LOG_INFO(F("MQTT: Published succesfully"));
+    return true;
 }
 
 /**
@@ -162,13 +53,16 @@ void publish_simple(PubSubClient &mqtt_client, const String &topic, const String
  *
  * @param mqtt_client клиент MQTT
  * @param topic строка с топиком
+ * @return true пустое сообщение ушло
  */
-void clear_retained(PubSubClient &mqtt_client, const String &topic)
+bool clear_retained(PubSubClient &mqtt_client, const String &topic)
 {
     LOG_INFO(F("MQTT: Remove retain message: ") << topic);
 
     if (!mqtt_client.publish(topic.c_str(), "", true))
     {
         LOG_ERROR(F("MQTT: Publish failed"));
+        return false;
     }
+    return true;
 }
