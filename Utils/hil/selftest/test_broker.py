@@ -87,6 +87,56 @@ def test_чужое_дерево_не_считается_топиком_устр
     assert watch.topics('homeassistant/'), 'соседнее дерево при этом видно'
 
 
+def test_удалённая_сущность_не_считается_топиком(watch) -> None:
+    """
+    Пустая нагрузка - это удаление, а не значение: так спецификация HA MQTT
+    Discovery убирает сущность, и так же брокер снимает удерживаемое сообщение.
+    Считать такой топик живым значит винить прошивку за честную уборку.
+    """
+    config = 'homeassistant/number/waterius-1/f0/config'
+
+    def дождаться(есть: bool) -> list[str]:
+        end = time.time() + 5
+        while time.time() < end:
+            topics = watch.topics('homeassistant/')
+            if (config in topics) == есть:
+                return topics
+            time.sleep(0.1)
+        return watch.topics('homeassistant/')
+
+    watch._client.publish(config, '{\"name\": \"f0\"}', retain=True).wait_for_publish(5)
+    assert config in дождаться(True)
+
+    watch._client.publish(config, '', retain=True).wait_for_publish(5)
+    assert config not in дождаться(False), 'удалённая сущность осталась топиком'
+
+
+def test_наблюдатель_переживает_обрыв_брокера(broker: MqttBroker, watch) -> None:
+    """
+    Подписка живёт внутри соединения, и клиент теряет её при обрыве.
+
+    paho переподключается сам и молча, поэтому без подписки в on_connect стенд
+    глох до конца прогона: устройство публиковало и писало в свой лог
+    «Published succesfully», а тест докладывал «в брокере пусто» и винил прошивку.
+    """
+    watch._client.publish(f'{TOPIC}/ch0', 'до', retain=False).wait_for_publish(5)
+    assert watch.wait_prefix(TOPIC, timeout=5) is not None
+
+    broker.stop()
+    broker.start()                     # тот же порт: клиент вернётся сам
+
+    end = time.time() + 20
+    while time.time() < end and watch._connects < 2:
+        time.sleep(0.2)
+    assert watch._connects >= 2, 'наблюдатель не переподключился'
+
+    watch.drain()                      # старое сообщение из очереди не спутать с новым
+    watch._client.publish(f'{TOPIC}/ch0', 'после', retain=False).wait_for_publish(5)
+    message = watch.wait_prefix(TOPIC, timeout=10)
+    assert message is not None and message.payload == 'после', (
+        'после обрыва наблюдатель не подписался заново и оглох')
+
+
 def test_флаг_retain_виден_только_новому_подписчику(watch) -> None:
     watch.publish_set('vac', 1, retain=True)
     live = watch.wait_prefix(TOPIC, timeout=5)
