@@ -13,6 +13,7 @@ from __future__ import annotations
 import pytest
 
 from .. import dut as dut_mod
+from ..dut import BUTTON_SETUP_MS, BUTTON_SHORT_MS
 
 
 class Clock:
@@ -105,7 +106,7 @@ def test_выдержка_идёт_до_нажатия(clock: Clock) -> None:
     до того, как линия прижата, - иначе ждать уже нечего.
     """
     было: list[str] = []
-    board, api = make(clock, settle=lambda: было.append(f'выдержка {clock.now}'))
+    board, api = make(clock, settle=lambda _: было.append(f'выдержка {clock.now}'))
 
     board.press_button()
 
@@ -119,3 +120,19 @@ def test_без_выдержки_нажатие_работает_как_преж
     """Стенд может не давать выдержки вовсе: тогда нажатие идёт сразу."""
     board, _ = make(clock)
     board.press_button()                # не должно упасть
+
+
+def test_выдержка_знает_длительность_нажатия(clock: Clock) -> None:
+    """
+    Длинным нажатием открывают портал, коротким заказывают сеанс, и стенду
+    надо их различать: приговор «не проснулся за 2 с» относится только ко
+    второму. Раньше выдержка не знала, какое нажатие идёт, и стенд мерил
+    двумя секундами открытие портала - так падал test_E19.
+    """
+    длительности: list[int] = []
+    board, _ = make(clock, settle=длительности.append)
+
+    board.press_button()
+    board.hold_button()
+
+    assert длительности == [BUTTON_SHORT_MS, BUTTON_SETUP_MS], длительности
