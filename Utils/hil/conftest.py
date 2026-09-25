@@ -468,8 +468,17 @@ def device_baseline(request: pytest.FixtureRequest) -> None:
     Тесты портала исключены: устройство там в режиме настройки, обычного
     сеанса с посылкой не будет, и перенастройка просто не дождётся его.
     """
-    if ('stand' not in request.keywords or 'portal' in request.keywords
-            or not request.config.getoption('--stand')):
+    if 'stand' not in request.keywords or not request.config.getoption('--stand'):
+        return
+    if 'portal' in request.keywords:
+        # Базу тесту портала ставить нечем, а своё требование он обязан
+        # получить: иначе маркер обещает предусловие и молча его не даёт -
+        # test_E19 просил датчик протечки на входе 0, получал механический
+        # счётчик и семь минут ждал тревогу, которой неоткуда взяться
+        свои = needs(request.node)
+        if свои:
+            request.getfixturevalue('firmware_versions')
+            request.getfixturevalue('stand').ensure_requirements(свои, only=True)
         return
     request.getfixturevalue('firmware_versions')
     if 'reset' in request.keywords:

@@ -35,7 +35,7 @@ from .constants import (
     WATER_COLD,
     WATER_HOT,
 )
-from .dut import Dut
+from .dut import BUTTON_SHORT_MS, Dut
 from .logwatch import MANUAL_TRANSMIT_MODE, WAKE_SESSION, LogWatcher, Session
 from .metf import Metf
 from .metf import check as metf_check
@@ -321,7 +321,7 @@ class Stand:
                     if self.log.headless_pending else '')
         assert session is not None, (
             f'сеанс не доиграл за {timeout:.0f} с (ждали mode={mode}): лог начался, '
-            f'но строки ухода в сон в нём нет{headless}\n'
+            f'но строки ухода в сон в нём нет{headless}{self.log.stuck_note()}\n'
             + '\n'.join(self.log.lines[-40:]))
 
         while True:
@@ -419,7 +419,7 @@ class Stand:
             f'ожидали тишину {timeout:.0f} с (mode={mode}), но сеанс состоялся\n'
             + '\n'.join(self.log.lines[-40:]))
 
-    def settle_before_press(self) -> None:
+    def settle_before_press(self, msec: int = BUTTON_SHORT_MS) -> None:
         """
         Не жать кнопку вплотную к концу сеанса.
 
@@ -438,8 +438,13 @@ class Stand:
         if left > 0:
             logger.info(f'выдержка перед нажатием: {left:.1f} с после сеанса')
             time.sleep(left)
-        # Нажатие заказывает сеанс, и ждать его надо иначе: см. wait_session
-        self._press_at = time.time()
+        # Сеанс заказывает только короткое нажатие, и ждать его надо иначе -
+        # см. wait_session. Длинным открывают портал: сеанса оттуда не будет,
+        # ЕСП уходит в режим настройки, и мерить её двумя секундами нельзя.
+        # Именно так падал test_E19: портал открыт длинным нажатием, а следом
+        # тест ждал тревожный сеанс - и получал приговор про кнопку
+        if msec <= BUTTON_SHORT_MS:
+            self._press_at = time.time()
 
     def _remember(self, session: Session) -> None:
         """Запомнить то, что устройство рассказало о себе в этом сеансе."""
@@ -934,7 +939,8 @@ class Stand:
         want.update(extra or {})
         return want
 
-    def ensure_requirements(self, extra: Mapping[str, Any] | None = None) -> None:
+    def ensure_requirements(self, extra: Mapping[str, Any] | None = None,
+                            only: bool = False) -> None:
         """
         Привести устройство к требованиям теста, если оно им не отвечает.
 
@@ -944,11 +950,17 @@ class Stand:
         Поднятую тревогу снимаем до настройки: требования возвращают входам тип
         NAMUR, а датчик протечки опрашивается только в своём типе - отпустить
         вход после смены типа уже некому, и тревога вернулась бы.
+
+        `only` - выставить ровно то, что просил тест, без общей базы. Так идут
+        тесты портала: базу им ставить нечем, зато своё требование они обязаны
+        получить. Молча пропущенное требование хуже отсутствующего - тест
+        проверяет не то, что написано в маркере.
         """
         if self.state is None:
             self.read_state()
         self.clear_alarms()
-        diff = unmet(self.state or {}, self.requirements(extra))
+        want = dict(extra or {}) if only else self.requirements(extra)
+        diff = unmet(self.state or {}, want)
         if not diff:
             return
         logger.info(f'настройка под требования теста: {diff}')

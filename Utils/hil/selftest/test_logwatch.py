@@ -635,3 +635,50 @@ def test_переполнение_буфера_платы_валит_тест() 
 
     with pytest.raises(AssertionError, match='приёмный буфер UART'):
         watcher.wait_session(timeout=1.0)
+
+
+class StumblingApi(FakeApi):
+    """METF, которая спотыкается на первых чтениях, а потом отвечает."""
+
+    def __init__(self, text: str, промахов: int) -> None:
+        super().__init__(text)
+        self._промахов = промахов
+
+    def serial_read(self) -> str:
+        if self._промахов > 0:
+            self._промахов -= 1
+            time.sleep(0.4)          # чтение ждёт ответа и не дожидается
+            raise TimeoutError('нет ответа')
+        return super().serial_read()
+
+
+def test_осечка_чтения_не_отнимает_время_у_устройства() -> None:
+    """
+    Окно приговора - две секунды, одно чтение ждёт секунду и повторяется:
+    одна заминка связи съедала окно целиком, и стенд объявлял себя слепым на
+    исправном устройстве. Теперь время неудачных чтений ему возвращается.
+    """
+    watcher = LogWatcher(StumblingApi(through_ring(SESSION_ALARM), промахов=2))
+    assert watcher.wait_start(1.0) is True
+
+
+def test_оборванный_лог_называет_последнюю_строку() -> None:
+    """
+    Прошивка внутри сетевого вызова молчит, и оборванный лог со стороны не
+    отличить от потерянного. Отличает последняя строка и время с неё.
+    """
+    watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM[:5])))
+    watcher.poll()
+    watcher._line_at = time.time() - 130      # молчит дольше, чем живёт питание
+
+    note = watcher.stuck_note()
+    assert 'Устройство молчит 130 с' in note, note
+    assert 'attiny держит питание' in note, note
+    assert 'обесточена' in note, note
+
+
+def test_свежий_лог_приписки_не_рождает() -> None:
+    """Пока строки идут, объяснять нечего - приписка только мешала бы."""
+    watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM[:5])))
+    watcher.poll()
+    assert watcher.stuck_note() == ''

@@ -34,7 +34,13 @@ from .constants import (
     PLANNED_PERIOD_MIN,
     PLANNED_WAIT_S,
 )
-from .logwatch import MANUAL_TRANSMIT_MODE, SEND_NO_CONNECTION, SEND_OK, TRANSMIT_MODE
+from .logwatch import (
+    MANUAL_TRANSMIT_MODE,
+    SEND_NO_CONNECTION,
+    SEND_OK,
+    TRANSMIT_MODE,
+    Session,
+)
 
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand  # а сбор тестов должен работать без них
@@ -81,6 +87,19 @@ def config_topic(topics: list[str], entity_type: str, entity_id: str) -> str | N
 def configs_named(topics: list[str], names: tuple[str, ...]) -> list[str]:
     """Топики конфигов сущностей с такими именами, любого типа."""
     return [topic for topic in topics for name in names if topic.endswith(f'/{name}/config')]
+
+
+def readings_publishes(session: Session, root: str) -> list[tuple[str, int, bool]]:
+    """
+    Публикации показаний из лога сеанса - без дерева автообнаружения.
+
+    Разделять обязательно: конфиги сущностей прошивка публикует удерживаемыми
+    всегда (`ha/publish_discovery.cpp`), а `mqtt_retain` управляет только
+    показаниями (`ha/publish_data.cpp`). Мерить их одной меркой значит винить
+    прошивку за исполнение спецификации HA.
+    """
+    return [(topic, size, retain) for topic, size, retain in session.mqtt_published
+            if topic == root or topic.startswith(f'{root}/')]
 
 
 @DISCOVERY
@@ -262,7 +281,17 @@ def test_I7_retain_flag(stand: Stand) -> None:
     stand.dut.press_button()
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    assert 'MQTT: Retain: 1' in session.text
+    # Флаг берём из строки публикации: с одной строкой на публикацию прошивка
+    # печатает его там же, где топик и размер (`ha/publish.cpp`). Смотрим только
+    # дерево показаний: конфиги автообнаружения прошивка держит удерживаемыми
+    # всегда (`ha/publish_discovery.cpp`, retain=true), и настройка им не указ -
+    # так требует спецификация HA, иначе интеграция не восстановится после
+    # перезапуска
+    показания = readings_publishes(session, stand.mqtt_root)
+    assert показания, f'в логе нет публикаций показаний:\n{session.text}'
+    без_флага = [topic for topic, _, retain in показания if not retain]
+    assert not без_флага, f'показания опубликованы без флага retain: {без_флага}'
+
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, \
         'устройство ничего не опубликовало'
 
@@ -294,7 +323,12 @@ def test_I7b_no_retain(stand: Stand) -> None:
     stand.dut.press_button()
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    assert 'MQTT: Retain: 0' in session.text
+    показания = readings_publishes(session, stand.mqtt_root)
+    assert показания, f'в логе нет публикаций показаний:\n{session.text}'
+    с_флагом = [topic for topic, _, retain in показания if retain]
+    assert not с_флагом, (
+        f'при выключенном retain показания всё же удерживаются: {с_флагом}')
+
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, \
         'устройство ничего не опубликовало'
 

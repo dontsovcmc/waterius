@@ -69,7 +69,7 @@ class Dut:
 
     def __init__(self, api: Any, button_pin: int, ch0_pin: int, ch1_pin: int,
                  reset_pin: int, idle: Callable[[], None] | None = None,
-                 settle: Callable[[], None] | None = None) -> None:
+                 settle: Callable[[int], None] | None = None) -> None:
         self.api = api
         self.button_pin = button_pin
         self.reset_pin = reset_pin
@@ -146,7 +146,7 @@ class Dut:
         прижатой линией, а это ровно то, что человеку и надо увидеть.
         """
         if self._settle is not None:
-            self._settle()
+            self._settle(msec)
         self._led(True)
         self._low(self.button_pin, msec)
         self._led(False)
