@@ -312,9 +312,17 @@ class Stand:
             timeout = min(timeout, SESSION_TAIL_S)
 
         session = self.log.wait_session(timeout, mode)
+        # Сеанс без начала ждущий конкретный режим не забирает: опознать его
+        # нечем. Но и молчать о нём нельзя - иначе отказ врёт, будто устройство
+        # не досказало сеанс, хотя оно его досказало и ушло спать
+        headless = ('. При этом в логе лежит конец сеанса без начала: метка '
+                    '`Startup mode:` не доехала, и опознать его режим нечем - '
+                    'смотрите overruns и dropped в /read/stat платы'
+                    if self.log.headless_pending else '')
         assert session is not None, (
             f'сеанс не доиграл за {timeout:.0f} с (ждали mode={mode}): лог начался, '
-            f'но строки ухода в сон в нём нет\n' + '\n'.join(self.log.lines[-40:]))
+            f'но строки ухода в сон в нём нет{headless}\n'
+            + '\n'.join(self.log.lines[-40:]))
 
         while True:
             payload = self.receiver.wait_payload(timeout=1.0)

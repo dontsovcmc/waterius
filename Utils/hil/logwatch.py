@@ -242,6 +242,9 @@ class Session:
     # wait_session: без этого числа тест, недосчитавшийся посылки, винит
     # прошивку в том, что сделал эфир.
     broken: int = 0
+    # Начало сеанса не доехало: собран по строке ухода в сон. Режим у такого
+    # сеанса неизвестен - угадывать его нечем
+    headless: bool = False
 
     # --- разобранные поля ---
 
@@ -571,9 +574,16 @@ class LogWatcher:
 
     # --- потери лога ---
 
-    def _dropped(self) -> int | None:
+    def _losses(self) -> tuple[int, int] | None:
         """
-        Счётчик вытесненных строк с платы; None - счётчика нет.
+        Счётчики потерь платы: вытеснено кольцом и переполнений буфера UART.
+
+        Это разные дыры. Первая - читатель не поспел за кольцом. Вторая раньше:
+        `loop()` платы не поспел за драйвером UART, и байты не дошли даже до
+        кольца - считать ему нечего, и `dropped` при такой потере равен нулю
+        (METF, протокол 13).
+
+        Ниже - про оба.
 
         METF считает потери с последнего `flush()`, то есть значение
         накопительное, и смысл имеет только его прирост за окно наблюдения.
@@ -584,7 +594,8 @@ class LogWatcher:
         if self._can_stat is False:
             return None
         try:
-            dropped = int(self.api.serial_stat()['dropped'])
+            stat = self.api.serial_stat()
+            losses = int(stat['dropped']), int(stat.get('overruns', 0))
         except AttributeError:
             logger.warning('metf_python_client 0.3: потери лога не проверяются, '
                            'нужен 0.4 с serial_stat()')
@@ -602,14 +613,14 @@ class LogWatcher:
                 logger.warning(f'METF не отдал /read/stat в этот раз: {err}')
             return None
         self._can_stat = True
-        return dropped
+        return losses
 
-    def loss_mark(self) -> int | None:
-        """Снимок счётчика перед ожиданием - опора для `assert_no_loss`."""
+    def loss_mark(self) -> tuple[int, int] | None:
+        """Снимок счётчиков перед ожиданием - опора для `assert_no_loss`."""
         self._mark_at = time.time()
-        return self._dropped()
+        return self._losses()
 
-    def assert_no_loss(self, mark: int | None, context: str) -> None:
+    def assert_no_loss(self, mark: tuple[int, int] | None, context: str) -> None:
         """
         Убедиться, что за окно наблюдения кольцо METF ничего не выбросило.
 
@@ -619,14 +630,20 @@ class LogWatcher:
         """
         if mark is None:
             return
-        now = self._dropped()
+        now = self._losses()
         if now is None:
             return
-        lost = now - mark
+        lost, overruns = now[0] - mark[0], now[1] - mark[1]
         assert lost <= 0, (
             f'METF потерял {lost} строк лога за {context}: кольцо переполнилось, '
             f'и лог неполон - утверждать по нему нечего. Читайте чаще или '
             f'соберите прошивку платы с большим ASB_BUFFER_BYTES'
+            f'{self._why_lost()}')
+        assert overruns <= 0, (
+            f'METF {overruns} раз переполнила приёмный буфер UART за {context}: '
+            f'байты не дошли даже до кольца, поэтому в логе дыра, а счётчик '
+            f'кольца о ней не знает. Первой пропадает голова сеанса - она же '
+            f'самый плотный залп. Ищите, чем занят loop() платы'
             f'{self._why_lost()}')
 
     def _why_lost(self) -> str:
@@ -794,9 +811,47 @@ class LogWatcher:
                 m = RE_MODE.search(line)
                 if m and (mode is None or int(m.group(1)) == mode):
                     return False
+            # Сеанс без начала - тоже сеанс. Не заметить его здесь значит
+            # позеленеть на утверждении о тишине, которой не было
+            if mode is None and self.headless_pending:
+                logger.warning('тишины не было: в логе конец сеанса без начала')
+                return False
             time.sleep(poll_interval)
         self.assert_no_loss(mark, f'ожидание тишины {timeout:.0f} с')
         return True
+
+    @property
+    def headless_pending(self) -> bool:
+        """В буфере лежит конец сеанса, а начала нет."""
+        return (any(SESSION_END in line for line in self.lines)
+                and not any(RE_MODE.search(line) for line in self.lines))
+
+    def _take_headless(self, mode: int | None) -> Session | None:
+        """
+        Сеанс, у которого не доехало начало.
+
+        `Startup mode:` печатается в самом плотном месте лога - полсотни строк
+        за треть секунды сразу после загрузки, - и пропадает первым. Пока такой
+        сеанс не считался сеансом вовсе, стенд ждал его до потолка и выносил
+        приговор «сеанс не доиграл», хотя в буфере лежал целый сеанс со строкой
+        ухода в сон: устройство отработало за восемь секунд и спало ещё сорок,
+        пока стенд ждал метку, которая уже не придёт (прогон 25 сентября 2026).
+
+        Режим такого сеанса неизвестен, и брать его неоткуда: в логе метка одна.
+        Поэтому ожидание конкретного режима он не закрывает - тест дождётся
+        своего сеанса или скажет, что был сеанс без начала.
+        """
+        if mode is not None:
+            return None
+        end = next((i for i, line in enumerate(self.lines)
+                    if SESSION_END in line), None)
+        if end is None:
+            return None
+        logger.warning('начало сеанса не дошло: сеанс собран по строке ухода в '
+                       'сон, режим неизвестен')
+        session = Session(lines=self.lines[:end + 1], headless=True)
+        del self.lines[:end + 1]
+        return session
 
     def _take_session(self, mode: int | None) -> Session | None:
         start = None
@@ -817,7 +872,7 @@ class LogWatcher:
                 start = i
                 break
         if start is None:
-            return None
+            return self._take_headless(mode)
 
         end = self._find_end(start)
         if end is None:

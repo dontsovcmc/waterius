@@ -573,3 +573,65 @@ def test_слепой_стенд_не_судит_о_пробуждении() -> 
     watcher = LogWatcher(DeafApi(''))
     with pytest.raises(AssertionError, match='ослеп'):
         watcher.wait_start(0.3)
+
+
+# --- сеанс, у которого не доехало начало ---
+
+# То же пробуждение, но без метки `Startup mode:` - ровно то, что видел стенд
+# 25 сентября 2026: устройство отработало и ушло спать, а строка начала
+# потерялась в приёмном буфере UART платы, до кольца
+БЕЗ_НАЧАЛА = SESSION_ALARM[1:]
+
+
+class OverrunApi(FakeApi):
+    """METF, у которой растёт счётчик переполнений буфера UART."""
+
+    def __init__(self, text: str, overruns: list[int]) -> None:
+        super().__init__(text)
+        self._overruns = list(overruns)
+
+    def serial_stat(self) -> dict:
+        value = (self._overruns.pop(0) if len(self._overruns) > 1
+                 else self._overruns[0])
+        return {'lines': 0, 'dropped': 0, 'overruns': value, 'baud': 115200,
+                'capacity': 511, 'line_len': 128, 'bytes': 65536}
+
+
+def test_сеанс_без_начала_всё_равно_сеанс() -> None:
+    """
+    Раньше стенд ждал метку начала до потолка и винил устройство, хотя в буфере
+    лежал целый сеанс со строкой ухода в сон.
+    """
+    session = LogWatcher(FakeApi(through_ring(БЕЗ_НАЧАЛА))).wait_session(timeout=2.0)
+
+    assert session is not None, 'сеанс без начала снова не собрался'
+    assert session.headless
+    assert session.mode is None, 'режим взять неоткуда - угадывать его нечем'
+    assert 'Going to sleep' in session.text
+
+
+def test_сеанс_без_начала_не_закрывает_ожидание_режима() -> None:
+    """
+    Опознать его нечем, поэтому выдать за тревожный нельзя: тест про тревогу
+    позеленел бы на плановом сеансе.
+    """
+    watcher = LogWatcher(FakeApi(through_ring(БЕЗ_НАЧАЛА)))
+    assert watcher.wait_session(timeout=1.0, mode=ALARM_MODE) is None
+    assert watcher.headless_pending, 'улика для отказа потерялась'
+
+
+def test_сеанс_без_начала_ломает_утверждение_о_тишине() -> None:
+    """Не заметить его здесь значит позеленеть на тишине, которой не было."""
+    watcher = LogWatcher(FakeApi(through_ring(БЕЗ_НАЧАЛА)))
+    assert watcher.expect_no_session(timeout=1.0) is False
+
+
+def test_переполнение_буфера_платы_валит_тест() -> None:
+    """
+    Дыра, которой не видит счётчик кольца: байты не дошли даже до него.
+    Молчать о ней нельзя - именно она съедает начало сеанса.
+    """
+    watcher = LogWatcher(OverrunApi(through_ring(SESSION_ALARM), [0, 3]))
+
+    with pytest.raises(AssertionError, match='приёмный буфер UART'):
+        watcher.wait_session(timeout=1.0)
