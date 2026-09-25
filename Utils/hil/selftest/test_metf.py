@@ -200,7 +200,7 @@ class FakeBoard:
             hook(answer)
         return answer
 
-    def __init__(self, version: int = 12, **wifi: object) -> None:
+    def __init__(self, version: int = metf.ACK_PROTOCOL, **wifi: object) -> None:
         self.version = version
         self.hooks: dict[str, list] = {'response': []}
         self.uptimes: list[int] = []
@@ -279,7 +279,7 @@ def test_досмотр_пропускает_плату_в_домашней_се
         monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
     """Здоровая плата не должна ни падать, ни жаловаться."""
     summary = inspected(monkeypatch, FakeBoard())
-    assert 'протокол 12' in summary and 'обрывы: none' in summary
+    assert f'протокол {metf.ACK_PROTOCOL}' in summary and 'обрывы: none' in summary
     assert warnings == []
 
 
@@ -312,7 +312,7 @@ def test_поднятая_точка_платы_видна_с_причиной(
     assert any('dropped' in line for line in warnings), warnings
 
 
-@pytest.mark.parametrize('version', [8, 11])
+@pytest.mark.parametrize('version', [8, 11, 12])
 def test_прошивка_младше_двенадцатой_к_прогону_не_допускается(
         monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str],
         version: int) -> None:
@@ -438,7 +438,7 @@ def test_ответ_без_аптайма_не_ломает_клиента(
     plate.uptimes = []              # ни один ответ аптайма не несёт
     api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
 
-    assert api.version() == 12
+    assert api.version() == metf.ACK_PROTOCOL
     assert api.reboots == 0 and api.uptime_ms is None
 
 
