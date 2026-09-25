@@ -542,3 +542,34 @@ def test_молчащий_лог_не_обвиняет_прошивку() -> Non
 
     note = Session(lines=[fw('MQTT: Connected.')]).mqtt_note
     assert 'ничего не сказало' in note and 'старше' in note
+
+
+class DeafApi(FakeApi):
+    """METF, которая не отвечает вовсе: стенд слеп, а не устройство молчит."""
+
+    def serial_read(self) -> str:
+        raise TimeoutError('нет ответа')
+
+
+def test_молчание_после_нажатия_видно_сразу() -> None:
+    """
+    По кнопке устройство просыпается сразу, поэтому пустой UART - готовый
+    ответ, а не повод ждать дальше.
+    """
+    watcher = LogWatcher(FakeApi(''))
+    assert watcher.wait_start(0.3) is False
+
+
+def test_первые_строки_прекращают_ожидание() -> None:
+    watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM)))
+    assert watcher.wait_start(5.0) is True
+
+
+def test_слепой_стенд_не_судит_о_пробуждении() -> None:
+    """
+    Пока METF не отдала ни одного чтения, о Ватериусе не известно ничего:
+    «не проснулся» здесь было бы приговором наугад.
+    """
+    watcher = LogWatcher(DeafApi(''))
+    with pytest.raises(AssertionError, match='ослеп'):
+        watcher.wait_start(0.3)
