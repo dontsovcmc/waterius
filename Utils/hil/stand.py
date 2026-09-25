@@ -939,7 +939,8 @@ class Stand:
         want.update(extra or {})
         return want
 
-    def ensure_requirements(self, extra: Mapping[str, Any] | None = None) -> None:
+    def ensure_requirements(self, extra: Mapping[str, Any] | None = None,
+                            only: bool = False) -> None:
         """
         Привести устройство к требованиям теста, если оно им не отвечает.
 
@@ -949,11 +950,17 @@ class Stand:
         Поднятую тревогу снимаем до настройки: требования возвращают входам тип
         NAMUR, а датчик протечки опрашивается только в своём типе - отпустить
         вход после смены типа уже некому, и тревога вернулась бы.
+
+        `only` - выставить ровно то, что просил тест, без общей базы. Так идут
+        тесты портала: базу им ставить нечем, зато своё требование они обязаны
+        получить. Молча пропущенное требование хуже отсутствующего - тест
+        проверяет не то, что написано в маркере.
         """
         if self.state is None:
             self.read_state()
         self.clear_alarms()
-        diff = unmet(self.state or {}, self.requirements(extra))
+        want = dict(extra or {}) if only else self.requirements(extra)
+        diff = unmet(self.state or {}, want)
         if not diff:
             return
         logger.info(f'настройка под требования теста: {diff}')
