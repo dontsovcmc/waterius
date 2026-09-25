@@ -262,7 +262,13 @@ def test_I7_retain_flag(stand: Stand) -> None:
     stand.dut.press_button()
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    assert 'MQTT: Retain: 1' in session.text
+    # Флаг берём из строки публикации: с одной строкой на публикацию прошивка
+    # печатает его там же, где топик и размер (`ha/publish.cpp`)
+    published = session.mqtt_published
+    assert published, f'в логе нет ни одной публикации:\n{session.text}'
+    без_флага = [topic for topic, _, retain in published if not retain]
+    assert not без_флага, f'опубликовано без флага retain: {без_флага}'
+
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, \
         'устройство ничего не опубликовало'
 
@@ -294,7 +300,11 @@ def test_I7b_no_retain(stand: Stand) -> None:
     stand.dut.press_button()
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    assert 'MQTT: Retain: 0' in session.text
+    published = session.mqtt_published
+    assert published, f'в логе нет ни одной публикации:\n{session.text}'
+    с_флагом = [topic for topic, _, retain in published if retain]
+    assert not с_флагом, f'при выключенном retain флаг всё же взведён: {с_флагом}'
+
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, \
         'устройство ничего не опубликовало'
 

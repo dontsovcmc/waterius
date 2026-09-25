@@ -321,7 +321,7 @@ class Stand:
                     if self.log.headless_pending else '')
         assert session is not None, (
             f'сеанс не доиграл за {timeout:.0f} с (ждали mode={mode}): лог начался, '
-            f'но строки ухода в сон в нём нет{headless}\n'
+            f'но строки ухода в сон в нём нет{headless}{self.log.stuck_note()}\n'
             + '\n'.join(self.log.lines[-40:]))
 
         while True:
