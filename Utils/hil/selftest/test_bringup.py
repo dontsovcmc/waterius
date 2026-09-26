@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from ..conftest import bring_up
+from ..conftest import bring_up, preflight
 from ..test_wifi import other_channel
 
 
@@ -51,6 +51,18 @@ def test_беда_дважды_подряд_не_прощается() -> None:
     # Повтор один: если стенд слеп и во второй раз, прогон бессмыслен
     with pytest.raises(AssertionError, match='ослеп'):
         bring_up(падать(2, 'стенд ослеп: METF ни разу не отдала лог'), 'сеть стенда')
+
+
+def test_мёртвое_устройство_останавливает_прогон() -> None:
+    # Ошибку сессионной фикстуры pytest повторяет в каждом тесте: без остановки
+    # это 91 одинаковый ERROR вместо одной строки о причине
+    with pytest.raises(pytest.exit.Exception, match='Attiny not found'):
+        preflight(падать(9, 'ЕСП жива, но Attiny not found.'), 'опрос устройства')
+
+
+def test_осечка_связи_на_подъёме_прогон_не_уносит() -> None:
+    assert preflight(падать(1, 'стенд ослеп: METF ни разу не отдала лог'),
+                     'сеть стенда') == 'поднялся'
 
 
 @dataclass(frozen=True)
