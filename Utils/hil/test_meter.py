@@ -16,6 +16,7 @@ import pytest
 
 from . import portal as portal_mod
 from .constants import BASE_FACTOR, COLD, ELECTRO, ELECTRONIC, ELECTRONIC_HIGH, NAMUR
+from .dut import IMPULSE_GAP_S
 from .logwatch import MANUAL_TRANSMIT_MODE
 
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
@@ -404,3 +405,50 @@ def test_D10_input_type_applies_without_leaving_portal(stand: Stand) -> None:
         time.sleep(SETTLE_S)
         assert input_impulses(board) == before + 1, (
             'после возврата к механическому длинное замыкание не считается')
+
+
+# Замыкание, внутрь которого стенд успевает подать импульс соседнему входу.
+# Двух секунд хватает с запасом: запрос к плате стоит десятки миллисекунд, а на
+# шаткой связи - до двух секунд, и это окно стенд проверяет по своим часам
+HOLD_MS = 2000
+
+# Столько раз повторяем перекрытие. Между замыканиями механического входа нужна
+# пауза IMPULSE_GAP_S: пока импульс не кончился, следующее замыкание не
+# считается, и это же даёт электронному входу пережить мёртвое время в такт
+TOGETHER = 3
+
+
+@pytest.mark.needs(ctype0=NAMUR, ctype1=ELECTRONIC, f0=BASE_FACTOR, f1=BASE_FACTOR)
+def test_D11_two_input_types_count_together(stand: Stand) -> None:
+    """
+    Входы разных типов считают каждый своё и не мешают друг другу.
+
+    Типы обслуживает разный код (`Attiny85/src/counter.h`, is_impuls), но живут
+    они в одном цикле и на одном прерывании: `ISR(PCINT0_vect)` зовёт `on_front`
+    у обоих счётчиков (`Attiny85/src/main.cpp`), а механический вход посреди
+    опроса встаёт на ~50 мс переспроса и включает АЦП. Импульс электронного
+    входа длиной в миллисекунду обязан это пережить, а механический - не
+    набрать лишнего от чужих фронтов.
+
+    Правила по отдельности проверяют хостовые тесты (`test_discrete`,
+    `test_electronic`); здесь важно только одновременное воздействие, а его
+    даёт стенд: выдержку каждому выводу плата отмеряет своим слотом.
+    """
+    stand.reset_observers()
+
+    for i in range(TOGETHER):
+        with stand.dut.holding(channel=0, msec=HOLD_MS) as released:
+            stand.dut.pulse(channel=1, count=1, width_ms=SHORT_PULSE_MS)
+            assert time.time() < released, (
+                f'перекрытие {i + 1}: импульс электронного входа ушёл позже, '
+                'чем механический вход отпустили - опыта не было. Это про '
+                'стенд, а не про прошивку: связь с платой медленнее окна')
+        time.sleep(IMPULSE_GAP_S)     # механическому входу - конец импульса
+
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
+
+    # Механический вход: одно замыкание - один импульс, сколько бы опросов оно
+    # ни накрыло; электронный - по импульсу на каждый фронт
+    session.assert_delta(channel=0, liters=TOGETHER * BASE_FACTOR)
+    session.assert_delta(channel=1, liters=TOGETHER * BASE_FACTOR)

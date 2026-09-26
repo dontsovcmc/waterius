@@ -106,7 +106,8 @@ class Dut:
 
     # --- базовое воздействие ---
 
-    def _board_pulse(self, pin: int, value: int, msec: int) -> bool:
+    def _board_pulse(self, pin: int, value: int, msec: int,
+                     wait: bool = True) -> bool:
         """
         Выдержка на самой плате: `POST /pulse` (protocol v4).
 
@@ -123,7 +124,7 @@ class Dut:
         pulse = getattr(self.api, 'pulse', None)
         if pulse is None:
             return False
-        pulse(pin, value, msec)
+        pulse(pin, value, msec, wait=wait)
         return True
 
     def _low(self, pin: int, msec: int) -> None:
@@ -184,6 +185,33 @@ class Dut:
             self._low(pin, width_ms)
             if i != count - 1:
                 time.sleep(gap)
+
+    @contextmanager
+    def holding(self, channel: int, msec: int) -> Iterator[float]:
+        """
+        Замкнуть вход и не ждать: внутри контекста стенд воздействует на другой
+        вход, пока этот замкнут. Так проверяется, что типы входов не мешают друг
+        другу - выдержку каждому выводу плата отмеряет своим слотом.
+
+        Выдаёт момент, когда линию отпустят: воздействие обязано уложиться в
+        окно, иначе перекрытия не было и утверждать по опыту нечего. Выход из
+        контекста досыпает остаток - иначе второй импульс придёт на ещё занятый
+        вывод и плата откажет кодом 409.
+        """
+        pin = self._ch[channel]
+        released = time.time() + msec / 1000.0
+        by_board = self._board_pulse(pin, LOW, msec, wait=False)
+        if not by_board:
+            self.api.pinMode(pin, OUTPUT)
+            self.api.digitalWrite(pin, LOW)
+        try:
+            yield released
+        finally:
+            delay = released - time.time()
+            if delay > 0:
+                time.sleep(delay)
+            if not by_board:
+                self.api.pinMode(pin, INPUT)
 
     def pulses(self, channel: int, count: int, gap: float,
                width_ms: int = IMPULSE_WIDTH_MS) -> None:

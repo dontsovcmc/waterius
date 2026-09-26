@@ -136,3 +136,62 @@ def test_выдержка_знает_длительность_нажатия(clo
     board.hold_button()
 
     assert длительности == [BUTTON_SHORT_MS, BUTTON_SETUP_MS], длительности
+
+
+class PulsingApi(FakeApi):
+    """Плата, умеющая `POST /pulse`: выдержку отмеряет она сама."""
+
+    def __init__(self, clock: Clock) -> None:
+        super().__init__(clock)
+        self.pulses: list[tuple[int, int, bool]] = []   # вывод, мс, ждали ли конца
+
+    def pulse(self, pin: int, value: int, duration_ms: int,
+              wait: bool = True) -> None:
+        self.pulses.append((pin, duration_ms, wait))
+        if wait:
+            self.clock.sleep(duration_ms / 1000.0)
+
+
+def test_удержание_не_ждёт_конца_замыкания(clock: Clock) -> None:
+    """
+    Внутри контекста время стоять не должно: там воздействуют на другой вход,
+    пока этот замкнут.
+    """
+    api = PulsingApi(clock)
+    board = dut_mod.Dut(api, button_pin=1, ch0_pin=2, ch1_pin=3, reset_pin=4)
+    board._led_ok = False
+
+    начало = clock.now
+    with board.holding(channel=0, msec=2000) as отпустят:
+        assert clock.now == начало, 'удержание съело время, которое нужно опыту'
+        assert clock.now < отпустят, 'окно замыкания кончилось до воздействия'
+        board.pulse(channel=1, count=1, width_ms=1)
+
+    assert api.pulses[0] == (2, 2000, False), api.pulses
+    assert api.pulses[1] == (3, 1, True), api.pulses
+
+
+def test_удержание_досыпает_остаток(clock: Clock) -> None:
+    """
+    Выход из контекста обязан дождаться конца выдержки: иначе следующее
+    замыкание придёт на ещё занятый вывод, и плата откажет кодом 409.
+    """
+    api = PulsingApi(clock)
+    board = dut_mod.Dut(api, button_pin=1, ch0_pin=2, ch1_pin=3, reset_pin=4)
+    board._led_ok = False
+
+    начало = clock.now
+    with board.holding(channel=0, msec=2000):
+        clock.sleep(0.5)
+
+    assert clock.now == начало + 2.0, f'вышли на {clock.now - начало} с'
+
+
+def test_удержание_без_слотов_платы_держит_линию_само(clock: Clock) -> None:
+    """Старому клиенту без `/pulse` линию прижимает стенд и сам отпускает."""
+    board, api = make(clock)          # FakeApi без метода pulse
+
+    with board.holding(channel=0, msec=2000):
+        assert api.lows, 'линию не прижали'
+
+    assert clock.now == 1002.0
