@@ -22,6 +22,17 @@ TinyDebugSerial mySerial;
 /*
 Версии прошивок
 
+46 - 2026.09.26 - dontsov
+	1. Такт опроса входов в сеансе отмеряется часами, а не оборотами цикла.
+	   Пока ЕСП на связи, attiny не спит, и 250 мс складывались из 250 оборотов
+	   по delayMicroseconds(1000) - а оборот стоит дороже миллисекунды: в нём
+	   чтение АЦП, обмен с ЕСП по прерыванию и 50 мс подтверждения импульса, на
+	   которые цикл встаёт целиком. Период выходил «250 мс плюс сколько
+	   получится», и замыкание, живущее около 350 мс, могло не получить
+	   подтверждения: замер стенда дал девять импульсов из десяти. Теперь такт
+	   объявляется по millis() - тем же часам, по которым в этом цикле уже
+	   отмеряется выдержка питания ЕСП.
+
 45 - 2026.09.21 - dontsov
 	1. Ватериус-2: нажатие кнопки больше не снимает тревоги в самой attiny.
 	   Кнопка там одна на два действия, а длительность нажатия видит только
@@ -589,18 +600,26 @@ void apply_counter_types()
 	interrupts();
 }
 
-void counting_1ms(uint8_t &delay_loop_count)
+/*
+Опрос входов, пока ЕСП на связи: такт отмеряется часами, а не оборотами цикла.
+
+Оборот стоит дороже миллисекунды - в нём чтение АЦП, обмен с ЕСП по прерыванию
+и 50 мс подтверждения импульса, на которые цикл встаёт целиком, - поэтому счёт
+оборотов давал период «250 мс плюс сколько получится». Замыкание, которое живёт
+350 мс, из-за этого терялось: замер стенда дал девять импульсов из десяти.
+
+Timer0 в сеансе включён (power_all_enable выше), и на millis() здесь уже живёт
+выдержка питания ЕСП (Power.cpp, elapsed).
+*/
+void counting_1ms(unsigned long &last_poll)
 {
 	wdt_reset();
 	apply_counter_types();
-	if (delay_loop_count < 250)
+	if (millis() - last_poll >= POLL_PERIOD_MSEC)
 	{
-		delay_loop_count++;
-	}
-	else
-	{
-		// Получаем период опроса входов 250мс, как и от ватчдога
-		delay_loop_count = 0;
+		// Шаг сетки, а не «от сейчас»: после 50 мс подтверждения следующий такт
+		// придёт через 200 мс, и опрос останется привязан к реальному времени
+		last_poll += POLL_PERIOD_MSEC;
 		event = CounterEvent::TIME;
 	}
 	if (event != CounterEvent::NONE)
@@ -729,14 +748,14 @@ void loop()
 
 	LOG(F("ESP turn on"));
 
-	uint8_t delay_loop_count = 0;		
+	unsigned long last_poll = millis();
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit))
 	{
-		counting_1ms(delay_loop_count);
+		counting_1ms(last_poll);
 	}
 	uint8_t sleep_delay_ms = DELAY_SENT_SLEEP;
 	while (sleep_delay_ms--) {
-		counting_1ms(delay_loop_count);
+		counting_1ms(last_poll);
 	}
 
 	slaveI2C.end(); // выключаем i2c slave.
