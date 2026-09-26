@@ -268,6 +268,21 @@ def bring_up(step: Callable[[], Any], what: str) -> Any:
         return step()
 
 
+def preflight(step: Callable[[], Any], what: str) -> Any:
+    """
+    Шаг подъёма, чей отказ уносит прогон целиком.
+
+    Отказ сессионной фикстуры pytest запоминает и повторяет в каждом тесте:
+    прогон печатает по одинаковой ошибке на тест и заканчивается только на
+    последнем. Один раз это дало 91 одинаковый ERROR - attiny была прошита
+    окружением другой модели, и ЕСП её не нашла.
+    """
+    try:
+        return bring_up(step, what)
+    except AssertionError as err:
+        pytest.exit(f'стенд не поднялся ({what}): {err}', returncode=1)
+
+
 @pytest.fixture(scope='session')
 def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     from .stand import Stand
@@ -276,11 +291,11 @@ def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     _metf = device.api
     global _stand
     _stand = device
-    device.check_atboard()     # до первого теста, а не на сороковой минуте
-    bring_up(device.identify, 'опрос устройства')    # версии и MAC - до первого теста
-    bring_up(device.ensure_network, 'сеть стенда')   # в чужой сети стенд бесполезен
-    bring_up(device.ensure_mqtt, 'брокер стенда')    # если он поднялся
-    bring_up(device.ensure_clock, 'часы платы')      # иначе время придёт из интернета
+    preflight(device.check_atboard, 'AT-плата')      # до первого теста, а не на сороковой минуте
+    preflight(device.identify, 'опрос устройства')   # версии и MAC - до первого теста
+    preflight(device.ensure_network, 'сеть стенда')  # в чужой сети стенд бесполезен
+    preflight(device.ensure_mqtt, 'брокер стенда')   # если он поднялся
+    preflight(device.ensure_clock, 'часы платы')     # иначе время придёт из интернета
     _log_air('первый тест')   # у первого файла улик иначе нет: стенд встал позже хука
     try:
         yield device
