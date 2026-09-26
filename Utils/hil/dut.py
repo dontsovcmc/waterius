@@ -16,7 +16,7 @@ HTTP-запроса на каждый фронт на интервал нама�
 from __future__ import annotations
 
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from typing import Any
 
@@ -45,6 +45,11 @@ IMPULSE_GAP_S = 1.2
 # Классике на короткое нажатие нужен такт WDT (250 мс), заставший кнопку прижатой
 # уже после первого обнаружения (button.h: on_time > 10); при любой фазе это
 # гарантируют полсекунды. До долгого далеко: 2 с у классики, 3 с у Ватериуса-2
+# Потолки пачки на плате (metf, `src/wave.h`): участков на линию и длительность
+# всей пачки. Что не влезло - серия, и её ведёт стенд
+WAVE_MAX_EDGES = 16
+WAVE_MAX_MS = 30000
+
 BUTTON_SHORT_MS = 500
 BUTTON_SETUP_MS = 4000
 RESET_MS = 100
@@ -176,9 +181,70 @@ class Dut:
 
     # --- импульсы счётчиков ---
 
+    def line(self, channel: int, edges: Sequence[int], value: int = LOW,
+             at_ms: int = 0) -> dict[str, Any]:
+        """
+        Линия пачки: длительности участков в миллисекундах, уровень первого из
+        них, смещение начала от общего старта пачки.
+
+        Уровни чередуются: [500, 300, 500] при value=LOW - это замкнуто,
+        отпущено, замкнуто.
+        """
+        return {'pin': self._ch[channel], 'value': value,
+                'at_ms': at_ms, 'edges': list(edges)}
+
+    def wave(self, *lines: dict[str, Any]) -> None:
+        """
+        Подать пачку и дождаться её конца.
+
+        Одним запросом, потому что интервалы между фронтами обязана отмерять
+        плата: через два запроса на интервал наматывается дорога по радио, и
+        заказанные 0,3 с приходили как две секунды.
+        """
+        self.api.wave(list(lines))
+
+    def moments(self, channel: int) -> list[int]:
+        """
+        Моменты фронтов последней пачки на этом входе - по часам платы,
+        в миллисекундах её аптайма. Их на один больше, чем участков: последний
+        момент - отпускание линии.
+
+        Этим тест утверждает о воздействии. Заказ ехал по радио и в дороге
+        искажался; расписка снята на плате, и если она разошлась с заказом -
+        виноват стенд, а не устройство.
+        """
+        pin = self._ch[channel]
+        stat = self.api.pulse_stat()
+        for line in stat.get('lines', []):
+            if line.get('pin') == pin:
+                return [int(mark) for mark in line['edges_ms']]
+        raise AssertionError(f'в расписке платы нет вывода {pin}: {stat}')
+
+    def delivered(self, channel: int) -> list[int]:
+        """Длительности участков, которые плата отмерила на самом деле."""
+        marks = self.moments(channel)
+        return [after - before
+                for before, after in zip(marks, marks[1:], strict=False)]
+
     def pulse(self, channel: int, count: int = 1,
               width_ms: int = IMPULSE_WIDTH_MS, gap: float = IMPULSE_GAP_S) -> None:
-        """Подать импульсы подряд с минимально допустимыми выдержками."""
+        """
+        Подать импульсы подряд с минимально допустимыми выдержками.
+
+        Серия, которая укладывается в пачку, уезжает одним запросом: интервалы
+        тогда отмерены платой и точны. Длинная серия остаётся за стендом - в её
+        паузах он вычитывает лог устройства, иначе кольцо платы переполняется.
+        """
+        edges: list[int] = []
+        for i in range(count):
+            if i:
+                edges.append(int(gap * 1000))
+            edges.append(width_ms)
+
+        if len(edges) <= WAVE_MAX_EDGES and sum(edges) <= WAVE_MAX_MS:
+            self.wave(self.line(channel, edges))
+            return
+
         pin = self._ch[channel]
         for i in range(count):
             self._low(pin, width_ms)

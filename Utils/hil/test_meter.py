@@ -16,6 +16,7 @@ import pytest
 
 from . import portal as portal_mod
 from .constants import BASE_FACTOR, COLD, ELECTRO, ELECTRONIC, ELECTRONIC_HIGH, NAMUR
+from .dut import IMPULSE_GAP_S, IMPULSE_WIDTH_MS
 from .logwatch import MANUAL_TRANSMIT_MODE
 
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
@@ -295,6 +296,10 @@ GLITCH_MS = 20           # короче подтверждения: IMPULSE_CONF
 GLITCHES = 5
 MERGE_GAP_S = 0.3        # короче трёх пустых опросов (750 мс): импульс не кончился
 
+# Конец импульса attiny видит по трём разомкнутым опросам подряд. Пауза короче
+# этого - дребезг внутри импульса, длиннее - второй импульс, и это не дефект
+MERGE_CEILING_MS = 750
+
 
 def test_D9_glitches_and_bounce_are_not_counted(stand: Stand) -> None:
     """
@@ -304,6 +309,11 @@ def test_D9_glitches_and_bounce_are_not_counted(stand: Stand) -> None:
     50 мс не переживает повторного чтения, а новое не считается, пока не
     прошло три пустых опроса. Первое проверяют короткие всплески, второе - два
     замыкания с паузой в треть секунды: это один импульс с дребезгом.
+
+    Воздействие уходит одной пачкой, и интервалы в ней отмеряет плата. Пока
+    паузу набирал стенд, к ней приклеивалась дорога запроса - заказанные 0,3 с
+    приходили как 2 с, attiny справедливо считала два импульса, а падал тест
+    прошивки. Поэтому перед приговором стенд спрашивает плату, что подал.
     """
     stand.setup(channel=1, factor=BASE_FACTOR, ctype=NAMUR, period_min=120)
 
@@ -315,6 +325,14 @@ def test_D9_glitches_and_bounce_are_not_counted(stand: Stand) -> None:
 
     stand.reset_observers()
     stand.dut.pulse(channel=1, count=2, gap=MERGE_GAP_S)
+
+    # Расписку читаем до нажатия: кнопка - такой же импульс, и она её заменит
+    delivered_ms = stand.dut.delivered(channel=1)
+    assert delivered_ms[1] < MERGE_CEILING_MS, (
+        f'стенд подал паузу {delivered_ms[1]} мс, а слипание проверяется паузой '
+        f'короче {MERGE_CEILING_MS} мс - по такой attiny обязана посчитать два '
+        f'импульса. Это отказ стенда, не прошивки (участки {delivered_ms})')
+
     stand.dut.press_button()
     stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE).assert_delta(
         channel=1, liters=BASE_FACTOR)
@@ -404,3 +422,61 @@ def test_D10_input_type_applies_without_leaving_portal(stand: Stand) -> None:
         time.sleep(SETTLE_S)
         assert input_impulses(board) == before + 1, (
             'после возврата к механическому длинное замыкание не считается')
+
+
+# Механический вход: замыкания с паузой IMPULSE_GAP_S - пауза больше 750 мс,
+# поэтому каждое замыкание отдельный импульс. Электронный: импульс в
+# миллисекунду внутрь каждого замыкания, со смещением от его начала
+TOGETHER = 3
+INSIDE_MS = 100
+
+
+@pytest.mark.needs(ctype0=NAMUR, ctype1=ELECTRONIC, f0=BASE_FACTOR, f1=BASE_FACTOR)
+def test_D11_two_input_types_count_together(stand: Stand) -> None:
+    """
+    Входы разных типов считают каждый своё и не мешают друг другу.
+
+    Типы обслуживает разный код (`Attiny85/src/counter.h`, is_impuls), но живут
+    они в одном цикле и на одном прерывании: `ISR(PCINT0_vect)` зовёт `on_front`
+    у обоих счётчиков (`Attiny85/src/main.cpp`), а механический вход посреди
+    опроса встаёт на 50 мс переспроса и включает АЦП. Импульс электронного входа
+    длиной в миллисекунду обязан это пережить, а механический - не набрать
+    лишнего от чужих фронтов.
+
+    Одновременность здесь заказана, а не подгадана: обе линии уезжают одной
+    пачкой, и плата выставляет их от одного старта.
+    """
+    closed_ms = IMPULSE_WIDTH_MS
+    gap_ms = int(IMPULSE_GAP_S * 1000)
+    step_ms = closed_ms + gap_ms          # шаг замыканий механического входа
+
+    mech: list[int] = []
+    for i in range(TOGETHER):
+        if i:
+            mech.append(gap_ms)
+        mech.append(closed_ms)
+
+    electro = [1]
+    for _ in range(TOGETHER - 1):
+        electro += [step_ms - 1, 1]
+
+    stand.reset_observers()
+    stand.dut.wave(stand.dut.line(channel=0, edges=mech),
+                   stand.dut.line(channel=1, edges=electro, at_ms=INSIDE_MS))
+
+    # Опыт состоялся, только если каждый короткий импульс лёг внутрь замыкания
+    marks0 = stand.dut.moments(channel=0)
+    marks1 = stand.dut.moments(channel=1)
+    closures = list(zip(marks0[0::2], marks0[1::2], strict=False))
+    for i, start in enumerate(marks1[0::2]):
+        assert any(low <= start <= high for low, high in closures), (
+            f'импульс {i + 1} электронного входа ушёл в {start}, а механический '
+            f'был замкнут {closures}: перекрытия не было. Это про стенд')
+
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
+
+    # Механический вход: одно замыкание - один импульс, сколько бы опросов оно
+    # ни накрыло; электронный - по импульсу на каждый фронт
+    session.assert_delta(channel=0, liters=TOGETHER * BASE_FACTOR)
+    session.assert_delta(channel=1, liters=TOGETHER * BASE_FACTOR)
