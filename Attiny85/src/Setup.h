@@ -50,6 +50,13 @@
 #define ONE_MINUTE 240L
 
 /*
+    Период опроса входов, мс. Вне сеанса его задаёт watchdog (то же самое
+    пробуждение, из которого сложены ONE_MINUTE), в сеансе - часы: там attiny
+    не спит и такт отмеряется по millis().
+*/
+#define POLL_PERIOD_MSEC 250
+
+/*
     Период отправки данных на сервер, мин.
 */
 #define WAKEUP_PERIOD_DEFAULT 15L * ONE_MINUTE
