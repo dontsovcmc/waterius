@@ -32,9 +32,12 @@ class Clock:
 class FakeAnswer:
     """Ответ платы: стенду нужны `raise_for_status`, код и заголовки."""
 
-    def __init__(self, status_code: int = 202, uptime: int | None = None) -> None:
+    def __init__(self, status_code: int = 202, uptime: int | None = None,
+                 text: str = '0') -> None:
         self.status_code = status_code
         self.headers = {} if uptime is None else {'X-Uptime-Ms': str(uptime)}
+        # Длина пачки в теле: по ней стенд знает, сколько ждать
+        self.text = text
 
     def raise_for_status(self) -> None:
         return None
@@ -44,19 +47,22 @@ class FakeSession:
     """`requests.Session` на минималках: помнит запросы и падает по заказу."""
 
     def __init__(self, failures: int = 0, error: Exception | None = None,
-                 status_code: int = 202) -> None:
+                 status_code: int = 202, text: str = '0') -> None:
         self.failures = failures
         self.error = error or requests.ConnectionError('host is down')
         self.status_code = status_code
+        self.text = text
         self.posts: list[tuple[str, dict, float]] = []
         # Крючки ответа - как у настоящей сессии: через них клиент ловит аптайм
         self.hooks: dict[str, list] = {'response': []}
 
-    def post(self, url: str, data: dict, timeout: float) -> FakeAnswer:
-        self.posts.append((url, data, timeout))
+    def post(self, url: str, timeout: float, data: dict | None = None,
+             json: dict | None = None) -> FakeAnswer:
+        # Пачка фронтов уходит телом JSON, одиночный импульс - формой
+        self.posts.append((url, data if data is not None else json or {}, timeout))
         if len(self.posts) <= self.failures:
             raise self.error
-        return self.hooked(FakeAnswer(self.status_code))
+        return self.hooked(FakeAnswer(self.status_code, text=self.text))
 
     def hooked(self, answer: Any) -> Any:
         """Ответ через крючки сессии - так же, как это делает requests."""
@@ -191,6 +197,64 @@ def test_старая_прошивка_платы_видна_сразу(
     assert 'протокол' in str(err.value)
 
 
+def test_пачка_уходит_одним_запросом_и_стенд_ждёт_её_длину(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """
+    Форму сигнала отмеряет плата - потому что интервалы между фронтами стенд
+    может отмерить только через радио. Один запрос на всю пачку, и ждём ровно
+    столько, сколько плата назвала в расписке.
+    """
+    session = FakeSession(text='1300')
+    api = board(monkeypatch, FakeClient(failures=0, session=session))
+    started = clock.now
+
+    total = api.wave([{'pin': 2, 'value': 0, 'at_ms': 0, 'edges': [500, 300, 500]}])
+
+    assert len(session.posts) == 1, f'запросов {len(session.posts)}, а нужен один'
+    url, body, _ = session.posts[0]
+    assert url == 'http://192.0.2.1/pulse'
+    assert body['lines'][0]['edges'] == [500, 300, 500]
+    assert total == pytest.approx(1.3)
+    assert clock.now - started == pytest.approx(1.3), 'стенд не выждал пачку'
+
+
+def test_негодную_пачку_плата_называет_словами(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """
+    Отказ 400 - это ошибка стенда, а не устройства, и она обязана дойти до
+    человека текстом платы, а не общим «запрос не удался».
+    """
+    session = FakeSession(status_code=400, text='edge shorter than 1 ms')
+    api = board(monkeypatch, FakeClient(failures=0, session=session))
+
+    with pytest.raises(ValueError, match='edge shorter than 1 ms'):
+        api.wave([{'pin': 2, 'value': 0, 'edges': [500, 0, 500]}])
+
+
+def test_плата_без_формы_сигнала_видна_сразу(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """
+    Прошивка младше четырнадцатой на пачку ответит не распиской: продолжать с
+    ней - значит подавать не то, что заказано, и падать не там, где сломалось.
+    """
+    session = FakeSession(status_code=200, text='0')
+    api = board(monkeypatch, FakeClient(failures=0, session=session))
+
+    with pytest.raises(metf.MetfTooOld, match='14'):
+        api.wave([{'pin': 2, 'value': 0, 'edges': [500]}])
+
+
+def test_пачка_повторяется_если_соединение_не_установилось(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """Плата не приняла соединение - запроса она не видела, можно повторить."""
+    session = FakeSession(failures=1, text='500')
+    api = board(monkeypatch, FakeClient(failures=0, session=session))
+
+    api.wave([{'pin': 2, 'value': 0, 'edges': [500]}])
+
+    assert len(session.posts) == 2, 'повтора не было'
+
+
 class FakeBoard:
     """Плата, отвечающая заданным состоянием на `/version` и `/wifi`."""
 
@@ -200,7 +264,7 @@ class FakeBoard:
             hook(answer)
         return answer
 
-    def __init__(self, version: int = metf.ACK_PROTOCOL, **wifi: object) -> None:
+    def __init__(self, version: int = metf.MIN_PROTOCOL, **wifi: object) -> None:
         self.version = version
         self.hooks: dict[str, list] = {'response': []}
         self.uptimes: list[int] = []
@@ -279,7 +343,7 @@ def test_досмотр_пропускает_плату_в_домашней_се
         monkeypatch: pytest.MonkeyPatch, clock: Clock, warnings: list[str]) -> None:
     """Здоровая плата не должна ни падать, ни жаловаться."""
     summary = inspected(monkeypatch, FakeBoard())
-    assert f'протокол {metf.ACK_PROTOCOL}' in summary and 'обрывы: none' in summary
+    assert f'протокол {metf.MIN_PROTOCOL}' in summary and 'обрывы: none' in summary
     assert warnings == []
 
 
@@ -438,7 +502,7 @@ def test_ответ_без_аптайма_не_ломает_клиента(
     plate.uptimes = []              # ни один ответ аптайма не несёт
     api = board(monkeypatch, FakeClient(failures=0, session=plate))  # type: ignore[arg-type]
 
-    assert api.version() == metf.ACK_PROTOCOL
+    assert api.version() == metf.MIN_PROTOCOL
     assert api.reboots == 0 and api.uptime_ms is None
 
 

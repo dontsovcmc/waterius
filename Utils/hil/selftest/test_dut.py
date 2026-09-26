@@ -136,3 +136,92 @@ def test_выдержка_знает_длительность_нажатия(clo
     board.hold_button()
 
     assert длительности == [BUTTON_SHORT_MS, BUTTON_SETUP_MS], длительности
+
+
+class WavingApi(FakeApi):
+    """
+    Плата, умеющая пачку: запоминает заказ и отдаёт по нему расписку так, как
+    отдала бы настоящая - моментами фронтов по своим часам.
+    """
+
+    def __init__(self, clock: Clock) -> None:
+        super().__init__(clock)
+        self.waves: list[list[dict]] = []
+        self._marks: dict[int, list[int]] = {}
+
+    def wave(self, lines: list[dict]) -> None:
+        self.waves.append(lines)
+        start = int(self.clock.now * 1000)
+        longest = 0.0
+        for line in lines:
+            at = line.get('at_ms', 0)
+            marks = [start + at]
+            for edge in line['edges']:
+                marks.append(marks[-1] + edge)
+            self._marks[line['pin']] = marks
+            longest = max(longest, (marks[-1] - start) / 1000.0)
+        self.clock.sleep(longest)
+
+    def pulse_stat(self) -> dict:
+        return {'lines': [{'pin': pin, 'edges_ms': marks}
+                          for pin, marks in self._marks.items()]}
+
+
+def waving(clock: Clock) -> tuple[dut_mod.Dut, WavingApi]:
+    api = WavingApi(clock)
+    board = dut_mod.Dut(api, button_pin=1, ch0_pin=2, ch1_pin=3, reset_pin=4)
+    board._led_ok = False
+    return board, api
+
+
+def test_серия_уходит_одной_пачкой(clock: Clock) -> None:
+    """
+    Интервалы внутри серии обязана отмерять плата: через два запроса на каждый
+    фронт к паузе приклеивается дорога по радио, и заказанные 0,3 с приходили
+    как две секунды.
+    """
+    board, api = waving(clock)
+
+    board.pulse(channel=0, count=3, width_ms=500, gap=1.2)
+
+    assert len(api.waves) == 1, f'пачек {len(api.waves)}, а нужна одна'
+    assert api.waves[0][0]['edges'] == [500, 1200, 500, 1200, 500]
+    assert not api.lows, 'линию дёргал стенд, хотя пачка уехала на плату'
+
+
+def test_длинная_серия_остаётся_за_стендом(clock: Clock) -> None:
+    """
+    Пачка на плате не длиннее полминуты, и это не произвол: в длинных паузах
+    стенд вычитывает лог устройства, иначе кольцо платы переполняется.
+    """
+    board, api = waving(clock)
+
+    board.pulse(channel=0, count=2, width_ms=500, gap=60.0)
+
+    assert not api.waves, 'минутную паузу отдали плате - лог за неё некому читать'
+    assert len(api.lows) == 2
+
+
+def test_расписка_даёт_фактические_интервалы(clock: Clock) -> None:
+    """Тест утверждает о воздействии по часам платы, а не по своему заказу."""
+    board, api = waving(clock)
+
+    board.wave(board.line(channel=1, edges=[500, 300, 500]))
+
+    assert board.delivered(channel=1) == [500, 300, 500]
+    moments = board.moments(channel=1)
+    assert len(moments) == 4, f'моментов {len(moments)}, участков 3: плюс отпускание'
+    assert moments == sorted(moments)
+    assert api.waves[0][0]['pin'] == 3
+
+
+def test_расписка_без_нужного_вывода_не_проходит_молча(clock: Clock) -> None:
+    """
+    Пустая расписка - это «плата не подала», а не «подала как заказано».
+    Молчаливое согласие здесь вернуло бы тесты к вере в заказ.
+    """
+    board, api = waving(clock)
+    api._marks = {}
+
+    with pytest.raises(AssertionError, match='нет вывода 2'):
+        board.delivered(channel=0)
