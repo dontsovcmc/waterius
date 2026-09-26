@@ -50,6 +50,11 @@
 #define ONE_MINUTE 240L
 
 /*
+    Период опроса входов, мс: то же пробуждение, из которого сложены ONE_MINUTE.
+*/
+#define POLL_PERIOD_MSEC 250
+
+/*
     Период отправки данных на сервер, мин.
 */
 #define WAKEUP_PERIOD_DEFAULT 15L * ONE_MINUTE

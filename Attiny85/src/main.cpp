@@ -22,6 +22,15 @@ TinyDebugSerial mySerial;
 /*
 Версии прошивок
 
+46 - 2026.09.26 - dontsov
+	1. Время в сеансе отмеряется часами, а не оборотами цикла. Такт опроса
+	   входов складывался из 250 оборотов по delayMicroseconds(1000), а выдержка
+	   перед снятием питания ЕСП - из DELAY_SENT_SLEEP таких же оборотов. Оборот
+	   дороже миллисекунды: чтение АЦП, обмен с ЕСП по прерыванию, 50 мс
+	   подтверждения импульса. Замыкание около 350 мс из-за этого могло не
+	   получить подтверждения - замер стенда дал девять импульсов из десяти.
+	   Вне сеанса без изменений: Timer0 выключен, такт даёт watchdog.
+
 45 - 2026.09.21 - dontsov
 	1. Ватериус-2: нажатие кнопки больше не снимает тревоги в самой attiny.
 	   Кнопка там одна на два действия, а длительность нажатия видит только
@@ -589,20 +598,30 @@ void apply_counter_types()
 	interrupts();
 }
 
-void counting_1ms(uint8_t &delay_loop_count)
+/*
+Один оборот опроса входов, пока ЕСП на связи: время отмеряют часы, а не обороты
+цикла - оборот дороже миллисекунды, и замыкание 350 мс терялось.
+
+Часы есть только в сеансе: вне его Timer0 выключен и millis() стоит, поэтому
+спящую attiny будит watchdog.
+*/
+void poll_inputs(unsigned long &last_poll)
 {
 	wdt_reset();
 	apply_counter_types();
-	if (delay_loop_count < 250)
+
+	if (millis() - last_poll >= POLL_PERIOD_MSEC)
 	{
-		delay_loop_count++;
-	}
-	else
-	{
-		// Получаем период опроса входов 250мс, как и от ватчдога
-		delay_loop_count = 0;
+		// Шаг сетки, а не «от сейчас»: иначе задержки внутри такта уезжают в период
+		last_poll += POLL_PERIOD_MSEC;
+		// Отстали больше такта - не догоняем: опросы вплотную оборвут импульс
+		if (millis() - last_poll >= POLL_PERIOD_MSEC)
+		{
+			last_poll = millis();
+		}
 		event = CounterEvent::TIME;
 	}
+
 	if (event != CounterEvent::NONE)
 	{
 		// Если получили фронт изменения сигнала или набежало время - проверяем входы
@@ -612,7 +631,19 @@ void counting_1ms(uint8_t &delay_loop_count)
 		interrupts();
 		counting(ev);
 	}
-	delayMicroseconds(1000);
+
+	delayMicroseconds(1000);   // чтобы не жечь цикл вхолостую; время меряют часы
+}
+
+// Опрашивать входы, пока не выйдет время: выдержка - это время, а не обороты
+
+void poll_inputs_for(unsigned long &last_poll, const unsigned long msec)
+{
+	const unsigned long started = millis();
+	while (millis() - started < msec)
+	{
+		poll_inputs(last_poll);
+	}
 }
 
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
@@ -729,15 +760,14 @@ void loop()
 
 	LOG(F("ESP turn on"));
 
-	uint8_t delay_loop_count = 0;		
+	unsigned long last_poll = millis();
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit))
 	{
-		counting_1ms(delay_loop_count);
+		poll_inputs(last_poll);
 	}
-	uint8_t sleep_delay_ms = DELAY_SENT_SLEEP;
-	while (sleep_delay_ms--) {
-		counting_1ms(delay_loop_count);
-	}
+
+	// ЕСП сказала «ухожу спать» - даём ей доспать до deep sleep, не бросая входы
+	poll_inputs_for(last_poll, DELAY_SENT_SLEEP);
 
 	slaveI2C.end(); // выключаем i2c slave.
 
