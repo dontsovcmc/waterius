@@ -356,13 +356,14 @@ class Metf:
         pause = self._pause if pause is None else pause
         last: Exception | None = None
         for attempt in range(1, self._attempts + 1):
+            начали = time.monotonic()
             try:
                 answer = target(*args, **kwargs)
             except NETWORK_ERRORS as err:
                 last = err
                 again = isinstance(err, repeatable)
                 self._note_failure(name, err, attempt,
-                                   self._attempts if again else 1)
+                                   self._attempts if again else 1, начали)
                 if not again:
                     break
                 if attempt < self._attempts:
@@ -375,11 +376,14 @@ class Metf:
         assert last is not None
         raise last
 
-    def _note_failure(self, name: str, err: Exception,
-                      attempt: int, attempts: int) -> None:
+    def _note_failure(self, name: str, err: Exception, attempt: int,
+                      attempts: int, начали: float | None = None) -> None:
+        # Отлучка считается с начала неудачного запроса, а не с его конца: сам
+        # таймаут - это тоже время, когда плата не отвечала. Иначе первая осечка
+        # печаталась как «связь вернулась через 0.0 с»
         now = time.monotonic()
         if self._down_since is None:
-            self._down_since = now
+            self._down_since = начали if начали is not None else now
         silent = now - self._down_since
         if silent > self._dead_after:
             raise MetfGone(

@@ -57,6 +57,16 @@ class _Tee:
         return getattr(self._stream, name)
 
 
+def _line(record: Any) -> str:
+    """
+    Строка лога прогона. Записи селф-тестов помечены: они нарочно гоняют стенд
+    по путям отказа, и без пометки их предупреждения читаются как настоящие
+    поломки - две трети всех WARNING полного прогона приходили оттуда.
+    """
+    метка = 'подделка | ' if record['extra'].get('поддельно') else ''
+    return '{time:HH:mm:ss} | {level: <7} | ' + метка + '{message}\n'
+
+
 def _next_log(where: Path) -> Path:
     """
     Имя лога прогона: `logs/ГГГГ-мм-ДД-ЧЧ-ММ.log` в корне репозитория.
@@ -95,8 +105,7 @@ def _open_log(config: pytest.Config) -> Path | None:
     if reporter is not None:
         reporter._tw._file = _Tee(reporter._tw._file, log)
 
-    sink = logger.add(log, level='INFO', colorize=False,
-                      format='{time:HH:mm:ss} | {level: <7} | {message}')
+    sink = logger.add(log, level='INFO', colorize=False, format=_line)
     config.add_cleanup(lambda: logger.remove(sink))
 
     handler = logging.StreamHandler(log)

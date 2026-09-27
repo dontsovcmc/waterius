@@ -133,8 +133,12 @@ class MqttWatch:
         client.subscribe(f'{root}/#', qos=0)
         client.loop_start()
         time.sleep(timeout)
-        client.loop_stop()
+        # Сначала disconnect, потом loop_stop: DISCONNECT пишет и сокет закрывает
+        # сам цикл, и остановленный раньше времени оставляет соединение висеть.
+        # Брокер тогда не гаснет - его shutdown() ждёт отцепления последнего
+        # клиента, - а на выходе сыплются «Task was destroyed but it is pending»
         client.disconnect()
+        client.loop_stop()
         return found
 
     def last(self, topic: str) -> Message | None:
@@ -221,5 +225,7 @@ class MqttWatch:
         return topics
 
     def close(self) -> None:
-        self._client.loop_stop()
+        # Порядок важен: DISCONNECT отправляет и сокет закрывает сам цикл paho,
+        # см. `retained_now`
         self._client.disconnect()
+        self._client.loop_stop()
