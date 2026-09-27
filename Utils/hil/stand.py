@@ -795,6 +795,14 @@ class Stand:
             f'ответов в логе устройства: {session.http_codes or "нет ни одного"}'
             f'{session.mqtt_note()}\n{session.text}')
 
+        # Сеанс без головы для утверждений о настройках не годится: строки
+        # `Apply setting:` идут в самом начале, и если начало не доехало, пустой
+        # `applied` означает дыру в логе, а не молчание прошивки
+        assert not session.headless, (
+            f'начало сеанса не доехало (голова лога потеряна), поэтому о '
+            f'настройках {list(settings)} этот сеанс не говорит ничего. '
+            f'Смотрите dropped и overruns в /read/stat платы\n{session.text}')
+
         applied = session.applied
         missing = [k for k in settings if k not in applied]
         assert not missing, (
