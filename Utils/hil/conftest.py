@@ -740,3 +740,7 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
         terminal.write_line('--- METF перезагружалась в тестах ---')
         for nodeid, times in _reboots.items():
             terminal.write_line(f'    {nodeid}: {times}')
+    if nextitem is None and _stand is not None:
+        note = _stand.power_note()
+        if note:
+            terminal.write_line(f'--- стенд: {note} ---')

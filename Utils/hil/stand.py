@@ -165,6 +165,11 @@ class Stand:
         self.mqtt = mqtt
         self.log = LogWatcher(api)
         self._power_warned = False
+        # Просадки питания за прогон: одно предупреждение ничего не говорит
+        # о частоте беды, а она про стенд - кабель и источник
+        self.power_sags = 0
+        self.power_sag_max_mv = 0
+        self.sessions = 0
         # Паузы между импульсами тоже вычитывают лог: иначе кольцо METF
         # переполняется плановым сеансом, и тест падает на неполном логе
         self.dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin,
@@ -382,12 +387,18 @@ class Stand:
         Прошивка считает батарейки севшими, если замеры за сеанс разошлись на
         100 мВ (`ESP8266/src/voltage.h`, ALERT_POWER_DIFF_MV), и моргает кодом
         1 - у питаемого от стенда устройства это говорит о кабеле и источнике.
-        Предупреждение одно на прогон: оно про стенд, а не про тест.
+        Предупреждение одно на прогон: оно про стенд, а не про тест. Но
+        считаются все: сводка в конце прогона показывает, редкость это или норма.
         """
-        if not payload.get('voltage_low') or self._power_warned:
+        self.sessions += 1
+        if not payload.get('voltage_low'):
             return
-        self._power_warned = True
         diff_mv = round(float(payload.get('voltage_diff') or 0.0) * 1000)
+        self.power_sags += 1
+        self.power_sag_max_mv = max(self.power_sag_max_mv, diff_mv)
+        if self._power_warned:
+            return                      # словами - один раз, счёт - в сводке
+        self._power_warned = True
         text = (f'стенд: питание устройства просело на {diff_mv} мВ за сеанс при '
                 f'пороге прошивки {ALERT_POWER_DIFF_MV} мВ '
                 f'(напряжение {payload.get("voltage")} В). Прошивка считает это '
@@ -395,6 +406,15 @@ class Stand:
                 f'короче кабель, отдельный источник, ёмкость по питанию платы')
         logger.warning(text)
         warnings.warn(text, StandPowerWarning, stacklevel=2)
+
+    def power_note(self) -> str:
+        """Сводка просадок питания за прогон: пусто, если их не было."""
+        if not self.power_sags:
+            return ''
+        return (f'питание устройства просаживалось в {self.power_sags} сеансах из '
+                f'{self.sessions}, максимум {self.power_sag_max_mv} мВ при пороге '
+                f'прошивки {ALERT_POWER_DIFF_MV} мВ: прошивка считает это '
+                f'разряженными батарейками. Лечится питанием стенда, не прошивкой')
 
     def wait_asleep(self, timeout: float = 60.0) -> bool:
         """
