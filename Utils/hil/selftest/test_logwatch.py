@@ -669,7 +669,8 @@ def test_оборванный_лог_называет_последнюю_стр�
     """
     watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM[:5])))
     watcher.poll()
-    watcher._line_at = time.time() - 130      # молчит дольше, чем живёт питание
+    # Метки строк - монотонные часы: настенные во сне хоста прыгают
+    watcher._line_at = time.monotonic() - 130   # молчит дольше, чем живёт питание
 
     note = watcher.stuck_note()
     assert 'Устройство молчит 130 с' in note, note

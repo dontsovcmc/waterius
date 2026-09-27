@@ -299,11 +299,11 @@ PRESS_BUDGET_S = 150.0
 
 def wait_ap(stand: Any, timeout: float) -> str | None:
     """Имя точки портала из лога, как только она поднялась; None - не поднялась."""
-    deadline = time.time() + timeout
+    deadline = time.monotonic() + timeout
     while True:
         stand.log.poll()
         ssid = find_ap(stand.log.lines)
-        if ssid or time.time() >= deadline:
+        if ssid or time.monotonic() >= deadline:
             return ssid
         time.sleep(0.5)
 
@@ -320,10 +320,10 @@ def open_portal(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> AtBoar
     """
     stand.log.clear()
     ssid = None
-    deadline = time.time() + timeout
-    while not ssid and time.time() < deadline:
+    deadline = time.monotonic() + timeout
+    while not ssid and time.monotonic() < deadline:
         stand.dut.hold_button()
-        ssid = wait_ap(stand, min(AP_WAIT_S, max(0.0, deadline - time.time())))
+        ssid = wait_ap(stand, min(AP_WAIT_S, max(0.0, deadline - time.monotonic())))
     if not ssid:
         raise PortalError(
             f'точка доступа портала не поднялась за {timeout:.0f} с: '
@@ -464,8 +464,8 @@ if __name__ == '__main__':
             log.clear()
             logger.info('удерживаю кнопку - режим настройки')
             dut.hold_button()
-        deadline = time.time() + 90
-        while time.time() < deadline and not ssid:
+        deadline = time.monotonic() + 90
+        while time.monotonic() < deadline and not ssid:
             log.poll()
             ssid = find_ap(log.lines)
             if not ssid:

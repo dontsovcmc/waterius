@@ -53,7 +53,7 @@ def test_H1_wakeup_period(stand: Stand) -> None:
     stamps = []
     for _ in range(3):
         session = stand.wait_session(timeout=2 * period * 60 + 120, mode=TRANSMIT_MODE)
-        stamps.append(time.time())
+        stamps.append(time.monotonic())
         assert session.mode == TRANSMIT_MODE
 
     low, high = period * (1 - H1_TOLERANCE), period * (1 + H1_TOLERANCE)
@@ -152,10 +152,10 @@ def test_H6_manual_wakeup_restarts_schedule(stand: Stand) -> None:
     stand.reset_observers()
     stand.dut.press_button()
     stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
-    pressed = time.time()
+    pressed = time.monotonic()
 
     stand.wait_session(timeout=planned_wait(MANUAL_PERIOD_MIN), mode=TRANSMIT_MODE)
-    assert_interval((time.time() - pressed) / 60, MANUAL_PERIOD_MIN,
+    assert_interval((time.monotonic() - pressed) / 60, MANUAL_PERIOD_MIN,
                     'плановый сеанс после нажатия')
 
 
@@ -203,10 +203,10 @@ def test_H7_esp_reset_keeps_period(stand: Stand, cfg: Any) -> None:
     rebooted = stand.wait_session(timeout=180)
     assert 'esp restarted: 1' in rebooted.full_text, rebooted.full_text
     assert rebooted.complete, rebooted.text
-    done = time.time()
+    done = time.monotonic()
 
     stand.wait_session(timeout=planned_wait(PERIOD_MIN), mode=TRANSMIT_MODE)
-    assert_interval((time.time() - done) / 60, PERIOD_MIN,
+    assert_interval((time.monotonic() - done) / 60, PERIOD_MIN,
                     'плановый сеанс после перезагрузки')
 
 

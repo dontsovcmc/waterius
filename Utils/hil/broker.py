@@ -22,9 +22,14 @@ import logging
 import socket
 import tempfile
 import threading
+import time
 from pathlib import Path
 
 from loguru import logger
+
+# Потолок гашения брокера. Десять секунд брались наугад и один раз истекли
+# целиком; больше ждать нечего - дальше задачи снимаются принудительно
+SHUTDOWN_S = 10.0
 
 
 class MqttBroker:
@@ -216,14 +221,53 @@ class MqttBroker:
                         encoding='utf-8')
         return str(path)
 
-    def stop(self) -> None:
-        if self._broker is not None and self._loop is not None:
+    def _quench(self) -> None:
+        """
+        Погасить брокер и снять оставшиеся задачи до закрытия цикла.
+
+        amqtt не снимает задачи клиентских обработчиков сам, а закрытый цикл с
+        непогашенными задачами печатает «Task was destroyed but it is pending» -
+        шесть таких ERROR в прогоне 2026-09-27 13-48, все вокруг рвущего брокера.
+        Само гашение к тому же не всегда успевает: там же оно упёрлось в потолок,
+        а у TimeoutError пустой текст, и в лог шло «брокер не погасился штатно: »
+        без причины - отсюда и тип исключения, и фактическое время в сообщении.
+        """
+        assert self._loop is not None
+        started = time.monotonic()
+        if self._broker is not None:
             try:
                 asyncio.run_coroutine_threadsafe(
-                    self._broker.shutdown(), self._loop).result(10)
+                    self._broker.shutdown(), self._loop).result(SHUTDOWN_S)
             except Exception as error:                      # noqa: BLE001
-                logger.warning(f'брокер не погасился штатно: {error}')
+                logger.warning(
+                    f'брокер не погасился за {time.monotonic() - started:.1f} с: '
+                    f'{type(error).__name__}: {error or "без текста"}')
             self._broker = None
+
+        async def сдать_задачи() -> int:
+            tasks = [task for task in asyncio.all_tasks()
+                     if task is not asyncio.current_task()]
+            for task in tasks:
+                task.cancel()
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            await asyncio.get_running_loop().shutdown_asyncgens()
+            return len(tasks)
+
+        try:
+            left = asyncio.run_coroutine_threadsafe(
+                сдать_задачи(), self._loop).result(SHUTDOWN_S)
+        except Exception as error:                          # noqa: BLE001
+            logger.warning(f'задачи брокера не сдались: '
+                           f'{type(error).__name__}: {error or "без текста"}')
+        else:
+            if left:
+                logger.debug(f'брокер погас за {time.monotonic() - started:.1f} с, '
+                             f'снято задач: {left}')
+
+    def stop(self) -> None:
+        if self._loop is not None:
+            self._quench()
         if self._loop is not None:
             self._loop.call_soon_threadsafe(self._loop.stop)
         if self._thread is not None:

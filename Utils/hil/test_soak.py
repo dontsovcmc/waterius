@@ -39,15 +39,15 @@ def test_Z1_soak(stand: Stand, request: pytest.FixtureRequest) -> None:
     stand.setup(period_min=SOAK_PERIOD_MIN)
     stand.reset_observers()
 
-    started = time.time()
+    started = time.monotonic()
     deadline = started + minutes * 60
     impulses: tuple[int, int] | None = None
     count = 0
-    while time.time() < deadline:
+    while time.monotonic() < deadline:
         session = stand.wait_session(
             timeout=SOAK_PERIOD_MIN * 60 * MISSED_FACTOR + 120, mode=TRANSMIT_MODE)
         count += 1
-        where = f'сеанс {count}, {(time.time() - started) / 60:.0f} мин прогона'
+        where = f'сеанс {count}, {(time.monotonic() - started) / 60:.0f} мин прогона'
 
         failures = [line for line in session.lines
                     if any(marker in line for marker in I2C_ERRORS)]

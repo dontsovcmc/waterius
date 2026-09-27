@@ -145,7 +145,7 @@ def test_E2_alarm_does_not_clear_itself(stand: Stand, quiet: None) -> None:
     # Расход прекращён, а тревога обязана остаться. Двух плановых сеансов
     # достаточно: старое правило снимало её через двадцать секунд тишины.
     for _ in range(2):
-        planned = stand.wait_session(timeout=15 * 60, mode=TRANSMIT_MODE)
+        planned = stand.wait_session(timeout=PLANNED_WAIT_S, mode=TRANSMIT_MODE)
         planned.assert_alarm(flow1=1)
 
 
@@ -318,7 +318,7 @@ def test_E7_consumption_stopped(stand: Stand) -> None:
 
     idle_before = None
     for _ in range(14):
-        session = stand.wait_session(timeout=15 * 60, mode=TRANSMIT_MODE)
+        session = stand.wait_session(timeout=PLANNED_WAIT_S, mode=TRANSMIT_MODE)
         idle = session.idle
         assert idle is not None, f'нет строки Idle min\n{session.text}'
         idle_before = idle

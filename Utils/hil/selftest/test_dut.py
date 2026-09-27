@@ -25,6 +25,10 @@ class Clock:
     def time(self) -> float:
         return self.now
 
+    def monotonic(self) -> float:
+        """Стенд отмеряет сроки монотонными часами: под тестом они те же."""
+        return self.now
+
     def sleep(self, seconds: float) -> None:
         self.now += seconds
 
@@ -60,6 +64,20 @@ def make(clock: Clock, idle=None, settle=None) -> tuple[dut_mod.Dut, FakeApi]:
                         idle=idle, settle=settle)
     board._led_ok = False                 # индикатора у заглушки нет
     return board, api
+
+
+def test_без_расписки_серия_считается_по_заказу(clock: Clock) -> None:
+    """
+    Плата без `/pulse` расписки не даёт, и доказать доставку нечем. На собранном
+    стенде такого не бывает - протокол 14 требует досмотр перед прогоном, - но
+    падать на этом стенд не должен.
+    """
+    board, api = make(clock)
+
+    подано = board.pulses(channel=0, count=3, gap=1.0)
+
+    assert подано == 3
+    assert len(api.lows) == 3
 
 
 def test_пауза_вычитывает_лог(clock: Clock) -> None:
@@ -149,7 +167,7 @@ class WavingApi(FakeApi):
         self.waves: list[list[dict]] = []
         self._marks: dict[int, list[int]] = {}
 
-    def wave(self, lines: list[dict]) -> None:
+    def wave(self, lines: list[dict], wait: bool = True) -> float:
         self.waves.append(lines)
         start = int(self.clock.now * 1000)
         longest = 0.0
@@ -160,7 +178,9 @@ class WavingApi(FakeApi):
                 marks.append(marks[-1] + edge)
             self._marks[line['pin']] = marks
             longest = max(longest, (marks[-1] - start) / 1000.0)
-        self.clock.sleep(longest)
+        if wait:
+            self.clock.sleep(longest)
+        return longest
 
     def pulse_stat(self) -> dict:
         return {'lines': [{'pin': pin, 'edges_ms': marks}
@@ -182,24 +202,29 @@ def test_серия_уходит_одной_пачкой(clock: Clock) -> None:
     """
     board, api = waving(clock)
 
-    board.pulse(channel=0, count=3, width_ms=500, gap=1.2)
+    подано = board.pulse(channel=0, count=3, width_ms=500, gap=1.2)
 
     assert len(api.waves) == 1, f'пачек {len(api.waves)}, а нужна одна'
     assert api.waves[0][0]['edges'] == [500, 1200, 500, 1200, 500]
     assert not api.lows, 'линию дёргал стенд, хотя пачка уехала на плату'
+    assert подано == 3, f'по расписке платы замыканий {подано}, а заказано 3'
 
 
-def test_длинная_серия_остаётся_за_стендом(clock: Clock) -> None:
+def test_длинная_пауза_режет_серию_на_пачки_по_одному(clock: Clock) -> None:
     """
     Пачка на плате не длиннее полминуты, и это не произвол: в длинных паузах
-    стенд вычитывает лог устройства, иначе кольцо платы переполняется.
+    стенд вычитывает лог устройства, иначе кольцо платы переполняется. Но
+    замыкание всё равно заказывается пачкой - иначе у стенда нет расписки, и
+    «до входа дошло 9 импульсов из 10» не отличить от «стенд не довёл».
     """
     board, api = waving(clock)
 
-    board.pulse(channel=0, count=2, width_ms=500, gap=60.0)
+    подано = board.pulse(channel=0, count=2, width_ms=500, gap=60.0)
 
-    assert not api.waves, 'минутную паузу отдали плате - лог за неё некому читать'
-    assert len(api.lows) == 2
+    assert [line[0]['edges'] for line in api.waves] == [[500], [500]], (
+        f'минутную паузу отдали плате: {api.waves}')
+    assert not api.lows, 'линию дёргал стенд, хотя расписку даёт только пачка'
+    assert подано == 2
 
 
 def test_расписка_даёт_фактические_интервалы(clock: Clock) -> None:

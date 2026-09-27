@@ -100,7 +100,9 @@ def test_команда_после_обрыва_уходит_на_поднято
     transport = TcpTransport('127.0.0.1', PASSWORD, port=console.port)
 
     console.close_client()
-    with pytest.raises(RouterError):
+    # Обрыв замечает не запись в закрытый сокет, а чтение ответа: оба шага
+    # обязаны стоять внутри, и одним выражением их не сделать
+    with pytest.raises(RouterError):    # noqa: PT012
         transport.write_line('show status')
         transport.read_idle(1.0, 0.2)
 
@@ -117,7 +119,7 @@ def test_обрыв_на_середине_ответа_назван_своим_�
     transport = TcpTransport('127.0.0.1', PASSWORD, port=console.port)
 
     console.close_client()
-    with pytest.raises(RouterError, match='оборвалась'):
+    with pytest.raises(RouterError, match='оборвалась'):    # noqa: PT012
         transport.write_line('show acl')
         transport.read_idle(1.0, 0.2)
 

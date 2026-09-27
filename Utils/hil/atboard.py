@@ -124,8 +124,8 @@ class AtBoard:
         self.buf = b''
 
     def _until(self, markers: tuple[bytes, ...], timeout: float) -> bytes:
-        deadline = time.time() + timeout
-        while time.time() < deadline:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
             if not self._pump():
                 time.sleep(0.01)
             for marker in markers:
@@ -137,9 +137,9 @@ class AtBoard:
         raise AtError(f'плата не ответила {markers}: {out[-200:]!r}')
 
     def _read_exact(self, size: int, timeout: float) -> bytes:
-        deadline = time.time() + timeout
+        deadline = time.monotonic() + timeout
         while len(self.buf) < size:
-            if time.time() > deadline:
+            if time.monotonic() > deadline:
                 raise AtError(f'принято {len(self.buf)} из {size} байт')
             if not self._pump():
                 time.sleep(0.005)
@@ -180,8 +180,8 @@ class AtBoard:
         оно переживает перезагрузку (`AT+SYSSTORE` по умолчанию 1).
         """
         self.cmd('AT+CWMODE=1')
-        deadline = time.time() + timeout
-        while time.time() < deadline:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
             m = RE_STATE.search(self.cmd('AT+CWSTATE?', timeout=5))
             if m and int(m.group(1)) == STATE_GOT_IP:
                 self._ensure_passive()
@@ -320,8 +320,8 @@ class AtBoard:
 
     def _receive(self, timeout: float) -> bytes:
         raw = b''
-        deadline = time.time() + timeout
-        while time.time() < deadline:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
             if _complete(raw):
                 break
             answer = self.cmd('AT+CIPRECVLEN?', timeout=5)
@@ -340,7 +340,7 @@ class AtBoard:
             size = int(self._until((b',',), 5)[:-1])
             raw += self._read_exact(size, 10)
             self._until((b'OK\r\n',), 5)
-            deadline = time.time() + timeout
+            deadline = time.monotonic() + timeout
         return raw
 
 

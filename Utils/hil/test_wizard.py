@@ -68,14 +68,14 @@ def save(board: AtBoard, path: str, **params: Any) -> dict[str, str]:
 def find_line(stand: Any, pattern: re.Pattern[str],
               timeout: float = 5.0) -> re.Match[str] | None:
     """Строка лога по шаблону: METF отдаёт UART с задержкой, ждём немного."""
-    deadline = time.time() + timeout
+    deadline = time.monotonic() + timeout
     while True:
         stand.log.poll()
         for line in stand.log.lines:
             match = pattern.search(line)
             if match:
                 return match
-        if time.time() >= deadline:
+        if time.monotonic() >= deadline:
             return None
         time.sleep(0.5)
 
@@ -105,8 +105,8 @@ def connect_status_code(board: AtBoard) -> str:
 def networks_list(board: AtBoard, timeout: float = 60.0) -> list[dict[str, Any]]:
     """Список сетей портала. Скан асинхронный: до его конца портал честно отдаёт пустой."""
     networks: list[dict[str, Any]] = []
-    deadline = time.time() + timeout
-    while time.time() < deadline and not networks:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline and not networks:
         answer = board.get('/api/networks', portal_mod.HOST)
         assert answer.status == 200, answer.status
         networks = json.loads(answer.text or '[]')
@@ -139,8 +139,8 @@ def wait_redirect(board: AtBoard, want: set[str],
     """
     redirect = None
     lost = False
-    deadline = time.time() + timeout
-    while time.time() < deadline and redirect not in want:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline and redirect not in want:
         try:
             redirect = api(board, '/api/connect_status').get('redirect')
         except AtError:
@@ -303,9 +303,9 @@ def find_network(board: AtBoard, ssid: str,
     повтор находит и сеть, поднявшуюся позже скана на старте портала.
     """
     seen: list[dict[str, Any]] = []
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        seen = networks_list(board, timeout=max(5.0, deadline - time.time()))
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        seen = networks_list(board, timeout=max(5.0, deadline - time.monotonic()))
         ours = next((net for net in seen if net['ssid'] == ssid), None)
         if ours:
             return ours, seen

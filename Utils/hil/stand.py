@@ -319,8 +319,13 @@ class Stand:
                     '`Startup mode:` не доехала, и опознать его режим нечем - '
                     'смотрите overruns и dropped в /read/stat платы'
                     if self.log.headless_pending else '')
+        # Наблюдённое время, а не потолок: они расходятся, и сильно. В прогоне
+        # 27 сентября отказ говорил «не доиграл за 125 с», а pytest намерил на
+        # этот тест 2,56 с - ожидание кончилось мгновенно, потому что настенные
+        # часы прыгнули через сон хоста. Потолок при этом выглядел виноватым
         assert session is not None, (
-            f'сеанс не доиграл за {timeout:.0f} с (ждали mode={mode}): лог начался, '
+            f'сеанс не доиграл за {self.log.waited:.0f} с наблюдения '
+            f'(потолок {timeout:.0f} с, ждали mode={mode}): лог начался, '
             f'но строки ухода в сон в нём нет{headless}{self.log.stuck_note()}\n'
             + '\n'.join(self.log.lines[-40:]))
 
@@ -434,7 +439,7 @@ class Stand:
         Ждём не всегда, а ровно недостающее: если с конца сеанса уже прошло
         больше, пауза нулевая.
         """
-        left = WAKE_SETTLE_S - (time.time() - self._session_at)
+        left = WAKE_SETTLE_S - (time.monotonic() - self._session_at)
         if left > 0:
             logger.info(f'выдержка перед нажатием: {left:.1f} с после сеанса')
             time.sleep(left)
@@ -444,11 +449,11 @@ class Stand:
         # Именно так падал test_E19: портал открыт длинным нажатием, а следом
         # тест ждал тревожный сеанс - и получал приговор про кнопку
         if msec <= BUTTON_SHORT_MS:
-            self._press_at = time.time()
+            self._press_at = time.monotonic()
 
     def _remember(self, session: Session) -> None:
         """Запомнить то, что устройство рассказало о себе в этом сеансе."""
-        self._session_at = time.time()
+        self._session_at = time.monotonic()
         if session.attiny_version is not None:
             self.attiny_version = session.attiny_version
         if session.esp_version is not None:
@@ -481,9 +486,9 @@ class Stand:
             raise AssertionError(f'стенд: AT-плата {port} - нет: порт не открылся\n{err}') from err
         try:
             # Открытие порта перезагружает NodeMCU: первые команды тонут (atboard.py, wait_ready)
-            deadline = time.time() + timeout
+            deadline = time.monotonic() + timeout
             answer = ''
-            while 'OK' not in answer and time.time() < deadline:
+            while 'OK' not in answer and time.monotonic() < deadline:
                 try:
                     answer = board.cmd('AT', timeout=1)
                 except AtError:
@@ -614,8 +619,8 @@ class Stand:
         self.log.clear()
         self.dut.hold_button()
         ap = None
-        deadline = time.time() + 90
-        while time.time() < deadline and not ap:
+        deadline = time.monotonic() + 90
+        while time.monotonic() < deadline and not ap:
             self.log.poll()
             ap = portal.find_ap(self.log.lines)
             if not ap:
@@ -779,6 +784,16 @@ class Stand:
             self.dut.press_button()
 
         session = self.wait_session(timeout=timeout)
+
+        # Настройки приезжают ответом приёмника на посылку, поэтому «прошивка не
+        # применила» имеет смысл только после состоявшегося разговора. Отказ
+        # прогона 27 сентября «прошивка не применила ['mqtt_auto_discovery']; в
+        # логе: {}» был не про прошивку: устройство до приёмника не дошло вовсе
+        assert session.payloads, (
+            f'стенд: приёмник {self.cfg.http_url} не получил ни одной посылки, '
+            f'поэтому настройки {list(settings)} до прошивки не доехали. Коды '
+            f'ответов в логе устройства: {session.http_codes or "нет ни одного"}'
+            f'{session.mqtt_note()}\n{session.text}')
 
         applied = session.applied
         missing = [k for k in settings if k not in applied]

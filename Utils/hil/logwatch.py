@@ -25,6 +25,8 @@ from typing import Any
 import requests
 from loguru import logger
 
+from .hostclock import host
+
 # Осечка связи, а не отказ платы. Свой список, а не импорт из metf.py: разбор
 # лога проверяется без железа, и тянуть сюда клиент METF незачем
 NETWORK_ERRORS = (requests.RequestException, OSError)
@@ -224,6 +226,10 @@ class Wake:
 # радио незачем, а лог сеанса вдобавок худеет впятеро, когда прошивка перейдёт
 # на одну строку на публикацию.
 POLL_INTERVAL = 0.5
+
+# Как часто долгое ожидание подаёт признак жизни. Без него «жду», «завис» и
+# «хост спал» в логе выглядят одинаково
+HEARTBEAT_S = 30.0
 
 # Во сколько раз окно ожидания первых строк может растянуться за счёт неудачных
 # чтений. Устройству полагается своё время наблюдения целиком, но и ждать
@@ -554,6 +560,10 @@ class LogWatcher:
         self.reads_ok = 0
         self.reads_failed = 0
         self._mark_at: float | None = None      # начало окна наблюдения потерь
+        # Сколько ждали в последнем ожидании: в отказ идёт наблюдённое время, а
+        # не потолок - иначе «не доиграл за 125 с» печаталось при 2,5 с ожидания
+        self.waited = 0.0
+        self._beats = 0                         # признаков жизни за это ожидание
 
     def poll(self) -> None:
         """Забрать накопленное с платы и склеить разрезанные строки."""
@@ -573,7 +583,7 @@ class LogWatcher:
         self._tail = raw.pop() if not chunk.endswith('\n') else ''
 
         if raw:
-            self._line_at = time.time()
+            self._line_at = time.monotonic()
 
         for piece in raw:
             piece = piece.rstrip('\r')
@@ -586,7 +596,36 @@ class LogWatcher:
                 self.lines[-1] += piece
 
     def clear(self) -> None:
+        """
+        Начать наблюдение с чистого листа - и сказать, что для этого выброшено.
+
+        Выбросить приходится: `poll()` уже забрал у платы всё, что лежало в
+        кольце, и прежнее окно нельзя оставлять - иначе хвост чужого сеанса
+        разберётся как начало нового. Но молча этого делать нельзя: если
+        устройство в этот миг печатает, в выброшенное уходит и `Startup mode:`,
+        и дальше стенд честно доказывает, что «ЕСП печатает, а сеанс не начался».
+        Ровно так выглядел отказ подъёма 27 сентября, где METF «отдала 11811
+        байт», начиная с середины сеанса.
+
+        Кольцо платы чистим её же средствами (`serial_flush`): наш `poll()` мог и
+        не удаться, и тогда старый лог приехал бы следующим опросом как новый.
+        """
         self.poll()
+        if self.lines:
+            начатый = (any(RE_MODE.search(line) for line in self.lines)
+                       and not any(SESSION_END in line for line in self.lines))
+            сказать = logger.warning if начатый else logger.info
+            беда = ', и в них начало сеанса без конца' if начатый else ''
+            сказать(f'начинаю наблюдение заново: выброшено {len(self.lines)} строк '
+                    f'({len(self.raw)} байт){беда}. '
+                    f'Последняя: «{self.lines[-1].strip()[:80]}»')
+        flush = getattr(self.api, 'serial_flush', None)
+        if flush is not None:
+            try:
+                flush()
+            except Exception as err:                 # плата могла не ответить
+                logger.warning(f'кольцо METF не очистилось ({err}): в нём мог '
+                               f'остаться прошлый сеанс')
         self.lines.clear()
         self._tail = ''
         self.raw = ''
@@ -636,7 +675,7 @@ class LogWatcher:
 
     def loss_mark(self) -> tuple[int, int] | None:
         """Снимок счётчиков перед ожиданием - опора для `assert_no_loss`."""
-        self._mark_at = time.time()
+        self._mark_at = time.monotonic()
         return self._losses()
 
     def assert_no_loss(self, mark: tuple[int, int] | None, context: str) -> None:
@@ -649,10 +688,22 @@ class LogWatcher:
         """
         if mark is None:
             return
+        reboot = getattr(self.api, 'reboot_since', None)
+        when = reboot(self._mark_at) if reboot and self._mark_at is not None else None
+        assert when is None, (
+            f'METF перезагружалась за {context} ({time.monotonic() - when:.0f} с назад): '
+            f'кольцо она при этом очищает целиком, а счётчики потерь начинает с '
+            f'нуля - о логе этого окна сказать нечего')
         now = self._losses()
         if now is None:
             return
         lost, overruns = now[0] - mark[0], now[1] - mark[1]
+        # Счётчики платы только растут, поэтому отрицательная разность - не
+        # «потерь не было», а сброшенный счётчик: потеря максимальна
+        assert lost >= 0 and overruns >= 0, (
+            f'счётчики потерь METF пошли назад за {context} '
+            f'(dropped {mark[0]} -> {now[0]}, overruns {mark[1]} -> {now[1]}): '
+            f'плату перезагрузили или кольцо очистили, лог этого окна неполон')
         assert lost <= 0, (
             f'METF потерял {lost} строк лога за {context}: кольцо переполнилось, '
             f'и лог неполон - утверждать по нему нечего. Читайте чаще или '
@@ -683,8 +734,7 @@ class LogWatcher:
         reboot = getattr(self.api, 'reboot_since', None)
         when = reboot(self._mark_at) if reboot else None
         if when is not None:
-            beda.append(f'METF перезагружалась в '
-                        f'{time.strftime("%H:%M:%S", time.localtime(when))} - '
+            beda.append(f'METF перезагружалась {time.monotonic() - when:.0f} с назад - '
                         f'кольцо она при этом очищает')
 
         stall = getattr(self.api, 'stall_since', None)
@@ -692,11 +742,27 @@ class LogWatcher:
         if gap is not None:
             since, seconds = gap
             beda.append(f'связь с METF пропадала на {seconds:.1f} с '
-                        f'({time.strftime("%H:%M:%S", time.localtime(since))})')
+                        f'({time.monotonic() - since:.0f} с назад)')
 
         if not beda:
             return ''
         return (f'. В этом окне {"; ".join(beda)} - виноват стенд, а не прошивка')
+
+    def heartbeat(self, what: str, waited: float, timeout: float) -> None:
+        """Строка раз в HEARTBEAT_S: сколько ждём, что видим и цел ли лог."""
+        beats = int(waited // HEARTBEAT_S)
+        if not beats:
+            self._beats = 0
+            return
+        if beats <= self._beats:
+            return
+        self._beats = beats
+        losses = self._losses()
+        кольцо = (f', кольцо dropped={losses[0]} overruns={losses[1]}'
+                  if losses else '')
+        logger.info(f'{what}: {waited:.0f} из {timeout:.0f} с, строк {len(self.lines)}, '
+                    f'чтений {self.reads_ok} удачных / {self.reads_failed} неудачных'
+                    f'{кольцо}')
 
     def wait_session(self, timeout: float, mode: int | None = None,
                      poll_interval: float = POLL_INTERVAL) -> Session | None:
@@ -714,15 +780,20 @@ class LogWatcher:
         и «сеанс пришёл», и «сеанса не было» - утверждения ни о чём.
         """
         mark = self.loss_mark()
-        deadline = time.time() + timeout
-        while time.time() < deadline:
+        started = time.monotonic()
+        while True:
+            host.check('ожидание сеанса')
             self.poll()
             session = self._take_session(mode)
             if session:
                 self.assert_no_loss(mark, 'ожидание сеанса')
                 return session
+            self.waited = time.monotonic() - started
+            if self.waited >= timeout:
+                break
+            self.heartbeat('ожидание сеанса', self.waited, timeout)
             time.sleep(poll_interval)
-        self.assert_no_loss(mark, f'ожидание сеанса {timeout:.0f} с')
+        self.assert_no_loss(mark, f'ожидание сеанса {self.waited:.0f} с')
         return None
 
     def wait_start(self, timeout: float) -> bool:
@@ -743,11 +814,12 @@ class LogWatcher:
         тройным окном: иначе при мёртвой связи ждали бы бесконечно.
         """
         reads, failed = self.reads_ok, self.reads_failed
-        started = time.time()
+        started = time.monotonic()
         deadline = started + timeout
         limit = started + timeout * BLIND_EXTRA
-        while time.time() < deadline:
-            before = time.time()
+        while time.monotonic() < deadline:
+            host.check('ожидание первых строк')
+            before = time.monotonic()
             ok = self.reads_ok
             self.poll()
             if self.lines:
@@ -756,9 +828,9 @@ class LogWatcher:
             if self.reads_ok == ok:
                 # Ни одного чтения за круг: это время стенда, а не устройства,
                 # и возвращается круг целиком - вместе с паузой опроса
-                deadline = min(limit, deadline + (time.time() - before))
+                deadline = min(limit, deadline + (time.monotonic() - before))
         assert self.reads_ok > reads, (
-            f'стенд ослеп: за {time.time() - started:.1f} с METF ни разу не '
+            f'стенд ослеп: за {time.monotonic() - started:.1f} с METF ни разу не '
             f'отдала лог ({self.reads_failed - failed} неудачных чтений), '
             f'поэтому о пробуждении Ватериуса сказать нечего')
         return False
@@ -773,13 +845,16 @@ class LogWatcher:
         в таких проверках важно не только «случилось», но и «не раньше».
         """
         mark = self.loss_mark()
-        started = time.time()
+        started = time.monotonic()
         deadline = started + timeout
-        while time.time() < deadline:
+        while time.monotonic() < deadline:
+            host.check(f'ожидание строки {text!r}')
             self.poll()
             if any(text in line for line in self.lines):
                 self.assert_no_loss(mark, f'ожидание строки {text!r}')
-                return time.time() - started
+                return time.monotonic() - started
+            self.heartbeat(f'ожидание строки {text!r}',
+                           time.monotonic() - started, timeout)
             time.sleep(poll_interval)
         self.assert_no_loss(mark, f'ожидание строки {text!r} {timeout:.0f} с')
         return None
@@ -795,10 +870,11 @@ class LogWatcher:
         """
         mark = self.loss_mark()
         reads, reads_failed = self.reads_ok, self.reads_failed
-        started = time.time()
+        started = time.monotonic()
         while True:
+            host.check('стартовый лог')
             self.poll()
-            waited = time.time() - started
+            waited = time.monotonic() - started
             state = self._wake_state()
             if state is None and waited >= timeout:
                 # Молчание на UART - приговор устройству, и выносить его, не
@@ -839,8 +915,10 @@ class LogWatcher:
         место, где мог быть пропущенный сеанс.
         """
         mark = self.loss_mark()
-        deadline = time.time() + timeout
-        while time.time() < deadline:
+        started = time.monotonic()
+        deadline = started + timeout
+        while time.monotonic() < deadline:
+            host.check('ожидание тишины')
             self.poll()
             for line in self.lines:
                 m = RE_MODE.search(line)
@@ -851,6 +929,7 @@ class LogWatcher:
             if mode is None and self.headless_pending:
                 logger.warning('тишины не было: в логе конец сеанса без начала')
                 return False
+            self.heartbeat('ожидание тишины', time.monotonic() - started, timeout)
             time.sleep(poll_interval)
         self.assert_no_loss(mark, f'ожидание тишины {timeout:.0f} с')
         return True
@@ -868,7 +947,7 @@ class LogWatcher:
         """
         if self._line_at is None or not self.lines:
             return ''
-        молчит = time.time() - self._line_at
+        молчит = time.monotonic() - self._line_at
         if молчит < 5.0:
             return ''
         конец = self.lines[-1].strip()

@@ -25,6 +25,10 @@ class Clock:
     def time(self) -> float:
         return self.now
 
+    def monotonic(self) -> float:
+        """Стенд отмеряет сроки монотонными часами: под тестом они те же."""
+        return self.now
+
     def sleep(self, seconds: float) -> None:
         self.now += seconds
 
