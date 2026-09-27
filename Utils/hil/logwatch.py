@@ -789,7 +789,7 @@ class LogWatcher:
                 self.assert_no_loss(mark, 'ожидание сеанса')
                 return session
             self.waited = time.monotonic() - started
-            if self.waited >= timeout:
+            if self.waited >= timeout or self.dead():
                 break
             self.heartbeat('ожидание сеанса', self.waited, timeout)
             time.sleep(poll_interval)
@@ -933,6 +933,25 @@ class LogWatcher:
             time.sleep(poll_interval)
         self.assert_no_loss(mark, f'ожидание тишины {timeout:.0f} с')
         return True
+
+    def dead(self) -> bool:
+        """
+        Начатый сеанс уже не доиграет - ждать потолок нечего.
+
+        С последней строки прошло больше, чем attiny держит питание ЕСП
+        (`WAIT_ESP_MSEC`, две минуты), значит ЕСП обесточена и строки ухода в сон
+        не будет никогда. Прежде это знание жило только в тексте отказа, то есть
+        доставалось после отсидки всего потолка.
+
+        Требуется именно незакрытый сеанс - начало без конца. Просто «строки в
+        буфере и тишина» тут не годятся: тест, ждущий планового сеанса, держит в
+        буфере прошлый, полный, и между пробуждениями молчит куда дольше двух
+        минут - по такому признаку отказ прилетал бы вместо ожидания.
+        """
+        if self._line_at is None or time.monotonic() - self._line_at < ATTINY_POWER_S:
+            return False
+        return (any(RE_MODE.search(line) for line in self.lines)
+                and not any(SESSION_END in line for line in self.lines))
 
     def stuck_note(self) -> str:
         """
