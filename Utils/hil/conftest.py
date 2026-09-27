@@ -30,6 +30,35 @@ if TYPE_CHECKING:                       # только для подсказок
 # железа и без этих зависимостей. Поэтому импорт - внутри фикстур.
 
 
+class _Lines:
+    """
+    Файл прогона, в который пишут двое: терминальный писатель pytest и логгеры.
+
+    pytest печатает строку теста по частям - имя, исход, время, - и запись
+    логгера, попавшая между частями, приклеивалась к ней:
+    «PASSED     6m 2s23:11:38 | INFO    | ping». Поэтому у писателей два входа:
+    pytest пишет как есть (`raw`), а логгер - всегда со своей строки.
+    """
+
+    def __init__(self, log: Any) -> None:
+        self._log = log
+        self._at_start = True
+
+    def raw(self, data: str) -> int:
+        if data:
+            self._at_start = data.endswith('\n')
+        return int(self._log.write(data))
+
+    def write(self, data: str) -> int:
+        if data and not self._at_start:
+            self._log.write('\n')
+            self._at_start = True
+        return self.raw(data)
+
+    def flush(self) -> None:
+        self._log.flush()
+
+
 class _Tee:
     """
     Пишет в терминал и в файл сразу.
@@ -38,12 +67,12 @@ class _Tee:
     что видно на экране: строки тестов, сводка, traceback.
     """
 
-    def __init__(self, stream: Any, log: Any) -> None:
+    def __init__(self, stream: Any, log: _Lines) -> None:
         self._stream = stream
         self._log = log
 
     def write(self, data: str) -> int:
-        self._log.write(data)
+        self._log.raw(data)
         return self._stream.write(data)
 
     def flush(self) -> None:
@@ -100,15 +129,23 @@ def _open_log(config: pytest.Config) -> Path | None:
     path.parent.mkdir(parents=True, exist_ok=True)
     log = path.open('w', buffering=1, encoding='utf-8')
     config.add_cleanup(log.close)
+    lines = _Lines(log)
 
     reporter = config.pluginmanager.get_plugin('terminalreporter')
     if reporter is not None:
-        reporter._tw._file = _Tee(reporter._tw._file, log)
+        reporter._tw._file = _Tee(reporter._tw._file, lines)
 
-    sink = logger.add(log, level='INFO', colorize=False, format=_line)
+    # Свой вывод loguru в stderr теперь лишний: он приезжал в терминал второй
+    # копией и приклеивался к строкам pytest. В файл всё попадает ниже, а
+    # внутри тестов записи показывает pytest-loguru
+    try:
+        logger.remove(0)
+    except ValueError:
+        pass                            # обработчик по умолчанию уже снят
+    sink = logger.add(lines, level='INFO', colorize=False, format=_line)
     config.add_cleanup(lambda: logger.remove(sink))
 
-    handler = logging.StreamHandler(log)
+    handler = logging.StreamHandler(lines)
     handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)-7s | %(message)s',
                                            datefmt='%H:%M:%S'))
     logging.getLogger().addHandler(handler)
