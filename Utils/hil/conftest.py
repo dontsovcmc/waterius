@@ -35,46 +35,45 @@ class _Lines:
     """
     Файл прогона, в который пишут двое: терминальный писатель pytest и логгеры.
 
-    pytest печатает строку теста по частям - имя, исход, время, - и запись
-    логгера, попавшая между частями, приклеивалась к ней:
-    «PASSED     6m 2s23:11:38 | INFO    | ping». Поэтому у писателей два входа:
-    pytest пишет как есть (`raw`), а логгер - всегда со своей строки.
+    pytest печатает строку теста по частям - имя, исход, время, - а между
+    именем и исходом лежит весь лог теста: у E3n это 1325 строк и полтора часа.
+    Записи логгера, попавшие между частями, склеивались с ними в кашу
+    «PASSED     6m 2s23:11:38 | INFO    | ping», а в файле оставалась сирота
+    «PASSED     1h 32m», по которой не узнать, чей это исход.
 
-    Но разорвать строку мало: между именем теста и исходом лежит весь его лог,
-    и в файле оставалась сирота «PASSED     1h 32m» через тысячу строк после
-    имени - понять, чей это исход, нельзя. Поэтому разорванное начало строки
-    запоминается и печатается заново вместе с исходом.
+    Поэтому у писателей два входа. Логгеры пишут сразу (`write`), а строка
+    pytest копится и печатается целиком (`raw`), в тот миг, когда дописана, -
+    имя и исход всегда рядом, и всегда один раз. В терминале порядок прежний:
+    туда `_Tee` отдаёт всё как есть.
     """
 
     def __init__(self, log: Any) -> None:
         self._log = log
-        self._at_start = True
-        self._partial = ''     # начатая pytest строка, ещё без исхода
-        self._broken = False   # её разорвала запись логгера
+        self._partial = ''         # недописанная строка pytest
 
     def _put(self, data: str) -> int:
-        self._at_start = data.endswith('\n')
         return int(self._log.write(data))
 
     def raw(self, data: str) -> int:
-        """Вход pytest: пишет как есть, но разорванную строку начинает заново."""
+        """Вход pytest: печатаем только дописанные строки."""
         if not data:
             return 0
-        if self._broken:
-            self._put(self._partial)
-            self._broken = False
-        конец = data.rfind('\n')
-        self._partial = data[конец + 1:] if конец != -1 else self._partial + data
-        return self._put(data)
+        self._partial += data
+        конец = self._partial.rfind('\n')
+        if конец != -1:
+            готовое, self._partial = self._partial[:конец + 1], self._partial[конец + 1:]
+            self._put(готовое)
+        return len(data)
 
     def write(self, data: str) -> int:
-        """Вход логгеров: всегда со своей строки."""
-        if not data:
-            return 0
-        if not self._at_start:
-            self._put('\n')
-            self._broken = bool(self._partial)
-        return self._put(data)
+        """Вход логгеров: строка pytest их не задерживает."""
+        return self._put(data) if data else 0
+
+    def finish(self) -> None:
+        """Дописать незавершённую строку pytest: прогон кончился."""
+        if self._partial:
+            self._put(self._partial + '\n')
+            self._partial = ''
 
     def flush(self) -> None:
         self._log.flush()
@@ -151,6 +150,8 @@ def _open_log(config: pytest.Config) -> Path | None:
     log = path.open('w', buffering=1, encoding='utf-8')
     config.add_cleanup(log.close)
     lines = _Lines(log)
+
+    config.add_cleanup(lines.finish)
 
     reporter = config.pluginmanager.get_plugin('terminalreporter')
     if reporter is not None:
