@@ -231,6 +231,11 @@ POLL_INTERVAL = 0.5
 # «хост спал» в логе выглядят одинаково
 HEARTBEAT_S = 30.0
 
+# Сколько молчания UART считаем концом печати, когда строки начатого сеанса ещё
+# лежат в окне, а строки ухода в сон в нём нет. Внутри сеанса пауз такой длины
+# не бывает: самая долгая - ответ сервера, единицы секунд
+SESSION_QUIET_S = 10.0
+
 # Во сколько раз окно ожидания первых строк может растянуться за счёт неудачных
 # чтений. Устройству полагается своё время наблюдения целиком, но и ждать
 # бесконечно нельзя: при мёртвой связи возврат упирается в этот предел, и стенд
@@ -598,6 +603,61 @@ class LogWatcher:
                 # Продолжение строки, разрезанной кольцом METF
                 self.lines[-1] += piece
 
+    def unfinished(self) -> bool:
+        """
+        В окне есть начало сеанса и нет его конца: устройство ещё печатает.
+
+        Режим настройки не в счёт: он кончается не сном, а перезапуском -
+        портал живёт, пока его не закроют, и строки ухода в сон у него нет
+        вовсе. Ожидание такого «конца» стоило E10 заводского сброса: стенд
+        прождал тринадцать секунд и выбросил вместе с окном перезапуск и
+        подъём точки портала, которых сам же и ждал следующие две минуты.
+        """
+        режим = None
+        for line in self.lines:
+            m = RE_MODE.search(line)
+            if m:
+                режим = int(m.group(1))
+        if режим is None or режим == SETUP_MODE:
+            return False
+        return not any(SESSION_END in line for line in self.lines)
+
+    def settle(self, timeout: float = ATTINY_POWER_S) -> float:
+        """
+        Дождаться конца начатого сеанса. Возвращает, сколько ждали.
+
+        Выброшенное начало сеанса не пропадает бесследно: устройство печатает
+        дальше, следующий разбор соберёт тот же сеанс по одному хвосту, режим
+        окажется неизвестен, и тест объявит «начало сеанса не доехало» - приговор
+        прошивке за то, что сделал стенд. Так упал B3 28 сентября: настройка
+        второго канала пришлась на сеанс, который ещё шёл.
+
+        Ждать бесконечно нельзя: сеанс мог оборваться, не напечатав строки ухода
+        в сон. Тогда его выдаёт молчание UART - пауз в SESSION_QUIET_S внутри
+        сеанса не бывает.
+        """
+        if not self.unfinished():
+            return 0.0
+        started = time.monotonic()
+        while True:
+            self.poll()
+            if not self.unfinished():
+                break
+            ждём = time.monotonic() - started
+            молчит = time.monotonic() - (self._line_at or started)
+            if молчит > SESSION_QUIET_S:
+                logger.warning(f'начатый сеанс молчит {молчит:.0f} с и конца не '
+                               f'напечатал: выбрасываю окно вместе с его началом')
+                break
+            if ждём >= timeout:
+                logger.warning(f'начатый сеанс не кончился за {ждём:.0f} с: '
+                               f'выбрасываю окно вместе с его началом')
+                break
+            host.check('ожидание конца сеанса')
+            self.heartbeat('ожидание конца сеанса', ждём, timeout)
+            time.sleep(POLL_INTERVAL)
+        return time.monotonic() - started
+
     def clear(self) -> None:
         """
         Начать наблюдение с чистого листа - и сказать, что для этого выброшено.
@@ -610,17 +670,21 @@ class LogWatcher:
         Ровно так выглядел отказ подъёма 27 сентября, где METF «отдала 11811
         байт», начиная с середины сеанса.
 
+        Идущий сеанс сперва доигрывается (`settle`), и только потом окно летит в
+        корзину: резать сеанс посередине - значит отнять у следующего голову.
+
         Кольцо платы чистим её же средствами (`serial_flush`): наш `poll()` мог и
         не удаться, и тогда старый лог приехал бы следующим опросом как новый.
         """
         self.poll()
+        ждали = self.settle()
         if self.lines:
-            начатый = (any(RE_MODE.search(line) for line in self.lines)
-                       and not any(SESSION_END in line for line in self.lines))
+            начатый = self.unfinished()
             сказать = logger.warning if начатый else logger.info
             беда = ', и в них начало сеанса без конца' if начатый else ''
-            сказать(f'начинаю наблюдение заново: выброшено {len(self.lines)} строк '
-                    f'({len(self.raw)} байт){беда}. '
+            дождались = f', дождавшись конца сеанса за {ждали:.0f} с' if ждали else ''
+            сказать(f'начинаю наблюдение заново{дождались}: выброшено '
+                    f'{len(self.lines)} строк ({len(self.raw)} байт){беда}. '
                     f'Последняя: «{self.lines[-1].strip()[:80]}»')
         flush = getattr(self.api, 'serial_flush', None)
         if flush is not None:
@@ -953,8 +1017,7 @@ class LogWatcher:
         """
         if self._line_at is None or time.monotonic() - self._line_at < ATTINY_POWER_S:
             return False
-        return (any(RE_MODE.search(line) for line in self.lines)
-                and not any(SESSION_END in line for line in self.lines))
+        return self.unfinished()
 
     def stuck_note(self) -> str:
         """

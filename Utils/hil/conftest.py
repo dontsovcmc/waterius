@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -34,26 +35,45 @@ class _Lines:
     """
     Файл прогона, в который пишут двое: терминальный писатель pytest и логгеры.
 
-    pytest печатает строку теста по частям - имя, исход, время, - и запись
-    логгера, попавшая между частями, приклеивалась к ней:
-    «PASSED     6m 2s23:11:38 | INFO    | ping». Поэтому у писателей два входа:
-    pytest пишет как есть (`raw`), а логгер - всегда со своей строки.
+    pytest печатает строку теста по частям - имя, исход, время, - а между
+    именем и исходом лежит весь лог теста: у E3n это 1325 строк и полтора часа.
+    Записи логгера, попавшие между частями, склеивались с ними в кашу
+    «PASSED     6m 2s23:11:38 | INFO    | ping», а в файле оставалась сирота
+    «PASSED     1h 32m», по которой не узнать, чей это исход.
+
+    Поэтому у писателей два входа. Логгеры пишут сразу (`write`), а строка
+    pytest копится и печатается целиком (`raw`), в тот миг, когда дописана, -
+    имя и исход всегда рядом, и всегда один раз. В терминале порядок прежний:
+    туда `_Tee` отдаёт всё как есть.
     """
 
     def __init__(self, log: Any) -> None:
         self._log = log
-        self._at_start = True
+        self._partial = ''         # недописанная строка pytest
 
-    def raw(self, data: str) -> int:
-        if data:
-            self._at_start = data.endswith('\n')
+    def _put(self, data: str) -> int:
         return int(self._log.write(data))
 
+    def raw(self, data: str) -> int:
+        """Вход pytest: печатаем только дописанные строки."""
+        if not data:
+            return 0
+        self._partial += data
+        конец = self._partial.rfind('\n')
+        if конец != -1:
+            готовое, self._partial = self._partial[:конец + 1], self._partial[конец + 1:]
+            self._put(готовое)
+        return len(data)
+
     def write(self, data: str) -> int:
-        if data and not self._at_start:
-            self._log.write('\n')
-            self._at_start = True
-        return self.raw(data)
+        """Вход логгеров: строка pytest их не задерживает."""
+        return self._put(data) if data else 0
+
+    def finish(self) -> None:
+        """Дописать незавершённую строку pytest: прогон кончился."""
+        if self._partial:
+            self._put(self._partial + '\n')
+            self._partial = ''
 
     def flush(self) -> None:
         self._log.flush()
@@ -130,6 +150,8 @@ def _open_log(config: pytest.Config) -> Path | None:
     log = path.open('w', buffering=1, encoding='utf-8')
     config.add_cleanup(log.close)
     lines = _Lines(log)
+
+    config.add_cleanup(lines.finish)
 
     reporter = config.pluginmanager.get_plugin('terminalreporter')
     if reporter is not None:
@@ -347,7 +369,35 @@ def bring_up(step: Callable[[], Any], what: str) -> Any:
         return step()
 
 
-def preflight(step: Callable[[], Any], what: str) -> Any:
+def _network_note(device: Any) -> str:
+    """
+    Состояние сети стенда словами роутера - в отказ подъёма.
+
+    «Устройство не доехало до приёмника» и «сеть стенда не проводит трафик»
+    выглядят одинаково: коды ответов -1 и там, и там. Различает их роутер. У
+    его прошивки есть своя беда - после `ap enable` без перезагрузки NAT не
+    возвращается, точка при этом «включена», фильтров нет, а наружу не ходит
+    никто (разбор - 03_router-nat-bug.md). 28 сентября на её диагностику ушло
+    два прогона.
+    """
+    try:
+        router = device.net.router
+        status = router.show('status')
+        ap = router.ap_enabled()
+        nat = router.nat_enabled()
+        clients = router.clients()
+    except Exception as err:                 # роутер мог и не ответить
+        return f'\nСостояние роутера стенда спросить не удалось: {err}'
+    uptime = re.search(r'Uptime:\s*\S+', status)
+    return (f'\nРоутер стенда: точка {"поднята" if ap else "погашена"}, '
+            f'NAT {"включён" if nat else "выключен"}, клиентов {len(clients)}'
+            f'{", " + uptime.group(0) if uptime else ""}. Если всё это выглядит '
+            f'исправным, а трафик не идёт - это ошибка прошивки роутера после '
+            f'`ap enable`, лечится перезагрузкой платы: '
+            f'`python Utils/hil/router.py --host <ip> restart`')
+
+
+def preflight(step: Callable[[], Any], what: str, device: Any = None) -> Any:
     """
     Шаг подъёма, чей отказ уносит прогон целиком.
 
@@ -359,7 +409,8 @@ def preflight(step: Callable[[], Any], what: str) -> Any:
     try:
         return bring_up(step, what)
     except AssertionError as err:
-        pytest.exit(f'стенд не поднялся ({what}): {err}', returncode=1)
+        note = _network_note(device) if device is not None else ''
+        pytest.exit(f'стенд не поднялся ({what}): {err}{note}', returncode=1)
 
 
 @pytest.fixture(scope='session')
@@ -370,11 +421,11 @@ def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     _metf = device.api
     global _stand
     _stand = device
-    preflight(device.check_atboard, 'AT-плата')      # до первого теста, а не на сороковой минуте
-    preflight(device.identify, 'опрос устройства')   # версии и MAC - до первого теста
-    preflight(device.ensure_network, 'сеть стенда')  # в чужой сети стенд бесполезен
-    preflight(device.ensure_mqtt, 'брокер стенда')   # если он поднялся
-    preflight(device.ensure_clock, 'часы платы')     # иначе время придёт из интернета
+    preflight(device.check_atboard, 'AT-плата', device)      # до первого теста, а не на сороковой минуте
+    preflight(device.identify, 'опрос устройства', device)   # версии и MAC - до первого теста
+    preflight(device.ensure_network, 'сеть стенда', device)  # в чужой сети стенд бесполезен
+    preflight(device.ensure_mqtt, 'брокер стенда', device)   # если он поднялся
+    preflight(device.ensure_clock, 'часы платы', device)     # иначе время придёт из интернета
     _log_air('первый тест')   # у первого файла улик иначе нет: стенд встал позже хука
     try:
         yield device

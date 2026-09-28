@@ -77,3 +77,29 @@ def test_невыполненная_перезагрузка_названа_св
 
 def test_аптайм_разбирается() -> None:
     assert router(['01:02:03']).uptime() == pytest.approx(3723.0)
+
+
+class КонсольБезAP(Console):
+    """Консоль, у которой точка доступа всегда «включена»: гашение не видно."""
+
+    def read_idle(self, timeout: float, idle: float) -> str:
+        line = self.sent[-1] if self.sent else ''
+        if line == 'show status':
+            return (f'{line}\nRouter Status:\nAP interface: enabled\n'
+                    f'Uptime: 00:10:00 (since 2026-09-23 13:00:00)\nesp32>')
+        return f'{line}\nesp32>'
+
+
+def test_упавшее_гашение_поднимает_точку_обратно() -> None:
+    """
+    Погашенная точка топит весь остаток прогона: 28 сентября G3 не дождался
+    нового состояния, и следом посыпались все тесты, которым нужна сеть.
+    """
+    board = NatRouter(КонсольБезAP())
+
+    with pytest.raises(RouterError), board.ap_off():
+        pytest.fail('до тела доходить было не должно')
+
+    assert 'ap disable' in board._t.sent
+    assert 'ap enable' in board._t.sent, 'точку обязаны были поднять обратно'
+    assert 'restart' in board._t.sent, 'без перезагрузки NAT не возвращается'

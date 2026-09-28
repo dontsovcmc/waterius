@@ -36,7 +36,7 @@ from .constants import (
     WATERIUS_MODEL_2,
 )
 
-pytestmark = [pytest.mark.stand, pytest.mark.slow]
+pytestmark = [pytest.mark.stand]
 
 BUILD = REPO_ROOT / 'ESP8266' / '.pio' / 'build' / 'waterius_2'
 
@@ -81,6 +81,7 @@ def request_ota(stand: Any, ota: dict[str, Any]) -> None:
     stand.dut.press_button()
 
 
+@pytest.mark.slow
 def test_J1_ota_updates_both_images(stand: Any, cfg: Any,
                                     images: dict[str, Any]) -> None:
     """
@@ -152,6 +153,7 @@ def test_J4_bad_url_is_reported(stand: Any, cfg: Any) -> None:
         'ошибка обновления обязана сбрасываться после публикации')
 
 
+@pytest.mark.slow
 def test_J3_low_battery_refuses(stand: Any, cfg: Any) -> None:
     """
     На просевших батарейках обновление не начинается: прерванная запись флеша
@@ -186,6 +188,7 @@ def test_J3_low_battery_refuses(stand: Any, cfg: Any) -> None:
     assert reported.payload['ota_error'] == OTA_ERR_LOW_BATTERY, reported.payload
 
 
+@pytest.mark.slow
 def test_J6_md5_mismatch_is_refused(stand: Any, cfg: Any,
                                     images: dict[str, Any]) -> None:
     """

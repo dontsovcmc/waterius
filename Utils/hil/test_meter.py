@@ -39,7 +39,6 @@ SHORT_PULSE_MS = 1
 HIGH_PULSE_MS = 30
 
 
-@pytest.mark.slow
 def test_D2a_missed_session_keeps_consumption(stand: Stand) -> None:
     """
     Пропущенный сеанс не теряет расход.
@@ -64,7 +63,6 @@ def test_D2a_missed_session_keeps_consumption(stand: Stand) -> None:
     session.assert_delta(channel=1, liters=2 * PULSES * BASE_FACTOR)
 
 
-@pytest.mark.slow
 @pytest.mark.requires(esp='2.0.47')       # младшие двигают точку отсчёта после коннекта
 def test_D2b_undelivered_session_keeps_delta(stand: Stand) -> None:
     """

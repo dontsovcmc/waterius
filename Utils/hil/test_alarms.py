@@ -196,6 +196,7 @@ def test_E3n_single_pulse_is_not_a_leak(stand: Stand, quiet: None) -> None:
     stand.expect_no_session(timeout=LEAK_SILENCE_S, mode=ALARM_MODE)
 
 
+@pytest.mark.slow
 @pytest.mark.needs(ctype0=LEAKAGE, ctype1=LEAKAGE)
 def test_E13_button_clears_both_channels(stand: Stand, quiet: None) -> None:
     """
@@ -219,6 +220,7 @@ def wet_plates(board: Any) -> list[dict[str, Any]]:
     return [m for m in answer if m.get('error') == MSG_ALARM_WET]
 
 
+@pytest.mark.slow
 @pytest.mark.portal
 @pytest.mark.requires(attiny=45, esp='2.0.51')
 @pytest.mark.needs(ctype0=LEAKAGE)

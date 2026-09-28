@@ -10,8 +10,10 @@ Assistant, а удерживаемое сообщение видно тольк�
 
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
 
@@ -202,3 +204,32 @@ def test_удерживаемое_отдаётся_с_тем_же_qos(broker: Mq
     late.disconnect()
 
     assert got == [0], f'удерживаемое пришло с QoS {got}, а публиковали нулём'
+
+
+def test_ожидание_топика_переживает_опоздание(watch: Any) -> None:
+    """
+    Снимок сразу после сеанса - гонка: последние публикации устройства доходят
+    до подписчика позже строки ухода в сон. I0b 28 сентября так и упал -
+    устройство напечатало `MQTT: pub waterius/rssi`, а в стенде его не было.
+    """
+    assert watch.last(f'{TOPIC}/rssi') is None
+
+    опоздавший = threading.Timer(
+        1.0, lambda: watch.publish_retained(f'{TOPIC}/rssi', '-74'))
+    опоздавший.start()
+    try:
+        message = watch.wait_topic(f'{TOPIC}/rssi', timeout=10)
+    finally:
+        опоздавший.cancel()
+
+    assert message is not None, 'опоздавшее сообщение должно дождаться'
+    assert message.payload == '-74'
+
+
+def test_ожидание_топика_не_висит_дольше_потолка(watch: Any) -> None:
+    """Молчание не должно висеть до конца прогона."""
+    начали = time.monotonic()
+
+    assert watch.wait_topic(f'{TOPIC}/нет-такого', timeout=1.0) is None
+
+    assert time.monotonic() - начали < 3.0

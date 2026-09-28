@@ -38,6 +38,7 @@ if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
 pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=41)]
 
 
+@pytest.mark.slow
 @pytest.mark.needs(ctype0=LEAKAGE)
 def test_E4a_sensor_bounce_gives_one_session(stand: Stand, quiet: None) -> None:
     """
@@ -69,6 +70,7 @@ def test_E4a_sensor_bounce_gives_one_session(stand: Stand, quiet: None) -> None:
         stand.dut.wet(channel=0, closed=False)
 
 
+@pytest.mark.slow
 def test_E5_normally_closed_sensor_detects_cut_wire(stand: Stand, quiet: None) -> None:
     """
     Нормально-замкнутый датчик: обрыв провода - это тревога.

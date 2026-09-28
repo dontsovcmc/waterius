@@ -21,7 +21,7 @@ from .logwatch import MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand  # а сбор тестов должен работать без них
 
-pytestmark = [pytest.mark.stand, pytest.mark.slow]
+pytestmark = [pytest.mark.stand]
 
 PERIOD_MIN = 5
 
@@ -35,6 +35,7 @@ H1_TOLERANCE = 0.4
 H1_PERIOD_MIN = 15
 
 
+@pytest.mark.slow
 def test_H1_wakeup_period(stand: Stand) -> None:
     """
     Период пробуждения соблюдается: устройство само выходит на связь раз в
@@ -80,6 +81,7 @@ def test_H1b_period_reaches_attiny(stand: Stand) -> None:
         f'в attiny уехал период {session.period_attiny}')
 
 
+@pytest.mark.slow
 @pytest.mark.requires(esp='2.0.47')       # у младших нет режима «только при расходе»
 def test_H3_silent_when_no_consumption(stand: Stand) -> None:
     """
@@ -106,6 +108,7 @@ def test_H3_silent_when_no_consumption(stand: Stand) -> None:
     assert session.payload is None, 'без расхода посылки быть не должно'
 
 
+@pytest.mark.slow
 @pytest.mark.requires(esp='2.0.47')       # у младших нет режима «только при расходе»
 def test_H4_consumption_wakes_it_up(stand: Stand) -> None:
     """Импульс возвращает связь на ближайшем плановом пробуждении."""
@@ -135,6 +138,7 @@ def assert_interval(minutes: float, period: int, what: str) -> None:
 MANUAL_PERIOD_MIN = 10
 
 
+@pytest.mark.slow
 @pytest.mark.requires(esp='2.0.47')
 def test_H6_manual_wakeup_restarts_schedule(stand: Stand) -> None:
     """
@@ -159,6 +163,7 @@ def test_H6_manual_wakeup_restarts_schedule(stand: Stand) -> None:
                     'плановый сеанс после нажатия')
 
 
+@pytest.mark.slow
 @pytest.mark.portal
 @pytest.mark.requires(attiny=40, esp='2.0.47')
 def test_H7_esp_reset_keeps_period(stand: Stand, cfg: Any) -> None:
@@ -210,6 +215,7 @@ def test_H7_esp_reset_keeps_period(stand: Stand, cfg: Any) -> None:
                     'плановый сеанс после перезагрузки')
 
 
+@pytest.mark.slow
 @pytest.mark.requires(esp='2.0.47')
 def test_H8_missed_session_keeps_tuning(stand: Stand) -> None:
     """

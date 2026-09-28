@@ -34,7 +34,7 @@ from .atboard import AtBoard, AtError
 from .constants import COLD, NAMUR, REPO_ROOT, WATER_COLD
 from .test_wifi import other_channel
 
-pytestmark = [pytest.mark.stand, pytest.mark.portal, pytest.mark.slow]
+pytestmark = [pytest.mark.stand, pytest.mark.portal]
 
 DATA = REPO_ROOT / 'ESP8266' / 'data'
 
@@ -313,6 +313,7 @@ def find_network(board: AtBoard, ssid: str,
     return None, seen
 
 
+@pytest.mark.slow
 def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
     """
     Роутер на другом канале, чем точка портала: на шаге подключения точка
@@ -365,8 +366,16 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
             dropped = start_connect(board)
             redirect, lost = wait_redirect(board, {CONNECTED})
 
+            # Переезд точки прошивка не печатает: радио у ЕСП одно, и при
+            # подключении к роутеру точка уходит следом молча
+            # (`active_point.cpp`, ap_channel). Единственная улика у стенда -
+            # потерянная связь AT-платы, поэтому к отказу идёт и то, чем
+            # кончился мастер: без этого «точка не ушла» и «устройство не
+            # подключилось вовсе» выглядят одинаково
             assert dropped or lost, (
-                f'AT-плата ни разу не потеряла точку: точка не ушла с канала {old} на {new}')
+                f'AT-плата ни разу не потеряла точку: точка не ушла с канала {old} '
+                f'на {new}. Мастер при этом вернул {redirect!r}, роутер на канале '
+                f'{stand.router.config().get("channel")}')
             assert redirect == CONNECTED, (
                 f'после смены канала мастер не увидел подключения: {redirect}')
 

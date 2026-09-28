@@ -21,7 +21,7 @@ import pytest
 from .constants import AS_COLD_CHANNEL, AUTO_IMPULSE_FACTOR, DEFAULT_WAKEUP_PERIOD_MIN
 from .reset import FreshDevice
 
-pytestmark = [pytest.mark.stand, pytest.mark.reset, pytest.mark.slow,
+pytestmark = [pytest.mark.stand, pytest.mark.reset,
               pytest.mark.requires(attiny=41)]
 
 
