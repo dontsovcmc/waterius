@@ -443,6 +443,6 @@ def test_G10_single_receiver(stand: Stand, alone: str) -> None:
             assert session.payload is None, 'свой сервер выключен, а посылка пришла'
             assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
                 f'брокер включён один, а в {stand.mqtt_root}/ пусто'
-                f'{session.mqtt_note}')
+                f'{session.mqtt_note}\n{stand.mqtt.note()}')
     finally:
         restore_receivers(stand, alone)

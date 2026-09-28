@@ -98,6 +98,10 @@ class AtBoard:
         # Сколько раз транспорт молча вернул станцию в сеть. Без этого счётчика
         # «связь не рвалась» не отличить от «оборвалась и починилась сама»
         self.rejoins = 0
+        # Обрывов, а не повторов: пока точка лежит, возврат не удаётся по
+        # нескольку раз подряд, и по возвратам один обрыв считается за два
+        self.outages = 0
+        self._in_outage = False
         time.sleep(0.3)
         self.ser.reset_input_buffer()
 
@@ -326,7 +330,9 @@ class AtBoard:
             self.cmd('AT+CIPCLOSE', timeout=5)
         except AtError:
             pass                                  # сервер обычно закрывает сам
-        return _parse(raw)
+        response = _parse(raw)
+        self._in_outage = False                   # запрос дошёл - обрыв кончился
+        return response
 
     def _start(self, host: str, port: int = 80) -> str:
         """Одна попытка открыть соединение. Отдаёт ответ платы как есть."""
@@ -371,6 +377,9 @@ class AtBoard:
         except AtError as err:
             return f'станция вне сети (CWSTATE={code}), вернуться не вышло: {err}'
         self.rejoins += 1
+        if not self._in_outage:
+            self.outages += 1
+            self._in_outage = True
         return f'станция была вне сети (CWSTATE={code}), вернулась с адресом {ip}'
 
     def _receive(self, timeout: float) -> bytes:

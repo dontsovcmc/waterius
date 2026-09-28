@@ -450,16 +450,6 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
                 f'по дороге точка терялась снова {lost}')
 
 
-def device_tail(stand: Any, count: int = 30) -> str:
-    """
-    Хвост лога устройства. Про точку доступа прошивка молчит, но соседние
-    строки говорят, чем она в этот миг занята, - без них «связь рвалась»
-    остаётся словом стенда против слова прошивки.
-    """
-    stand.log.poll()
-    return '\n'.join(stand.log.lines[-count:])
-
-
 @pytest.mark.reset
 def test_W6_router_on_the_same_channel(fresh_device: Any, cfg: Any,
                                        stand: Any) -> None:
@@ -484,9 +474,11 @@ def test_W6_router_on_the_same_channel(fresh_device: Any, cfg: Any,
         00:55:842  WIFI: begin channel: 1
         00:57:671  WIFI: Connected. SSID: waterius_stand Channel: 1
 
-    Поэтому обрыв тут не приговор, а мерка: ровно один, и телефон возвращается
-    сам. Ноль будет значить, что прошивка перестала ронять клиента, и проверку
-    надо пересмотреть; больше одного - что его роняют повторно.
+    Поэтому обрыв тут не приговор, а мерка: ровно один эпизод, и телефон
+    возвращается сам. Ноль будет значить, что прошивка перестала ронять клиента,
+    и проверку надо пересмотреть; два - что его роняют повторно. Считаются
+    именно эпизоды: пока точка лежит, транспорт возвращается по нескольку раз
+    подряд, и по возвратам один обрыв выглядел двумя.
 
     Мастер до конца здесь не идёт - остальные его шаги проверяют W1 и A10, - но
     устройство обязано уйти в сеть и прислать показания.
@@ -527,23 +519,24 @@ def test_W6_router_on_the_same_channel(fresh_device: Any, cfg: Any,
             f'мастер предупредит о потере связи, хотя канал точки и роутера '
             f'один - {channel}: {answer}')
 
-        возвратов = board.rejoins
+        было = board.outages
         dropped = start_connect(board)
         redirect, lost = wait_redirect(board, {CONNECTED})
 
         assert redirect == CONNECTED, (
-            f'мастер не увидел подключения к сети: {redirect}\n{device_tail(stand)}')
+            f'мастер не увидел подключения к сети: {redirect}\n{stand.log.tail()}')
 
-        # Каждое слагаемое - отдельный способ заметить один и тот же обрыв:
-        # отказ самого запроса, возврат мастера и молчаливый возврат транспорта
-        # (`atboard.py`, _recover). Считать надо все три: транспорт чинит связь
-        # молча, и по одному `lost` обрыва не видно вовсе
-        перерывов = int(dropped) + int(lost) + (board.rejoins - возвратов)
-        assert перерывов == 1, (
-            f'связь с порталом рвалась {перерывов} раз (запрос {dropped}, '
-            f'мастер {lost}, транспорт {board.rejoins - возвратов}), а на '
+        # Один обрыв виден тремя способами сразу - отказом запроса, возвратом
+        # мастера и молчаливым возвратом транспорта, - поэтому складывать их
+        # нельзя: 28.09 так вышло «два раза» на одном обрыве. Считаем эпизоды
+        # транспорта (`atboard.py`, outages), а отказ запроса и возврат мастера
+        # берут тот же эпизод, когда транспорту чинить уже нечего
+        обрывов = board.outages - было or int(dropped or lost)
+        assert обрывов == 1, (
+            f'связь с порталом рвалась {обрывов} раз (запрос {dropped}, '
+            f'мастер {lost}, эпизодов транспорта {board.outages - было}), а на '
             f'совпавшем канале обрыв ровно один - на подключении.\n'
-            f'{device_tail(stand)}')
+            f'{stand.log.tail()}')
 
         # Точка осталась там же, где поднялась: вот чем W6 отличается от W5
         still, air = portal_in_air(board, portal_ssid, channel, STAY_S)
@@ -553,7 +546,7 @@ def test_W6_router_on_the_same_channel(fresh_device: Any, cfg: Any,
 
         # Прошивка называет сеть и канал сама - последнее слово за ней
         connected = find_line(stand, RE_WIFI_CONNECTED, timeout=10)
-        assert connected, f'прошивка не доложила о подключении\n{device_tail(stand)}'
+        assert connected, f'прошивка не доложила о подключении\n{stand.log.tail()}'
         assert (connected.group(1), int(connected.group(2))) == (ssid, channel), (
             f'подключились не туда: {connected.group(0)}, ждали {ssid} на канале {channel}')
 
