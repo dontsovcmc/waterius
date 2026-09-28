@@ -50,6 +50,18 @@ SHORT_PERIOD_MIN = 2       # период на время проверки тр�
 NTP_NAME = re.compile(r'NTP: (?:NtpServer|Unable to resolve) (\d)\.ru\.pool\.ntp\.org')
 
 
+def ntp_said(session: Any) -> str:
+    """
+    Что о времени сказало само устройство.
+
+    «Не спросило время у стенда» без этих строк не делит вину: устройство могло
+    уйти в пул, могло не дойти до синхронизации вовсе, а могла потеряться
+    голова лога. N7 28 сентября упал ровно этим текстом, и разбирать было нечем.
+    """
+    said = [line for line in session.text.splitlines() if 'NTP' in line]
+    return '\n'.join(said) if said else 'о времени - ни строки'
+
+
 def board_epoch() -> int:
     """Время, которое назначаем плате: узнаваемое, но не в прошлом."""
     return int(time.time()) + SKEW_SEC
@@ -272,7 +284,9 @@ def test_N7_bogus_time_is_rejected(stand: Stand, clock: Any) -> None:
     stand.dut.press_button()
     session = stand.wait_session(timeout=180)
 
-    assert clock.requests_seen > asked, 'устройство не спросило время у стенда'
+    assert clock.requests_seen > asked, (
+        f'устройство не спросило время у платы стенда. Само оно говорит:\n'
+        f'{ntp_said(session)}')
     assert 'NTP: Unable to sync time' in session.text, (
         'время 2023 года принято без возражений\n' + session.text)
     assert session.payload is not None
