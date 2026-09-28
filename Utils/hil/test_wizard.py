@@ -366,8 +366,16 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
             dropped = start_connect(board)
             redirect, lost = wait_redirect(board, {CONNECTED})
 
+            # Переезд точки прошивка не печатает: радио у ЕСП одно, и при
+            # подключении к роутеру точка уходит следом молча
+            # (`active_point.cpp`, ap_channel). Единственная улика у стенда -
+            # потерянная связь AT-платы, поэтому к отказу идёт и то, чем
+            # кончился мастер: без этого «точка не ушла» и «устройство не
+            # подключилось вовсе» выглядят одинаково
             assert dropped or lost, (
-                f'AT-плата ни разу не потеряла точку: точка не ушла с канала {old} на {new}')
+                f'AT-плата ни разу не потеряла точку: точка не ушла с канала {old} '
+                f'на {new}. Мастер при этом вернул {redirect!r}, роутер на канале '
+                f'{stand.router.config().get("channel")}')
             assert redirect == CONNECTED, (
                 f'после смены канала мастер не увидел подключения: {redirect}')
 
