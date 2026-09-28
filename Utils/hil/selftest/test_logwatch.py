@@ -712,3 +712,57 @@ def test_молчание_между_плановыми_сеансами_не_с
     watcher._line_at = time.monotonic() - ATTINY_POWER_S - 60
 
     assert not watcher.dead(), 'полный сеанс в буфере принят за оборванный'
+
+
+class ПлатаПоЧастям:
+    """METF, отдающая лог порциями: сеанс приходит не разом."""
+
+    def __init__(self, porcii: list[str]) -> None:
+        self.porcii = list(porcii)
+        self.flushed = 0
+
+    def serial_read(self) -> str:
+        return self.porcii.pop(0) if self.porcii else ''
+
+    def serial_flush(self) -> None:
+        self.flushed += 1
+
+
+def test_clear_дожидается_конца_начатого_сеанса() -> None:
+    """
+    Резать сеанс посередине - значит отнять у следующего голову: тот соберётся
+    по хвосту, режим окажется неизвестен, и тест объявит «начало сеанса не
+    доехало». Так упал B3 28 сентября.
+    """
+    плата = ПлатаПоЧастям([through_ring(SESSION_ALARM[:5]),      # начало
+                           through_ring(SESSION_ALARM[5:])])     # и конец
+    watcher = LogWatcher(плата)
+
+    watcher.clear()
+
+    assert not плата.porcii, 'конец сеанса надо было дочитать, а не выбросить'
+    assert watcher.lines == [], 'после clear окно должно быть пустым'
+    assert плата.flushed == 1
+
+
+def test_clear_не_ждёт_замолчавший_сеанс(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Оборванный сеанс конца не напечатает: ждать его - терять минуты зря."""
+    плата = ПлатаПоЧастям([through_ring(SESSION_ALARM[:5])])
+    watcher = LogWatcher(плата)
+    watcher.poll()
+    watcher._line_at = time.monotonic() - 2 * ATTINY_POWER_S
+
+    начали = time.monotonic()
+    watcher.clear()
+
+    assert time.monotonic() - начали < 1.0, 'ждать было нечего'
+    assert watcher.lines == []
+
+
+def test_settle_молчит_когда_сеанса_нет() -> None:
+    """Целый сеанс в окне - ждать нечего, и лишней строки в логе быть не должно."""
+    watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM)))
+    watcher.poll()
+
+    assert watcher.unfinished() is False
+    assert watcher.settle() == 0.0
