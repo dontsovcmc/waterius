@@ -38,22 +38,42 @@ class _Lines:
     логгера, попавшая между частями, приклеивалась к ней:
     «PASSED     6m 2s23:11:38 | INFO    | ping». Поэтому у писателей два входа:
     pytest пишет как есть (`raw`), а логгер - всегда со своей строки.
+
+    Но разорвать строку мало: между именем теста и исходом лежит весь его лог,
+    и в файле оставалась сирота «PASSED     1h 32m» через тысячу строк после
+    имени - понять, чей это исход, нельзя. Поэтому разорванное начало строки
+    запоминается и печатается заново вместе с исходом.
     """
 
     def __init__(self, log: Any) -> None:
         self._log = log
         self._at_start = True
+        self._partial = ''     # начатая pytest строка, ещё без исхода
+        self._broken = False   # её разорвала запись логгера
 
-    def raw(self, data: str) -> int:
-        if data:
-            self._at_start = data.endswith('\n')
+    def _put(self, data: str) -> int:
+        self._at_start = data.endswith('\n')
         return int(self._log.write(data))
 
+    def raw(self, data: str) -> int:
+        """Вход pytest: пишет как есть, но разорванную строку начинает заново."""
+        if not data:
+            return 0
+        if self._broken:
+            self._put(self._partial)
+            self._broken = False
+        конец = data.rfind('\n')
+        self._partial = data[конец + 1:] if конец != -1 else self._partial + data
+        return self._put(data)
+
     def write(self, data: str) -> int:
-        if data and not self._at_start:
-            self._log.write('\n')
-            self._at_start = True
-        return self.raw(data)
+        """Вход логгеров: всегда со своей строки."""
+        if not data:
+            return 0
+        if not self._at_start:
+            self._put('\n')
+            self._broken = bool(self._partial)
+        return self._put(data)
 
     def flush(self) -> None:
         self._log.flush()
