@@ -66,6 +66,11 @@ ERROR_MARKERS = (
 )
 
 
+# Сколько ждём, пока команда консоли отразится в `show status`: интерфейс
+# поднимается и гасится не в момент ответа
+APPLY_S = 5.0
+
+
 class RouterError(RuntimeError):
     """Роутер не принял команду или ответил ошибкой."""
 
@@ -266,7 +271,7 @@ class NatRouter:
         return self.cmd(f'show {section}', timeout=6.0)
 
     def cmd_checked(self, line: str, applied: Callable[[], bool],
-                    what: str) -> None:
+                    what: str, timeout: float = APPLY_S) -> None:
         """
         Выполнить команду и убедиться по состоянию роутера, что она подействовала.
 
@@ -274,10 +279,21 @@ class NatRouter:
         держать список всех её формулировок. Один такой промах уже был:
         `dhcp_reserve` с именем устройства отвечал `excess option`, в список не
         попадал, и стенд считал адрес закреплённым. Состояние врать не умеет.
+
+        Состояние спрашивается до потолка, а не один раз сразу: интерфейс
+        поднимается и гасится не в момент ответа консоли. G3 28 сентября упал
+        на `ap disable`, хотя точка погасла, - стенд успел спросить раньше.
         """
         self.cmd(line)
-        if not applied():
-            raise RouterError(f'{what}: команда выполнена, а состояние не изменилось\n{line}')
+        deadline = time.monotonic() + timeout
+        while True:
+            if applied():
+                return
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(0.5)
+        raise RouterError(f'{what}: команда выполнена, а состояние не изменилось '
+                          f'за {timeout:.0f} с\n{line}')
 
     def config(self) -> dict[str, str]:
         """`show config` в словарь. Ключи - как их печатает прошивка."""
