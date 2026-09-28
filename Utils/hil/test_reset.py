@@ -18,7 +18,13 @@ from typing import Any
 
 import pytest
 
-from .constants import AS_COLD_CHANNEL, AUTO_IMPULSE_FACTOR, DEFAULT_WAKEUP_PERIOD_MIN
+from .constants import (
+    AS_COLD_CHANNEL,
+    AUTO_IMPULSE_FACTOR,
+    DEFAULT_WAKEUP_PERIOD_MIN,
+    WATER_COLD,
+    WATER_HOT,
+)
 from .reset import FreshDevice
 
 pytestmark = [pytest.mark.stand, pytest.mark.reset,
@@ -40,8 +46,9 @@ def after_reset(cfg: Any, stand: Any) -> Iterator[dict]:
     device = FreshDevice.reset(cfg, stand)
     try:
         session = device.leave()
+        # Судим по первой посылке: во второй уже то, что ответил приёмник
         yield {'before': device.before, 'session': session,
-               'payload': session.payload, 'tail': stand.log.tail(60)}
+               'payload': session.payloads[0], 'tail': stand.log.tail(60)}
     finally:
         device.close()
 
@@ -62,26 +69,28 @@ def test_R2_settings_return_to_defaults(after_reset: dict) -> None:
     """
     Всё остальное вернулось к умолчаниям.
 
-    Список широкий намеренно. Сброс возвращает структуру настроек целиком, и
-    проверка по двум-трём полям зеленела бы на любом частичном сбросе: пороги
-    тревог, показания, серийные номера и маска квитанции лежат в тех же
-    настройках и сбрасываться обязаны так же.
+    Проверяется ровно то, что сбрасывает `factory_reset` (`config.cpp`):
+    настройки ЕСП целиком - присваиванием `Settings()` и `init_config`, - плюс
+    типы входов, которые живут в EEPROM attiny и стираются только командой
+    `setCountersType`. Больше из attiny сброс не трогает ничего: это
+    особенность платы.
 
-    Типы входов сюда же, хотя живут они в EEPROM attiny: сбросить их ЕСП может
-    только командой `setCountersType` (`config.cpp`, factory_reset), и без неё
-    «заводское состояние» осталось бы с датчиком протечки на входе. Ничего
-    другого из attiny сброс не трогает - это особенность платы, - поэтому
-    список проверяет лишь то, что живёт в настройках ЕСП.
+    Вне списка три поля, которые к первой посылке успел задать стенд: сеть,
+    `http_on` и `http_url`, - без них посылки не было бы вовсе. И
+    `setup_finished`: счётчик растёт на выходе из портала, то есть уже после
+    сброса.
     """
     payload = after_reset['payload']
     expected = {
         'f0': AS_COLD_CHANNEL,          # вес обоих входов - снова спецзначения
         'f1': AUTO_IMPULSE_FACTOR,
         'period_min': DEFAULT_WAKEUP_PERIOD_MIN,
+        'cname0': WATER_HOT, 'cname1': WATER_COLD,
         'ctype0': 0, 'ctype1': 0,       # типы входов - в EEPROM attiny
         'ch0_start': 0, 'ch1_start': 0,  # показания
         'serial0': '', 'serial1': '',
         'company': '', 'place': '',
+        'email': '',                    # переживает сброс только токен
         'av0': 0, 'av1': 0,             # пороги тревог
         'ar0': 0, 'ar1': 0,
         'ah0': 0, 'ah1': 0,
@@ -90,6 +99,7 @@ def test_R2_settings_return_to_defaults(after_reset: dict) -> None:
         'ackw': False, 'ackh': False,   # маска квитанции - CONFIRM_ANY
         'ackm': False,
         'voltage_cal': 100,
+        'dhcp': True, 'mqtt_retain': True,
         'mqtt': False,                  # брокер выключен, адрес стенда забыт
         'ha': False,
     }

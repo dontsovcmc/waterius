@@ -162,9 +162,10 @@ class FreshDevice:
         session = self.stand.wait_session(timeout=timeout)
         assert session.payload is not None, (
             f'после сброса и настройки посылка не дошла\n{session.text}')
-        logger.info(f'после сброса: f0={session.payload.get("f0")}, '
-                    f'f1={session.payload.get("f1")}, '
-                    f'period_min={session.payload.get("period_min")}')
+        первая = session.payloads[0]
+        logger.info(f'после сброса: f0={первая.get("f0")}, '
+                    f'f1={первая.get("f1")}, '
+                    f'period_min={первая.get("period_min")}')
         return session
 
     def close(self) -> None:

@@ -122,3 +122,22 @@ def test_настройки_уходят_целой_посылке_один_ра
 
     assert b'"period_min": 5' in answer(receiver, FULL)
     assert b'"period_min"' not in answer(receiver, FULL)
+
+
+def test_снятый_заряд_не_достаётся_чужому_сеансу(receiver: Receiver) -> None:
+    """
+    Заряд, которого никто не забрал, снимается и в чужую посылку не попадает.
+
+    Иначе он ждёт не своего сеанса, а первой посылки, какая придёт: у теста
+    сброса это первая посылка после сброса, и заводские умолчания в ней
+    подменяются эталоном стенда.
+    """
+    receiver.reply_settings({'period_min': 5})
+
+    assert receiver.forget_reply() == {'period_min': 5}
+    assert b'"period_min"' not in answer(receiver, FULL)
+
+
+def test_снимать_нечего_когда_заряда_нет(receiver: Receiver) -> None:
+    """Пустой приёмник снимается молча: вызов стоит перед каждым тестом."""
+    assert receiver.forget_reply() is None

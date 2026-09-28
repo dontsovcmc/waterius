@@ -339,6 +339,13 @@ class Receiver:
             self._reply = dict(settings)
             self._reply_once = once
 
+    def forget_reply(self) -> dict[str, Any] | None:
+        """Снять заряженный ответ, не дожидаясь посылки. Возвращает снятое."""
+        with self._lock:
+            заряд, self._reply = self._reply, None
+            self._reply_once = True
+        return заряд
+
     def _take_reply(self) -> bytes:
         with self._lock:
             if self._reply is None:
