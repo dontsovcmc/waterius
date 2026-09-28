@@ -95,6 +95,9 @@ class AtBoard:
         self.ssid: str | None = None       # сеть, в которую плата вошла последней
         self.password = ''
         self.portal_ssid: str | None = None    # имя точки портала, её ставит portal.py
+        # Сколько раз транспорт молча вернул станцию в сеть. Без этого счётчика
+        # «связь не рвалась» не отличить от «оборвалась и починилась сама»
+        self.rejoins = 0
         time.sleep(0.3)
         self.ser.reset_input_buffer()
 
@@ -367,6 +370,7 @@ class AtBoard:
             ip = self.join(self.ssid, self.password)
         except AtError as err:
             return f'станция вне сети (CWSTATE={code}), вернуться не вышло: {err}'
+        self.rejoins += 1
         return f'станция была вне сети (CWSTATE={code}), вернулась с адресом {ip}'
 
     def _receive(self, timeout: float) -> bytes:

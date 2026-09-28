@@ -51,11 +51,19 @@ DETECT_PULSES = 3
 # save_fast_connect печатает пару, которую сохранил
 RE_FAST_CONNECT = re.compile(r'Fast connect: channel=(\d+) bssid=(\S+)')
 
+# Чем кончилось подключение, словами самой прошивки (`wifi_helpers.cpp`, wifi_connect)
+RE_WIFI_CONNECTED = re.compile(r'WIFI: SSID: (\S+) Channel: (\d+)')
+
 # W5: сколько ждать, пока точка портала уведёт станцию за собой, и сколько -
 # пока она сама встанет на канал роутера. Оба срока - от начала подключения к
 # роутеру, а оно идёт полным сканом эфира, если быстрый коннект промахнулся
 KICK_S = 20.0
 MOVE_S = 90.0
+
+# W6: сколько ждать подтверждения, что точка осталась на своём канале. Ждать
+# тут нечего - точка уже в эфире, - но скан во время подключения ЕСП может
+# разойтись с ней разок
+STAY_S = 30.0
 
 
 def api(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:
@@ -301,18 +309,23 @@ def test_W2_wrong_password_returns_to_wifi_settings(board: AtBoard, cfg: Any,
                     password=cfg.ap_password) == {}
 
 
-def find_network(board: AtBoard, ssid: str,
+def find_network(board: AtBoard, ssid: str, channel: int | None = None,
                  timeout: float = 90.0) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
     """
     Сеть по имени и последний увиденный список. Запрос после выдачи списка
     запускает новый скан (`active_point_api.cpp`, get_api_networks), так что
     повтор находит и сеть, поднявшуюся позже скана на старте портала.
+
+    Канал, если он задан, ждём наравне с именем: список, снятый до переезда
+    роутера, честно показывает прежний, и по одному имени тест взял бы
+    устаревшую строку и пошёл настраивать сеть на канале, которого уже нет.
     """
     seen: list[dict[str, Any]] = []
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         seen = networks_list(board, timeout=max(5.0, deadline - time.monotonic()))
-        ours = next((net for net in seen if net['ssid'] == ssid), None)
+        ours = next((net for net in seen if net['ssid'] == ssid
+                     and (channel is None or int(net['wifi_channel']) == channel)), None)
         if ours:
             return ours, seen
         time.sleep(3)
@@ -349,7 +362,6 @@ def portal_in_air(board: AtBoard, ssid: str, channel: int,
     return None, seen
 
 
-@pytest.mark.slow
 def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
     """
     Роутер на другом канале, чем точка портала (K2).
@@ -390,14 +402,12 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
                 f'точка портала поднялась на канале {started.group(1)}, а не на канале '
                 f'прошлого подключения {old}: сценарий со сменой канала не воспроизведён')
 
-            ours, seen = find_network(board, ssid)
+            ours, seen = find_network(board, ssid, channel=new)
             assert ours, (
-                f'сети стенда {ssid} нет в списке и после повторных сканов: '
-                f'{[(net["ssid"], net["wifi_channel"]) for net in seen]}; '
+                f'сети стенда {ssid} на канале {new} нет в списке и после '
+                f'повторных сканов: {[(net["ssid"], net["wifi_channel"]) for net in seen]}; '
                 f'роутер: канал {stand.router.config().get("channel")}, '
                 f'точка {stand.router.ap_enabled()}')
-            assert int(ours['wifi_channel']) == new, (
-                f"в списке сеть стенда на канале {ours['wifi_channel']}, роутер на {new}")
 
             answer = portal_mod.post_json(board, '/api/save_connect', ssid=ssid,
                                           password=cfg.ap_password,
@@ -438,6 +448,119 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
             assert redirect == CONNECTED, (
                 f'после смены канала мастер не увидел подключения: {redirect}; '
                 f'по дороге точка терялась снова {lost}')
+
+
+def device_tail(stand: Any, count: int = 30) -> str:
+    """
+    Хвост лога устройства. Про точку доступа прошивка молчит, но соседние
+    строки говорят, чем она в этот миг занята, - без них «связь рвалась»
+    остаётся словом стенда против слова прошивки.
+    """
+    stand.log.poll()
+    return '\n'.join(stand.log.lines[-count:])
+
+
+@pytest.mark.reset
+def test_W6_router_on_the_same_channel(fresh_device: Any, cfg: Any,
+                                       stand: Any) -> None:
+    """
+    Роутер на том же канале, что и точка портала: переезжать точке некуда.
+
+    Обратная сторона W5 и настоящая первая настройка: сети устройство не знает,
+    поэтому точка портала поднимается на заводском канале (`core/wifi.cpp`,
+    ap_channel - канал из настроек, а после сброса он равен 1). Роутер уводим
+    туда же. Тогда страница подключения не должна пугать предупреждением о
+    потере связи (S_ANOTHER_CHANNEL), точка обязана остаться на своём канале, а
+    мастер - дойти до конца.
+
+    Связь при этом всё равно рвётся - один раз, на самом подключении. Это не
+    переезд: `active_point.cpp` зовёт `wifi_connect(sett, WIFI_AP_STA)`, а тот
+    в `wifi_begin` (`wifi_helpers.cpp`) делает `WiFi.disconnect(true)` и заново
+    ставит режим, пересоздавая точку при любом канале. Замер 28.09, два прогона
+    из двух:
+
+        00:55:104  Start connect
+        00:55:208  WIFI: disconnect          <- здесь AT-плату выбивает
+        00:55:842  WIFI: begin channel: 1
+        00:57:671  WIFI: Connected. SSID: waterius_stand Channel: 1
+
+    Поэтому обрыв тут не приговор, а мерка: ровно один, и телефон возвращается
+    сам. Ноль будет значить, что прошивка перестала ронять клиента, и проверку
+    надо пересмотреть; больше одного - что его роняют повторно.
+
+    Мастер до конца здесь не идёт - остальные его шаги проверяют W1 и A10, - но
+    устройство обязано уйти в сеть и прислать показания.
+    """
+    board = fresh_device.board
+    ssid = stand.ap_ssid
+    assert portal_mod.needs_setup(board), (
+        'устройство знает сеть: это не первая настройка, сценарий не тот')
+
+    started = find_line(stand, portal_mod.RE_AP_STARTED)
+    assert started, 'нет строки о запуске точки портала'
+    channel = int(started.group(1))
+    portal_ssid = board.portal_ssid
+    assert portal_ssid, 'имя точки портала неизвестно'
+
+    with stand.router.channel(channel):
+        стоял = stand.router.config().get('channel')
+        assert стоял == str(channel), (
+            f'роутер не встал на канал точки портала {channel}: {стоял}')
+
+        # Список, снятый порталом до переезда роутера, показывает прежний канал:
+        # ждём тот, на котором роутер стоит сейчас
+        ours, seen = find_network(board, ssid, channel=channel)
+        assert ours, (
+            f'сети стенда {ssid} на канале {channel} нет в списке и после '
+            f'повторных сканов: {[(net["ssid"], net["wifi_channel"]) for net in seen]}; '
+            f'роутер: канал {stand.router.config().get("channel")}, '
+            f'точка {stand.router.ap_enabled()}')
+
+        answer = portal_mod.post_json(board, '/api/save_connect', ssid=ssid,
+                                      password=cfg.ap_password,
+                                      wifi_channel=ours['wifi_channel'],
+                                      bssid=ours['bssid'], wizard='true')
+        assert not answer.get('errors'), answer
+        # error=0 - S_ANOTHER_CHANNEL (`active_point_api.cpp`, save_connect):
+        # страница предупредит о потере связи. Каналы совпали - предупреждать не о чем
+        assert 'error=0' not in answer.get('redirect', ''), (
+            f'мастер предупредит о потере связи, хотя канал точки и роутера '
+            f'один - {channel}: {answer}')
+
+        возвратов = board.rejoins
+        dropped = start_connect(board)
+        redirect, lost = wait_redirect(board, {CONNECTED})
+
+        assert redirect == CONNECTED, (
+            f'мастер не увидел подключения к сети: {redirect}\n{device_tail(stand)}')
+
+        # Каждое слагаемое - отдельный способ заметить один и тот же обрыв:
+        # отказ самого запроса, возврат мастера и молчаливый возврат транспорта
+        # (`atboard.py`, _recover). Считать надо все три: транспорт чинит связь
+        # молча, и по одному `lost` обрыва не видно вовсе
+        перерывов = int(dropped) + int(lost) + (board.rejoins - возвратов)
+        assert перерывов == 1, (
+            f'связь с порталом рвалась {перерывов} раз (запрос {dropped}, '
+            f'мастер {lost}, транспорт {board.rejoins - возвратов}), а на '
+            f'совпавшем канале обрыв ровно один - на подключении.\n'
+            f'{device_tail(stand)}')
+
+        # Точка осталась там же, где поднялась: вот чем W6 отличается от W5
+        still, air = portal_in_air(board, portal_ssid, channel, STAY_S)
+        assert still, (
+            f'точки портала {portal_ssid} нет на канале {channel} после '
+            f'подключения: в эфире {[(net.ssid, net.channel) for net in air]}')
+
+        # Прошивка называет сеть и канал сама - последнее слово за ней
+        connected = find_line(stand, RE_WIFI_CONNECTED, timeout=10)
+        assert connected, f'прошивка не доложила о подключении\n{device_tail(stand)}'
+        assert (connected.group(1), int(connected.group(2))) == (ssid, channel), (
+            f'подключились не туда: {connected.group(0)}, ждали {ssid} на канале {channel}')
+
+    # Возврат стенда - уже на его обычном канале. Внутри смены канала устройство
+    # достаёт облако, но не приёмник стенда (прогон 28.09: cloud.waterius.ru
+    # отвечает 200, 192.168.100.18:8010 - код -3), а это уже не про мастер
+    fresh_device.leave()
 
 
 def hex_digits(mac: str) -> str:
