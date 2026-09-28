@@ -147,6 +147,9 @@ def test_потерянная_точка_возвращается_и_запро�
     assert answer.status == 200 and answer.body == b'hi'
     assert board.ser.count(b'AT+CWJAP') == 1, 'плата не вернулась в сеть'
     assert board.ser.count(b'AT+CIPSTART') == 2, 'запрос не повторён'
+    # Возврат молчаливый: без счётчика тест, проверяющий «связь не рвалась»,
+    # принял бы починенный обрыв за его отсутствие
+    assert board.rejoins == 1, 'молчаливый возврат в сеть не посчитан'
 
 
 def test_занятое_соединение_закрывается_а_не_переподключается(
@@ -183,3 +186,69 @@ def test_join_запоминает_сеть(monkeypatch: pytest.MonkeyPatch) -> 
     board = scripted(monkeypatch, портальный_сценарий([b'OK\r\n'], state=b'2'))
     assert board.join('waterius-портал') == '192.168.4.2'
     assert board.ssid == 'waterius-портал'
+
+
+# Ответ живой платы на AT+CWLAP, снятый со стенда 28.09: своя сеть, скрытая
+# соседская и точка стенда. Хвост полей зависит от AT+CWLAPOPT и не разбирается
+LAP = (b'AT+CWLAP\r\n'
+       b'+CWLAP:(3,"dav",-60,"7c:52:59:3f:23:9b",4,-1,-1,4,4,7,1)\r\n'
+       b'+CWLAP:(0,"",-64,"46:df:65:bb:23:d9",2,-1,-1,0,0,7,0)\r\n'
+       b'+CWLAP:(3,"waterius_stand",-87,"1C:C3:AB:3A:D3:11",11,-1,-1,4,4,7,0)\r\n'
+       b'\r\nOK\r\n')
+
+
+def test_скан_читает_канал_чужой_точки(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Канал точки портала стенду взять больше неоткуда: прошивка о переезде
+    молчит, а войти в точку, чтобы спросить, - значит потерять сам переезд.
+    """
+    board = scripted(monkeypatch, {b'AT+CWLAP': [LAP]})
+
+    networks = board.scan()
+
+    assert [(net.ssid, net.channel) for net in networks] == [
+        ('dav', 4), ('', 2), ('waterius_stand', 11)]
+    наша = networks[2]
+    assert наша.rssi == -87
+    assert наша.bssid == '1c:c3:ab:3a:d3:11', 'BSSID сравнивают с ответом портала, он в нижнем регистре'
+
+
+def test_скан_по_имени_не_сканирует_весь_эфир(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Полный скан идёт секунды; когда ищут одну точку, спрашивают одну."""
+    board = scripted(monkeypatch, {b'AT+CWLAP': [LAP]})
+
+    board.scan('waterius_stand')
+
+    assert board.ser.sent.startswith(b'AT+CWLAP="waterius_stand"')
+
+
+def test_скан_без_ответа_платы_это_ошибка(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Пустой список и отказ платы - разные новости, путать их нельзя."""
+    board = scripted(monkeypatch, {b'AT+CWLAP': [b'ERROR\r\n']})
+
+    with pytest.raises(atboard.AtError, match='скан эфира'):
+        board.scan()
+
+
+def test_wait_offline_ждёт_пока_точка_уведёт_станцию(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Станция в сети - переезд ещё не начался. Ждём, а не спрашиваем один раз:
+    ЕСП уходит на канал роутера не мгновенно.
+    """
+    board = scripted(monkeypatch, {b'AT+CWSTATE?': [
+        b'+CWSTATE:2,"waterius"\r\n\r\nOK\r\n',
+        b'+CWSTATE:2,"waterius"\r\n\r\nOK\r\n',
+        b'+CWSTATE:4,"waterius"\r\n\r\nOK\r\n']})
+
+    assert board.wait_offline(timeout=10) is True
+    assert board.ser.count(b'AT+CWSTATE?') == 3
+
+
+def test_wait_offline_не_висит_дольше_потолка(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Станция, оставшаяся в сети, - это отказ теста, а не вечное ожидание."""
+    board = scripted(monkeypatch, {b'AT+CWSTATE?': [
+        b'+CWSTATE:2,"waterius"\r\n\r\nOK\r\n']})
+
+    assert board.wait_offline(timeout=0.2) is False

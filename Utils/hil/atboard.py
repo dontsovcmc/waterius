@@ -45,6 +45,9 @@ RE_IP = re.compile(r'\+CIPSTA:ip:"([\d.]+)"')
 RE_RECVLEN = re.compile(r'\+CIPRECVLEN:(\d+)')
 # ESP-AT пишет адрес в кавычках; без кавычек тоже принимаем
 RE_DOMAIN = re.compile(r'\+CIPDOMAIN:"?([0-9A-Fa-f.:]+)"?')
+# Строка скана: +CWLAP:(<шифрование>,"<имя>",<уровень>,"<mac>",<канал>,...).
+# Хвост полей зависит от AT+CWLAPOPT и здесь не нужен, поэтому не разбирается
+RE_LAP = re.compile(r'\+CWLAP:\((\d+),"([^"]*)",(-?\d+),"([0-9a-fA-F:]+)",(\d+)')
 # Нулевой кусок в конце chunked-ответа. Длина куска пишется в поле фиксированной
 # ширины и добивается пробелами, поэтому концом служит "0   \r\n\r\n".
 RE_LAST_CHUNK = re.compile(rb'(?:^|\r\n)0[ \t]*\r\n\r\n$')
@@ -54,6 +57,16 @@ STATE_GOT_IP = 2             # AT+CWSTATE?: 2 - подключена и полу
 
 class AtError(Exception):
     pass
+
+
+@dataclass
+class Network:
+    """Сеть в эфире глазами платы."""
+
+    ssid: str
+    rssi: int
+    bssid: str
+    channel: int
 
 
 @dataclass
@@ -81,6 +94,10 @@ class AtBoard:
         self._passive = False
         self.ssid: str | None = None       # сеть, в которую плата вошла последней
         self.password = ''
+        self.portal_ssid: str | None = None    # имя точки портала, её ставит portal.py
+        # Сколько раз транспорт молча вернул станцию в сеть. Без этого счётчика
+        # «связь не рвалась» не отличить от «оборвалась и починилась сама»
+        self.rejoins = 0
         time.sleep(0.3)
         self.ser.reset_input_buffer()
 
@@ -188,6 +205,43 @@ class AtBoard:
                 return True
             time.sleep(0.5)
         return False
+
+    def state(self) -> int:
+        """Состояние станции по `AT+CWSTATE?`: 2 - в сети и с адресом."""
+        answer = self.cmd('AT+CWSTATE?', timeout=5)
+        m = RE_STATE.search(answer)
+        if not m:
+            raise AtError(f'плата не сказала своего состояния: {answer.strip()}')
+        return int(m.group(1))
+
+    def wait_offline(self, timeout: float = 30.0) -> bool:
+        """
+        Дождаться, пока станция останется без сети.
+
+        Уходя на канал роутера, Ватериус уводит точку портала за собой и клиента
+        при этом теряет. Звать его обратно некому - возвращается он сам.
+        """
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if self.state() != STATE_GOT_IP:
+                return True
+            time.sleep(0.5)
+        return False
+
+    def scan(self, ssid: str | None = None, timeout: float = 30.0) -> list[Network]:
+        """
+        Сети в эфире. Имя сужает скан до одной сети (`AT+CWLAP="<имя>"`).
+
+        Это единственный способ увидеть чужую точку доступа целиком - с каналом
+        и BSSID, - не входя в неё.
+        """
+        query = f'AT+CWLAP="{ssid}"' if ssid else 'AT+CWLAP'
+        answer = self.cmd(query, timeout=timeout)
+        if 'OK' not in answer:
+            raise AtError(f'скан эфира не удался: {answer.strip()}')
+        return [Network(ssid=m.group(2), rssi=int(m.group(3)),
+                        bssid=m.group(4).lower(), channel=int(m.group(5)))
+                for m in RE_LAP.finditer(answer)]
 
     def join(self, ssid: str, password: str = '', timeout: float = 30.0) -> str:
         """Присоединиться к сети и вернуть свой адрес. Открытая сеть - пустой пароль."""
@@ -316,6 +370,7 @@ class AtBoard:
             ip = self.join(self.ssid, self.password)
         except AtError as err:
             return f'станция вне сети (CWSTATE={code}), вернуться не вышло: {err}'
+        self.rejoins += 1
         return f'станция была вне сети (CWSTATE={code}), вернулась с адресом {ip}'
 
     def _receive(self, timeout: float) -> bytes:
