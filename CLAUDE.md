@@ -179,3 +179,21 @@ Disable modules via build_flags in `platformio.ini`:
 - CI (`.github/workflows/ci.yml`) runs on every PR and push to `dev`/`master`:
   builds both ESP8266 envs and both Attiny85 envs, runs the host tests under
   both models
+
+## Running HIL tests (`Utils/hil`)
+
+**Never redirect pytest output to `/tmp` or any file outside the repo.** The run
+writes `logs/ГГГГ-мм-ДД-ЧЧ-ММ.log` itself (pytest output + stand loguru + METF
+logging), prints its path in the session header, and flushes line by line, so an
+aborted run keeps everything it printed. A redirect to `/tmp` makes a second,
+worse copy that nobody can find afterwards and that dies with the sandbox.
+
+```bash
+python3 -m pytest Utils/hil --stand                 # лог сам, в logs/
+tail -f logs/$(ls -t logs | head -1)                # следить за идущим прогоном
+```
+
+For a long unattended run, launch it in the background **without** a redirect
+(`run_in_background`) and watch `logs/`. Do not pipe pytest into `head`/`tail`:
+the closed pipe raises `BrokenPipeError` inside the stand's log tee and kills the
+run with `INTERNALERROR`. Details — `Utils/hil/README.md`, «Запуск».
