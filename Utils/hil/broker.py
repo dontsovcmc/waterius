@@ -195,9 +195,9 @@ class MqttBroker:
         if not self.listening():
             self.stop()
             raise RuntimeError(
-                f'брокер не отвечает на {self.host}:{self.port}. Если адрес не '
-                'принадлежит этой машине, поправьте [broker] host в stand.ini: '
-                'Ватериус ходит на него через NAT точки доступа')
+                f'брокер не отвечает на {self.host}:{self.port}. Свой адрес стенд '
+                'спрашивает у ядра перед прогоном (config.own_ip); если он задан '
+                'руками через HIL_BROKER_HOST - уберите переменную')
 
         logger.info(f'брокер слушает {self.host}:{self.port}')
 
