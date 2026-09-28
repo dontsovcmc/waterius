@@ -813,7 +813,7 @@ class Stand:
             f'стенд: приёмник {self.cfg.http_url} не получил ни одной посылки, '
             f'поэтому настройки {list(settings)} до прошивки не доехали. Коды '
             f'ответов в логе устройства: {session.http_codes or "нет ни одного"}'
-            f'{session.mqtt_note()}\n{session.text}')
+            f'{session.mqtt_note}\n{session.text}')
 
         # Сеанс без головы для утверждений о настройках не годится: строки
         # `Apply setting:` идут в самом начале, и если начало не доехало, пустой

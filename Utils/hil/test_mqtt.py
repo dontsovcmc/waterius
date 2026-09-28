@@ -124,7 +124,7 @@ def test_I0_readings_reach_broker(stand: Stand) -> None:
     свои = readings_publishes(session, stand.mqtt_root)
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
         f'в брокере нет ничего в {stand.mqtt_root}/, пришло: {stand.mqtt.topics()}'
-        f'{session.mqtt_note()}\nПубликаций в своё дерево по логу устройства: '
+        f'{session.mqtt_note}\nПубликаций в своё дерево по логу устройства: '
         f'{len(свои)}')
 
     # Именно этот топик, а не любой в дереве: при включённом автодискавери
@@ -435,14 +435,14 @@ def test_I0b_readings_go_to_separate_topics(stand: Stand) -> None:
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert session.payload is not None, 'приёмник не получил посылку'
+    assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
+        f'в брокере пусто, пришло: {stand.mqtt.topics()}{session.mqtt_note}')
     topics = stand.mqtt.topics(stand.mqtt_root)
-    assert topics, (f'в брокере пусто, пришло: {stand.mqtt.topics()}'
-                    f'{session.mqtt_note}')
 
     # Целые и строки, без плавающей точки: её текстовое представление у
     # прошивки и у python разное, и тест мигал бы на верных данных
     for name in ('imp0', 'imp1', 'rssi', 'version_esp', 'period_min'):
-        message = stand.mqtt.last(f'{stand.mqtt_root}/{name}')
+        message = stand.mqtt.wait_topic(f'{stand.mqtt_root}/{name}')
         assert message is not None, missing(name, session, topics)
         assert message.payload == str(session.payload[name]), (
             f'{name}: в брокере {message.payload!r}, в посылке '
@@ -453,7 +453,7 @@ def test_I0b_readings_go_to_separate_topics(stand: Stand) -> None:
     for name, value in session.payload.items():
         if type(value) is not bool:
             continue
-        message = stand.mqtt.last(f'{stand.mqtt_root}/{name}')
+        message = stand.mqtt.wait_topic(f'{stand.mqtt_root}/{name}')
         assert message is not None, missing(name, session, topics)
         assert message.payload == ('true' if value else 'false'), (
             f'{name}: в брокере {message.payload!r}, в посылке {value!r}')

@@ -141,6 +141,25 @@ class MqttWatch:
         client.loop_stop()
         return found
 
+    def wait_topic(self, topic: str, timeout: float = 15.0) -> Message | None:
+        """
+        Дождаться сообщения в точности этого топика.
+
+        Снимок сразу после сеанса - гонка: устройство публикует десятки топиков
+        подряд, а брокер и подписчик работают своим чередом, и последние из них
+        доходят уже после строки ухода в сон. I0b 28 сентября так и упал -
+        устройство напечатало `MQTT: pub waterius/rssi`, а в стенде из
+        семидесяти восьми топиков лежало сорок пять.
+        """
+        deadline = time.monotonic() + timeout
+        while True:
+            message = self.last(topic)
+            if message is not None:
+                return message
+            if time.monotonic() >= deadline:
+                return None
+            time.sleep(0.2)
+
     def last(self, topic: str) -> Message | None:
         """Последнее сообщение в точности этого топика."""
         with self._lock:
