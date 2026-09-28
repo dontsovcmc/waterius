@@ -40,7 +40,8 @@ def after_reset(cfg: Any, stand: Any) -> Iterator[dict]:
     device = FreshDevice.reset(cfg, stand)
     try:
         session = device.leave()
-        yield {'before': device.before, 'session': session, 'payload': session.payload}
+        yield {'before': device.before, 'session': session,
+               'payload': session.payload, 'tail': stand.log.tail(60)}
     finally:
         device.close()
 
@@ -67,8 +68,10 @@ def test_R2_settings_return_to_defaults(after_reset: dict) -> None:
     настройках и сбрасываться обязаны так же.
 
     Типы входов сюда же, хотя живут они в EEPROM attiny: сбросить их ЕСП может
-    только командой, и без неё «заводское состояние» осталось бы с датчиком
-    протечки на входе.
+    только командой `setCountersType` (`config.cpp`, factory_reset), и без неё
+    «заводское состояние» осталось бы с датчиком протечки на входе. Ничего
+    другого из attiny сброс не трогает - это особенность платы, - поэтому
+    список проверяет лишь то, что живёт в настройках ЕСП.
     """
     payload = after_reset['payload']
     expected = {
@@ -92,4 +95,5 @@ def test_R2_settings_return_to_defaults(after_reset: dict) -> None:
     }
     wrong = {name: payload.get(name) for name, want in expected.items()
              if payload.get(name) != want}
-    assert not wrong, f'после сброса осталось не умолчание: {wrong}'
+    assert not wrong, (f'после сброса осталось не умолчание: {wrong}\n'
+                       f'{after_reset["tail"]}')

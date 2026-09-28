@@ -264,10 +264,11 @@ def pytest_exception_interact(node: Any, call: Any, report: Any) -> None:
     """
     from .hostclock import HostAsleep
     from .metf import MetfGone
+    from .stand import DeviceLost
 
     if call.excinfo is None:
         return
-    if isinstance(call.excinfo.value, (MetfGone, HostAsleep)):
+    if isinstance(call.excinfo.value, (MetfGone, HostAsleep, DeviceLost)):
         pytest.exit(str(call.excinfo.value), returncode=1)
 
 
@@ -546,9 +547,14 @@ def _log_air(where: str) -> None:
         parts.append(f'METF о себе не сказала ({type(err).__name__})')
     payload = _stand.last_payload or {}
     if 'rssi' in payload:
+        # Возраст обязателен: 28 сентября устройство двадцать минут лежало без
+        # сети, а улика всё это время бодро сообщала «ошибок связи 0»
+        было = _stand.last_payload_at
+        возраст = (f'{time.monotonic() - было:.0f} с назад' if было else
+                   'неизвестно когда')
         parts.append(f'Ватериус {payload["rssi"]} дБм на канале '
                      f'{payload.get("channel")}, ошибок связи '
-                     f'{payload.get("wifi_connect_errors")} - из последней посылки')
+                     f'{payload.get("wifi_connect_errors")} - из посылки {возраст}')
     logger.info(f'эфир перед {where}: ' + '; '.join(parts))
 
 

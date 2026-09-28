@@ -210,7 +210,15 @@ def _save(board: AtBoard, path: str, host: str, **params: str) -> dict:
     проглоченная ошибка здесь дороже всего: устройство останется в чужой сети,
     а тесты будут падать на пустом приёмнике.
     """
-    answer = board.post(path, host, body=urlencode(params).encode())
+    body = urlencode(params).encode()
+    try:
+        answer = board.post(path, host, body=body)
+    except AtError as err:
+        # Пустой ответ - не «запрос не дошёл»: 28 сентября в логе устройства
+        # были видны параметры формы, потерялся только ответ. Сохранения портала
+        # идемпотентны, поэтому повтор ничего не портит
+        logger.warning(f'{path}: {err}; повторяю')
+        answer = board.post(path, host, body=body)
     if answer.status != 200:
         raise PortalError(f'{path}: код {answer.status}')
     try:
@@ -277,13 +285,49 @@ def asset_urls(data_dir: Path) -> dict[str, Path]:
     return urls
 
 
-def find_ap(lines: list[str]) -> str | None:
-    """Имя точки доступа портала из лога устройства."""
+def find_ap_started(lines: list[str]) -> tuple[str, int] | None:
+    """Имя и канал точки портала из лога устройства."""
     for line in reversed(lines):
         m = RE_AP_STARTED.search(line)
         if m:
-            return m.group(2)
+            return m.group(2), int(m.group(1))
     return None
+
+
+def find_ap(lines: list[str]) -> str | None:
+    """Имя точки доступа портала из лога устройства."""
+    поднялась = find_ap_started(lines)
+    return поднялась[0] if поднялась else None
+
+
+def device_ap_name(stand: Any) -> str:
+    """
+    Имя точки портала по последней посылке, без скана эфира.
+
+    `utils.cpp`, get_device_name: `<бренд>-<esp_id>`, дальше версия ЕСП.
+    """
+    посылка = stand.last_payload or {}
+    esp_id, version = посылка.get('esp_id'), посылка.get('version_esp')
+    return f'{BRAND_NAME}-{esp_id}-{version}' if esp_id and version else ''
+
+
+def ap_in_air(board: AtBoard, ssid: str, timeout: float = 15.0):
+    """
+    Точка портала глазами AT-платы: скан по имени, не входя в неё.
+
+    Свидетель, независимый от METF: лог приезжает по сети, скан - по проводу.
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            for net in board.scan(ssid, timeout=min(20.0, timeout)):
+                if net.ssid == ssid:
+                    return net
+        except AtError as err:
+            logger.warning(f'скан эфира не вышел: {err}')
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(1.0)
 
 
 # Сколько ждать точку доступа после нажатия. От нажатия до строки
@@ -309,35 +353,43 @@ def wait_ap(stand: Any, timeout: float) -> str | None:
         time.sleep(0.5)
 
 
-def close_stray_portal(cfg: Any, stand: Any) -> str:
+# Сколько искать точку устройства в эфире, прежде чем решить, что его там нет.
+# Скан по имени идёт по всем каналам и занимает секунды.
+AIR_LOOK_S = 10.0
+
+
+def rescue_stray_portal(cfg: Any, stand: Any,
+                        board: AtBoard | None = None) -> tuple[bool, str]:
     """
-    Погасить портал, который стенд не заметил, и сказать, был ли он.
+    Вернуть в сеть стенда устройство, чей портал стенд не заметил.
 
     Строку о запуске точки можно потерять вместе с окном лога, а устройство при
     этом сидит в настройках до сторожевого таймера - десять минут. Всё это
     время кнопка его не будит: ЕСП запитана, и нажатие до attiny не доходит.
-    Так один незамеченный портал унёс блок настроек целиком 28 сентября.
 
-    Имя точки стенд знает из последней посылки (`utils.cpp`, get_device_name:
-    `<бренд>-<esp_id>`, дальше версия), поэтому искать её сканом не нужно.
+    Одного `/api/turnoff` мало. После заводского сброса устройство выходит из
+    настроек без сети и приёмника, и 28 сентября такой выход стоил прогону
+    сорока семи ошибок подряд: двадцать минут каждый тест падал на пустом
+    приёмнике. Поэтому сперва сеть и приёмник, и только потом выход.
     """
-    посылка = stand.last_payload or {}
-    esp_id, version = посылка.get('esp_id'), посылка.get('version_esp')
-    if not esp_id or not version:
-        return ''
-    ssid = f'{BRAND_NAME}-{esp_id}-{version}'
-    board = None
+    ssid = device_ap_name(stand)
+    if not ssid:
+        return False, ''
+    своя = board is None
+    board = board or AtBoard(cfg.atboard_port)
     try:
-        board = AtBoard(cfg.atboard_port)
+        if not ap_in_air(board, ssid, timeout=AIR_LOOK_S):
+            return False, f'. Точки {ssid} в эфире нет: устройство не в настройках'
         board.join(ssid, timeout=20.0)
-        board.get('/api/turnoff', HOST)
+        configure(board, stand.ap_ssid, cfg.ap_password, cfg.http_url)
     except Exception as err:
-        return f'. Точки {ssid} в эфире нет ({type(err).__name__})'
+        return False, (f'. Точка {ssid} в эфире есть, но вернуть устройство в '
+                       f'сеть стенда не вышло: {type(err).__name__}: {err}')
     finally:
-        if board is not None:
+        if своя:
             board.close()
-    return (f'. Точка {ssid} в эфире всё-таки была - стенд её не заметил; '
-            f'портал закрыт командой, устройство больше не держит себя в настройках')
+    return True, (f'. Точка {ssid} в эфире всё-таки была - стенд её не заметил; '
+                  f'устройство возвращено в сеть стенда и выведено из настроек')
 
 
 def open_portal(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> AtBoard:
@@ -360,7 +412,7 @@ def open_portal(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> AtBoar
         raise PortalError(
             f'точка доступа портала не поднялась за {timeout:.0f} с: '
             f'устройство не проснулось или не увидело кнопку'
-            f'{close_stray_portal(cfg, stand)}')
+            f'{rescue_stray_portal(cfg, stand)[1]}')
     logger.info(f'портал: {ssid}')
 
     device = AtBoard(cfg.atboard_port)
