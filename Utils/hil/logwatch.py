@@ -604,9 +604,23 @@ class LogWatcher:
                 self.lines[-1] += piece
 
     def unfinished(self) -> bool:
-        """В окне есть начало сеанса и нет его конца: устройство ещё печатает."""
-        return (any(RE_MODE.search(line) for line in self.lines)
-                and not any(SESSION_END in line for line in self.lines))
+        """
+        В окне есть начало сеанса и нет его конца: устройство ещё печатает.
+
+        Режим настройки не в счёт: он кончается не сном, а перезапуском -
+        портал живёт, пока его не закроют, и строки ухода в сон у него нет
+        вовсе. Ожидание такого «конца» стоило E10 заводского сброса: стенд
+        прождал тринадцать секунд и выбросил вместе с окном перезапуск и
+        подъём точки портала, которых сам же и ждал следующие две минуты.
+        """
+        режим = None
+        for line in self.lines:
+            m = RE_MODE.search(line)
+            if m:
+                режим = int(m.group(1))
+        if режим is None or режим == SETUP_MODE:
+            return False
+        return not any(SESSION_END in line for line in self.lines)
 
     def settle(self, timeout: float = ATTINY_POWER_S) -> float:
         """

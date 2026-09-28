@@ -766,3 +766,27 @@ def test_settle_молчит_когда_сеанса_нет() -> None:
 
     assert watcher.unfinished() is False
     assert watcher.settle() == 0.0
+
+
+SESSION_SETUP_START = [
+    fw('Startup mode: 1'),
+    fw('Config succesfully loaded'),
+    fw('AP started: waterius-6827706-2.0.51'),
+    fw('Start scan Wi-Fi networks'),
+]
+
+
+def test_режим_настройки_не_ждёт_конца_сеанса() -> None:
+    """
+    У портала строки ухода в сон нет вовсе: он кончается перезапуском. Ожидание
+    такого «конца» стоило E10 заводского сброса - выброшенными оказались
+    перезапуск и подъём точки, которых стенд сам же и ждал.
+    """
+    плата = ПлатаПоЧастям([through_ring(SESSION_SETUP_START)])
+    watcher = LogWatcher(плата)
+    watcher.poll()
+
+    assert watcher.unfinished() is False
+    начали = time.monotonic()
+    assert watcher.settle() == 0.0
+    assert time.monotonic() - начали < 1.0
