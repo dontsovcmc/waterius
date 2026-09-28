@@ -144,10 +144,15 @@ class StandConfig:
         return f'https://{self.receiver_host}:{self.receiver_tls_port}{path}'
 
 
-def load(path: str | os.PathLike[str] | None = None) -> StandConfig:
+def load(path: str | os.PathLike[str] | None = None,
+         search: bool = False) -> StandConfig:
     """
     Прочитать stand.ini. Любое значение перекрывается переменной окружения
     вида HIL_METF_HOST - удобно, когда стендов два.
+
+    `search` - искать ли платы, чей записанный адрес молчит (discover.py).
+    Прогону и спасательным инструментам это нужно, разбору настроек - нет:
+    поиск ходит по сети.
     """
     parser = configparser.ConfigParser()
     file = Path(path or DEFAULT_PATH)
@@ -163,6 +168,21 @@ def load(path: str | os.PathLike[str] | None = None) -> StandConfig:
     # ждут Ватериус, который приходит к ним через NAT точки доступа, - значит
     # нужен адрес Мака в той же проводной сети, где стоят роутер и METF.
     towards = get('router', 'host', '') or get('metf', 'host', '') or ELSEWHERE
+    try:
+        mine = own_ip(towards)
+    except OSError as err:
+        logger.warning(f'свой адрес не спросить ({err}): адреса берутся из файла как есть')
+        mine = ''
+
+    def fix(section: str, host: str, why: str) -> str:
+        """Принять найденный адрес и починить строку в файле."""
+        written = parser.get(section, 'host', fallback='')
+        if host != written:
+            logger.warning(
+                f'[{section}] host в stand.ini - {written or "пусто"}, а {why} {host}: '
+                'беру найденный'
+                + ('' if _pin(file, section, 'host', host) else ' (файл не поправлен)'))
+        return host
 
     def here(section: str) -> str:
         """
@@ -176,32 +196,38 @@ def load(path: str | os.PathLike[str] | None = None) -> StandConfig:
         того же отказа. Переменная окружения главнее - ею приёмник уводят на
         другую машину.
         """
+        env = os.environ.get(f'HIL_{section.upper()}_HOST')
+        if env:
+            return env
+        if not mine:
+            return parser.get(section, 'host', fallback='')
+        return fix(section, mine, 'эта машина')
+
+    def board(kind: str, section: str) -> str:
+        """
+        Адрес платы стенда. Молчащий адрес - повод поискать плату, а не повод
+        падать по таймауту через тридцать секунд: адреса раздаёт DHCP, и они
+        переезжают целыми стендами (discover.py).
+        """
         written = parser.get(section, 'host', fallback='')
         env = os.environ.get(f'HIL_{section.upper()}_HOST')
         if env:
             return env
-        try:
-            mine = own_ip(towards)
-        except OSError as err:
-            logger.warning(f'свой адрес не спросить ({err}): '
-                           f'[{section}] host остаётся {written or "пустым"}')
+        if not search or not mine:
             return written
-        if mine != written:
-            logger.warning(
-                f'[{section}] host в stand.ini - {written or "пусто"}, а эта машина '
-                f'{mine}: беру свой адрес'
-                + ('' if _pin(file, section, 'host', mine) else ' (файл не поправлен)'))
-        return mine
+        from . import discover
+        found = discover.find(kind, written, mine)
+        return fix(section, found, 'плата нашлась на') if found else written
 
     return StandConfig(
-        metf_host=get('metf', 'host', '192.168.51.250'),
+        metf_host=board('metf', 'metf'),
         can_drive_high=get('metf', 'can_drive_high', '0') == '1',
         button_pin=int(get('metf', 'button_pin', '1')),
         ch0_pin=int(get('metf', 'ch0_pin', '3')),
         ch1_pin=int(get('metf', 'ch1_pin', '2')),
         reset_pin=int(get('metf', 'reset_pin', '0')),
         router_port=get('router', 'port', ''),
-        router_host=get('router', 'host', ''),
+        router_host=board('router', 'router'),
         router_password=get('router', 'password', ''),
         ap_ssid=get('router', 'ap_ssid', ''),
         ap_password=get('router', 'ap_password', ''),

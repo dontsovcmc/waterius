@@ -96,7 +96,7 @@ def main() -> None:
                         help='только доложить состояние, ничего не менять')
     args = parser.parse_args()
 
-    cfg = config.load(args.config)
+    cfg = config.load(args.config, search=True)   # чинить нечего, если плату не нашли
     lines: list[str] = []
     for step in (_router, _metf, _atboard):
         try:

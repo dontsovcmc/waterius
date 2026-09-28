@@ -176,3 +176,55 @@ def test_сокет_закрывается(monkeypatch: pytest.MonkeyPatch) -> N
     stand_config.own_ip('127.0.0.1')
 
     assert открытые and all(сокет.fileno() == -1 for сокет in открытые)
+
+
+@pytest.fixture
+def нашлась(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str]]:
+    """Поиск платы, который ничего не делает, но помнит, о чём его спросили."""
+    from .. import discover
+
+    звали: list[tuple[str, str, str]] = []
+
+    def find(kind: str, written: str, near: str) -> str:
+        звали.append((kind, written, near))
+        return '192.168.100.3' if kind == 'metf' else ''
+
+    monkeypatch.setattr(discover, 'find', find)
+    return звали
+
+
+def test_по_умолчанию_платы_не_ищут(файл: Path, чужой_адрес: str,
+                                    нашлась: list[Any]) -> None:
+    """Разбору настроек сеть не нужна: поиск ходит по ней и стоит секунды."""
+    cfg = stand_config.load(файл)
+
+    assert cfg.metf_host == '192.168.100.21'
+    assert нашлась == []
+
+
+def test_с_поиском_адрес_платы_берут_у_найденной(файл: Path, чужой_адрес: str,
+                                                 нашлась: list[Any]) -> None:
+    cfg = stand_config.load(файл, search=True)
+
+    assert cfg.metf_host == '192.168.100.3'
+    assert 'host = 192.168.100.3' in файл.read_text(encoding='utf-8')
+    assert ('metf', '192.168.100.21', чужой_адрес) in нашлась
+
+
+def test_не_нашлась_значит_остаётся_записанное(файл: Path, чужой_адрес: str,
+                                               нашлась: list[Any]) -> None:
+    """Роутер поиск не нашёл: адрес из файла лучше пустоты - по нему хоть отказ понятен."""
+    cfg = stand_config.load(файл, search=True)
+
+    assert cfg.router_host == '192.168.100.20'
+
+
+def test_переменная_окружения_главнее_поиска(файл: Path, чужой_адрес: str,
+                                             нашлась: list[Any],
+                                             monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv('HIL_METF_HOST', '10.0.0.7')
+
+    cfg = stand_config.load(файл, search=True)
+
+    assert cfg.metf_host == '10.0.0.7'
+    assert [k for k, *_ in нашлась] == ['router']
