@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -367,7 +368,35 @@ def bring_up(step: Callable[[], Any], what: str) -> Any:
         return step()
 
 
-def preflight(step: Callable[[], Any], what: str) -> Any:
+def _network_note(device: Any) -> str:
+    """
+    Состояние сети стенда словами роутера - в отказ подъёма.
+
+    «Устройство не доехало до приёмника» и «сеть стенда не проводит трафик»
+    выглядят одинаково: коды ответов -1 и там, и там. Различает их роутер. У
+    его прошивки есть своя беда - после `ap enable` без перезагрузки NAT не
+    возвращается, точка при этом «включена», фильтров нет, а наружу не ходит
+    никто (разбор - 03_router-nat-bug.md). 28 сентября на её диагностику ушло
+    два прогона.
+    """
+    try:
+        router = device.net.router
+        status = router.show('status')
+        ap = router.ap_enabled()
+        nat = router.nat_enabled()
+        clients = router.clients()
+    except Exception as err:                 # роутер мог и не ответить
+        return f'\nСостояние роутера стенда спросить не удалось: {err}'
+    uptime = re.search(r'Uptime:\s*\S+', status)
+    return (f'\nРоутер стенда: точка {"поднята" if ap else "погашена"}, '
+            f'NAT {"включён" if nat else "выключен"}, клиентов {len(clients)}'
+            f'{", " + uptime.group(0) if uptime else ""}. Если всё это выглядит '
+            f'исправным, а трафик не идёт - это ошибка прошивки роутера после '
+            f'`ap enable`, лечится перезагрузкой платы: '
+            f'`python Utils/hil/router.py --host <ip> restart`')
+
+
+def preflight(step: Callable[[], Any], what: str, device: Any = None) -> Any:
     """
     Шаг подъёма, чей отказ уносит прогон целиком.
 
@@ -379,7 +408,8 @@ def preflight(step: Callable[[], Any], what: str) -> Any:
     try:
         return bring_up(step, what)
     except AssertionError as err:
-        pytest.exit(f'стенд не поднялся ({what}): {err}', returncode=1)
+        note = _network_note(device) if device is not None else ''
+        pytest.exit(f'стенд не поднялся ({what}): {err}{note}', returncode=1)
 
 
 @pytest.fixture(scope='session')
@@ -390,11 +420,11 @@ def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     _metf = device.api
     global _stand
     _stand = device
-    preflight(device.check_atboard, 'AT-плата')      # до первого теста, а не на сороковой минуте
-    preflight(device.identify, 'опрос устройства')   # версии и MAC - до первого теста
-    preflight(device.ensure_network, 'сеть стенда')  # в чужой сети стенд бесполезен
-    preflight(device.ensure_mqtt, 'брокер стенда')   # если он поднялся
-    preflight(device.ensure_clock, 'часы платы')     # иначе время придёт из интернета
+    preflight(device.check_atboard, 'AT-плата', device)      # до первого теста, а не на сороковой минуте
+    preflight(device.identify, 'опрос устройства', device)   # версии и MAC - до первого теста
+    preflight(device.ensure_network, 'сеть стенда', device)  # в чужой сети стенд бесполезен
+    preflight(device.ensure_mqtt, 'брокер стенда', device)   # если он поднялся
+    preflight(device.ensure_clock, 'часы платы', device)     # иначе время придёт из интернета
     _log_air('первый тест')   # у первого файла улик иначе нет: стенд встал позже хука
     try:
         yield device
