@@ -148,7 +148,6 @@ def test_N2_falls_back_to_the_pool(stand: Stand, clock: Any) -> None:
         'после неудачи устройство не попробовало пул\n' + session.text)
 
 
-@pytest.mark.slow
 def test_N3_pool_server_is_chosen_at_random(stand: Stand, clock: Any) -> None:
     """
     Сервер из пула выбирается случайно, а не по фиксированному кругу.
@@ -219,7 +218,6 @@ def test_N4_sync_is_not_asked_every_wakeup(stand: Stand, clock: Any) -> None:
         f'{clock.requests_seen - before} раз за три плановых пробуждения')
 
 
-@pytest.mark.slow
 def test_N5_unreachable_server_freezes_the_tuning(stand: Stand, clock: Any) -> None:
     """
     Недоступный сервер времени не двигает расписание.

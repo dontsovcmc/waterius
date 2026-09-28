@@ -34,7 +34,7 @@ from .atboard import AtBoard, AtError
 from .constants import COLD, NAMUR, REPO_ROOT, WATER_COLD
 from .test_wifi import other_channel
 
-pytestmark = [pytest.mark.stand, pytest.mark.portal, pytest.mark.slow]
+pytestmark = [pytest.mark.stand, pytest.mark.portal]
 
 DATA = REPO_ROOT / 'ESP8266' / 'data'
 
@@ -313,6 +313,7 @@ def find_network(board: AtBoard, ssid: str,
     return None, seen
 
 
+@pytest.mark.slow
 def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
     """
     Роутер на другом канале, чем точка портала: на шаге подключения точка

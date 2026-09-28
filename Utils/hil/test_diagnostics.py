@@ -26,7 +26,7 @@ import pytest
 from . import portal as portal_mod
 from .constants import FACTOR_TOO_BIG, INPUT_SILENT, NAMUR
 
-pytestmark = [pytest.mark.stand, pytest.mark.portal, pytest.mark.slow]
+pytestmark = [pytest.mark.stand, pytest.mark.portal]
 
 
 # Пара весов обязательна: плашка появляется, только когда один вес ровно
@@ -68,6 +68,7 @@ def atboard(cfg: Any) -> None:
         pytest.skip('нет AT-платы: [atboard] port в stand.ini')
 
 
+@pytest.mark.slow
 def test_B3_heavy_factor_is_suspicious(cfg: Any, stand: Any) -> None:
     """
     Вес импульса завышен вдесятеро: тяжёлый канал насчитал в разы больше.

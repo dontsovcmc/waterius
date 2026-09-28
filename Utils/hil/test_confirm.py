@@ -57,6 +57,7 @@ def arm_sensor(stand: Stand, **extra: int) -> None:
     stand.setup(channel=SENSOR, ctype=LEAKAGE, **extra)
 
 
+@pytest.mark.slow
 def test_F1_any_receiver_is_enough(stand: Stand, quiet: None) -> None:
     """
     Маска пустая: хватает любого получателя, повторных сеансов нет.
@@ -112,6 +113,7 @@ def test_F2_required_receiver_unreachable(stand: Stand, quiet: None) -> None:
         stand.dut.wet(channel=SENSOR, closed=False)
 
 
+@pytest.mark.slow
 def test_F3_disabled_receiver_drops_out(stand: Stand, quiet: None) -> None:
     """
     Получатель отмечен обязательным, но выключен целиком.
