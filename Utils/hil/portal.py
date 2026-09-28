@@ -34,6 +34,7 @@ from urllib.parse import urlencode
 from loguru import logger
 
 from .atboard import AtBoard, AtError, Response
+from .constants import BRAND_NAME
 
 HOST = '192.168.4.1'
 
@@ -308,6 +309,37 @@ def wait_ap(stand: Any, timeout: float) -> str | None:
         time.sleep(0.5)
 
 
+def close_stray_portal(cfg: Any, stand: Any) -> str:
+    """
+    Погасить портал, который стенд не заметил, и сказать, был ли он.
+
+    Строку о запуске точки можно потерять вместе с окном лога, а устройство при
+    этом сидит в настройках до сторожевого таймера - десять минут. Всё это
+    время кнопка его не будит: ЕСП запитана, и нажатие до attiny не доходит.
+    Так один незамеченный портал унёс блок настроек целиком 28 сентября.
+
+    Имя точки стенд знает из последней посылки (`utils.cpp`, get_device_name:
+    `<бренд>-<esp_id>`, дальше версия), поэтому искать её сканом не нужно.
+    """
+    посылка = stand.last_payload or {}
+    esp_id, version = посылка.get('esp_id'), посылка.get('version_esp')
+    if not esp_id or not version:
+        return ''
+    ssid = f'{BRAND_NAME}-{esp_id}-{version}'
+    board = None
+    try:
+        board = AtBoard(cfg.atboard_port)
+        board.join(ssid, timeout=20.0)
+        board.get('/api/turnoff', HOST)
+    except Exception as err:
+        return f'. Точки {ssid} в эфире нет ({type(err).__name__})'
+    finally:
+        if board is not None:
+            board.close()
+    return (f'. Точка {ssid} в эфире всё-таки была - стенд её не заметил; '
+            f'портал закрыт командой, устройство больше не держит себя в настройках')
+
+
 def open_portal(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> AtBoard:
     """
     Ватериус в режиме настройки, AT-плата в его сети. Закрыть плату - дело
@@ -327,7 +359,8 @@ def open_portal(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> AtBoar
     if not ssid:
         raise PortalError(
             f'точка доступа портала не поднялась за {timeout:.0f} с: '
-            'устройство не проснулось или не увидело кнопку')
+            f'устройство не проснулось или не увидело кнопку'
+            f'{close_stray_portal(cfg, stand)}')
     logger.info(f'портал: {ssid}')
 
     device = AtBoard(cfg.atboard_port)
