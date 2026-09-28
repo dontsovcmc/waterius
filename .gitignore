@@ -46,3 +46,5 @@ simulator/package-lock.json
 
 # Логи прогонов стенда
 Utils/hil/logs/
+# Логи прогонов стенда: logs/ГГГГ-мм-ДД-ЧЧ-ММ.log в корне репозитория
+/logs/

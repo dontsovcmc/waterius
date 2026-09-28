@@ -162,8 +162,8 @@ def test_F4_delivery_attempts(stand: Stand, quiet: None) -> None:
             # попытки её доставить, а не число новостей.
             stand.dut.wet(channel=SENSOR, closed=True)
 
-            deadline = time.time() + 50 * 60
-            while time.time() < deadline:
+            deadline = time.monotonic() + 50 * 60
+            while time.monotonic() < deadline:
                 session = stand.log.wait_session(timeout=600, mode=ALARM_MODE)
                 if session is None:
                     break

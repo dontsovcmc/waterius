@@ -45,10 +45,10 @@ def status(board: Any) -> dict[str, Any]:
 
 def wait_impulses(board: Any, want: int, timeout: float = 10.0) -> dict[str, Any]:
     """Дождаться, пока вход насчитает want импульсов с начала сеанса настройки."""
-    deadline = time.time() + timeout
+    deadline = time.monotonic() + timeout
     while True:
         body = status(board)
-        if body['impulses'] >= want or time.time() >= deadline:
+        if body['impulses'] >= want or time.monotonic() >= deadline:
             return body
         time.sleep(1)
 

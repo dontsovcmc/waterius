@@ -91,15 +91,15 @@ class SerialTransport:
         self._ser.flush()
 
     def read_idle(self, timeout: float, idle: float) -> str:
-        deadline = time.time() + timeout
+        deadline = time.monotonic() + timeout
         chunks: list[bytes] = []
-        last = time.time()
-        while time.time() < deadline:
+        last = time.monotonic()
+        while time.monotonic() < deadline:
             data = self._ser.read(4096)
             if data:
                 chunks.append(data)
-                last = time.time()
-            elif chunks and time.time() - last >= idle:
+                last = time.monotonic()
+            elif chunks and time.monotonic() - last >= idle:
                 break
             else:
                 time.sleep(0.02)
@@ -145,13 +145,13 @@ class TcpTransport:
             self._sock.close()
         except OSError:
             pass
-        deadline = time.time() + timeout
+        deadline = time.monotonic() + timeout
         while True:
             try:
                 self._connect()
                 return
             except OSError:
-                if time.time() > deadline:
+                if time.monotonic() > deadline:
                     raise
                 time.sleep(2.0)
 
@@ -171,10 +171,10 @@ class TcpTransport:
             self._sock.sendall(line.encode() + b'\r\n')
 
     def read_idle(self, timeout: float, idle: float) -> str:
-        deadline = time.time() + timeout
+        deadline = time.monotonic() + timeout
         chunks: list[bytes] = []
-        last = time.time()
-        while time.time() < deadline:
+        last = time.monotonic()
+        while time.monotonic() < deadline:
             try:
                 data = self._sock.recv(4096)
             except TimeoutError:
@@ -190,8 +190,8 @@ class TcpTransport:
                 ) from err
             if data:
                 chunks.append(data)
-                last = time.time()
-            elif chunks and time.time() - last >= idle:
+                last = time.monotonic()
+            elif chunks and time.monotonic() - last >= idle:
                 break
         return b''.join(chunks).decode(errors='replace')
 
@@ -589,8 +589,8 @@ class NatRouter:
         главный источник мигающих тестов.
         """
         mac = mac.lower()
-        deadline = time.time() + timeout
-        while time.time() < deadline:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
             if any(c['mac'] == mac for c in self.clients()):
                 return True
             time.sleep(1.0)

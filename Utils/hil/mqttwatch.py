@@ -75,7 +75,12 @@ class MqttWatch:
 
     def _on_disconnect(self, _client: Any, _userdata: Any, _flags: Any = None,
                        reason: Any = None, _properties: Any = None) -> None:
-        if reason:                       # 0 - это наш собственный disconnect()
+        # paho 2.x приносит сюда ReasonCode, а он правдив всегда - в том числе
+        # нулевой «Normal disconnection». Стенд поэтому предупреждал о потере
+        # брокера на каждом своём же отключении, и в логе прогона это выглядело
+        # бедой связи. Судим по числу: ноль - наш собственный disconnect()
+        code = getattr(reason, 'value', reason)
+        if code:
             logger.warning(f'MQTT: наблюдатель потерял брокер ({reason})')
 
     def _on_message(self, _client: Any, _userdata: Any, msg: mqtt.MQTTMessage) -> None:
@@ -94,14 +99,14 @@ class MqttWatch:
         сообщения, и у автодискавери, который уходит в `homeassistant/`, -
         проверка «хоть что-то приехало» так зеленела бы всегда.
         """
-        deadline = time.time() + timeout
+        deadline = time.monotonic() + timeout
         while True:
             with self._lock:
                 root = prefix.rstrip('/')
                 for message in reversed(self.history):
                     if message.topic == root or message.topic.startswith(root + '/'):
                         return message
-            if time.time() >= deadline:
+            if time.monotonic() >= deadline:
                 return None
             time.sleep(0.5)
 
@@ -128,8 +133,12 @@ class MqttWatch:
         client.subscribe(f'{root}/#', qos=0)
         client.loop_start()
         time.sleep(timeout)
-        client.loop_stop()
+        # Сначала disconnect, потом loop_stop: DISCONNECT пишет и сокет закрывает
+        # сам цикл, и остановленный раньше времени оставляет соединение висеть.
+        # Брокер тогда не гаснет - его shutdown() ждёт отцепления последнего
+        # клиента, - а на выходе сыплются «Task was destroyed but it is pending»
         client.disconnect()
+        client.loop_stop()
         return found
 
     def last(self, topic: str) -> Message | None:
@@ -216,5 +225,7 @@ class MqttWatch:
         return topics
 
     def close(self) -> None:
-        self._client.loop_stop()
+        # Порядок важен: DISCONNECT отправляет и сокет закрывает сам цикл paho,
+        # см. `retained_now`
         self._client.disconnect()
+        self._client.loop_stop()

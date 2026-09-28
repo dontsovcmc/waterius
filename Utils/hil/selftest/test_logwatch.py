@@ -15,6 +15,7 @@ import pytest
 
 from ..logwatch import (
     ALARM_MODE,
+    ATTINY_POWER_S,
     TRANSMIT_MODE,
     WAKE_NO_ATTINY,
     WAKE_SESSION,
@@ -669,7 +670,8 @@ def test_оборванный_лог_называет_последнюю_стр�
     """
     watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM[:5])))
     watcher.poll()
-    watcher._line_at = time.time() - 130      # молчит дольше, чем живёт питание
+    # Метки строк - монотонные часы: настенные во сне хоста прыгают
+    watcher._line_at = time.monotonic() - 130   # молчит дольше, чем живёт питание
 
     note = watcher.stuck_note()
     assert 'Устройство молчит 130 с' in note, note
@@ -682,3 +684,31 @@ def test_свежий_лог_приписки_не_рождает() -> None:
     watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM[:5])))
     watcher.poll()
     assert watcher.stuck_note() == ''
+
+def test_обесточенная_есп_не_держит_ожидание_до_потолка() -> None:
+    """
+    Сеанс без конца ждать нечего, если ЕСП уже обесточена: attiny снимает питание
+    через две минуты, и строки ухода в сон не будет никогда. Прежде это знание
+    жило только в тексте отказа, то есть доставалось после отсидки всего потолка -
+    в прогоне это выглядело так, будто стенд зря ждёт минуты.
+    """
+    watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM[:5])))
+    watcher.poll()
+    watcher._line_at = time.monotonic() - ATTINY_POWER_S - 1
+
+    started = time.monotonic()
+    assert watcher.wait_session(timeout=600, poll_interval=0.01) is None
+    assert time.monotonic() - started < 5, 'ждали потолок, хотя ЕСП обесточена'
+    assert watcher.dead(), 'молчание дольше питания attiny не признано смертью сеанса'
+
+def test_молчание_между_плановыми_сеансами_не_смерть() -> None:
+    """
+    Тест, ждущий планового сеанса, держит в буфере прошлый - полный, - и молчит
+    между пробуждениями дольше двух минут. Признать это смертью сеанса значит
+    прислать отказ вместо ожидания.
+    """
+    watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM)))
+    watcher.poll()
+    watcher._line_at = time.monotonic() - ATTINY_POWER_S - 60
+
+    assert not watcher.dead(), 'полный сеанс в буфере принят за оборванный'

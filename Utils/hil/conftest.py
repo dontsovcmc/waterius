@@ -21,11 +21,42 @@ from typing import TYPE_CHECKING, Any
 import pytest
 from loguru import logger
 
+from .hostclock import host
+
 if TYPE_CHECKING:                       # только для подсказок типов
     pass
 
 # Модули стенда тянут pyserial и paho-mqtt, а разбор лога проверяется без
 # железа и без этих зависимостей. Поэтому импорт - внутри фикстур.
+
+
+class _Lines:
+    """
+    Файл прогона, в который пишут двое: терминальный писатель pytest и логгеры.
+
+    pytest печатает строку теста по частям - имя, исход, время, - и запись
+    логгера, попавшая между частями, приклеивалась к ней:
+    «PASSED     6m 2s23:11:38 | INFO    | ping». Поэтому у писателей два входа:
+    pytest пишет как есть (`raw`), а логгер - всегда со своей строки.
+    """
+
+    def __init__(self, log: Any) -> None:
+        self._log = log
+        self._at_start = True
+
+    def raw(self, data: str) -> int:
+        if data:
+            self._at_start = data.endswith('\n')
+        return int(self._log.write(data))
+
+    def write(self, data: str) -> int:
+        if data and not self._at_start:
+            self._log.write('\n')
+            self._at_start = True
+        return self.raw(data)
+
+    def flush(self) -> None:
+        self._log.flush()
 
 
 class _Tee:
@@ -36,12 +67,12 @@ class _Tee:
     что видно на экране: строки тестов, сводка, traceback.
     """
 
-    def __init__(self, stream: Any, log: Any) -> None:
+    def __init__(self, stream: Any, log: _Lines) -> None:
         self._stream = stream
         self._log = log
 
     def write(self, data: str) -> int:
-        self._log.write(data)
+        self._log.raw(data)
         return self._stream.write(data)
 
     def flush(self) -> None:
@@ -53,6 +84,32 @@ class _Tee:
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._stream, name)
+
+
+def _line(record: Any) -> str:
+    """
+    Строка лога прогона. Записи селф-тестов помечены: они нарочно гоняют стенд
+    по путям отказа, и без пометки их предупреждения читаются как настоящие
+    поломки - две трети всех WARNING полного прогона приходили оттуда.
+    """
+    метка = 'подделка | ' if record['extra'].get('поддельно') else ''
+    return '{time:HH:mm:ss} | {level: <7} | ' + метка + '{message}\n'
+
+
+def _next_log(where: Path) -> Path:
+    """
+    Имя лога прогона: `logs/ГГГГ-мм-ДД-ЧЧ-ММ.log` в корне репозитория.
+
+    Минуты хватает, чтобы найти прогон по времени, но два прогона в одну минуту
+    затёрли бы друг друга - поэтому второму добавляется номер.
+    """
+    stem = time.strftime('%Y-%m-%d-%H-%M')
+    path = where / f'{stem}.log'
+    n = 2
+    while path.exists():
+        path = where / f'{stem}-{n}.log'
+        n += 1
+    return path
 
 
 def _open_log(config: pytest.Config) -> Path | None:
@@ -68,21 +125,27 @@ def _open_log(config: pytest.Config) -> Path | None:
     if where == 'off':
         return None
 
-    path = Path(where) if where else (
-        Path(__file__).parent / 'logs' / time.strftime('hil-%Y%m%d-%H%M%S.log'))
+    path = Path(where) if where else _next_log(config.rootpath / 'logs')
     path.parent.mkdir(parents=True, exist_ok=True)
     log = path.open('w', buffering=1, encoding='utf-8')
     config.add_cleanup(log.close)
+    lines = _Lines(log)
 
     reporter = config.pluginmanager.get_plugin('terminalreporter')
     if reporter is not None:
-        reporter._tw._file = _Tee(reporter._tw._file, log)
+        reporter._tw._file = _Tee(reporter._tw._file, lines)
 
-    sink = logger.add(log, level='INFO', colorize=False,
-                      format='{time:HH:mm:ss} | {level: <7} | {message}')
+    # Свой вывод loguru в stderr теперь лишний: он приезжал в терминал второй
+    # копией и приклеивался к строкам pytest. В файл всё попадает ниже, а
+    # внутри тестов записи показывает pytest-loguru
+    try:
+        logger.remove(0)
+    except ValueError:
+        pass                            # обработчик по умолчанию уже снят
+    sink = logger.add(lines, level='INFO', colorize=False, format=_line)
     config.add_cleanup(lambda: logger.remove(sink))
 
-    handler = logging.StreamHandler(log)
+    handler = logging.StreamHandler(lines)
     handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)-7s | %(message)s',
                                            datefmt='%H:%M:%S'))
     logging.getLogger().addHandler(handler)
@@ -101,8 +164,8 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption('--stand-config', default=None,
                      help='путь к stand.ini')
     parser.addoption('--stand-log', default=None,
-                     help='файл лога прогона; по умолчанию Utils/hil/logs/hil-<дата>.log, '
-                          '"off" - не писать')
+                     help='файл лога прогона; по умолчанию logs/ГГГГ-мм-ДД-ЧЧ-ММ.log '
+                          'в корне репозитория, "off" - не писать')
     parser.addoption('--ap-channel', type=int, default=None,
                      help='канал точки стенда; по умолчанию из stand.ini. Эфир решает '
                           'судьбу прогона: канал держат дальше пяти от домашней сети')
@@ -129,6 +192,14 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 @pytest.hookimpl(trylast=True)               # терминальный репортер создаётся в своём
 def pytest_configure(config: pytest.Config) -> None:   # pytest_configure - ждём его
     config._stand_log = _open_log(config)       # type: ignore[attr-defined]
+    if config.getoption('--stand'):
+        # Прогон занимает железо часами, а хост засыпает через минуту простоя.
+        # Держим удержание сами, а не флагом в командной строке: флаг забывают,
+        # и цена забывчивости - прогон, в котором девять падений из десяти про сон
+        from .hostclock import keep_awake
+        awake = keep_awake()
+        if awake is not None:
+            config.add_cleanup(awake.terminate)
     config.addinivalue_line('markers', 'stand: требует собранного стенда')
     config.addinivalue_line('markers', 'slow: идёт десятки минут')
     config.addinivalue_line('markers', 'mqtt: нужен брокер (amqtt из requirements.txt)')
@@ -158,15 +229,23 @@ def pytest_configure(config: pytest.Config) -> None:   # pytest_configure - жд
 @pytest.hookimpl(tryfirst=True)
 def pytest_exception_interact(node: Any, call: Any, report: Any) -> None:
     """
-    METF замолчал надолго - останавливаем прогон целиком.
+    METF замолчал надолго или простоял хост - останавливаем прогон целиком.
 
     Без платы стенд не может ни нажать кнопку, ни прочитать лог, поэтому
     продолжать бессмысленно: каждый следующий тест выдаст тот же traceback.
     Один раз это стоило часа прогона и 23 одинаковых ошибок подряд.
+
+    Простой хоста хуже: он не виден вовсе. Пока Мак спал, лог никто не
+    вычитывал, кольцо METF переполнялось, и обстановка устройства неизвестна -
+    дальнейшие вердикты не стоят ничего. Прогон 2026-09-27 дал так девять
+    ложных падений из десяти.
     """
+    from .hostclock import HostAsleep
     from .metf import MetfGone
 
-    if call.excinfo is not None and isinstance(call.excinfo.value, MetfGone):
+    if call.excinfo is None:
+        return
+    if isinstance(call.excinfo.value, (MetfGone, HostAsleep)):
         pytest.exit(str(call.excinfo.value), returncode=1)
 
 
@@ -493,14 +572,21 @@ def device_baseline(request: pytest.FixtureRequest) -> None:
         свои = needs(request.node)
         if свои:
             request.getfixturevalue('firmware_versions')
-            request.getfixturevalue('stand').ensure_requirements(свои, only=True)
+            стенд = request.getfixturevalue('stand')
+            bring_up(lambda: стенд.ensure_requirements(свои, only=True),
+                     'требования теста')
         return
     request.getfixturevalue('firmware_versions')
     if 'reset' in request.keywords:
         # Блок R проверяет сами умолчания: выставить требования - значит
         # стереть предмет проверки. Возврат стенда делает фикстура модуля.
         return
-    request.getfixturevalue('stand').ensure_requirements(needs(request.node))
+    стенд = request.getfixturevalue('stand')
+    # Осечка стенда в фикстуре приходит как ERROR, а не FAILED, и читается как
+    # «тест даже не начался по вине прошивки». Повтор для беды стенда уже
+    # написан для подъёма - здесь он нужен ровно затем же
+    bring_up(lambda: стенд.ensure_requirements(needs(request.node)),
+             'требования теста')
 
 
 @pytest.fixture(autouse=True)
@@ -597,26 +683,33 @@ def capture(request: pytest.FixtureRequest,
         path.unlink()
 
 
-# Время по ходу прогона. --durations печатает сводку только в конце и по фазам,
-# а по многочасовому прогону надо видеть сразу, какой тест и какой файл съедают
-# время. Подготовка и возврат стенда входят в сумму: это тоже время теста.
-_test_seconds: dict[str, float] = {}
-_file_seconds: dict[Path, float] = {}
+def _metf_note() -> str:
+    """
+    Время METF от её перегрузки - в каждый отказ.
 
-
-def elapsed(seconds: float) -> str:
-    minutes, sec = divmod(round(seconds), 60)
-    hours, minutes = divmod(minutes, 60)
-    return f'{hours:02d}:{minutes:02d}:{sec:02d}'
-
-
-def pytest_runtest_logreport(report: pytest.TestReport) -> None:
-    _test_seconds[report.nodeid] = _test_seconds.get(report.nodeid, 0.0) + report.duration
+    По нему видно, падала ли плата: вся картина о Ватериусе приходит через неё,
+    и перезагрузившаяся посреди теста плата объясняет и пустой лог, и потерянный
+    импульс. Спрашивать плату не нужно, аптайм приезжает заголовком
+    `X-Uptime-Ms` на каждом ответе и лежит в `Metf.uptime_ms`.
+    """
+    if _metf is None or _metf.uptime_ms is None:
+        return 'METF: аптайм неизвестен (плата ни разу не ответила)'
+    return (f'METF: от перегрузки {_metf.uptime_ms / 1000:.0f} с, '
+            f'перезагрузок за прогон {_metf.reboots}')
 
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
-    """После теста - его время, после последнего теста файла - время файла."""
+    """
+    Вокруг теста - улики стенда: эфир перед новым файлом, перезагрузки платы и
+    причина падения сразу.
+
+    Время теста печатает сам pytest (`console_output_style = times` в pytest.ini
+    вместе с `-v`), поэтому своего учёта здесь нет: самописная строка вдобавок
+    сбрасывала `currentfspath` терминального репортера, и pytest заново печатал
+    имя файла перед каждым тестом - из-за этого тесты одного файла в логе не
+    отличались.
+    """
     global _air_at
     if item.path != _air_at:
         _air_at = item.path
@@ -627,28 +720,27 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
         _reboots[item.nodeid] = _metf.reboots - before
         logger.warning(f'METF перезагружалась во время теста {item.name}: '
                        f'{_metf.reboots - before} раз')
-    spent = _test_seconds.pop(item.nodeid, 0.0)
-    _file_seconds[item.path] = _file_seconds.get(item.path, 0.0) + spent
 
     terminal = item.config.pluginmanager.get_plugin('terminalreporter')
     if terminal is None:
         return
-    terminal.write_line(f'    время теста: {elapsed(spent)}')
     # Причину - сразу: сводка pytest печатает её в конце многочасового прогона
     for when in ('setup', 'call', 'teardown'):
         report = getattr(item, f'rep_{when}', None)
         if report is not None and report.failed:
             terminal.write_line(f'--- причина падения ({when}) ---')
             terminal.write_line(report.longreprtext)
+            terminal.write_line(f'--- {_metf_note()}{host.note()} ---')
             if item.nodeid in _reboots:
                 terminal.write_line(
                     f'--- во время теста METF перезагружалась '
                     f'({_reboots[item.nodeid]} раз): отказ может быть про стенд, '
                     f'а не про Ватериус ---')
-    if nextitem is None or nextitem.path != item.path:
-        terminal.write_line(
-            f'--- {item.path.name}: {elapsed(_file_seconds[item.path])} ---')
     if nextitem is None and _reboots:
         terminal.write_line('--- METF перезагружалась в тестах ---')
         for nodeid, times in _reboots.items():
             terminal.write_line(f'    {nodeid}: {times}')
+    if nextitem is None and _stand is not None:
+        note = _stand.power_note()
+        if note:
+            terminal.write_line(f'--- стенд: {note} ---')

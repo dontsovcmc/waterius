@@ -110,7 +110,7 @@ def test_D3_electricity_counts_kilowatt_hours(stand: Stand, channel: int) -> Non
     imp_before = int(before.payload[f'imp{channel}'])
 
     stand.reset_observers()
-    stand.dut.pulse(channel=channel, count=per_kwh)
+    подано = stand.dut.pulse(channel=channel, count=per_kwh)
     stand.dut.press_button()
     session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
@@ -121,9 +121,15 @@ def test_D3_electricity_counts_kilowatt_hours(stand: Stand, channel: int) -> Non
     # неизвестной
     got = float(session.payload[f'ch{channel}'])
     counted = int(session.payload[f'imp{channel}']) - imp_before
+    # Сперва воздействие: плата отдаёт расписку о фронтах, которые правда выдала
+    # (`/pulse/stat`), и без неё «дошло 9 из 10» не отличить от «стенд не довёл»
+    assert подано == per_kwh, (
+        f'плата выдала {подано} замыканий из {per_kwh} по своей расписке: '
+        f'воздействия не было, и об учёте прошивки этот тест ничего не говорит')
     assert counted == per_kwh, (
-        f'до входа дошло {counted} импульсов из {per_kwh}: считает не прошивка, '
-        f'а стенд не довёл импульс. Показания: было {kwh_before}, стало {got}')
+        f'плата выдала {per_kwh} замыканий, а attiny насчитала {counted}: '
+        f'импульс потерян между выводом платы и входом устройства - шлейф, '
+        f'уровень или сам вход. Показания: было {kwh_before}, стало {got}')
     assert abs(got - kwh_before - 1.0) < 0.001, (
         f'было {kwh_before}, стало {got}; импульсов attiny насчитал {counted}')
     session.assert_delta(channel=channel, liters=1)
@@ -233,8 +239,19 @@ def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
     stand.setup(channel=1, factor=BASE_FACTOR, ctype=NAMUR, period_min=120)
     stand.reset_observers()
 
-    train = threading.Thread(target=stand.dut.pulses, kwargs={
-        'channel': 1, 'count': DURING_PULSES, 'gap': DURING_GAP_S})
+    # Поток молча съедает исключение, а join о нём не скажет: серия, сорвавшаяся
+    # на осечке связи с платой, выглядела бы как потерянные приросты
+    итог: list[int] = []
+    беда: list[BaseException] = []
+
+    def поезд() -> None:
+        try:
+            итог.append(stand.dut.pulses(
+                channel=1, count=DURING_PULSES, gap=DURING_GAP_S))
+        except BaseException as err:            # noqa: BLE001
+            беда.append(err)
+
+    train = threading.Thread(target=поезд)
     train.start()
     try:
         time.sleep(PRESS_AFTER_S)
@@ -252,9 +269,15 @@ def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
     # Счётчик attiny в отказ: он делит вину. Насчитала attiny все импульсы -
     # прирост потеряла ЕСП; насчитала меньше - импульс не доехал до платы, и
     # виноват стенд или дребезг, а не прошивка
+    if беда:
+        raise AssertionError(
+            f'стенд не довёл серию импульсов: {беда[0]!r}') from беда[0]
+    assert итог == [DURING_PULSES], (
+        f'плата приняла {итог} замыканий из {DURING_PULSES}: воздействия не было, '
+        f'и о потере приростов этот тест не говорит')
     assert got == DURING_PULSES * BASE_FACTOR, (
         f"приросты {first.payload['delta1']} + {second.payload['delta1']}, "
-        f'подано {DURING_PULSES} импульсов по {BASE_FACTOR} л\n'
+        f'плата выдала {DURING_PULSES} замыканий по {BASE_FACTOR} л\n'
         f'счёт attiny: {counted(first)} -> {counted(second)}')
 
 

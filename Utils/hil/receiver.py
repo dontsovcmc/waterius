@@ -199,12 +199,12 @@ class Receiver:
         Ждём его недолго, а не сдаёмся первой же ошибкой; если не ушёл -
         говорим прямо, что искать, потому что сам стенд тут ни при чём.
         """
-        deadline = time.time() + BIND_WAIT_S
+        deadline = time.monotonic() + BIND_WAIT_S
         while True:
             try:
                 return ThreadingHTTPServer((host, port), self._handler)
             except OSError as err:
-                if err.errno != errno.EADDRINUSE or time.time() >= deadline:
+                if err.errno != errno.EADDRINUSE or time.monotonic() >= deadline:
                     raise OSError(
                         f'порт {port} занят не стендом и не освободился за '
                         f'{BIND_WAIT_S:.0f} с: посмотрите, кто его держит '

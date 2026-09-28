@@ -90,6 +90,11 @@ GET_TIMEOUT_S = 5.0
 # 25 сентября - заминка на 1,4 с стоила 217 строк. Секунда - меньше половины
 # времени набивки, и повтор при этом бесплатен
 READ_TIMEOUT_S = 1.0
+# Повтор чтения лога идёт без паузы: с `ack` он отдаёт то же окно и ничего не
+# стоит, а каждая секунда слепоты - это строки, вытесненные из кольца. Осечка с
+# общей паузой стоила стенду двух секунд подряд: секунда таймаута, секунда
+# паузы и полсекунды сна опроса
+READ_PAUSE_S = 0.0
 
 
 # Ответ на `/pulse` - расписка о приёме, он не ждёт конца выдержки: медиана
@@ -278,7 +283,12 @@ class Metf:
         self.uptime_ms = now
         if was is not None and now < was:
             self.reboots += 1
-            self.last_reboot = time.time()
+            self.last_reboot = time.monotonic()
+            # Номер окна на плате начался заново, а наш остался большим. Плата
+            # понимает `ack` больше всего, что у неё есть, как «забудь всё» и
+            # стирает кольцо, не отдав ни строки, - причём `dropped` при этом
+            # не растёт, и дыра выходит совершенно молчаливой
+            self._log_seq = 0
             logger.warning(
                 f'METF перезагрузилась: аптайм {was} -> {now} мс. Кольцо лога '
                 f'пусто, сервер времени выключен, выводы вернулись во вход')
@@ -307,7 +317,7 @@ class Metf:
                              (f'{self._api._root}/read',),
                              {'params': {'ack': self._log_seq},
                               'timeout': READ_TIMEOUT_S},
-                             repeatable=NETWORK_ERRORS)
+                             repeatable=NETWORK_ERRORS, pause=READ_PAUSE_S)
         answer.raise_for_status()
 
         seq = answer.headers.get(LOG_SEQ_HEADER)
@@ -341,17 +351,19 @@ class Metf:
 
     def _retry(self, name: str, target: Callable[..., Any],
                args: tuple[Any, ...], kwargs: dict[str, Any],
-               repeatable: tuple[type[BaseException], ...] = NETWORK_ERRORS) -> Any:
-        pause = self._pause
+               repeatable: tuple[type[BaseException], ...] = NETWORK_ERRORS,
+               pause: float | None = None) -> Any:
+        pause = self._pause if pause is None else pause
         last: Exception | None = None
         for attempt in range(1, self._attempts + 1):
+            начали = time.monotonic()
             try:
                 answer = target(*args, **kwargs)
             except NETWORK_ERRORS as err:
                 last = err
                 again = isinstance(err, repeatable)
                 self._note_failure(name, err, attempt,
-                                   self._attempts if again else 1)
+                                   self._attempts if again else 1, начали)
                 if not again:
                     break
                 if attempt < self._attempts:
@@ -364,11 +376,14 @@ class Metf:
         assert last is not None
         raise last
 
-    def _note_failure(self, name: str, err: Exception,
-                      attempt: int, attempts: int) -> None:
-        now = time.time()
+    def _note_failure(self, name: str, err: Exception, attempt: int,
+                      attempts: int, начали: float | None = None) -> None:
+        # Отлучка считается с начала неудачного запроса, а не с его конца: сам
+        # таймаут - это тоже время, когда плата не отвечала. Иначе первая осечка
+        # печаталась как «связь вернулась через 0.0 с»
+        now = time.monotonic()
         if self._down_since is None:
-            self._down_since = now
+            self._down_since = начали if начали is not None else now
         silent = now - self._down_since
         if silent > self._dead_after:
             raise MetfGone(
@@ -384,7 +399,7 @@ class Metf:
     def _note_success(self) -> None:
         if self._down_since is None:
             return
-        silent = time.time() - self._down_since
+        silent = time.monotonic() - self._down_since
         self.last_stall = (self._down_since, silent)
         logger.warning(f'METF: связь вернулась через {silent:.1f} с')
         self._down_since = None

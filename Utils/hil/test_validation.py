@@ -152,12 +152,12 @@ def test_C8_valid_forms_are_accepted(board: AtBoard, cfg: Any, stand: Any) -> No
 
 def saved_line(stand: Any, value: str, timeout: float = 5.0) -> bool:
     """Есть ли в логе строка `Saved` с этим значением: ответ портала пуст в обоих случаях."""
-    deadline = time.time() + timeout
+    deadline = time.monotonic() + timeout
     while True:
         stand.log.poll()
         if any('Saved' in line and value in line for line in stand.log.lines):
             return True
-        if time.time() >= deadline:
+        if time.monotonic() >= deadline:
             return False
         time.sleep(0.5)
 

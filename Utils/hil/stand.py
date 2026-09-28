@@ -165,6 +165,11 @@ class Stand:
         self.mqtt = mqtt
         self.log = LogWatcher(api)
         self._power_warned = False
+        # Просадки питания за прогон: одно предупреждение ничего не говорит
+        # о частоте беды, а она про стенд - кабель и источник
+        self.power_sags = 0
+        self.power_sag_max_mv = 0
+        self.sessions = 0
         # Паузы между импульсами тоже вычитывают лог: иначе кольцо METF
         # переполняется плановым сеансом, и тест падает на неполном логе
         self.dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin,
@@ -319,8 +324,13 @@ class Stand:
                     '`Startup mode:` не доехала, и опознать его режим нечем - '
                     'смотрите overruns и dropped в /read/stat платы'
                     if self.log.headless_pending else '')
+        # Наблюдённое время, а не потолок: они расходятся, и сильно. В прогоне
+        # 27 сентября отказ говорил «не доиграл за 125 с», а pytest намерил на
+        # этот тест 2,56 с - ожидание кончилось мгновенно, потому что настенные
+        # часы прыгнули через сон хоста. Потолок при этом выглядел виноватым
         assert session is not None, (
-            f'сеанс не доиграл за {timeout:.0f} с (ждали mode={mode}): лог начался, '
+            f'сеанс не доиграл за {self.log.waited:.0f} с наблюдения '
+            f'(потолок {timeout:.0f} с, ждали mode={mode}): лог начался, '
             f'но строки ухода в сон в нём нет{headless}{self.log.stuck_note()}\n'
             + '\n'.join(self.log.lines[-40:]))
 
@@ -377,12 +387,18 @@ class Stand:
         Прошивка считает батарейки севшими, если замеры за сеанс разошлись на
         100 мВ (`ESP8266/src/voltage.h`, ALERT_POWER_DIFF_MV), и моргает кодом
         1 - у питаемого от стенда устройства это говорит о кабеле и источнике.
-        Предупреждение одно на прогон: оно про стенд, а не про тест.
+        Предупреждение одно на прогон: оно про стенд, а не про тест. Но
+        считаются все: сводка в конце прогона показывает, редкость это или норма.
         """
-        if not payload.get('voltage_low') or self._power_warned:
+        self.sessions += 1
+        if not payload.get('voltage_low'):
             return
-        self._power_warned = True
         diff_mv = round(float(payload.get('voltage_diff') or 0.0) * 1000)
+        self.power_sags += 1
+        self.power_sag_max_mv = max(self.power_sag_max_mv, diff_mv)
+        if self._power_warned:
+            return                      # словами - один раз, счёт - в сводке
+        self._power_warned = True
         text = (f'стенд: питание устройства просело на {diff_mv} мВ за сеанс при '
                 f'пороге прошивки {ALERT_POWER_DIFF_MV} мВ '
                 f'(напряжение {payload.get("voltage")} В). Прошивка считает это '
@@ -390,6 +406,15 @@ class Stand:
                 f'короче кабель, отдельный источник, ёмкость по питанию платы')
         logger.warning(text)
         warnings.warn(text, StandPowerWarning, stacklevel=2)
+
+    def power_note(self) -> str:
+        """Сводка просадок питания за прогон: пусто, если их не было."""
+        if not self.power_sags:
+            return ''
+        return (f'питание устройства просаживалось в {self.power_sags} сеансах из '
+                f'{self.sessions}, максимум {self.power_sag_max_mv} мВ при пороге '
+                f'прошивки {ALERT_POWER_DIFF_MV} мВ: прошивка считает это '
+                f'разряженными батарейками. Лечится питанием стенда, не прошивкой')
 
     def wait_asleep(self, timeout: float = 60.0) -> bool:
         """
@@ -434,7 +459,7 @@ class Stand:
         Ждём не всегда, а ровно недостающее: если с конца сеанса уже прошло
         больше, пауза нулевая.
         """
-        left = WAKE_SETTLE_S - (time.time() - self._session_at)
+        left = WAKE_SETTLE_S - (time.monotonic() - self._session_at)
         if left > 0:
             logger.info(f'выдержка перед нажатием: {left:.1f} с после сеанса')
             time.sleep(left)
@@ -444,11 +469,11 @@ class Stand:
         # Именно так падал test_E19: портал открыт длинным нажатием, а следом
         # тест ждал тревожный сеанс - и получал приговор про кнопку
         if msec <= BUTTON_SHORT_MS:
-            self._press_at = time.time()
+            self._press_at = time.monotonic()
 
     def _remember(self, session: Session) -> None:
         """Запомнить то, что устройство рассказало о себе в этом сеансе."""
-        self._session_at = time.time()
+        self._session_at = time.monotonic()
         if session.attiny_version is not None:
             self.attiny_version = session.attiny_version
         if session.esp_version is not None:
@@ -481,9 +506,9 @@ class Stand:
             raise AssertionError(f'стенд: AT-плата {port} - нет: порт не открылся\n{err}') from err
         try:
             # Открытие порта перезагружает NodeMCU: первые команды тонут (atboard.py, wait_ready)
-            deadline = time.time() + timeout
+            deadline = time.monotonic() + timeout
             answer = ''
-            while 'OK' not in answer and time.time() < deadline:
+            while 'OK' not in answer and time.monotonic() < deadline:
                 try:
                     answer = board.cmd('AT', timeout=1)
                 except AtError:
@@ -614,8 +639,8 @@ class Stand:
         self.log.clear()
         self.dut.hold_button()
         ap = None
-        deadline = time.time() + 90
-        while time.time() < deadline and not ap:
+        deadline = time.monotonic() + 90
+        while time.monotonic() < deadline and not ap:
             self.log.poll()
             ap = portal.find_ap(self.log.lines)
             if not ap:
@@ -779,6 +804,24 @@ class Stand:
             self.dut.press_button()
 
         session = self.wait_session(timeout=timeout)
+
+        # Настройки приезжают ответом приёмника на посылку, поэтому «прошивка не
+        # применила» имеет смысл только после состоявшегося разговора. Отказ
+        # прогона 27 сентября «прошивка не применила ['mqtt_auto_discovery']; в
+        # логе: {}» был не про прошивку: устройство до приёмника не дошло вовсе
+        assert session.payloads, (
+            f'стенд: приёмник {self.cfg.http_url} не получил ни одной посылки, '
+            f'поэтому настройки {list(settings)} до прошивки не доехали. Коды '
+            f'ответов в логе устройства: {session.http_codes or "нет ни одного"}'
+            f'{session.mqtt_note()}\n{session.text}')
+
+        # Сеанс без головы для утверждений о настройках не годится: строки
+        # `Apply setting:` идут в самом начале, и если начало не доехало, пустой
+        # `applied` означает дыру в логе, а не молчание прошивки
+        assert not session.headless, (
+            f'начало сеанса не доехало (голова лога потеряна), поэтому о '
+            f'настройках {list(settings)} этот сеанс не говорит ничего. '
+            f'Смотрите dropped и overruns в /read/stat платы\n{session.text}')
 
         applied = session.applied
         missing = [k for k in settings if k not in applied]
