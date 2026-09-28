@@ -16,6 +16,12 @@
 время последней отправки, и переведённые назад часы дают ей состояние
 «проснулись раньше, чем заснули».
 
+Сеанс, заказанный кнопкой, берётся только свой - по режиму. Период тут
+короткий (N4 ставит две минуты), плановые пробуждения идут вперемешку с
+нажатиями, и сеанс соседа выглядит как свой: он просто не форсирует
+синхронизацию (`sync_time.cpp`, maybe_sync_time: `forced = mode !=
+TRANSMIT_MODE`). Так упал N7 28 сентября - и прошёл, запущенный в одиночку.
+
 Чего здесь нет. Две синхронизации с суточным разрывом стенд не проверит - это
 сутки прогона. Проверяется соседнее и достижимое: что после прогрева устройство
 перестаёт спрашивать время каждое пробуждение.
@@ -32,7 +38,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from .constants import DEFAULT_NTP_SERVER, NTP_POOL_SIZE, NTP_WARMUP_SYNCS, START_VALID_TIME
-from .logwatch import TRANSMIT_MODE
+from .logwatch import MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
 
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand  # а сбор тестов должен работать без них
@@ -109,7 +115,7 @@ def test_N1_manual_server_is_used(stand: Stand, clock: Any) -> None:
 
     stand.reset_observers()
     stand.dut.press_button()      # ручное пробуждение синхронизацию форсирует
-    session = stand.wait_session(timeout=180)
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert clock.requests_seen > before, (
         'устройство не обратилось к серверу стенда\n' + session.text)
@@ -134,7 +140,7 @@ def test_N2_falls_back_to_the_pool(stand: Stand, clock: Any) -> None:
 
     stand.reset_observers()
     stand.dut.press_button()
-    session = stand.wait_session(timeout=180)
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert 'NTP: No reply from NTP server' in session.text, (
         'сервер стенда молчал, а прошивка этого не заметила\n' + session.text)
@@ -162,7 +168,7 @@ def test_N3_pool_server_is_chosen_at_random(stand: Stand, clock: Any) -> None:
     for attempt in range(6):
         stand.reset_observers()
         stand.dut.press_button()
-        session = stand.wait_session(timeout=180)
+        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
         names = pool_names(session.lines)
         assert names, f'сеанс {attempt + 1}: пул не опрашивался\n{session.text}'
         chosen.append(names[0])
@@ -198,7 +204,7 @@ def test_N4_sync_is_not_asked_every_wakeup(stand: Stand, clock: Any) -> None:
     for _ in range(NTP_WARMUP_SYNCS):
         stand.reset_observers()
         stand.dut.press_button()
-        stand.wait_session(timeout=180)
+        stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     before = clock.requests_seen
 
@@ -234,7 +240,7 @@ def test_N5_unreachable_server_freezes_the_tuning(stand: Stand, clock: Any) -> N
     """
     stand.reset_observers()
     stand.dut.press_button()
-    start = stand.wait_session(timeout=180)
+    start = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
     assert start.payload is not None
     tuned = start.payload['period_min_tuned']
     stamp = payload_epoch(start.payload)
@@ -243,7 +249,7 @@ def test_N5_unreachable_server_freezes_the_tuning(stand: Stand, clock: Any) -> N
         for failures in range(1, 4):      # номер неудачи, он же их счёт
             stand.reset_observers()
             stand.dut.press_button()
-            session = stand.wait_session(timeout=180)
+            session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
             assert session.payload is not None
 
             assert 'NTP: sync failed' in session.text, (
@@ -282,7 +288,7 @@ def test_N7_bogus_time_is_rejected(stand: Stand, clock: Any) -> None:
 
     stand.reset_observers()
     stand.dut.press_button()
-    session = stand.wait_session(timeout=180)
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert clock.requests_seen > asked, (
         f'устройство не спросило время у платы стенда. Само оно говорит:\n'
