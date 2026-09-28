@@ -296,6 +296,10 @@ class Stand:
         """Начать наблюдение с чистого листа - вызывается перед каждым тестом."""
         self.log.clear()
         self.receiver.drain()
+        # Заряд ждёт не своего сеанса, а первой посылки, какая придёт
+        забытый = self.receiver.forget_reply()
+        if забытый:
+            logger.warning(f'приёмник держал незабранный ответ - снимаем: {забытый}')
         if self.mqtt:
             self.mqtt.clear_retained_tree(self.mqtt_root)
             self.mqtt.drain()
