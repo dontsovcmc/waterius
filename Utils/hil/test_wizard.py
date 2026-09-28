@@ -30,7 +30,7 @@ import pytest
 from loguru import logger
 
 from . import portal as portal_mod
-from .atboard import AtBoard, AtError
+from .atboard import AtBoard, AtError, Network
 from .constants import COLD, NAMUR, REPO_ROOT, WATER_COLD
 from .test_wifi import other_channel
 
@@ -50,6 +50,12 @@ DETECT_PULSES = 3
 
 # save_fast_connect печатает пару, которую сохранил
 RE_FAST_CONNECT = re.compile(r'Fast connect: channel=(\d+) bssid=(\S+)')
+
+# W5: сколько ждать, пока точка портала уведёт станцию за собой, и сколько -
+# пока она сама встанет на канал роутера. Оба срока - от начала подключения к
+# роутеру, а оно идёт полным сканом эфира, если быстрый коннект промахнулся
+KICK_S = 20.0
+MOVE_S = 90.0
 
 
 def api(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:
@@ -313,12 +319,49 @@ def find_network(board: AtBoard, ssid: str,
     return None, seen
 
 
+def portal_in_air(board: AtBoard, ssid: str, channel: int,
+                  timeout: float = MOVE_S) -> tuple[Network | None, list[Network]]:
+    """
+    Дождаться точку портала в эфире на нужном канале и вернуть её и весь эфир.
+
+    Скан повторяется: пока ЕСП подключается к роутеру, её точка то пропадает,
+    то возвращается, и один скан ничего не доказывает. Эфир отдаётся целиком -
+    без него отказ не скажет, где точка осталась. Пустой скан картину не
+    затирает: он значит лишь, что в этот миг плата не слышала никого.
+    """
+    seen: list[Network] = []
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            снимок = board.scan()
+        except AtError as err:
+            logger.info(f'скан эфира не удался, повторяю: {err}')
+            time.sleep(2)
+            continue
+        seen = снимок or seen
+        ours = [net for net in снимок if net.ssid == ssid]
+        for net in ours:
+            if net.channel == channel:
+                return net, seen
+        if ours:
+            logger.info(f'точка портала пока на канале {ours[0].channel}')
+        time.sleep(2)
+    return None, seen
+
+
 @pytest.mark.slow
 def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
     """
-    Роутер на другом канале, чем точка портала: на шаге подключения точка
-    уходит на канал роутера, телефон теряет её, возвращается - и мастер доходит
-    до конца (K2).
+    Роутер на другом канале, чем точка портала (K2).
+
+    Радио у ЕСП одно: подключаясь к роутеру, она уводит на его канал и свою
+    точку, а клиента при этом теряет. Телефон обязан пережить это сам -
+    отключиться, найти точку заново уже на новом канале и вернуться в мастер.
+    Тем же путём идёт и стенд: `AT+CWSTATE?` показывает потерю сети, `AT+CWLAP`
+    находит точку на канале роутера, `AT+CWJAP` возвращает плату.
+
+    Скан эфира здесь не удобство, а единственное прямое доказательство: о
+    переезде точки прошивка не печатает ничего.
 
     Точка поднимается на канале из настроек, то есть прошлого подключения
     (`active_point.cpp`, ap_channel), поэтому канал роутера меняется до входа
@@ -339,6 +382,8 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
             f'роутер не перешёл на канал {new}: канал {router_channel}, точка {ap_on}')
 
         with portal_mod.session(cfg, stand) as board:
+            portal_ssid = board.portal_ssid
+            assert portal_ssid, 'имя точки портала неизвестно: возвращаться некуда'
             started = find_line(stand, portal_mod.RE_AP_STARTED)
             assert started, 'нет строки о запуске точки портала'
             assert int(started.group(1)) == old, (
@@ -364,20 +409,35 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
             assert 'error=0' in answer.get('redirect', ''), (
                 f'смена канала не отмечена, предупреждения не будет: {answer}')
             dropped = start_connect(board)
-            redirect, lost = wait_redirect(board, {CONNECTED})
 
             # Переезд точки прошивка не печатает: радио у ЕСП одно, и при
             # подключении к роутеру точка уходит следом молча
-            # (`active_point.cpp`, ap_channel). Единственная улика у стенда -
-            # потерянная связь AT-платы, поэтому к отказу идёт и то, чем
-            # кончился мастер: без этого «точка не ушла» и «устройство не
-            # подключилось вовсе» выглядят одинаково
-            assert dropped or lost, (
-                f'AT-плата ни разу не потеряла точку: точка не ушла с канала {old} '
-                f'на {new}. Мастер при этом вернул {redirect!r}, роутер на канале '
+            # (`active_point.cpp`, ap_channel). Улику стенд берёт из эфира сам:
+            # станция остаётся без сети, а скан находит имя точки на канале
+            # роутера. Обрыв запроса уликой не годится - транспорт AT-платы
+            # после него молча возвращается и повторяет запрос
+            # (`atboard.py`, _recover), так что до теста обрыв может и не дойти
+            kicked = board.wait_offline(KICK_S)
+            logger.info(f'после start_connect: запрос оборвался {dropped}, '
+                        f'станция вне сети {kicked}')
+
+            moved, air = portal_in_air(board, portal_ssid, new, MOVE_S)
+            assert moved, (
+                f'точка портала {portal_ssid} не встала на канал {new} за '
+                f'{MOVE_S:.0f} с: переезда не было. В эфире '
+                f'{[(net.ssid, net.channel) for net in air]}; запрос оборвался '
+                f'{dropped}, станция вне сети {kicked}, роутер на канале '
                 f'{stand.router.config().get("channel")}')
+            logger.info(f'точка портала переехала на канал {moved.channel}, '
+                        f'возвращаемся на неё')
+
+            # Возвращается клиент сам: Ватериус его отключил и звать не будет.
+            # Имя то же, а канал и BSSID новые - их ищет сам модуль по имени
+            board.join(portal_ssid)
+            redirect, lost = wait_redirect(board, {CONNECTED})
             assert redirect == CONNECTED, (
-                f'после смены канала мастер не увидел подключения: {redirect}')
+                f'после смены канала мастер не увидел подключения: {redirect}; '
+                f'по дороге точка терялась снова {lost}')
 
 
 def hex_digits(mac: str) -> str:
