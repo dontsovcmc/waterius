@@ -155,11 +155,16 @@ def test_G1b_resend_after_settings_reaches_broker(stand: Stand) -> None:
     session.assert_confirm(mqtt=SEND_OK)
 
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=10) is not None
-    message = stand.mqtt.last(stand.mqtt_root)
+    # Именно дождаться второй, а не снять первую попавшуюся: обе публикации
+    # идут в один топик, и между ними - применение настроек и вся отправка
+    message = stand.mqtt.wait_topic(
+        stand.mqtt_root,
+        until=lambda m: m.json().get('period_min') == RESEND_PERIOD_MIN)
+    было = stand.mqtt.last(stand.mqtt_root)
     assert message is not None, (
-        f'в корне ничего нет, дерево: {stand.mqtt.topics(stand.mqtt_root)}')
-    assert message.json()['period_min'] == RESEND_PERIOD_MIN, (
-        'в брокере осталась первая посылка сеанса: повторная до него не дошла')
+        f'в брокере осталась первая посылка сеанса: повторная до него не дошла. '
+        f'В корне period_min={было.json().get("period_min") if было else "пусто"}, '
+        f'ждали {RESEND_PERIOD_MIN}')
 
 
 def test_G2_payload_schema(stand: Stand) -> None:
