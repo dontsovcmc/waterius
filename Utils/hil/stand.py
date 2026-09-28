@@ -131,6 +131,16 @@ class StandPowerWarning(UserWarning):
     """Питание стенда просело настолько, что прошивка сочла батарейки севшими."""
 
 
+class DeviceLost(Exception):
+    """Устройство вне сети стенда, и вернуть его туда стенд не смог."""
+
+
+# Сколько тестов подряд приёмник может остаться пустым, прежде чем прогон
+# останавливается. Один раз - беда теста, три подряд - беда стенда: чинить
+# нечем, а каждый следующий тест выдаст ту же ошибку. 28.09 их было сорок семь.
+SILENT_LIMIT = 3
+
+
 def _ensure_ap_channel(router: NatRouter, want: int) -> dict[str, str]:
     """
     Поставить точку стенда на её канал и вернуть настройки роутера.
@@ -186,6 +196,10 @@ class Stand:
         self.net = Net(router, cfg.dut_ip, cfg.dut_mac,
                        cfg.broker_port, cfg.receiver_port)
         self.last_payload: dict[str, Any] | None = None
+        # Когда она пришла: улики про эфир берутся из неё, и двадцатиминутной
+        # давности числа нельзя выдавать за нынешнее состояние устройства
+        self.last_payload_at: float | None = None
+        self._silent = 0          # тестов подряд с пустым приёмником
         self.attiny_version: int | None = None
         self.esp_version: tuple[int, int, int] | None = None
         self.dut_mac: str = cfg.dut_mac.lower()
@@ -376,6 +390,7 @@ class Stand:
         if session.payloads:
             session.payload = session.payloads[-1]
             self.last_payload = session.payload
+            self.last_payload_at = time.monotonic()
 
         self._remember(session)
 
@@ -782,6 +797,39 @@ class Stand:
 
     # --- настройка устройства ---
 
+    def _note_silence(self, session: Session) -> None:
+        """
+        Счёт сеансов подряд, где до приёмника не дошло ничего.
+
+        Один такой сеанс - беда теста, три подряд - беда стенда: чинить нечем, и
+        каждый следующий тест выдаст ту же ошибку. 28 сентября их было сорок
+        семь, и прогон доработал до конца, не проверив ничего.
+        """
+        self._silent = self._silent + 1 if not session.payloads else 0
+        if self._silent >= SILENT_LIMIT:
+            raise DeviceLost(
+                f'приёмник {self.cfg.http_url} пуст {self._silent} теста подряд, '
+                f'и вернуть устройство в сеть стенда не вышло: дальше каждый '
+                f'тест выдаст ту же ошибку')
+
+    def _rescue_device(self) -> bool:
+        """
+        Вернуть устройство в сеть стенда, если оно осталось в своём портале.
+
+        Заводской сброс стирает сеть и приёмник, и незамеченный портал оставляет
+        устройство без них насовсем: кнопка его не будит, пока ЕСП запитана.
+        28 сентября чинить это было некому - сорок семь тестов подряд двадцать
+        минут падали на пустом приёмнике, пока блок R случайно не настроил сеть
+        заново.
+        """
+        if not self.cfg.atboard_port:
+            return False
+        from . import portal
+        вернули, улика = portal.rescue_stray_portal(self.cfg, self)
+        if улика:
+            logger.warning(f'приёмник пуст, ищем устройство в эфире{улика}')
+        return вернули
+
     def setup(self, channel: int | None = None, wake: bool = True,
               timeout: float = 180.0, **params: Any) -> Session:
         """
@@ -812,6 +860,18 @@ class Stand:
             self.dut.press_button()
 
         session = self.wait_session(timeout=timeout)
+
+        # Пустой приёмник - не всегда молчание прошивки: устройство могло
+        # остаться в своём портале со стёртой сетью, и тогда чинить его надо
+        # порталом, а не повторять тест
+        if not session.payloads and self._rescue_device():
+            self.reset_observers()
+            self.receiver.reply_settings(settings)
+            if wake:
+                self.dut.press_button()
+            session = self.wait_session(timeout=timeout)
+
+        self._note_silence(session)
 
         # Настройки приезжают ответом приёмника на посылку, поэтому «прошивка не
         # применила» имеет смысл только после состоявшегося разговора. Отказ

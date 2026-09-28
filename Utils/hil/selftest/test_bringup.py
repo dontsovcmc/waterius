@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 
 import pytest
@@ -90,6 +91,7 @@ class ПоддельныйСтенд:
             return {'rssi': -71, 'ssid': 'dav', 'channel': 4}
 
     last_payload = {'rssi': -83, 'channel': 11, 'wifi_connect_errors': 14}
+    last_payload_at = time.monotonic()
 
 
 def test_улики_про_эфир_называют_обе_платы(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -119,3 +121,34 @@ def test_молчащая_METF_не_роняет_улики(monkeypatch: pytest.
 
     ветка._log_air('test_sending.py')
     assert 'TimeoutError' in сказано[0] and '-83' in сказано[0], сказано
+
+
+def test_улика_про_эфир_называет_возраст_посылки(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Свежесть числа - часть самого числа: старое врёт молча."""
+    from .. import conftest as ветка
+
+    class Старая(ПоддельныйСтенд):
+        last_payload_at = time.monotonic() - 1200
+
+    сказано: list[str] = []
+    monkeypatch.setattr(ветка, '_stand', Старая())
+    monkeypatch.setattr(ветка.logger, 'info', lambda text: сказано.append(text))
+
+    ветка._log_air('test_sending.py')
+    assert 'из посылки 1200 с назад' in сказано[0], сказано
+
+
+def test_улика_про_эфир_без_времени_посылки_не_врёт(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    from .. import conftest as ветка
+
+    class Безвременная(ПоддельныйСтенд):
+        last_payload_at = None
+
+    сказано: list[str] = []
+    monkeypatch.setattr(ветка, '_stand', Безвременная())
+    monkeypatch.setattr(ветка.logger, 'info', lambda text: сказано.append(text))
+
+    ветка._log_air('test_sending.py')
+    assert 'неизвестно когда' in сказано[0], сказано
