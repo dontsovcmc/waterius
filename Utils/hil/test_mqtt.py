@@ -118,8 +118,14 @@ def test_I0_readings_reach_broker(stand: Stand) -> None:
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert 'MQTT: Connected.' in session.text, f'брокер недоступен\n{session.text}'
+
+    # Без приписки устройства «в брокере пусто» обвиняет прошивку в том, что
+    # могло быть бедой стенда: потерянной подпиской, чужой уборкой удерживаемых
+    свои = readings_publishes(session, stand.mqtt_root)
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
-        f'в брокере нет ничего в {stand.mqtt_root}/, пришло: {stand.mqtt.topics()}')
+        f'в брокере нет ничего в {stand.mqtt_root}/, пришло: {stand.mqtt.topics()}'
+        f'{session.mqtt_note()}\nПубликаций в своё дерево по логу устройства: '
+        f'{len(свои)}')
 
     # Именно этот топик, а не любой в дереве: при включённом автодискавери
     # показания идут одним объектом в корень
