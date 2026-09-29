@@ -381,7 +381,7 @@ def rescue_stray_portal(cfg: Any, stand: Any,
         if not ap_in_air(board, ssid, timeout=AIR_LOOK_S):
             return False, f'. Точки {ssid} в эфире нет: устройство не в настройках'
         board.join(ssid, timeout=20.0)
-        configure(board, stand.ap_ssid, cfg.ap_password, cfg.http_url)
+        configure(board, stand.ap_ssid, cfg.dut_password, cfg.http_url)
     except Exception as err:
         return False, (f'. Точка {ssid} в эфире есть, но вернуть устройство в '
                        f'сеть стенда не вышло: {type(err).__name__}: {err}')

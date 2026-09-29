@@ -191,7 +191,7 @@ class ПлатаСпасения(ПоддельнаяПлата):
 
 class ПоддельныйCfg:
     atboard_port = '/dev/fake'
-    ap_password = '12345678'
+    dut_password = '12345678'
     http_url = 'http://192.168.100.18:8010/data'
 
 

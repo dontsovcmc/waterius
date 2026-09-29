@@ -196,6 +196,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption('--ap-bandwidth', type=int, default=None,
                      help='полоса, которую точка обязана вещать, МГц: стенд сверяет '
                           'её со сканом эфира и говорит о расхождении')
+    parser.addoption('--norouter', action='store_true', default=False,
+                     help='гонять без платы WT32-ETH01: Ватериус живёт в сети из '
+                          '[wifi] stand.ini, а тесты, управляющие точкой, '
+                          'пропускаются (фикстуры router и net)')
     parser.addoption('--pcap', action='store_true', default=False,
                      help='снимать дамп трафика точки доступа к упавшим тестам')
     parser.addoption('--experimental', action='store_true', default=False,
@@ -222,6 +226,9 @@ def pytest_configure(config: pytest.Config) -> None:   # pytest_configure - жд
         awake = keep_awake()
         if awake is not None:
             config.add_cleanup(awake.terminate)
+    if config.getoption('--pcap') and config.getoption('--norouter'):
+        pytest.exit('--pcap без роутера нечем: дамп трафика снимает точка стенда',
+                    returncode=1)
     config.addinivalue_line('markers', 'stand: требует собранного стенда')
     config.addinivalue_line('markers', 'slow: идёт десятки минут')
     config.addinivalue_line('markers', 'mqtt: нужен брокер (amqtt из requirements.txt)')
@@ -308,7 +315,8 @@ def cfg(request: pytest.FixtureRequest) -> Any:
     from . import config as stand_config
     # search=True: платы, чей адрес в файле устарел, ищутся до первого теста,
     # а не оборачиваются получасом таймаутов (discover.py)
-    loaded = stand_config.load(request.config.getoption('--stand-config'), search=True)
+    loaded = stand_config.load(request.config.getoption('--stand-config'), search=True,
+                               norouter=request.config.getoption('--norouter'))
     asked = {name: request.config.getoption(f'--{name.replace("_", "-")}')
              for name in ('ap_channel', 'ap_channel_other', 'ap_bandwidth')}
     given = {name: value for name, value in asked.items() if value is not None}
@@ -383,8 +391,10 @@ def _network_note(device: Any) -> str:
     никто (разбор - 03_router-nat-bug.md). 28 сентября на её диагностику ушло
     два прогона.
     """
+    if device.router is None:
+        return ''
     try:
-        router = device.net.router
+        router = device.router
         status = router.show('status')
         ap = router.ap_enabled()
         nat = router.nat_enabled()
@@ -452,10 +462,31 @@ def armed_clock(request: pytest.FixtureRequest) -> None:
     request.getfixturevalue('stand').arm_clock()
 
 
+@pytest.fixture
+def router(request: pytest.FixtureRequest) -> Any:
+    """
+    Точка стенда для теста, который ею управляет.
+
+    Просят её именно те тесты, что гасят точку, меняют канал или ставят правила
+    фильтра, - и по этой просьбе прогон без платы (`--norouter`) их пропускает.
+    Маркером то же самое пришлось бы держать в двух местах: в списке маркеров и
+    в самом тесте, а забытый маркер не виден никак.
+    """
+    if request.config.getoption('--norouter'):
+        pytest.skip('тест управляет точкой стенда, а прогон идёт с --norouter')
+    return request.getfixturevalue('stand').router
+
+
+@pytest.fixture
+def net(router: Any, request: pytest.FixtureRequest) -> Any:
+    """Сетевые сценарии: их ставит фильтр той же точки, поэтому и пропуск тот же."""
+    return request.getfixturevalue('stand').net
+
+
 @pytest.fixture(scope='session')
 def baseline(stand: Any) -> Any:
     """Снимок настроек роутера, к которому возвращаемся после каждого теста."""
-    return stand.router.snapshot()
+    return stand.router.snapshot() if stand.router is not None else None
 
 
 @pytest.fixture(autouse=True)
@@ -467,7 +498,8 @@ def clean_net(request: pytest.FixtureRequest) -> Iterator[None]:
     следующий упадёт по чужой причине и разбираться придётся с конца.
     """
     if ('stand' not in request.keywords or 'portal' in request.keywords
-            or not request.config.getoption('--stand')):
+            or not request.config.getoption('--stand')
+            or request.config.getoption('--norouter')):
         yield
         return
 

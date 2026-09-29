@@ -116,11 +116,11 @@ def test_P5_saved_password_is_masked(board: AtBoard, cfg: Any) -> None:
     задан (`active_point.cpp`, processor), а те же звёздочки при сохранении
     означают «не трогали» (`core/input.h`, is_all_asterisks) - это проверяет C6.
     """
-    assert cfg.ap_password, '[router] ap_password в stand.ini'
+    assert cfg.dut_password, 'пароль сети устройства в stand.ini'
     for url in ('/wifi_settings.html', '/setup_send.html'):
         answer = board.get(url, portal_mod.HOST)
         assert answer.status == 200, f'{url}: {answer.status}'
-        assert cfg.ap_password not in answer.text, f'{url}: пароль Wi-Fi виден в разметке'
+        assert cfg.dut_password not in answer.text, f'{url}: пароль Wi-Fi виден в разметке'
 
     page = board.get('/wifi_settings.html', portal_mod.HOST).text
     assert 'value="********"' in page, (

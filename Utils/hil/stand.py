@@ -166,7 +166,7 @@ def _ensure_ap_channel(router: NatRouter, want: int) -> dict[str, str]:
 class Stand:
     """Фасад над всем железом стенда."""
 
-    def __init__(self, cfg: StandConfig, api: Metf, router: NatRouter,
+    def __init__(self, cfg: StandConfig, api: Metf, router: NatRouter | None,
                  receiver: Receiver, mqtt: MqttWatch | None) -> None:
         self.cfg = cfg
         self.api = api
@@ -193,8 +193,10 @@ class Stand:
         # Время устройству отдаёт та же плата: тесты синхронизации не должны
         # зависеть ни от интернета, ни от серверов на машине с прогоном
         self.clock = BoardClock(cfg.metf_host)
+        # Сетевые сценарии ставит фильтр точки стенда: без неё их нет, и тесты,
+        # которым они нужны, пропускает фикстура `net`
         self.net = Net(router, cfg.dut_ip, cfg.dut_mac,
-                       cfg.broker_port, cfg.receiver_port)
+                       cfg.broker_port, cfg.receiver_port) if router else None
         self.last_payload: dict[str, Any] | None = None
         # Когда она пришла: улики про эфир берутся из неё, и двадцатиминутной
         # давности числа нельзя выдавать за нынешнее состояние устройства
@@ -207,11 +209,20 @@ class Stand:
         # Последнее известное состояние устройства (state.py). None - неизвестно,
         # и следующий тест начнёт с короткого нажатия
         self.state: dict[str, Any] | None = None
+        # Подключилось ли устройство к сети в последнем сеансе. None - сеансов
+        # ещё не было, а совпавшие строки конфига о подключении не говорят
+        self.joined: bool | None = None
 
     # --- жизненный цикл ---
 
     @classmethod
     def create(cls, cfg: StandConfig, mqtt: MqttWatch | None = None) -> Stand:
+        # До железа: полминуты ожидания METF ради отказа про незаполненный файл
+        # никому не нужны
+        assert not cfg.norouter or cfg.wifi_ssid, (
+            'прогон без роутера (--norouter) требует [wifi] ssid в stand.ini: '
+            'точки стенда нет, и спросить имя сети устройства не у кого')
+
         api = Metf(cfg.metf_host)
         waited = _wait_metf(api, cfg.metf_host)
         try:
@@ -223,33 +234,42 @@ class Stand:
         if waited:
             logger.info(f'стенд: METF {cfg.metf_host} отозвалась через {waited:.0f} с')
 
-        router_at = cfg.router_port or cfg.router_host
-        try:
-            router = connect(cfg.router_port or None, cfg.router_host or None,
-                             cfg.router_password, cfg.ap_password)
-            version = router.version()
-        except Exception as err:
-            raise AssertionError(
-                f'стенд: WT32-ETH01 {router_at} - нет: консоль не отвечает\n{err}') from err
-        logger.info(f'стенд: WT32-ETH01 {router_at} - есть, {version}')
+        router: NatRouter | None = None
+        if cfg.norouter:
+            # Точки стенда нет: ломать в эфире нечего, поэтому и запрет «METF
+            # сидит на точке стенда» не про этот режим. Канал сверять не с чем -
+            # сеть чужая, и в скане остаётся то, ради чего он и нужен: соседи
+            logger.info(f'стенд: без роутера, сеть устройства «{cfg.wifi_ssid}»')
+            metf_check(api, cfg.metf_host)
+            air_check(cfg.wifi_ssid)
+        else:
+            router_at = cfg.router_port or cfg.router_host
+            try:
+                router = connect(cfg.router_port or None, cfg.router_host or None,
+                                 cfg.router_password, cfg.ap_password)
+                version = router.version()
+            except Exception as err:
+                raise AssertionError(
+                    f'стенд: WT32-ETH01 {router_at} - нет: консоль не отвечает\n{err}') from err
+            logger.info(f'стенд: WT32-ETH01 {router_at} - есть, {version}')
 
-        # Канал закрепляется до досмотра: эфир решает судьбу прогона, а
-        # «как осталось с прошлого раза» - не настройка. Тесты W4 и W5 уводят
-        # точку на запасной канал и возвращают; если прогон умер посреди них,
-        # здесь точка и вернётся на своё место.
-        ap = _ensure_ap_channel(router, cfg.ap_channel)
+            # Канал закрепляется до досмотра: эфир решает судьбу прогона, а
+            # «как осталось с прошлого раза» - не настройка. Тесты W4 и W5 уводят
+            # точку на запасной канал и возвращают; если прогон умер посреди них,
+            # здесь точка и вернётся на своё место.
+            ap = _ensure_ap_channel(router, cfg.ap_channel)
 
-        # Досмотр METF идёт после роутера: имя точки стенда спрашивается у него,
-        # а без имени не проверить главного - что управляющий канал не лежит на
-        # том, что тесты ломают
-        ap_ssid = cfg.ap_ssid or ap.get('ssid', '')
-        metf_check(api, cfg.metf_host, ap_ssid, int(ap.get('channel', 0) or 0))
-        air_check(ap_ssid, int(ap.get('channel', 0) or 0), cfg.ap_bandwidth)
+            # Досмотр METF идёт после роутера: имя точки стенда спрашивается у него,
+            # а без имени не проверить главного - что управляющий канал не лежит на
+            # том, что тесты ломают
+            ap_ssid = cfg.ap_ssid or ap.get('ssid', '')
+            metf_check(api, cfg.metf_host, ap_ssid, int(ap.get('channel', 0) or 0))
+            air_check(ap_ssid, int(ap.get('channel', 0) or 0), cfg.ap_bandwidth)
 
-        # Прошлый прогон мог умереть с выключенной точкой или правилом фильтра.
-        # restore() чинит это после теста, а identify() идёт раньше первого
-        router.acl_clear()
-        router.ap(True)
+            # Прошлый прогон мог умереть с выключенной точкой или правилом фильтра.
+            # restore() чинит это после теста, а identify() идёт раньше первого
+            router.acl_clear()
+            router.ap(True)
 
         receiver = Receiver(port=cfg.receiver_port,
                             cert_host=cfg.receiver_host)
@@ -260,7 +280,8 @@ class Stand:
 
         # Адрес закрепляется в identify(), когда MAC уже прочитан из лога:
         # правила фильтра иначе пришлось бы переписывать после каждой выдачи
-        router.client_stats(True)
+        if router is not None:
+            router.client_stats(True)
         return stand
 
     def release_lines(self) -> None:
@@ -278,7 +299,8 @@ class Stand:
 
     def close(self) -> None:
         self.receiver.stop()
-        self.router.close()
+        if self.router is not None:
+            self.router.close()
 
     @property
     def ap_ssid(self) -> str:
@@ -288,6 +310,8 @@ class Stand:
         Спрашиваем у самой точки, если не задано в stand.ini: третья копия
         имени однажды разойдётся с эфиром, и заметить это будет нечем.
         """
+        if self.cfg.norouter:
+            return self.cfg.dut_ssid
         ssid = self.cfg.ap_ssid or self.router.config().get('ssid', '')
         assert ssid, 'не удалось узнать имя точки доступа стенда'
         return ssid
@@ -514,6 +538,30 @@ class Stand:
             if self.dut_mac:
                 logger.warning(f'MAC из лога {session.mac} != {self.dut_mac} из stand.ini')
             self.dut_mac = session.mac
+        self._note_wifi(session)
+
+    def _note_wifi(self, session: Session) -> None:
+        """
+        Подключилось устройство к сети или нет - словами, в каждом сеансе.
+
+        Прошивка печатает исход сама (`WIFI: Connected.` либо `Connection
+        failed.`), но стенд эту строку не читал, и неподключившееся устройство
+        узнавалось только по пустому приёмнику через минуту - отказом про
+        настройки, которые «не доехали». Сеанс сюда попадает уже завершённым,
+        то есть дошедшим до `Going to sleep`: ждать подключения больше нечего.
+
+        Сеанс, в котором радио не включалось (`Idle: no consumption, WiFi stays
+        off`, main.cpp), о сети не говорит ничего: прошлый вердикт в нём вернее
+        нового.
+        """
+        ssid = session.config.get('wifi_ssid') or self.device_config.get('wifi_ssid') or '?'
+        if session.wifi_connected:
+            self.joined = True
+            logger.info(f'Ватериус: подключено к «{ssid}»')
+        elif session.wifi_attempts:
+            self.joined = False
+            logger.warning(f'Ватериус: НЕ подключено к «{ssid}» '
+                           f'(попыток {session.wifi_attempts}), ушёл в сон')
 
     def check_atboard(self, timeout: float = 10.0) -> None:
         """
@@ -591,7 +639,7 @@ class Stand:
         logger.info(f'стенд: Ватериус - есть: attiny {self.attiny_version}, '
                     f'ЕСП {self.version_str}, MAC {self.dut_mac or "неизвестен"}')
 
-        if self.dut_mac:
+        if self.dut_mac and self.router is not None and self.net is not None:
             self.router.dhcp_reserve(self.dut_mac, self.cfg.dut_ip)
             self.net.dut_mac = self.dut_mac
 
@@ -620,22 +668,35 @@ class Stand:
         config = self.device_config
         assert config, ('устройство не напечатало свои настройки: '
                         'нечего сверять, проверьте лог и уровень логирования')
-        if (not force and config.get('wifi_ssid') == want_ssid
-                and config.get('http_on') == '1'
-                and config.get('http_host') == want_url):
+        настроено = (config.get('wifi_ssid') == want_ssid
+                     and config.get('http_on') == '1'
+                     and config.get('http_host') == want_url)
+        if not force and настроено and self.joined:
             logger.info(f'устройство уже в сети стенда: {want_ssid} -> {want_url}')
             return False
 
-        logger.warning(f'устройство настроено на чужую сеть: '
-                       f'{config.get("wifi_ssid") or "?"} -> '
-                       f'{config.get("http_host") or "нет своего сервера"}')
+        if настроено:
+            # Совпавшие строки конфига о подключении не говорят: 29 сентября
+            # устройство «уже было в сети стенда», не подключалось к ней ни
+            # разу, и прогон умирал минутой позже на пустом приёмнике
+            logger.warning(f'устройство настроено на «{want_ssid}», но к ней не '
+                           f'подключилось - настраиваю заново через портал')
+        else:
+            logger.warning(f'устройство настроено на чужую сеть: '
+                           f'{config.get("wifi_ssid") or "?"} -> '
+                           f'{config.get("http_host") or "нет своего сервера"}')
         assert self.cfg.atboard_port, (
-            'нужна AT-плата, чтобы настроить устройство через портал: '
-            '[atboard] port в stand.ini. Либо настройте Ватериус вручную на сеть '
-            f'{want_ssid} и сервер {want_url}')
-        assert self.cfg.ap_password, (
-            '[router] ap_password в stand.ini: пароль точки доступа стенда, '
-            'его не прочитать у роутера - show config печатает звёздочки')
+            'устройство не в сети стенда, а настроить его нечем: нужна AT-плата '
+            '([atboard] port в stand.ini). '
+            + (f'Настройки у него правильные - «{want_ssid}» и {want_url}, - но '
+               f'подключиться к сети оно не смогло: смотрите саму точку.'
+               if настроено else
+               f'Либо настройте Ватериус вручную на сеть {want_ssid} и сервер '
+               f'{want_url}'))
+        assert self.cfg.dut_password, (
+            'пароль сети устройства в stand.ini ([router] ap_password, а без '
+            'роутера [wifi] password): у точки его не прочитать - show config '
+            'печатает звёздочки')
 
         self._setup_via_portal(want_ssid, want_url)
 
@@ -650,11 +711,12 @@ class Stand:
             f'после настройки сервер остался {config.get("http_host")!r}\n{session.text}')
         assert session.wifi_connected, (
             f'устройство не подключилось к {want_ssid}\n{session.text}')
+        nat = (f'NAT на точке: {self.router.nat_enabled()}. Клиенты точки видят '
+               'только её саму, если NAT не поднялся - лечится `restart` роутера; '
+               if self.router is not None else '')
         assert session.payload is not None, (
-            'устройство в сети стенда, но посылка до приёмника не дошла. '
-            f'NAT на точке: {self.router.nat_enabled()}. Клиенты точки видят '
-            'только её саму, если NAT не поднялся - лечится `restart` роутера; '
-            f'приёмник слушает {self.cfg.http_url}\n{session.text}')
+            f'устройство в сети «{want_ssid}», но посылка до приёмника не дошла. '
+            f'{nat}приёмник слушает {self.cfg.http_url}\n{session.text}')
         logger.info(f'устройство переведено в сеть стенда: {want_ssid} -> {want_url}')
         return True
 
@@ -677,7 +739,7 @@ class Stand:
         board = AtBoard(self.cfg.atboard_port)
         try:
             logger.info(f'AT-плата в сети портала {ap}: {board.join(ap)}')
-            portal.configure(board, ssid, self.cfg.ap_password, url)
+            portal.configure(board, ssid, self.cfg.dut_password, url)
         finally:
             board.close()
 

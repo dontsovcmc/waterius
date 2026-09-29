@@ -217,7 +217,7 @@ def test_H7_esp_reset_keeps_period(stand: Stand, cfg: Any) -> None:
 
 @pytest.mark.slow
 @pytest.mark.requires(esp='2.0.47')
-def test_H8_missed_session_keeps_tuning(stand: Stand) -> None:
+def test_H8_missed_session_keeps_tuning(stand: Stand, net: Any) -> None:
     """
     Пропущенный сеанс не ломает подстройку периода (#345, #347).
 
@@ -231,7 +231,7 @@ def test_H8_missed_session_keeps_tuning(stand: Stand) -> None:
     assert before.payload is not None
     tuned = before.payload['period_min_tuned']
 
-    with stand.net.ap_off():
+    with net.ap_off():
         missed = stand.wait_session(timeout=planned_wait(PERIOD_MIN), mode=TRANSMIT_MODE)
         assert not missed.wifi_connected, missed.text
 

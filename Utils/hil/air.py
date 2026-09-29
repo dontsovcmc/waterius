@@ -98,12 +98,16 @@ def _scan_once() -> list[Network]:
     return found
 
 
-def check(ap_ssid: str, channel: int, want_width: int) -> list[Network]:
+def check(ap_ssid: str, channel: int = 0, want_width: int = 0) -> list[Network]:
     """
     Сверить точку стенда с тем, что слышно в эфире, и назвать беды.
 
     Беды именно называются, а не роняют прогон: чинятся они руками (полоса -
     прошивкой роутера, соседи - выбором канала), а тесты гонять надо и сегодня.
+
+    Канал и полоса нулями - сверять не с чем: так бывает без точки стенда
+    (`--norouter`), где сеть чужая и спросить у неё нечего. Остаётся то, ради
+    чего скан и нужен, - кто сидит в одной полосе с устройством.
     """
     seen = scan(ap_ssid)
     if not seen:
@@ -115,7 +119,7 @@ def check(ap_ssid: str, channel: int, want_width: int) -> list[Network]:
                        f'проверить полосу и соседей нечем')
         return seen
 
-    if ours.channel != channel:
+    if channel and ours.channel != channel:
         logger.warning(f'эфир: роутер говорит про канал {channel}, а в эфире '
                        f'точка на {ours.channel} - настройка не применилась')
     if want_width and ours.width > want_width:

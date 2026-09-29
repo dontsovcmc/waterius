@@ -201,7 +201,7 @@ def test_G2_payload_schema(stand: Stand) -> None:
         assert low <= payload[name] <= high, f'{name}={payload[name]!r} вне [{low}, {high}]'
 
 
-def test_G3_no_router(stand: Stand) -> None:
+def test_G3_no_router(stand: Stand, net: Any) -> None:
     """
     Роутера нет: устройство не подключилось и до отправки не дошло.
 
@@ -211,7 +211,7 @@ def test_G3_no_router(stand: Stand) -> None:
     """
     stand.reset_observers()
 
-    with stand.net.ap_off():
+    with net.ap_off():
         stand.dut.press_button()
         session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
@@ -223,7 +223,7 @@ def test_G3_no_router(stand: Stand) -> None:
 
 
 @pytest.mark.requires(esp='2.0.47')
-def test_G4a_cloud_unreachable(stand: Stand) -> None:
+def test_G4a_cloud_unreachable(stand: Stand, net: Any) -> None:
     """
     Облака waterius.ru нет, свой сервер жив.
 
@@ -232,7 +232,7 @@ def test_G4a_cloud_unreachable(stand: Stand) -> None:
     """
     stand.reset_observers()
 
-    with stand.net.waterius_down():
+    with net.waterius_down():
         stand.dut.press_button()
         session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
@@ -243,7 +243,7 @@ def test_G4a_cloud_unreachable(stand: Stand) -> None:
 
 
 @pytest.mark.requires(esp='2.0.47')
-def test_G4b_own_server_unreachable(stand: Stand) -> None:
+def test_G4b_own_server_unreachable(stand: Stand, net: Any) -> None:
     """
     Своего сервера нет, облако живо. Зеркало предыдущего теста.
 
@@ -253,7 +253,7 @@ def test_G4b_own_server_unreachable(stand: Stand) -> None:
     """
     stand.reset_observers()
 
-    with stand.net.own_server_down():
+    with net.own_server_down():
         stand.dut.press_button()
         session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
@@ -268,7 +268,7 @@ def test_G4b_own_server_unreachable(stand: Stand) -> None:
 
 @pytest.mark.mqtt
 @pytest.mark.requires(esp='2.0.47')       # младшие не печатают MQTT: Connecting failed
-def test_G5_broker_unreachable(stand: Stand) -> None:
+def test_G5_broker_unreachable(stand: Stand, net: Any) -> None:
     """
     Брокер недоступен, облако живо.
 
@@ -279,7 +279,7 @@ def test_G5_broker_unreachable(stand: Stand) -> None:
     """
     stand.reset_observers()
 
-    with stand.net.mqtt_down():
+    with net.mqtt_down():
         stand.dut.press_button()
         session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 

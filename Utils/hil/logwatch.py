@@ -92,6 +92,11 @@ RE_IDLE_MIN = re.compile(r'Idle min: (\d+)/(\d+), stop: ([01])/([01])')
 RE_IDLE_SEND = re.compile(r'Idle: consumed=([01]), silence_min=(\d+), transmit=([01])')
 RE_HTTP_CODE = re.compile(r'HTTP: Response code: (-?\d+)')
 
+# Попытки подключиться к сети: прошивка печатает их по одной (`wifi.cpp`).
+# Число попыток - улика к отказу подключения: одна значит, что устройству
+# больше и не разрешали, две - что сеть не отозвалась ни разу.
+RE_WIFI_ATTEMPT = re.compile(r'WIFI: Attempt #(\d+)')
+
 # Публикация в MQTT глазами самой прошивки: по строке на топик и итог. Нужны,
 # чтобы отличить «устройство не опубликовало» от «брокер не получил»: раньше
 # отказ говорил только про брокер, и виноватым выглядело устройство.
@@ -428,6 +433,10 @@ class Session:
     @property
     def wifi_connected(self) -> bool:
         return 'WIFI: Connected.' in self.text
+
+    @property
+    def wifi_attempts(self) -> int:
+        return len(RE_WIFI_ATTEMPT.findall(self.text))
 
     @property
     def http_codes(self) -> list[int]:

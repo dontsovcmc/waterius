@@ -43,7 +43,7 @@ def other_channel(cfg: Any, current: int) -> int:
 
 
 @pytest.mark.requires(esp='2.0.47')
-def test_W4_router_changed_channel(stand: Stand) -> None:
+def test_W4_router_changed_channel(stand: Stand, router: Any) -> None:
     """
     Роутер сменил канал: быстрый коннект промахивается, полный скан находит
     сеть, и следующий сеанс снова быстрый - уже на новом канале (#222, #372).
@@ -52,7 +52,7 @@ def test_W4_router_changed_channel(stand: Stand) -> None:
     old = int(stand.last_payload['channel'])
     new = other_channel(stand.cfg, old)
 
-    with stand.router.channel(new):
+    with router.channel(new):
         stand.reset_observers()
         stand.dut.press_button()
         moved = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
@@ -98,7 +98,7 @@ EDGE_NETWORKS = [
 
 @pytest.mark.requires(esp='2.0.47')
 @pytest.mark.parametrize('ssid, password', EDGE_NETWORKS)
-def test_W3_unusual_network_names(stand: Stand, ssid: str, password: str) -> None:
+def test_W3_unusual_network_names(stand: Stand, ssid: str, password: str, router: Any) -> None:
     """
     Сеть с пробелом, апострофом, паролем из цифр, предельной длины
     (#50, #113, #114, #280, PR #265).
@@ -114,7 +114,7 @@ def test_W3_unusual_network_names(stand: Stand, ssid: str, password: str) -> Non
 
     back = False
     try:
-        with stand.router.ssid_verbatim(ssid, password):
+        with router.ssid_verbatim(ssid, password):
             stand.reset_observers()
             stand.dut.press_button()
             session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)

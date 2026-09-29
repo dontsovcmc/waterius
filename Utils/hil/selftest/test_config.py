@@ -228,3 +228,32 @@ def test_переменная_окружения_главнее_поиска(ф�
 
     assert cfg.metf_host == '10.0.0.7'
     assert [k for k, *_ in нашлась] == ['router']
+
+
+def test_без_роутера_сеть_устройства_берут_из_wifi(файл: Path, чужой_адрес: str) -> None:
+    """Точки стенда нет - имя и пароль сети спросить не у кого, только файл."""
+    файл.write_text(СТЕНД + '\n[wifi]\nssid = home\npassword = secret\n',
+                    encoding='utf-8')
+
+    cfg = stand_config.load(файл, norouter=True)
+
+    assert (cfg.dut_ssid, cfg.dut_password) == ('home', 'secret')
+
+
+def test_с_роутером_сеть_устройства_задаёт_точка(файл: Path, чужой_адрес: str) -> None:
+    файл.write_text(СТЕНД.replace('password = 12345678',
+                                  'password = 12345678\nap_ssid = waterius_stand\n'
+                                  'ap_password = standpass')
+                    + '\n[wifi]\nssid = home\npassword = secret\n', encoding='utf-8')
+
+    cfg = stand_config.load(файл)
+
+    assert (cfg.dut_ssid, cfg.dut_password) == ('waterius_stand', 'standpass')
+
+
+def test_без_роутера_плату_точки_не_ищут(файл: Path, чужой_адрес: str,
+                                         нашлась: list[Any]) -> None:
+    """Обход /24 ради платы, которой нет, стоит секунд и строки лжи в stand.ini."""
+    stand_config.load(файл, search=True, norouter=True)
+
+    assert [k for k, *_ in нашлась] == ['metf']
