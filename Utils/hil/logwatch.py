@@ -148,6 +148,45 @@ RE_BUILD = re.compile(r'Build: (.+?)\s*$')
 RE_ERROR = re.compile(r'\bERROR\s*:\s*(.+?)\s*$')
 ATTINY_LOST = 'Attiny not found.'
 
+MODE_NAMES = {SETUP_MODE: 'настройка', TRANSMIT_MODE: 'по расписанию',
+              MANUAL_TRANSMIT_MODE: 'кнопка', ALARM_MODE: 'тревога'}
+
+# Строки, которые прошивка печатает о своих главных событиях: подключение к
+# сети и брокеру, исход отправки, уход в сон.
+RE_WIFI_JOINED = re.compile(r'WIFI: SSID: (\S+) Channel: (\d+)')
+RE_WIFI_FAILED = re.compile(r'WIFI: Connection failed\.')
+RE_MQTT_JOINED = re.compile(r'MQTT: Connected\.')
+RE_MQTT_REFUSED = re.compile(r'MQTT: Connect(?:ing)? failed(?: with state (-?\d+))?')
+RE_SENT = re.compile(r'(WATR|HTTP): Data sent\. Time (\d+) ms')
+RE_SEND_FAILED = re.compile(r'(WATR|HTTP): Failed send data\. Time (\d+) ms')
+RE_SLEEP = re.compile(re.escape(SESSION_END))
+SENDER_NAMES = {'WATR': 'waterius.ru', 'HTTP': 'свой сервер'}
+
+# Метки лога прогона: что сказать человеку про строку устройства. Разбирается
+# первое подходящее правило, поэтому ошибка «вообще» стоит последней - иначе
+# она перехватывала бы и отказ сети, и потерянную attiny.
+DEVICE_MARKS: tuple[tuple[re.Pattern[str], str, Any], ...] = (
+    (RE_MODE, 'info',
+     lambda m: f'проснулся, режим {m[1]} - {MODE_NAMES.get(int(m[1]), "?")}'),
+    (RE_WIFI_JOINED, 'info', lambda m: f'подключился к «{m[1]}», канал {m[2]}'),
+    (RE_WIFI_FAILED, 'warning', lambda m: 'к сети не подключился'),
+    (RE_MQTT_JOINED, 'info', lambda m: 'подключился к брокеру'),
+    (RE_MQTT_REFUSED, 'warning',
+     lambda m: f'к брокеру не подключился{f" (state {m[1]})" if m[1] else ""}'),
+    (RE_MQTT_DONE, 'info', lambda m: f'опубликовал {m[1]} топиков за {m[2]} мс'),
+    (RE_MQTT_FAIL, 'warning', lambda m: f'не опубликовал {m[1]} ({m[2]})'),
+    (RE_HTTP_CODE, 'info', lambda m: f'сервер ответил {m[1]}'),
+    (RE_SENT, 'info',
+     lambda m: f'отправил на {SENDER_NAMES[m[1]]} за {m[2]} мс'),
+    (RE_SEND_FAILED, 'warning',
+     lambda m: f'не отправил на {SENDER_NAMES[m[1]]} ({m[2]} мс)'),
+    (RE_SLEEP, 'info', lambda m: 'ушёл в сон'),
+    (re.compile(re.escape(ATTINY_LOST)), 'warning',
+     lambda m: 'attiny не отвечает по i2c («Attiny not found.»): сеанса не '
+               'будет - шлейф, питание и фьюзы attiny, docs/flashing.md'),
+    (RE_ERROR, 'warning', lambda m: f'ошибка: {m[1]}'),
+)
+
 # Чем кончилось пробуждение по кнопке (LogWatcher.wait_wake)
 WAKE_SESSION = 'session'        # attiny ответила, сеанс начался
 WAKE_NO_ATTINY = 'no_attiny'    # ЕСП жива, attiny молчит на i2c
@@ -581,6 +620,9 @@ class LogWatcher:
         # не потолок - иначе «не доиграл за 125 с» печаталось при 2,5 с ожидания
         self.waited = 0.0
         self._beats = 0                         # признаков жизни за это ожидание
+        # Строка, которую ещё дописывает плата: метку по ней ставить рано,
+        # кольцо режет длинные строки и хвост приедет следующим чтением
+        self._mark_line: str | None = None
 
     def poll(self) -> None:
         """Забрать накопленное с платы и склеить разрезанные строки."""
@@ -592,6 +634,9 @@ class LogWatcher:
             return
         self.reads_ok += 1
         if not chunk:
+            # Плата молчит - значит последняя строка дописана. Иначе метка про
+            # уход в сон лежала бы до следующего пробуждения
+            self._flush_mark()
             return
         self.raw += chunk
 
@@ -607,10 +652,39 @@ class LogWatcher:
             if not piece:
                 continue
             if LINE_START.match(piece) or not self.lines:
+                self._flush_mark()
                 self.lines.append(piece)
+                self._mark_line = piece
             else:
                 # Продолжение строки, разрезанной кольцом METF
                 self.lines[-1] += piece
+                if self._mark_line is not None:
+                    self._mark_line += piece
+
+    def _flush_mark(self) -> None:
+        """Строка дописана - сказать о ней в логе прогона, если есть что."""
+        line, self._mark_line = self._mark_line, None
+        if line is None:
+            return
+        for pattern, level, say in DEVICE_MARKS:
+            m = pattern.search(line)
+            if m:
+                getattr(logger, level)(f'Ватериус: {say(m)}')
+                return
+
+    @property
+    def attiny_lost(self) -> bool:
+        """В окне есть `Attiny not found.`: ЕСП жива, а сеанса не будет."""
+        return any(ATTINY_LOST in line for line in self.lines)
+
+    def attiny_note(self) -> str:
+        """Приписка к отказу, когда сеанса не дала потерянная attiny."""
+        if not self.attiny_lost:
+            return ''
+        return ('. ЕСП проснулась, но attiny не ответила по i2c («Attiny not '
+                'found.»), а `Startup mode:` печатается только после её ответа - '
+                'сеанса не было бы и через час. Смотрите шлейф i2c, питание '
+                'платы и фьюзы attiny (docs/flashing.md)')
 
     def tail(self, count: int = 30) -> str:
         """
@@ -714,6 +788,7 @@ class LogWatcher:
                                f'остаться прошлый сеанс')
         self.lines.clear()
         self._tail = ''
+        self._mark_line = None
         self.raw = ''
 
     # --- потери лога ---
@@ -875,7 +950,7 @@ class LogWatcher:
                 self.assert_no_loss(mark, 'ожидание сеанса')
                 return session
             self.waited = time.monotonic() - started
-            if self.waited >= timeout or self.dead():
+            if self.waited >= timeout or self.dead() or self.attiny_lost:
                 break
             self.heartbeat('ожидание сеанса', self.waited, timeout)
             time.sleep(poll_interval)
