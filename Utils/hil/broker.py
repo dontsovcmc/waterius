@@ -112,7 +112,7 @@ class MqttBroker:
         # Только методы: `_retained_messages` и `_subscriptions` заводятся в
         # конструкторе, у класса их нет, а пропажу видно первым же вызовом.
         needed = ('_publish_retained_messages_for_subscription',
-                  '_get_handler', '_matches')
+                  '_get_handler', '_matches', '_broadcast_message')
         missing = [name for name in needed if not hasattr(Broker, name)]
         if missing:
             raise RuntimeError(
@@ -139,7 +139,48 @@ class MqttBroker:
                         retained.topic, retained.data,
                         min(qos, retained.qos or 0), retain=True)
 
+            async def _broadcast_message(self, session: object, topic: str,
+                                         data: bytes,
+                                         force_qos: int | None = None) -> None:
+                # Тот же дефект, что и у удерживаемых, но на живой рассылке:
+                # QoS публикации сюда не доезжает вовсе (amqtt зовёт нас без
+                # него из `_handle_message_delivery`), и доставка идёт с QoS
+                # подписки. Ватериус подписан единицей - значит брокер ждёт
+                # PUBACK от устройства, которое уже спит, по двадцать секунд на
+                # сообщение. Ноль - нижняя граница минимума из двух
+                # (MQTT 3.1.1, 3.8.4): на стенде никто не публикует выше.
+                await super()._broadcast_message(
+                    session, topic, data, 0 if force_qos is None else force_qos)
+
         return StandBroker
+
+    def drop_retained(self, prefix: str = '', timeout: float = 5.0) -> list[str]:
+        """
+        Снять удерживаемые сообщения дерева прямо в брокере.
+
+        Уборка по эфиру стоит пустой публикации на каждый топик, и уходят они
+        всем подписчикам - в том числе в сессию устройства, которое уснуло, не
+        простившись. Чистим в самом брокере: ни одного пакета в эфир.
+
+        Обязательно в потоке брокера: удаление ключей на ходу роняет его же
+        обход `_retained_messages` при подписке нового клиента.
+        """
+        broker, loop = self._broker, self._loop
+        if broker is None or loop is None:
+            return []
+        retained = getattr(broker, '_retained_messages', None)
+        if retained is None:
+            raise RuntimeError('amqtt изменил внутренности (_retained_messages): '
+                               'уборка удерживаемых больше не работает, '
+                               'проверьте broker.py')
+
+        async def снять() -> list[str]:
+            topics = [topic for topic in retained if topic.startswith(prefix)]
+            for topic in topics:
+                del retained[topic]
+            return topics
+
+        return asyncio.run_coroutine_threadsafe(снять(), loop).result(timeout)
 
     def start(self, timeout: float = 10.0) -> None:
         if not self.available():

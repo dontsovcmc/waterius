@@ -233,3 +233,84 @@ def test_ожидание_топика_не_висит_дольше_потолк
     assert watch.wait_topic(f'{TOPIC}/нет-такого', timeout=1.0) is None
 
     assert time.monotonic() - начали < 3.0
+
+
+def подписчик(broker: MqttBroker, client_id: str, got: list[Any],
+              qos: int = 1) -> Any:
+    """Клиент вроде Ватериуса: подписка с QoS 1 и сбор пришедшего."""
+    import paho.mqtt.client as mqtt
+
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id)
+    client.on_message = lambda _c, _u, msg: got.append(msg)
+    client.connect(broker.host, broker.port, 30)
+    client.subscribe(f'{TOPIC}/#', qos=qos)
+    client.loop_start()
+    time.sleep(0.5)
+    return client
+
+
+def test_живая_доставка_не_поднимает_qos_до_подписки(broker: MqttBroker, watch) -> None:
+    """
+    Доставка идёт с наименьшим из двух QoS (MQTT 3.1.1, 3.8.4), а amqtt теряет
+    QoS публикации по дороге и берёт QoS подписки. Цена видна на железе: 29
+    сентября уборка одного теста дала 78 публикаций в сессию уснувшего
+    устройства, и брокер ждал PUBACK по двадцать секунд на каждую - тысяча
+    строк трейсбеков в логе и наблюдатель, потерявший брокер по keep alive.
+    """
+    got: list[Any] = []
+    device = подписчик(broker, 'waterius', got)
+
+    watch._client.publish(f'{TOPIC}/ch0', '1', qos=0).wait_for_publish(5)
+    time.sleep(1.0)
+    device.loop_stop()
+    device.disconnect()
+
+    assert [m.qos for m in got] == [0], f'доставка с QoS {[m.qos for m in got]}'
+
+
+def test_уборка_удерживаемых_идёт_мимо_эфира(broker: MqttBroker, watch) -> None:
+    """
+    Дерево чистится в самом брокере: публиковать под сотню пустых сообщений -
+    значит послать их всем подписчикам, включая сессию уснувшего устройства.
+    """
+    watch._client.publish(f'{TOPIC}/ch0', '1', retain=True).wait_for_publish(5)
+    time.sleep(0.5)
+    watch.drain()
+
+    снято = broker.drop_retained(TOPIC)
+
+    assert снято == [f'{TOPIC}/ch0'], снято
+    assert watch.fetch_retained(TOPIC, timeout=1.0) == []
+    time.sleep(0.5)
+    assert not watch.history, f'уборка ушла в эфир: {watch.history}'
+
+
+def test_чужое_дерево_уборка_не_трогает(broker: MqttBroker, watch) -> None:
+    watch._client.publish(f'{TOPIC}/ch0', '1', retain=True).wait_for_publish(5)
+    watch._client.publish('homeassistant/sensor/w/config', '{}',
+                          retain=True).wait_for_publish(5)
+    time.sleep(0.5)
+
+    broker.drop_retained(TOPIC)
+
+    assert [m.topic for m in watch.fetch_retained('homeassistant', timeout=1.0)] == [
+        'homeassistant/sensor/w/config']
+
+
+def test_стенд_убирает_дерево_брокером(broker: MqttBroker) -> None:
+    """У наблюдателя со своим брокером уборка не публикует ничего."""
+    from ..mqttwatch import MqttWatch
+
+    watch = MqttWatch(broker.host, broker.port, TOPIC, broker=broker)
+    try:
+        watch._client.publish(f'{TOPIC}/ch0', '1', retain=True).wait_for_publish(5)
+        time.sleep(0.5)
+        watch.drain()
+
+        снято = watch.clear_retained_tree(TOPIC)
+
+        assert снято == [f'{TOPIC}/ch0'], снято
+        time.sleep(0.5)
+        assert not watch.history, f'уборка ушла в эфир: {watch.history}'
+    finally:
+        watch.close()

@@ -250,3 +250,20 @@ def test_расписка_без_нужного_вывода_не_проходи
 
     with pytest.raises(AssertionError, match='нет вывода 2'):
         board.delivered(channel=0)
+
+
+def test_нажатие_видно_в_логе(clock: Clock, monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Без метки о нажатии молчание устройства не с чем сопоставить: в логе прогона
+    стоит только приговор «Ватериус не проснулся», а когда его будили - нет.
+    """
+    сказано: list[str] = []
+    monkeypatch.setattr(dut_mod.logger, 'info', lambda text: сказано.append(text))
+    board, _ = make(clock)
+
+    board.press_button()
+    board.hold_button()
+
+    assert f'{BUTTON_SHORT_MS} мс' in сказано[0], сказано
+    assert f'{BUTTON_SETUP_MS} мс' in сказано[1], сказано
+    assert 'удержание' in сказано[1], сказано

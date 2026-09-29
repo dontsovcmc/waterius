@@ -183,6 +183,8 @@ class Dut:
         """
         if self._settle is not None:
             self._settle(msec)
+        вид = 'короткое нажатие' if msec <= BUTTON_SHORT_MS else 'удержание'
+        logger.info(f'кнопка: {вид} {msec} мс')
         self._led(True)
         self._low(self.button_pin, msec)
         self._led(False)
