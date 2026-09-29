@@ -66,6 +66,39 @@ def test_осечка_связи_на_подъёме_прогон_не_унос�
                      'сеть стенда') == 'поднялся'
 
 
+def test_отказ_не_assert_тоже_останавливает_прогон() -> None:
+    # Приёмник не встал на порт, METF не открыла UART - подъём срывается
+    # обычным исключением, а стоит это ровно столько же, сколько assert
+    def шаг() -> None:
+        raise OSError('[Errno 48] Address already in use')
+
+    with pytest.raises(pytest.exit.Exception, match='Address already in use'):
+        preflight(шаг, 'приёмник')
+
+
+def тело(фикстура):
+    """Тело фикстуры pytest без её обвязки."""
+    return getattr(фикстура, '_fixture_function', фикстура)
+
+
+def test_молчащая_METF_останавливает_прогон(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Стенд, который не поднялся, уносит прогон, а не каждый тест по отдельности.
+
+    29 сентября стенд переехал на другие адреса, METF не отозвалась за свои
+    тридцать секунд - и отказ сессионной фикстуры отпечатался по разу на тест.
+    """
+    from .. import conftest as ветка
+    from .. import stand as платы
+
+    def create(cfg, mqtt=None):
+        raise AssertionError('стенд: METF 192.168.100.3 не отозвалась за 30 с')
+
+    monkeypatch.setattr(платы.Stand, 'create', create)
+    with pytest.raises(pytest.exit.Exception, match='не отозвалась'):
+        next(тело(ветка.stand)(cfg=None, mqtt=None))
+
+
 @dataclass(frozen=True)
 class Настройки:
     ap_channel_other: int

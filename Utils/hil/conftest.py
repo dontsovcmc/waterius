@@ -418,10 +418,17 @@ def preflight(step: Callable[[], Any], what: str, device: Any = None) -> Any:
     прогон печатает по одинаковой ошибке на тест и заканчивается только на
     последнем. Один раз это дало 91 одинаковый ERROR - attiny была прошита
     окружением другой модели, и ЕСП её не нашла.
+
+    Ловится не только assert. Подъём срывается и обычным исключением - приёмник
+    не встал на порт, METF не открыла UART, - а стоит это ровно столько же:
+    железа нет, и каждый следующий тест выдаст тот же traceback. Свои
+    исключения pytest (выход из прогона) пролетают как есть.
     """
     try:
         return bring_up(step, what)
-    except AssertionError as err:
+    except pytest.exit.Exception:
+        raise
+    except Exception as err:
         note = _network_note(device) if device is not None else ''
         pytest.exit(f'стенд не поднялся ({what}): {err}{note}', returncode=1)
 
@@ -429,7 +436,12 @@ def preflight(step: Callable[[], Any], what: str, device: Any = None) -> Any:
 @pytest.fixture(scope='session')
 def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     from .stand import Stand
-    device = Stand.create(cfg, mqtt)    # METF и роутер: без них дальше нечем
+    # Платы - такой же шаг подъёма, как и все прочие, и мимо preflight он шёл
+    # зря: 29 сентября стенд переехал на другие адреса, METF не отозвалась за
+    # свои тридцать секунд, и прогон отпечатал этот отказ по разу на каждый
+    # тест вместо одной строки о причине. Без METF нечем ни нажать кнопку, ни
+    # прочитать лог - проверять дальше нечего.
+    device = preflight(lambda: Stand.create(cfg, mqtt), 'платы стенда')
     global _metf
     _metf = device.api
     global _stand
