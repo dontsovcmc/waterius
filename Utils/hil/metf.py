@@ -79,6 +79,13 @@ CHANNEL_GAP = 5
 # Чтение состояния платы: короткий запрос, повторяемый без последствий
 GET_TIMEOUT_S = 5.0
 
+# Срок на установку соединения - отдельный от срока на ответ. Один общий срок
+# отмерял обоим по секунде, а потерянный SYN переспрашивается ровно через
+# секунду: 29 сентября 139 из 196 осечек связи были таймаутом соединения, и
+# следом за каждой шла удачная попытка - плата отвечала, просто не успевала
+# поздороваться.
+CONNECT_TIMEOUT_S = 3.0
+
 # `GET /read` отдаёт накопленный лог и тут же осушает кольцо, поэтому ответ на
 # него существует в одном экземпляре. С протокола 12 это больше не так: плата
 # держит окно до подтверждения, и не доехавший ответ ничего не стоит.
@@ -354,6 +361,9 @@ class Metf:
                repeatable: tuple[type[BaseException], ...] = NETWORK_ERRORS,
                pause: float | None = None) -> Any:
         pause = self._pause if pause is None else pause
+        срок = kwargs.get('timeout')
+        if isinstance(срок, (int, float)):
+            kwargs = {**kwargs, 'timeout': (CONNECT_TIMEOUT_S, срок)}
         last: Exception | None = None
         for attempt in range(1, self._attempts + 1):
             начали = time.monotonic()

@@ -552,3 +552,23 @@ def test_ответ_без_номера_окна_это_отказ(
 
     with pytest.raises(AssertionError, match='номер окна'):
         api.serial_read()
+
+
+def test_на_соединение_даётся_больше_чем_на_ответ() -> None:
+    """
+    Секунды хватает плате на ответ, но не на установку соединения: потерянный
+    SYN переспрашивается через секунду, и весь срок уходил на него. 29 сентября
+    это дало 139 таймаутов соединения из 196 осечек связи.
+    """
+    заказано: list[Any] = []
+
+    def get(url: str, **kwargs: Any) -> FakeAnswer:
+        заказано.append(kwargs['timeout'])
+        return FakeAnswer(uptime=1000)
+
+    плата = metf.Metf('127.0.0.1')
+    плата._retry('GET /version', get, ('http://х/version',),
+                 {'timeout': metf.GET_TIMEOUT_S})
+
+    assert заказано == [(metf.CONNECT_TIMEOUT_S, metf.GET_TIMEOUT_S)]
+    assert metf.CONNECT_TIMEOUT_S > metf.READ_TIMEOUT_S

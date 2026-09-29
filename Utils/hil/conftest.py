@@ -132,6 +132,24 @@ def _next_log(where: Path) -> Path:
     return path
 
 
+class _LogFormat(logging.Formatter):
+    """
+    Формат записей стандартного logging в логе прогона - без стека amqtt.
+
+    Брокер печатает отказ доставки через `logger.exception`, то есть девятью
+    строками стека на каждое сообщение: 29 сентября это была четверть файла, и
+    строки стенда тонули. Сама строка о беде остаётся - режется только стек, и
+    только у amqtt: стек клиента METF в разборе нужен.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        if record.name.startswith('amqtt') and (record.exc_info or record.exc_text):
+            record = logging.makeLogRecord(record.__dict__)
+            record.exc_info = None
+            record.exc_text = None
+        return super().format(record)
+
+
 def _open_log(config: pytest.Config) -> Path | None:
     """
     Завести лог прогона. По умолчанию - всегда, без флагов и без `tee`.
@@ -168,8 +186,8 @@ def _open_log(config: pytest.Config) -> Path | None:
     config.add_cleanup(lambda: logger.remove(sink))
 
     handler = logging.StreamHandler(lines)
-    handler.setFormatter(logging.Formatter('%(asctime)s | %(levelname)-7s | %(message)s',
-                                           datefmt='%H:%M:%S'))
+    handler.setFormatter(_LogFormat('%(asctime)s | %(levelname)-7s | %(message)s',
+                                    datefmt='%H:%M:%S'))
     logging.getLogger().addHandler(handler)
     config.add_cleanup(lambda: logging.getLogger().removeHandler(handler))
     return path
@@ -348,7 +366,8 @@ def mqtt(cfg: Any, broker: Any) -> Iterator[Any]:
         yield None
         return
     from .mqttwatch import MqttWatch
-    watch = MqttWatch(cfg.broker_host, cfg.broker_port, cfg.mqtt_topic)
+    watch = MqttWatch(cfg.broker_host, cfg.broker_port, cfg.mqtt_topic,
+                      broker=broker)
     try:
         yield watch
     finally:

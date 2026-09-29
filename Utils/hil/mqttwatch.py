@@ -39,10 +39,14 @@ class Message:
 class MqttWatch:
     """Подписчик на всё дерево брокера плюс публикация команд."""
 
-    def __init__(self, host: str, port: int = 1883, topic: str = 'waterius') -> None:
+    def __init__(self, host: str, port: int = 1883, topic: str = 'waterius',
+                 broker: Any = None) -> None:
         self.host = host
         self.port = port
         self.topic = topic.rstrip('/')
+        # Свой брокер, когда он в этом же процессе: уборку удерживаемых он
+        # делает у себя, не рассылая пустые сообщения подписчикам
+        self.broker = broker
         self.messages: queue.Queue[Message] = queue.Queue()
         self.history: list[Message] = []
         self._lock = threading.Lock()
@@ -252,6 +256,12 @@ class MqttWatch:
         больше накопилось, тем менее предсказуемо, что устройство успеет
         разобрать, поэтому каждый тест начинается с пустого дерева.
         """
+        if self.broker is not None:
+            topics = self.broker.drop_retained(prefix)
+            if topics:
+                logger.info(f'снято удерживаемых сообщений: {len(topics)}')
+            return topics
+
         topics = [m.topic for m in self.fetch_retained(prefix, timeout)]
         for topic in topics:
             self.clear_retained(topic)

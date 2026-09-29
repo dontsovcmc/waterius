@@ -82,3 +82,38 @@ def test_целая_строка_проходит_как_есть() -> None:
     строки.raw(ИМЯ + 'PASSED 0.4s\n')
 
     assert файл.text == ИМЯ + 'PASSED 0.4s\n'
+
+
+def запись(name: str) -> object:
+    """Запись стандартного logging с трейсбеком - такие шлёт amqtt."""
+    import logging
+
+    try:
+        raise TimeoutError('Timeout waiting for PUBACK for packet ID 1')
+    except TimeoutError:
+        import sys
+        return logging.LogRecord(name, logging.ERROR, __file__, 1,
+                                 'Task failed and will be skipped', (),
+                                 sys.exc_info())
+
+
+def test_трейсбек_amqtt_в_лог_прогона_не_идёт() -> None:
+    """
+    Оборванная сессия клиента давала девять строк стека на каждое сообщение:
+    в прогоне 29 сентября - четверть файла. Сама строка о беде остаётся.
+    """
+    from ..conftest import _LogFormat
+
+    текст = _LogFormat('%(message)s').format(запись('amqtt.broker'))
+
+    assert 'Task failed' in текст
+    assert 'Traceback' not in текст, текст
+
+
+def test_чужие_трейсбеки_остаются() -> None:
+    """Стек клиента METF - улика, а не шум: его режут только у amqtt."""
+    from ..conftest import _LogFormat
+
+    текст = _LogFormat('%(message)s').format(запись('metf_python_client'))
+
+    assert 'Traceback' in текст
