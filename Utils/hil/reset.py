@@ -115,7 +115,7 @@ class FreshDevice:
         Посылка «до» нужна ради токена и почты. Берём последнюю, что стенд уже
         видел: отдельное нажатие стоило бы целого сеанса.
         """
-        assert cfg.ap_password, '[router] ap_password в stand.ini'
+        assert cfg.dut_password, 'пароль сети устройства в stand.ini'
         before = dict(stand.last_payload or {})
         if not before.get('key'):
             stand.reset_observers()
@@ -151,7 +151,7 @@ class FreshDevice:
         self.stand.reset_observers()
         try:
             portal_mod.configure(self.board, self.stand.ap_ssid,
-                                 self.cfg.ap_password, self.cfg.http_url)
+                                 self.cfg.dut_password, self.cfg.http_url)
         except Exception as err:
             # «Форма не дошла» и «потерялся ответ» выглядят одинаково, различает
             # их лог устройства: строки `parameter <имя>=` печатаются до ответа

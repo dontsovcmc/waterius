@@ -203,7 +203,7 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
     # A4: сеть и пароль, с парой канал-BSSID из скана - как их шлёт страница
     ours = next(net for net in networks if net['ssid'] == ssid)
     assert save(board, '/api/save_connect', ssid=ssid,
-                password=cfg.ap_password, wifi_channel=ours['wifi_channel'],
+                password=cfg.dut_password, wifi_channel=ours['wifi_channel'],
                 bssid=ours['bssid'], wizard='true') == {}
 
     fast = find_line(stand, RE_FAST_CONNECT)
@@ -290,7 +290,7 @@ def test_W2_wrong_password_returns_to_wifi_settings(board: AtBoard, cfg: Any,
         code = connect_status_code(board)
         landing = portal_mod.landing_page(board, DATA)
 
-        assert save(board, '/api/save_connect', ssid=ssid, password=cfg.ap_password,
+        assert save(board, '/api/save_connect', ssid=ssid, password=cfg.dut_password,
                     wizard='true') == {}
         start_connect(board)
         redirect, _ = wait_redirect(board, {CONNECTED})
@@ -306,7 +306,7 @@ def test_W2_wrong_password_returns_to_wifi_settings(board: AtBoard, cfg: Any,
                 f'вместо {want}')
     finally:
         assert save(board, '/api/save_connect', ssid=ssid,
-                    password=cfg.ap_password) == {}
+                    password=cfg.dut_password) == {}
 
 
 def find_network(board: AtBoard, ssid: str, channel: int | None = None,
@@ -362,7 +362,7 @@ def portal_in_air(board: AtBoard, ssid: str, channel: int,
     return None, seen
 
 
-def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
+def test_W5_router_on_another_channel(cfg: Any, stand: Any, router: Any) -> None:
     """
     Роутер на другом канале, чем точка портала (K2).
 
@@ -387,9 +387,9 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
     new = other_channel(cfg, old)
     ssid = stand.ap_ssid
 
-    with stand.router.channel(new):
-        router_channel = stand.router.config().get('channel')
-        ap_on = stand.router.ap_enabled()
+    with router.channel(new):
+        router_channel = router.config().get('channel')
+        ap_on = router.ap_enabled()
         assert router_channel == str(new) and ap_on, (
             f'роутер не перешёл на канал {new}: канал {router_channel}, точка {ap_on}')
 
@@ -406,11 +406,11 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
             assert ours, (
                 f'сети стенда {ssid} на канале {new} нет в списке и после '
                 f'повторных сканов: {[(net["ssid"], net["wifi_channel"]) for net in seen]}; '
-                f'роутер: канал {stand.router.config().get("channel")}, '
-                f'точка {stand.router.ap_enabled()}')
+                f'роутер: канал {router.config().get("channel")}, '
+                f'точка {router.ap_enabled()}')
 
             answer = portal_mod.post_json(board, '/api/save_connect', ssid=ssid,
-                                          password=cfg.ap_password,
+                                          password=cfg.dut_password,
                                           wifi_channel=ours['wifi_channel'],
                                           bssid=ours['bssid'], wizard='true')
             assert not answer.get('errors'), answer
@@ -437,7 +437,7 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
                 f'{MOVE_S:.0f} с: переезда не было. В эфире '
                 f'{[(net.ssid, net.channel) for net in air]}; запрос оборвался '
                 f'{dropped}, станция вне сети {kicked}, роутер на канале '
-                f'{stand.router.config().get("channel")}')
+                f'{router.config().get("channel")}')
             logger.info(f'точка портала переехала на канал {moved.channel}, '
                         f'возвращаемся на неё')
 
@@ -452,7 +452,7 @@ def test_W5_router_on_another_channel(cfg: Any, stand: Any) -> None:
 
 @pytest.mark.reset
 def test_W6_router_on_the_same_channel(fresh_device: Any, cfg: Any,
-                                       stand: Any) -> None:
+                                       stand: Any, router: Any) -> None:
     """
     Роутер на том же канале, что и точка портала: переезжать точке некуда.
 
@@ -494,8 +494,8 @@ def test_W6_router_on_the_same_channel(fresh_device: Any, cfg: Any,
     portal_ssid = board.portal_ssid
     assert portal_ssid, 'имя точки портала неизвестно'
 
-    with stand.router.channel(channel):
-        стоял = stand.router.config().get('channel')
+    with router.channel(channel):
+        стоял = router.config().get('channel')
         assert стоял == str(channel), (
             f'роутер не встал на канал точки портала {channel}: {стоял}')
 
@@ -505,11 +505,11 @@ def test_W6_router_on_the_same_channel(fresh_device: Any, cfg: Any,
         assert ours, (
             f'сети стенда {ssid} на канале {channel} нет в списке и после '
             f'повторных сканов: {[(net["ssid"], net["wifi_channel"]) for net in seen]}; '
-            f'роутер: канал {stand.router.config().get("channel")}, '
-            f'точка {stand.router.ap_enabled()}')
+            f'роутер: канал {router.config().get("channel")}, '
+            f'точка {router.ap_enabled()}')
 
         answer = portal_mod.post_json(board, '/api/save_connect', ssid=ssid,
-                                      password=cfg.ap_password,
+                                      password=cfg.dut_password,
                                       wifi_channel=ours['wifi_channel'],
                                       bssid=ours['bssid'], wizard='true')
         assert not answer.get('errors'), answer

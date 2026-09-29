@@ -39,7 +39,7 @@ SHORT_PULSE_MS = 1
 HIGH_PULSE_MS = 30
 
 
-def test_D2a_missed_session_keeps_consumption(stand: Stand) -> None:
+def test_D2a_missed_session_keeps_consumption(stand: Stand, net: Any) -> None:
     """
     Пропущенный сеанс не теряет расход.
 
@@ -50,7 +50,7 @@ def test_D2a_missed_session_keeps_consumption(stand: Stand) -> None:
     stand.setup(channel=1, factor=BASE_FACTOR, ctype=NAMUR, period_min=120)
     stand.reset_observers()
 
-    with stand.net.ap_off():
+    with net.ap_off():
         stand.dut.pulse(channel=1, count=PULSES)
         stand.dut.press_button()
         missed = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
@@ -64,7 +64,7 @@ def test_D2a_missed_session_keeps_consumption(stand: Stand) -> None:
 
 
 @pytest.mark.requires(esp='2.0.47')       # младшие двигают точку отсчёта после коннекта
-def test_D2b_undelivered_session_keeps_delta(stand: Stand) -> None:
+def test_D2b_undelivered_session_keeps_delta(stand: Stand, net: Any) -> None:
     """
     Тот же опыт, но сеть жива, а получатели недоступны.
 
@@ -74,7 +74,7 @@ def test_D2b_undelivered_session_keeps_delta(stand: Stand) -> None:
     stand.setup(channel=1, factor=BASE_FACTOR, ctype=NAMUR, period_min=120)
     stand.reset_observers()
 
-    with stand.net.internet_down():
+    with net.internet_down():
         stand.dut.pulse(channel=1, count=PULSES)
         stand.dut.press_button()
         missed = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)

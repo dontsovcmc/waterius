@@ -218,7 +218,7 @@ def test_N4_sync_is_not_asked_every_wakeup(stand: Stand, clock: Any) -> None:
         f'{clock.requests_seen - before} раз за три плановых пробуждения')
 
 
-def test_N5_unreachable_server_freezes_the_tuning(stand: Stand, clock: Any) -> None:
+def test_N5_unreachable_server_freezes_the_tuning(stand: Stand, clock: Any, net: Any) -> None:
     """
     Недоступный сервер времени не двигает расписание.
 
@@ -243,7 +243,7 @@ def test_N5_unreachable_server_freezes_the_tuning(stand: Stand, clock: Any) -> N
     tuned = start.payload['period_min_tuned']
     stamp = payload_epoch(start.payload)
 
-    with stand.net.ntp_down():
+    with net.ntp_down():
         for failures in range(1, 4):      # номер неудачи, он же их счёт
             stand.reset_observers()
             stand.dut.press_button()

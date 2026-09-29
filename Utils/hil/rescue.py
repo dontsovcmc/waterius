@@ -8,6 +8,7 @@
 
     python3 Utils/hil/rescue.py             # починить
     python3 Utils/hil/rescue.py --check     # только доложить, ничего не трогать
+    python3 Utils/hil/rescue.py --norouter  # стенд без точки доступа
 """
 
 from __future__ import annotations
@@ -94,11 +95,15 @@ def main() -> None:
     parser.add_argument('--config', default=None, help='путь к stand.ini')
     parser.add_argument('--check', action='store_true',
                         help='только доложить состояние, ничего не менять')
+    parser.add_argument('--norouter', action='store_true',
+                        help='стенд без платы WT32-ETH01: точку не трогать')
     args = parser.parse_args()
 
-    cfg = config.load(args.config, search=True)   # чинить нечего, если плату не нашли
+    cfg = config.load(args.config, search=True,   # чинить нечего, если плату не нашли
+                      norouter=args.norouter)
     lines: list[str] = []
-    for step in (_router, _metf, _atboard):
+    steps = (_metf, _atboard) if args.norouter else (_router, _metf, _atboard)
+    for step in steps:
         try:
             lines += step(cfg, args.check)
         except Exception as err:                       # доходим до конца: чинится что чинится

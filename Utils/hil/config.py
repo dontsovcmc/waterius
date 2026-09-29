@@ -96,6 +96,13 @@ class StandConfig:
     # 40 МГц занимают пять каналов вместо одного и бьют по соседям.
     ap_bandwidth: int
 
+    # Прогон без платы WT32-ETH01 (--norouter): точки стенда нет, Ватериус живёт
+    # в обычной сети из [wifi], а тесты, управляющие точкой, пропускаются.
+    norouter: bool
+    # Эта самая сеть. Спросить её имя не у кого - точки нет, - поэтому только файл.
+    wifi_ssid: str
+    wifi_password: str
+
     # Ватериус в сети точки доступа
     dut_mac: str
     dut_ip: str
@@ -132,6 +139,22 @@ class StandConfig:
         return f'{self.cloud_url}/api/source/waterius/'
 
     @property
+    def dut_ssid(self) -> str:
+        """
+        Сеть, в которой обязан жить Ватериус: точка стенда либо [wifi].
+
+        Имя точки стенда бывает пустым - тогда его спрашивают у самой точки
+        (`Stand.ap_ssid`). Без роутера спрашивать не у кого, и пустое имя здесь
+        уже беда, о которой говорит подъём.
+        """
+        return self.wifi_ssid if self.norouter else self.ap_ssid
+
+    @property
+    def dut_password(self) -> str:
+        """Пароль той же сети: у роутера его не прочитать, только из файла."""
+        return self.wifi_password if self.norouter else self.ap_password
+
+    @property
     def http_url(self) -> str:
         return f'http://{self.receiver_host}:{self.receiver_port}/data'
 
@@ -145,7 +168,7 @@ class StandConfig:
 
 
 def load(path: str | os.PathLike[str] | None = None,
-         search: bool = False) -> StandConfig:
+         search: bool = False, norouter: bool = False) -> StandConfig:
     """
     Прочитать stand.ini. Любое значение перекрывается переменной окружения
     вида HIL_METF_HOST - удобно, когда стендов два.
@@ -153,6 +176,10 @@ def load(path: str | os.PathLike[str] | None = None,
     `search` - искать ли платы, чей записанный адрес молчит (discover.py).
     Прогону и спасательным инструментам это нужно, разбору настроек - нет:
     поиск ходит по сети.
+
+    `norouter` - прогон без платы WT32-ETH01. Её не ищут (обход /24 ради платы,
+    которой нет, стоит пары секунд и одной строки лжи в stand.ini), а сеть
+    устройства берётся из [wifi].
     """
     parser = configparser.ConfigParser()
     file = Path(path or DEFAULT_PATH)
@@ -215,6 +242,8 @@ def load(path: str | os.PathLike[str] | None = None,
             return env
         if not search or not mine:
             return written
+        if norouter and kind == 'router':
+            return written
         from . import discover
         found = discover.find(kind, written, mine)
         return fix(section, found, 'плата нашлась на') if found else written
@@ -234,6 +263,9 @@ def load(path: str | os.PathLike[str] | None = None,
         ap_channel=int(get('router', 'ap_channel', '11')),
         ap_channel_other=int(get('router', 'ap_channel_other', '1')),
         ap_bandwidth=int(get('router', 'ap_bandwidth', '20')),
+        norouter=norouter,
+        wifi_ssid=get('wifi', 'ssid', ''),
+        wifi_password=get('wifi', 'password', ''),
         dut_mac=get('dut', 'mac', ''),
         dut_ip=get('dut', 'ip', '192.168.4.100'),
         receiver_host=here('receiver'),

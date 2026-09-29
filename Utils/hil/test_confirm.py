@@ -23,7 +23,7 @@
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -85,7 +85,7 @@ def test_F1_any_receiver_is_enough(stand: Stand, quiet: None) -> None:
 
 
 @pytest.mark.slow
-def test_F2_required_receiver_unreachable(stand: Stand, quiet: None) -> None:
+def test_F2_required_receiver_unreachable(stand: Stand, quiet: None, net: Any) -> None:
     """
     MQTT отмечен обязательным и недоступен: квитанции нет, attiny будит ЕСП
     снова. Брокер при этом остаётся включённым в настройках - иначе получится
@@ -95,7 +95,7 @@ def test_F2_required_receiver_unreachable(stand: Stand, quiet: None) -> None:
     stand.reset_observers()
 
     try:
-        with stand.net.mqtt_down():
+        with net.mqtt_down():
             stand.dut.wet(channel=SENSOR, closed=True)
 
             first = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
@@ -139,7 +139,7 @@ def test_F3_disabled_receiver_drops_out(stand: Stand, quiet: None) -> None:
 
 
 @pytest.mark.slow
-def test_F4_delivery_attempts(stand: Stand, quiet: None) -> None:
+def test_F4_delivery_attempts(stand: Stand, quiet: None, net: Any) -> None:
     """
     Потолок попыток доставки: не больше ALARM_MAX_TRIES, то есть пяти.
 
@@ -159,7 +159,7 @@ def test_F4_delivery_attempts(stand: Stand, quiet: None) -> None:
 
     sessions = []
     try:
-        with stand.net.internet_down():
+        with net.internet_down():
             # Датчик остаётся замкнутым всё окно: новость одна, и считаем мы
             # попытки её доставить, а не число новостей.
             stand.dut.wet(channel=SENSOR, closed=True)
