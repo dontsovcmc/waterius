@@ -306,7 +306,9 @@ def cfg(request: pytest.FixtureRequest) -> Any:
     import dataclasses
 
     from . import config as stand_config
-    loaded = stand_config.load(request.config.getoption('--stand-config'))
+    # search=True: платы, чей адрес в файле устарел, ищутся до первого теста,
+    # а не оборачиваются получасом таймаутов (discover.py)
+    loaded = stand_config.load(request.config.getoption('--stand-config'), search=True)
     asked = {name: request.config.getoption(f'--{name.replace("_", "-")}')
              for name in ('ap_channel', 'ap_channel_other', 'ap_bandwidth')}
     given = {name: value for name, value in asked.items() if value is not None}

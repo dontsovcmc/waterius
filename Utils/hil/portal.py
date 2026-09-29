@@ -535,7 +535,7 @@ if __name__ == '__main__':
     parser.add_argument('--config', default=None, help='путь к stand.ini')
     args = parser.parse_args()
 
-    cfg = load(args.config)
+    cfg = load(args.config, search=True)
     data_dir = Path(args.data) if args.data else \
         Path(__file__).resolve().parents[2] / 'ESP8266' / 'data'
 
