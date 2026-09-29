@@ -23,6 +23,10 @@
 проверяет - у него нет счётчика фронтов на выводе светодиода. Наглядное
 подтверждение, зачем нужны статусы получателей: у G4a и G4b код один и тот же,
 то есть глазами эти две поломки неразличимы.
+
+Тесты, которым облако нужно отвечающим, просят фикстуру `live_cloud`: адрес
+облака зашит в прошивке, и своего облака у стенда нет. Прогон без интернета -
+`pytest --nocloud`, такие тесты пропускаются.
 """
 
 from __future__ import annotations
@@ -108,7 +112,7 @@ def expected_fields(esp_version: tuple[int, int, int] | None) -> dict[str, Any]:
 
 @pytest.mark.mqtt          # проверяет все три канала, включая брокер
 @pytest.mark.requires(esp='2.0.47')       # вердикт читается из строки Alarm confirm
-def test_G1_all_three_channels(stand: Stand) -> None:
+def test_G1_all_three_channels(stand: Stand, live_cloud: None) -> None:
     """Короткое нажатие: показания уходят во все три канала."""
     stand.reset_observers()
     stand.dut.press_button()
@@ -243,7 +247,8 @@ def test_G4a_cloud_unreachable(stand: Stand, net: Any) -> None:
 
 
 @pytest.mark.requires(esp='2.0.47')
-def test_G4b_own_server_unreachable(stand: Stand, net: Any) -> None:
+def test_G4b_own_server_unreachable(stand: Stand, net: Any,
+                                    live_cloud: None) -> None:
     """
     Своего сервера нет, облако живо. Зеркало предыдущего теста.
 
@@ -268,7 +273,8 @@ def test_G4b_own_server_unreachable(stand: Stand, net: Any) -> None:
 
 @pytest.mark.mqtt
 @pytest.mark.requires(esp='2.0.47')       # младшие не печатают MQTT: Connecting failed
-def test_G5_broker_unreachable(stand: Stand, net: Any) -> None:
+def test_G5_broker_unreachable(stand: Stand, net: Any,
+                               live_cloud: None) -> None:
     """
     Брокер недоступен, облако живо.
 
@@ -290,7 +296,7 @@ def test_G5_broker_unreachable(stand: Stand, net: Any) -> None:
 
 
 @pytest.mark.requires(esp='2.0.47')
-def test_G7_server_answers_500(stand: Stand) -> None:
+def test_G7_server_answers_500(stand: Stand, live_cloud: None) -> None:
     """
     Свой сервер отвечает 500: сеть в порядке, данные не приняты.
 
@@ -344,7 +350,7 @@ def test_G8_own_server_over_https(stand: Stand) -> None:
 
 @pytest.mark.mqtt
 @pytest.mark.requires(esp='2.0.47')
-def test_G9_hanging_server(stand: Stand) -> None:
+def test_G9_hanging_server(stand: Stand, live_cloud: None) -> None:
     """
     Свой сервер принял соединение и молчит (#367).
 

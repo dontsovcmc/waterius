@@ -1111,9 +1111,19 @@ class Stand:
 
         Автодискавери по умолчанию выключено: сеанс с ним печатает сотни строк и
         вытесняет из кольца METF начало следующего.
+
+        Почта - в общих требованиях, а не у тестов облака: она уезжает в облако
+        с каждой посылкой, и с пустой облако отвечает 404 всем сеансам подряд,
+        а не только тем, кто его ответ сверяет. Значение - из stand.ini: в
+        тестах адреса учётной записи нет. Получатель и здесь идёт первым: почту
+        прошивка принимает под тем же `if (sett.waterius_on)`, что и адрес
+        (active_point_api.cpp, applyNonCheckBoxParameter).
         """
         want: dict[str, Any] = {'http_on': 1, 'http_url': self.cfg.http_url,
                                 'ntp_server': self.cfg.metf_host}
+        if self.cfg.dut_email:
+            want['waterius_on'] = 1
+            want['waterius_email'] = self.cfg.dut_email
         if self.mqtt is not None:
             want.update(mqtt_on=1, mqtt_host=self.cfg.broker_host,
                         mqtt_port=self.cfg.broker_port, mqtt_retain=1,

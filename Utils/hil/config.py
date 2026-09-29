@@ -106,6 +106,11 @@ class StandConfig:
     # Ватериус в сети точки доступа
     dut_mac: str
     dut_ip: str
+    # Почта учётной записи, к которой облако привязывает устройство. Адрес
+    # облака в прошивке зашит (`WATERIUS_DEFAULT_DOMAIN`), и единственное, чем
+    # стенд на него влияет, - эта почта: с пустой облако отвечает 404 на каждую
+    # посылку, и блок G сверяет ответ облака вместо прошивки (прогон 29.09).
+    dut_email: str
 
     # Приёмник посылок: адрес, который прошит в настройках Ватериуса
     receiver_host: str
@@ -268,6 +273,7 @@ def load(path: str | os.PathLike[str] | None = None,
         wifi_password=get('wifi', 'password', ''),
         dut_mac=get('dut', 'mac', ''),
         dut_ip=get('dut', 'ip', '192.168.4.100'),
+        dut_email=get('dut', 'email', ''),
         receiver_host=here('receiver'),
         receiver_port=int(get('receiver', 'port', '8000')),
         receiver_tls_port=int(get('receiver', 'tls_port', '8443')),
