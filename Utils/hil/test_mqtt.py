@@ -415,7 +415,8 @@ def missing(name: str, session: Any, topics: list[str]) -> str:
     """
     said = [line for line in session.text.splitlines() if f'/{name}' in line]
     return (f'нет топика {name}. Устройство про него говорит: '
-            f'{said or "ни слова"}. Доехало {len(topics)} топиков: {topics}')
+            f'{said or "ни слова"}. Доехало {len(topics)} топиков: {topics}'
+            f'{session.mqtt_note}')
 
 
 @NO_DISCOVERY
