@@ -105,6 +105,11 @@ jobs:
       - name: Зависимости стенда
         run: pip install -r Utils/hil/requirements.txt
 
+      # Стенд - такой же код и гниёт так же: без линтера ошибка в нём находится
+      # только на живом железе, часами (Utils/hil/rules.md, «Оснастка и долги»)
+      - name: Линтер стенда
+        run: python -m ruff check Utils/hil
+
       - name: selftest
         run: python -m pytest Utils/hil/selftest -q
 
