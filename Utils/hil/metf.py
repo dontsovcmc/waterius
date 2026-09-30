@@ -12,10 +12,13 @@ METF - клиент Wi-Fi домашней сети, и тот же эфир т�
 платы - это конец прогона сразу, с внятным текстом: без METF стенд всё равно
 ничего не может, и час одинаковых ошибок никому не нужен.
 
-Третье правило - про то, что повторять нельзя. Повтор осмыслен, только если
-запрос заведомо не доехал: плата отказала в соединении или не ответила на SYN.
-`ReadTimeout` означает обратное - запрос ушёл, ответа нет, - и для `/pulse` это
-принципиально: импульс мог быть выдан, и повтор нажмёт кнопку второй раз.
+Третье правило - про то, что повторять нельзя, и оно здесь умолчание. Повтор
+осмыслен, только если запрос заведомо не доехал: плата отказала в соединении
+или не ответила на SYN. `ReadTimeout` означает обратное - запрос ушёл, ответа
+нет, - и для `/pulse` это принципиально: импульс мог быть выдан, и повтор
+нажмёт кнопку второй раз. Широкий повтор разрешается поимённо
+(`REPEATABLE_CALLS`, `serial_read`, `_get`) - тем вызовам, которые ничего не
+двигают и ничего не осушают.
 """
 
 from __future__ import annotations
@@ -38,8 +41,22 @@ NETWORK_ERRORS = (requests.RequestException, OSError)
 
 # Что можно повторять: соединение не установилось, значит плата запроса не
 # видела. `ConnectTimeout` - наследник `ConnectionError`, поэтому попадает сюда,
-# а `ReadTimeout` - нет, и это ровно то поведение, которое нужно
+# а `ReadTimeout` - нет, и это ровно то поведение, которое нужно.
+#
+# Это умолчание `_retry`, а не редкое исключение: широкий повтор разрешается
+# поимённо. Обратное умолчание держалось только на памяти автора каждого нового
+# вызова - `pulse`, `wave` и `pulse_stat` запрет выписали себе сами, а всё
+# остальное уходило в общую обёртку и повторялось по `ReadTimeout`, то есть
+# ровно тогда, когда запрос мог доехать
 SAFE_TO_REPEAT = (requests.ConnectionError,)
+
+# Вызовы платы, которым широкий повтор ничего не портит: они ничего не двигают
+# в железе и ничего не осушают, поэтому второй такой же запрос отдаёт то же
+# самое. Всё, чего здесь нет, - воздействие (`digitalWrite`, `pinMode`,
+# `rgb_*`), и потерянный ответ на него повторять нельзя: линию дёрнет дважды.
+# Список именной нарочно - новый метод клиента попадает под строгое умолчание
+# и падает заметно, а не подаёт воздействие второй раз молча
+REPEATABLE_CALLS = frozenset({'ping', 'serial_begin', 'serial_stat'})
 
 # Версии протокола платы: `GET /version`, разбор - в `docs/api.md` репозитория
 # metf.
@@ -158,8 +175,14 @@ class Metf:
         if not callable(target):
             return target
 
+        # Широкий повтор - только тем, кто назван в `REPEATABLE_CALLS`.
+        # Остальным достаётся строгое умолчание `_retry`: воздействие,
+        # у которого пропал ответ, стенд повторять не вправе
+        repeatable = (NETWORK_ERRORS if name in REPEATABLE_CALLS
+                      else SAFE_TO_REPEAT)
+
         def call(*args: Any, **kwargs: Any) -> Any:
-            return self._retry(name, target, args, kwargs)
+            return self._retry(name, target, args, kwargs, repeatable=repeatable)
 
         call.__name__ = name
         return call
@@ -350,15 +373,18 @@ class Metf:
         return self._get('wifi').json()
 
     def _get(self, path: str) -> Any:
+        # Чтение состояния платы: тот же запрос отдаёт то же самое, поэтому
+        # повторяется по любому сетевому отказу, а не только по отказу связи
         root = self._api._root
         answer = self._retry(f'GET /{path}', self._api._sess.get,
-                             (f'{root}/{path}',), {'timeout': GET_TIMEOUT_S})
+                             (f'{root}/{path}',), {'timeout': GET_TIMEOUT_S},
+                             repeatable=NETWORK_ERRORS)
         answer.raise_for_status()
         return answer
 
     def _retry(self, name: str, target: Callable[..., Any],
                args: tuple[Any, ...], kwargs: dict[str, Any],
-               repeatable: tuple[type[BaseException], ...] = NETWORK_ERRORS,
+               repeatable: tuple[type[BaseException], ...] = SAFE_TO_REPEAT,
                pause: float | None = None) -> Any:
         pause = self._pause if pause is None else pause
         срок = kwargs.get('timeout')

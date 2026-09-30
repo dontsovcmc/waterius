@@ -44,7 +44,7 @@ def _pin(path: Path, section: str, key: str, value: str) -> bool:
 
     configparser.write() вернул бы файл без единого комментария, а половина
     стенда объяснена именно ими: какой канал держать, почему пуст порт роутера,
-    чем грозит can_drive_high.
+    зачем закреплён канал точки.
     """
     try:
         lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
@@ -72,10 +72,6 @@ def _pin(path: Path, section: str, key: str, value: str) -> bool:
 class StandConfig:
     # Плата-манипулятор
     metf_host: str
-    # Разрешено ли стенду выдавать на вход уровень, а не только замыкание.
-    # Нужно для типа «Электронный (+)»; провод тот же, но плата начинает
-    # питать линию, поэтому включается отдельно и осознанно.
-    can_drive_high: bool
     button_pin: int
     ch0_pin: int
     ch1_pin: int
@@ -255,7 +251,6 @@ def load(path: str | os.PathLike[str] | None = None,
 
     return StandConfig(
         metf_host=board('metf', 'metf'),
-        can_drive_high=get('metf', 'can_drive_high', '0') == '1',
         button_pin=int(get('metf', 'button_pin', '1')),
         ch0_pin=int(get('metf', 'ch0_pin', '3')),
         ch1_pin=int(get('metf', 'ch1_pin', '2')),

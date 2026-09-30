@@ -572,3 +572,68 @@ def test_на_соединение_даётся_больше_чем_на_отв�
 
     assert заказано == [(metf.CONNECT_TIMEOUT_S, metf.GET_TIMEOUT_S)]
     assert metf.CONNECT_TIMEOUT_S > metf.READ_TIMEOUT_S
+
+
+class Actuating:
+    """
+    Плата с двумя ручками: одна двигает линию, другая только рассказывает.
+
+    Обе падают потерей ответа - тем самым отказом, при котором запрос мог
+    доехать. Разница между ними и есть предмет проверки.
+    """
+
+    def __init__(self) -> None:
+        self.writes = 0
+        self.stats = 0
+        self._root = 'http://192.0.2.1'
+        self._sess = FakeSession()
+
+    def digitalWrite(self, pin: int, value: int) -> None:    # noqa: N802
+        self.writes += 1
+        raise requests.ReadTimeout('ответа нет')
+
+    def serial_stat(self) -> dict:
+        self.stats += 1
+        raise requests.ReadTimeout('ответа нет')
+
+
+def test_потерянный_ответ_на_воздействие_не_повторяется(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """
+    `ReadTimeout` значит, что запрос ушёл, а ответа нет: линию могли дёрнуть.
+    Повтор дёрнет её второй раз, и честная серия станет испорченной - поэтому
+    строгое умолчание достаётся всему, что не названо поимённо.
+    """
+    плата = Actuating()
+    api = board(monkeypatch, плата)          # type: ignore[arg-type]
+
+    with pytest.raises(requests.ReadTimeout):
+        api.digitalWrite(3, 1)
+
+    assert плата.writes == 1, (
+        f'воздействие ушло на плату {плата.writes} раза при потерянном ответе: '
+        f'повтор подаёт его заново')
+
+
+def test_названный_поимённо_опрос_повторяется(
+        monkeypatch: pytest.MonkeyPatch, clock: Clock) -> None:
+    """
+    Опрос счётчиков потерь ничего не двигает и ничего не осушает: второй такой
+    же запрос отдаёт то же самое. Ему широкий повтор оставлен - иначе одна
+    осечка связи гасит проверку потерь лога на целое окно.
+    """
+    плата = Actuating()
+    api = board(monkeypatch, плата)          # type: ignore[arg-type]
+
+    with pytest.raises(requests.ReadTimeout):
+        api.serial_stat()
+
+    assert плата.stats == metf.ATTEMPTS, (
+        f'опрос ушёл {плата.stats} раз, а повторов положено {metf.ATTEMPTS}')
+    assert 'serial_stat' in metf.REPEATABLE_CALLS
+
+
+def test_воздействие_не_попало_в_список_повторяемых() -> None:
+    """Список именной, и воздействию в нём не место ни при каком редактировании."""
+    assert not metf.REPEATABLE_CALLS & {'digitalWrite', 'pinMode', 'pulse',
+                                        'wave', 'rgb_color'}
