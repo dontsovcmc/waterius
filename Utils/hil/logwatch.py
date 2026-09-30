@@ -599,11 +599,41 @@ class Session:
         m = RE_BLYNK.search(self.text)
         return int(m.group(1)) if m else None
 
+    @property
+    def no_payload_note(self) -> str:
+        """
+        Почему приёмник пуст - словами самого устройства.
+
+        Пустой приёмник бывает от разных бед: устройство не подключилось к сети,
+        свой сервер не ответил двумястами, тело оборвалось в эфире. Отказ «посылки
+        нет» их не различает и винит отправку в том, что сделал Wi-Fi.
+        """
+        if not self.wifi_connected:
+            if not self.wifi_attempts:
+                return 'радио в этом сеансе не включалось: подключения не было и не могло быть'
+            wifi = [m.group(1) for m in map(RE_ERROR.search, self.lines)
+                    if m and m.group(1).startswith('WIFI:')]
+            return (f'устройство не подключилось к сети ({self.wifi_attempts} '
+                    f'попыток: {"; ".join(dict.fromkeys(wifi)) or "без строк ошибок"}) '
+                    f'и до отправки не дошло - это отказ Wi-Fi, а не отправки')
+        codes = self.own_codes
+        said = (f'свой сервер ответил {codes}' if codes else
+                'до своего сервера оно не дошло: кодов его ответа в сеансе нет')
+        confirm = self.confirm
+        verdict = f', итог получателя http={confirm["http"]}' if confirm else ''
+        return f'устройство в сети, {said}{verdict}{self.air_note}'
+
+    def expect_payload(self, what: str = 'приёмник не получил посылку') -> dict[str, Any]:
+        """Посылка сеанса, а без неё - отказ с причиной и строками устройства."""
+        if self.payload is None:
+            raise AssertionError(f'{what}: {self.no_payload_note}\n{self.text}')
+        return self.payload
+
     def assert_alarm(self, **expected: int) -> None:
         """assert_alarm(flow1=1, flow0=0) - по полям посылки."""
-        assert self.payload is not None, 'посылки не было, проверять нечего'
+        payload = self.expect_payload('посылки не было, проверять нечего')
         for name, want in expected.items():
-            got = self.payload.get(f'alarm_{name}')
+            got = payload.get(f'alarm_{name}')
             assert got == want, f'alarm_{name}: ожидали {want}, получили {got}\n{self.text}'
 
     def assert_confirm(self, **expected: int) -> None:
@@ -613,8 +643,7 @@ class Session:
             assert c[name] == want, f'{name}: ожидали {want}, получили {c[name]}\n{self.text}'
 
     def assert_delta(self, channel: int, liters: int) -> None:
-        assert self.payload is not None, 'посылки не было'
-        got = self.payload.get(f'delta{channel}')
+        got = self.expect_payload('посылки не было').get(f'delta{channel}')
         assert got == liters, f'delta{channel}: ожидали {liters}, получили {got}'
 
 

@@ -133,8 +133,7 @@ def test_I0_readings_reach_broker(stand: Stand) -> None:
     assert message is not None, (
         'показаний в корневом топике нет, дерево: '
         f'{stand.mqtt.topics(stand.mqtt_root)}')
-    assert session.payload is not None, 'приёмник не получил посылку'
-    assert message.json() == session.payload, (
+    assert message.json() == session.expect_payload(), (
         'в брокер и на сервер ушли разные данные')
 
 
@@ -192,8 +191,7 @@ def test_I4_remote_period_min(stand: Stand) -> None:
         f'команда не применена: {session.applied}')
     assert len(session.payloads) >= 2, (
         'после применения данные должны уйти повторно' + session.air_note)
-    assert session.payload is not None
-    assert session.payload['period_min'] == OTHER_PERIOD_MIN
+    assert session.expect_payload()['period_min'] == OTHER_PERIOD_MIN
 
 
 @pytest.mark.requires(esp='2.0.47')       # младшие снимают команду без флага retain
@@ -434,7 +432,7 @@ def test_I0b_readings_go_to_separate_topics(stand: Stand) -> None:
     stand.dut.press_button()
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    assert session.payload is not None, 'приёмник не получил посылку'
+    session.expect_payload()
     assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (
         f'в брокере пусто, пришло: {stand.mqtt.topics()}{session.mqtt_note}')
     topics = stand.mqtt.topics(stand.mqtt_root)
@@ -485,8 +483,7 @@ def test_I4c_commands_need_discovery(stand: Stand) -> None:
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert session.applied == {}, f'настройки применены: {session.applied}'
-    assert session.payload is not None
-    assert session.payload['period_min'] == was, 'период поменялся без подписки'
+    assert session.expect_payload()['period_min'] == was, 'период поменялся без подписки'
 
     # Главное утверждение - положительное: команду никто не забрал, она так и
     # лежит в брокере удерживаемой. Отсутствие строк в логе доказывало бы то же
@@ -573,10 +570,10 @@ def test_I9_both_input_types_in_one_session(stand: Stand) -> None:
 
         assert session.applied.get('ctype0') == str(ELECTRONIC), session.applied
         assert session.applied.get('ctype1') == str(INPUT_OFF), session.applied
-        assert session.payload is not None
-        assert session.payload['ctype0'] == ELECTRONIC, (
-            f"вход 0 не сменил тип: {session.payload['ctype0']}")
-        assert session.payload['ctype1'] == INPUT_OFF, (
+        payload = session.expect_payload()
+        assert payload['ctype0'] == ELECTRONIC, (
+            f"вход 0 не сменил тип: {payload['ctype0']}")
+        assert payload['ctype1'] == INPUT_OFF, (
             f"вход 1 не сменил тип: {session.payload['ctype1']}")
     finally:
         # Устройство снимает свои команды само (I4b), но упавший тест иначе
@@ -608,8 +605,7 @@ def test_I14_invalid_command_is_dropped(stand: Stand) -> None:
         session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
         assert session.applied.get('period_min') == 'abc', session.applied
-        assert session.payload is not None
-        assert session.payload['period_min'] == was, 'негодный период применён'
+        assert session.expect_payload()['period_min'] == was, 'негодный период применён'
 
         left = [m.topic for m in stand.mqtt.fetch_retained(stand.mqtt_root)]
         stuck = [name for name in names if stand.mqtt.command_topic(name) in left]

@@ -103,6 +103,42 @@ class Подъём:
         self.cfg = cfg
 
 
+class Возврат:
+    """Стенд на шаге `rejoin`: сеансы по очереди из списка."""
+
+    def __init__(self, *сеансы: list[str]) -> None:
+        self.сеансы = [сеанс(lines) for lines in сеансы]
+        self.нажатий = 0
+        стенд = self
+
+        class dut:                   # noqa: N801 - подделка платы
+            @staticmethod
+            def press_button() -> None:
+                стенд.нажатий += 1
+
+        self.dut = dut
+
+    def reset_observers(self) -> None:
+        pass
+
+    def wait_session(self, timeout: float, mode: int | None = None) -> Any:
+        return self.сеансы.pop(0)
+
+
+def test_возврат_в_сеть_кончается_первым_подключением() -> None:
+    стенд = Возврат(НЕ_ПОДКЛЮЧИЛСЯ, ПОДКЛЮЧИЛСЯ, ПОДКЛЮЧИЛСЯ)
+    Stand.rejoin(стенд)
+    assert стенд.нажатий == 2
+
+
+def test_не_вернувшееся_устройство_роняет_teardown_с_уликой() -> None:
+    стенд = Возврат(НЕ_ПОДКЛЮЧИЛСЯ, НЕ_ПОДКЛЮЧИЛСЯ)
+    with pytest.raises(AssertionError, match='не вернулось в сеть стенда за 2 сеанса') as отказ:
+        Stand.rejoin(стенд, tries=2)
+    assert 'устройство не подключилось к сети (2 попыток' in str(отказ.value)
+    assert стенд.нажатий == 2
+
+
 def test_совпавший_конфиг_без_подключения_не_считается_сетью() -> None:
     with pytest.raises(AssertionError, match='подключиться к сети оно не смогло'):
         Stand.ensure_network(Подъём(joined=False))

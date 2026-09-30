@@ -116,8 +116,8 @@ def test_J1_ota_updates_both_images(stand: Any, cfg: Any,
     session = stand.wait_session(timeout=300)
     assert session.esp_version == want, (
         f'после обновления версия {session.esp_version}, ждали {want}')
-    assert session.payload is not None
-    assert session.payload['ota_error'] == OTA_ERR_NONE, session.payload['ota_error']
+    ota_error = session.expect_payload()['ota_error']
+    assert ota_error == OTA_ERR_NONE, ota_error
 
     logger.info('образы вернули устройству ту же версию, что была')
 
@@ -142,14 +142,13 @@ def test_J4_bad_url_is_reported(stand: Any, cfg: Any) -> None:
     stand.reset_observers()
     stand.dut.press_button()
     reported = stand.wait_session(timeout=180)
-    assert reported.payload is not None
-    assert reported.payload['ota_error'] == OTA_ERR_FW_UPDATE, reported.payload
+    payload = reported.expect_payload()
+    assert payload['ota_error'] == OTA_ERR_FW_UPDATE, payload
 
     stand.reset_observers()
     stand.dut.press_button()
     cleared = stand.wait_session(timeout=180)
-    assert cleared.payload is not None
-    assert cleared.payload['ota_error'] == OTA_ERR_NONE, (
+    assert cleared.expect_payload()['ota_error'] == OTA_ERR_NONE, (
         'ошибка обновления обязана сбрасываться после публикации')
 
 
@@ -185,7 +184,8 @@ def test_J3_low_battery_refuses(stand: Any, cfg: Any) -> None:
     stand.reset_observers()
     stand.dut.press_button()
     reported = stand.wait_session(timeout=180)
-    assert reported.payload['ota_error'] == OTA_ERR_LOW_BATTERY, reported.payload
+    payload = reported.expect_payload()
+    assert payload['ota_error'] == OTA_ERR_LOW_BATTERY, payload
 
 
 @pytest.mark.slow
@@ -214,8 +214,8 @@ def test_J6_md5_mismatch_is_refused(stand: Any, cfg: Any,
     stand.reset_observers()
     stand.dut.press_button()
     reported = stand.wait_session(timeout=180)
-    assert reported.payload is not None
-    assert reported.payload['ota_error'] == OTA_ERR_FW_UPDATE, reported.payload
+    payload = reported.expect_payload()
+    assert payload['ota_error'] == OTA_ERR_FW_UPDATE, payload
     assert reported.esp_version == want, 'версия сменилась: образ всё-таки записан'
 
 

@@ -95,6 +95,7 @@ class AtBoard:
         self.ssid: str | None = None       # сеть, в которую плата вошла последней
         self.password = ''
         self.portal_ssid: str | None = None    # имя точки портала, её ставит portal.py
+        self.closed_at: float | None = None    # когда портал закрыт командой (portal.turnoff)
         # Сколько раз транспорт молча вернул станцию в сеть. Без этого счётчика
         # «связь не рвалась» не отличить от «оборвалась и починилась сама»
         self.rejoins = 0

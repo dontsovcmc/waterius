@@ -261,6 +261,8 @@ def turnoff(board: AtBoard, host: str = HOST) -> None:
         board.get('/api/turnoff', host)
     except AtError as err:
         logger.warning(f'портал не ответил на turnoff: {err}')
+        return
+    board.closed_at = time.monotonic()
 
 
 def configure(board: AtBoard, ssid: str, password: str, url: str,
@@ -432,17 +434,20 @@ def session(cfg: Any, stand: Any, timeout: float = PRESS_BUDGET_S) -> Iterator[A
     ждал бы десять минут сторожевого таймера портала. Пока устройство не
     уснуло, ЕСП запитана и нажатие кнопки до attiny не доходит, поэтому
     выходим только дождавшись сна.
+
+    Тест, закрывший портал сам (`turnoff`), команду второй раз не получает:
+    точки уже нет, и AT-плата полминуты ищет её впустую. Если он и сеанс после
+    выхода дождался сам, устройство уже спит - ждать его сна нечего.
     """
     device = open_portal(cfg, stand, timeout)
     try:
         yield device
     finally:
-        try:
-            device.get('/api/turnoff', HOST)
-        except Exception as err:
-            logger.warning(f'портал не закрылся командой: {err}')
+        if device.closed_at is None:
+            turnoff(device)
         device.close()
-        stand.wait_asleep()
+        if not stand.slept_since(device.closed_at):
+            stand.wait_asleep()
 
 
 def post_json(board: AtBoard, path: str, **params: Any) -> dict[str, Any]:

@@ -250,11 +250,10 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
     # присланные до мастера, и последняя из них выглядит как результат
     # настройки, хотя настройки в ней прежние
     stand.reset_observers()
-    board.get('/api/turnoff', portal_mod.HOST)
+    portal_mod.turnoff(board)
 
     session = stand.wait_session(timeout=300)
-    payload = session.payload
-    assert payload is not None, 'после мастера устройство не прислало показания'
+    payload = session.expect_payload('после мастера устройство не прислало показания')
     assert payload['f1'] == FACTOR, payload['f1']
     assert payload['ctype1'] == NAMUR, payload['ctype1']
     assert payload['period_min'] == PERIOD_MIN, payload['period_min']

@@ -58,7 +58,7 @@ def test_W4_router_changed_channel(stand: Stand, router: Any) -> None:
         moved = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
         assert f'WIFI: begin channel: {old}' in moved.text, moved.text
         assert moved.wifi_connected, f'полный скан не нашёл сеть на канале {new}\n{moved.text}'
-        assert moved.payload is not None and int(moved.payload['channel']) == new
+        assert int(moved.expect_payload()['channel']) == new
 
         stand.reset_observers()
         stand.dut.press_button()
@@ -119,7 +119,7 @@ def test_W3_unusual_network_names(stand: Stand, ssid: str, password: str, router
             stand.dut.press_button()
             session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
             assert session.wifi_connected, f'в сеть {ssid!r} не подключился\n{session.text}'
-            assert session.payload is not None, 'в сети, а посылки нет'
+            session.expect_payload('в сети, а посылки нет')
 
             teach(stand, home_ssid, home_password)
             back = True

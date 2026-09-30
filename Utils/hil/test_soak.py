@@ -53,9 +53,9 @@ def test_Z1_soak(stand: Stand, request: pytest.FixtureRequest) -> None:
                     if any(marker in line for marker in I2C_ERRORS)]
         assert not failures, f'{where}: сбой i2c\n' + '\n'.join(failures)
         assert session.complete and session.wifi_connected, f'{where}\n{session.text}'
-        assert session.payload is not None, f'{where}: посылки нет'
+        payload = session.expect_payload(f'{where}: посылки нет')
 
-        now = (session.payload['imp0'], session.payload['imp1'])
+        now = (payload['imp0'], payload['imp1'])
         if impulses is not None:
             assert now[0] >= impulses[0] and now[1] >= impulses[1], (
                 f'{where}: счёт пошёл назад {impulses} -> {now}')

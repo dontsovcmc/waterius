@@ -550,6 +550,10 @@ def clean_net(request: pytest.FixtureRequest) -> Iterator[None]:
 
     Именно после, а не до: упавший тест обязан оставить стенд рабочим, иначе
     следующий упадёт по чужой причине и разбираться придётся с конца.
+
+    Вернуть роутер мало, если последний сеанс прошёл без сети: прошивка при
+    этом забывает канал точки, и следующий тест начинал бы с полного скана
+    эфира (`Stand.rejoin`).
     """
     if ('stand' not in request.keywords or 'portal' in request.keywords
             or not request.config.getoption('--stand')
@@ -564,6 +568,8 @@ def clean_net(request: pytest.FixtureRequest) -> Iterator[None]:
         yield
     finally:
         device.router.restore(state)
+        if device.joined is False:
+            device.rejoin()
 
 
 @pytest.fixture(autouse=True)
