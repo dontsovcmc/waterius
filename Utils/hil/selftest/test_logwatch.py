@@ -559,6 +559,27 @@ def test_приписка_называет_взгляд_устройства() -
     assert 'waterius/voltage' in note, note
 
 
+def test_приписка_называет_потерянный_хвост() -> None:
+    """
+    «pub» печатается, когда публикация легла в буфер TCP. Дошла ли она, говорит
+    только ожидание подтверждения перед закрытием - оно и делит вину между
+    устройством и брокером стенда.
+    """
+    from ..logwatch import Session
+
+    потерян = Session(lines=[
+        fw('MQTT: Publish data finished: 83 topics, 597 ms'),
+        fw('MQTT: Flush failed, no ack for 3000 ms', level='ERROR'),
+    ]).mqtt_note
+    дошёл = Session(lines=[
+        fw('MQTT: Publish data finished: 83 topics, 597 ms'),
+        fw('MQTT: Flushed in 42 ms'),
+    ]).mqtt_note
+
+    assert 'не подтвердил хвост за 3000 мс' in потерян, потерян
+    assert 'подтвердил всё отправленное за 42 мс' in дошёл, дошёл
+
+
 def test_молчащий_лог_не_обвиняет_прошивку() -> None:
     """
     Прошивка старше одной строки на публикацию ничего такого не печатает -

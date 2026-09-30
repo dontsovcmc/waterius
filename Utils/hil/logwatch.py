@@ -103,6 +103,10 @@ RE_WIFI_ATTEMPT = re.compile(r'WIFI: Attempt #(\d+)')
 RE_MQTT_PUB = re.compile(r'MQTT: pub (\S+) size=(\d+) retain=([01])')
 RE_MQTT_DONE = re.compile(r'MQTT: Publish data finished: (\d+) topics, (\d+) ms')
 RE_MQTT_FAIL = re.compile(r'MQTT: Publish failed: (\S+) \(([^)]*)\)')
+# «pub» значит «легло в буфер TCP»; дошло ли до брокера, говорит только
+# ожидание подтверждения перед закрытием (sender_mqtt.h, disconnect_mqtt)
+RE_MQTT_FLUSHED = re.compile(r'MQTT: Flushed in (\d+) ms')
+RE_MQTT_FLUSH_FAILED = re.compile(r'MQTT: Flush failed, no ack for (\d+) ms')
 # Код ошибки, который прошивка собралась моргать (wleds.cpp, blynk_error).
 # Успех не моргается вовсе, поэтому строки в удачном сеансе нет.
 RE_BLYNK = re.compile(r'Blynk: code=(\d+)')
@@ -176,6 +180,8 @@ DEVICE_MARKS: tuple[tuple[re.Pattern[str], str, Any], ...] = (
      lambda m: f'к брокеру не подключился{f" (state {m[1]})" if m[1] else ""}'),
     (RE_MQTT_DONE, 'info', lambda m: f'опубликовал {m[1]} топиков за {m[2]} мс'),
     (RE_MQTT_FAIL, 'warning', lambda m: f'не опубликовал {m[1]} ({m[2]})'),
+    (RE_MQTT_FLUSH_FAILED, 'warning',
+     lambda m: f'брокер не подтвердил хвост публикаций за {m[1]} мс - он потерян'),
     (RE_HTTP_CODE, 'info', lambda m: f'сервер ответил {m[1]}'),
     (RE_SENT, 'info',
      lambda m: f'отправил на {SENDER_NAMES[m[1]]} за {m[2]} мс'),
@@ -558,6 +564,13 @@ class Session:
                          f'{published[-1][0]}')
         if self.mqtt_failed:
             parts.append(f'неудачные: {self.mqtt_failed}')
+        flushed = RE_MQTT_FLUSHED.search(self.text)
+        lost = RE_MQTT_FLUSH_FAILED.search(self.text)
+        if lost:
+            parts.append(f'брокер не подтвердил хвост за {lost[1]} мс - '
+                         'устройство уснуло, не отправив его')
+        elif flushed:
+            parts.append(f'брокер подтвердил всё отправленное за {flushed[1]} мс')
         return '\nЧто говорит устройство: ' + '; '.join(parts)
 
     @property

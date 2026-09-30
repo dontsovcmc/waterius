@@ -663,6 +663,7 @@ class NatRouter:
         stop = threading.Event()
 
         def pump() -> None:
+            got = 0
             try:
                 with socket.create_connection((host, PCAP_PORT), timeout=5.0) as s, \
                         open(path, 'wb') as f:
@@ -675,8 +676,14 @@ class NatRouter:
                         if not data:
                             break
                         f.write(data)
+                        got += len(data)
             except OSError as err:
                 logger.warning(f'дамп трафика не собран: {err}')
+                return
+            # Даже заголовка pcap нет - значит, роутер отказал сразу
+            if not got:
+                logger.warning(f'дамп трафика пуст: роутер закрыл порт {PCAP_PORT}, '
+                               f'не отдав ни байта ({path})')
 
         thread = threading.Thread(target=pump, daemon=True)
         thread.start()
