@@ -189,11 +189,28 @@ aborted run keeps everything it printed. A redirect to `/tmp` makes a second,
 worse copy that nobody can find afterwards and that dies with the sandbox.
 
 ```bash
-python3 -m pytest Utils/hil --stand                 # лог сам, в logs/
-tail -f logs/$(ls -t logs | head -1)                # следить за идущим прогоном
+python3 -m pytest Utils/hil --stand                    # лог сам, в logs/
+python3 -m pytest Utils/hil --stand -m "not slow"      # ~140 тестов, около часа
+python3 -m pytest Utils/hil --stand --norouter         # без платы WT32-ETH01
+python3 -m pytest Utils/hil --stand --nocloud          # без обращений к живому облаку
+python3 -m pytest Utils/hil --stand --reverse          # задом наперёд: ловит зависимость по порядку
+python3 -m hil.rescue                                  # вылечить стенд после упавшего прогона
+tail -f logs/$(ls -t logs | head -1)                   # следить за идущим прогоном
 ```
 
 For a long unattended run, launch it in the background **without** a redirect
 (`run_in_background`) and watch `logs/`. Do not pipe pytest into `head`/`tail`:
 the closed pipe raises `BrokenPipeError` inside the stand's log tee and kills the
 run with `INTERNALERROR`. Details — `Utils/hil/README.md`, «Запуск».
+
+Addresses in `stand.ini` are not settings to maintain: the run asks the kernel for
+its own IP and finds the boards itself (written address → mDNS → sweep of its own
+/24), then pins what it found back into the file. A `stand.ini` from another
+directory is passed as a single argument, `--stand-config=<path>`, not separated by
+a space.
+
+**The rules the stand is built on — `Utils/hil/rules.md`.** They are written without
+reference to this hardware, so they hold for any hardware-in-the-loop bench: read
+them before writing a new test or explaining a failed run. The order of elimination
+when a run goes red is at the end of that file: host clock → bench reachability →
+the air → log transport → broker → and only then the firmware.
