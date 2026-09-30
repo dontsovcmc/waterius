@@ -8,8 +8,8 @@
 Правила фильтра дают остальные, а заодно единственный способ проверить маску
 квитанции: облако молчит, брокер отвечает.
 
-Облако и свой сервер разводятся по портам: облако - это https на 443, свой
-сервер стенда - порт приёмника. Резать по адресу не нужно.
+Облако и свой сервер разводятся по портам: оба слушают на машине стенда,
+каждый на своём. Резать по адресу не нужно.
 
 Все сценарии - контекстные менеджеры с гарантированным возвратом. Тест, упавший
 с выключенной точкой доступа, иначе уронил бы весь прогон: Ватериус просто не
@@ -25,7 +25,6 @@ from loguru import logger
 
 from .router import NatRouter
 
-HTTPS_PORT = 443
 NTP_PORT = 123
 
 # Список, в котором режется исходящий трафик клиента точки. Имя обманчиво:
@@ -39,12 +38,14 @@ class Net:
     """Сеть стенда: точка доступа и фильтр трафика Ватериуса."""
 
     def __init__(self, router: NatRouter, dut_ip: str, dut_mac: str = '',
-                 broker_port: int = 1883, receiver_port: int = 8000) -> None:
+                 broker_port: int = 1883, receiver_port: int = 8000,
+                 cloud_port: int = 8020) -> None:
         self.router = router
         self.dut_ip = dut_ip
         self.dut_mac = dut_mac.lower()
         self.broker_port = broker_port
         self.receiver_port = receiver_port
+        self.cloud_port = cloud_port
         self._identity_checked = False
 
     def verify_dut(self) -> None:
@@ -117,14 +118,14 @@ class Net:
     @contextmanager
     def waterius_down(self) -> Iterator[None]:
         """
-        Облако waterius.ru недоступно, свой сервер и брокер живы.
+        Облако недоступно, свой сервер и брокер живы.
 
-        Режем только https: свой сервер стенда слушает обычный http на своём
-        порту, и под правило не попадает. В логе это `waterius=3 http=1`.
+        Режем порт облака стенда: свой сервер слушает на другом и под правило
+        не попадает. В логе это `waterius=3 http=1`.
         """
         self.verify_dut()
-        logger.info('сеть: режем облако waterius.ru, свой сервер оставляем')
-        with self.router.blocked(self.dut_ip, HTTPS_PORT), \
+        logger.info('сеть: режем облако стенда, свой сервер оставляем')
+        with self.router.blocked(self.dut_ip, self.cloud_port), \
                 self._blocking('waterius_down'):
             yield
 

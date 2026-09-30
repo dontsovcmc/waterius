@@ -218,9 +218,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
                      help='гонять без платы WT32-ETH01: Ватериус живёт в сети из '
                           '[wifi] stand.ini, а тесты, управляющие точкой, '
                           'пропускаются (фикстуры router и net)')
-    parser.addoption('--nocloud', action='store_true', default=False,
-                     help='гонять без живого облака cloud.waterius.ru: тесты, которые '
-                          'сверяют его ответ (фикстура live_cloud), пропускаются')
     parser.addoption('--pcap', action='store_true', default=False,
                      help='снимать дамп трафика точки доступа к упавшим тестам')
     parser.addoption('--experimental', action='store_true', default=False,
@@ -515,24 +512,6 @@ def router(request: pytest.FixtureRequest) -> Any:
 def net(router: Any, request: pytest.FixtureRequest) -> Any:
     """Сетевые сценарии: их ставит фильтр той же точки, поэтому и пропуск тот же."""
     return request.getfixturevalue('stand').net
-
-
-@pytest.fixture
-def live_cloud(request: pytest.FixtureRequest) -> None:
-    """
-    Живое облако cloud.waterius.ru для теста, который сверяет его ответ.
-
-    Адрес облака зашит в прошивке, и от стенда зависит одна почта учётной записи
-    ([dut] email): с чужой или пустой облако отвечает 404, и тест говорит об
-    учётной записи вместо прошивки. Просьба той же формы, что `router`, - по ней
-    прогон без облака (`--nocloud`) такие тесты пропускает.
-    """
-    if request.config.getoption('--nocloud'):
-        pytest.skip('тест сверяет ответ облака, а прогон идёт с --nocloud')
-    if not request.config.getoption('--stand'):
-        return
-    if not request.getfixturevalue('cfg').dut_email:
-        pytest.skip('облако привязывает посылки к учётной записи: [dut] email в stand.ini')
 
 
 @pytest.fixture(scope='session')

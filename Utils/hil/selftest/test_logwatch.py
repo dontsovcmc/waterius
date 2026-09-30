@@ -102,6 +102,30 @@ def test_сеанс_нарезается_целиком() -> None:
     assert second is not None and second.mode == TRANSMIT_MODE
 
 
+def test_коды_облака_отделены_от_своего_сервера() -> None:
+    """Строку `HTTP: Response code:` печатают оба получателя одним текстом."""
+    lines = [
+        fw('Startup mode: 2'),
+        fw('WATR: Send new data'),
+        fw('WATR: Attempt #1 from 3'),
+        fw('HTTP: Response code: -3'),
+        fw('WATR: Attempt #2 from 3'),
+        fw('HTTP: Response code: 200'),
+        fw('WATR: Data sent. Time 812 ms'),
+        fw('HTTP: Send new data'),
+        fw('HTTP: Response code: 500'),
+        fw('HTTP: Failed send data. Time 90 ms'),
+        fw('Going to sleep'),
+    ]
+    watcher = LogWatcher(FakeApi(through_ring(lines)))
+    watcher.poll()
+    session = watcher._take_session(None)
+    assert session is not None
+
+    assert session.cloud_codes == [-3, 200]
+    assert session.http_codes == [-3, 200, 500]
+
+
 def test_сеанс_выбирается_по_режиму() -> None:
     watcher = LogWatcher(FakeApi(through_ring(SESSION_PLAN + SESSION_ALARM)))
     watcher.poll()

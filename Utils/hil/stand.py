@@ -27,6 +27,8 @@ from .config import StandConfig
 from .constants import (
     BASE_FACTOR,
     BUTTON_SESSION_WAIT_S,
+    CLOUD_PORT,
+    CLOUD_PORT_TRIES,
     LEAKAGE_NC,
     NAMUR,
     SESSION_TAIL_S,
@@ -40,7 +42,7 @@ from .logwatch import MANUAL_TRANSMIT_MODE, WAKE_SESSION, LogWatcher, Session
 from .metf import Metf
 from .metf import check as metf_check
 from .net import Net
-from .receiver import Receiver
+from .receiver import Receiver, start_cloud
 from .state import merge, same_value, unmet
 
 if TYPE_CHECKING:                     # paho нужен только тестам MQTT, а стенд
@@ -167,11 +169,14 @@ class Stand:
     """Фасад над всем железом стенда."""
 
     def __init__(self, cfg: StandConfig, api: Metf, router: NatRouter | None,
-                 receiver: Receiver, mqtt: MqttWatch | None) -> None:
+                 receiver: Receiver, cloud: Receiver,
+                 mqtt: MqttWatch | None) -> None:
         self.cfg = cfg
         self.api = api
         self.router = router
         self.receiver = receiver
+        # Облако стенда: сюда устройство шлёт вместо cloud.waterius.ru
+        self.cloud = cloud
         self.mqtt = mqtt
         self.log = LogWatcher(api)
         self._power_warned = False
@@ -195,8 +200,8 @@ class Stand:
         self.clock = BoardClock(cfg.metf_host)
         # Сетевые сценарии ставит фильтр точки стенда: без неё их нет, и тесты,
         # которым они нужны, пропускает фикстура `net`
-        self.net = Net(router, cfg.dut_ip, cfg.dut_mac,
-                       cfg.broker_port, cfg.receiver_port) if router else None
+        self.net = Net(router, cfg.dut_ip, cfg.dut_mac, cfg.broker_port,
+                       cfg.receiver_port, cloud.port) if router else None
         self.last_payload: dict[str, Any] | None = None
         # Когда она пришла: улики про эфир берутся из неё, и двадцатиминутной
         # давности числа нельзя выдавать за нынешнее состояние устройства
@@ -274,8 +279,9 @@ class Stand:
         receiver = Receiver(port=cfg.receiver_port,
                             cert_host=cfg.receiver_host)
         receiver.start()
+        cloud = start_cloud(CLOUD_PORT, CLOUD_PORT_TRIES)
 
-        stand = cls(cfg, api, router, receiver, mqtt)
+        stand = cls(cfg, api, router, receiver, cloud, mqtt)
         stand.dut.init()
 
         # Адрес закрепляется в identify(), когда MAC уже прочитан из лога:
@@ -299,6 +305,7 @@ class Stand:
 
     def close(self) -> None:
         self.receiver.stop()
+        self.cloud.stop()
         if self.router is not None:
             self.router.close()
 
@@ -324,6 +331,10 @@ class Stand:
         забытый = self.receiver.forget_reply()
         if забытый:
             logger.warning(f'приёмник держал незабранный ответ - снимаем: {забытый}')
+        self.cloud.drain()
+        забытый = self.cloud.forget_reply()
+        if забытый:
+            logger.warning(f'облако стенда держало незабранный ответ - снимаем: {забытый}')
         if self.mqtt:
             self.mqtt.clear_retained_tree(self.mqtt_root)
             self.mqtt.drain()
@@ -1100,6 +1111,11 @@ class Stand:
         """
         self.state = None
 
+    @property
+    def cloud_url(self) -> str:
+        """Адрес облака стенда, каким его видит устройство."""
+        return f'http://{self.cfg.receiver_host}:{self.cloud.port}/cloud'
+
     def requirements(self, extra: Mapping[str, Any] | None = None) -> dict[str, Any]:
         """
         Требования к устройству: общие для всех тестов плюс свои из маркера needs.
@@ -1112,17 +1128,16 @@ class Stand:
         Автодискавери по умолчанию выключено: сеанс с ним печатает сотни строк и
         вытесняет из кольца METF начало следующего.
 
-        Почта - в общих требованиях, а не у тестов облака: она уезжает в облако
-        с каждой посылкой, и с пустой облако отвечает 404 всем сеансам подряд,
-        а не только тем, кто его ответ сверяет. Значение - из stand.ini: в
-        тестах адреса учётной записи нет. Получатель и здесь идёт первым: почту
-        прошивка принимает под тем же `if (sett.waterius_on)`, что и адрес
-        (active_point_api.cpp, applyNonCheckBoxParameter).
+        Облако - стенда, а не cloud.waterius.ru: прогон не должен зависеть от
+        интернета и чужого сервера. Получатель и здесь идёт первым: адрес и
+        почту прошивка принимает под одним `if (sett.waterius_on)`
+        (active_point_api.cpp, applyNonCheckBoxParameter). Почта - из stand.ini,
+        пустую стенд не трогает.
         """
         want: dict[str, Any] = {'http_on': 1, 'http_url': self.cfg.http_url,
-                                'ntp_server': self.cfg.metf_host}
+                                'ntp_server': self.cfg.metf_host,
+                                'waterius_on': 1, 'waterius_host': self.cloud_url}
         if self.cfg.dut_email:
-            want['waterius_on'] = 1
             want['waterius_email'] = self.cfg.dut_email
         if self.mqtt is not None:
             want.update(mqtt_on=1, mqtt_host=self.cfg.broker_host,

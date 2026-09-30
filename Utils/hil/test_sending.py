@@ -9,7 +9,7 @@
 
 * нет роутера - `WIFI: Connection failed.` и ни одной строки `Alarm confirm`:
   её печатают только после успешного подключения;
-* нет облака waterius.ru - `Alarm confirm: ... waterius=3 http=1`;
+* нет облака - `Alarm confirm: ... waterius=3 http=1`;
 * нет своего сервера - та же строка, но `waterius=1 http=3`;
 * нет брокера - `MQTT: Connect failed with state` и `mqtt=3`;
 * сервер отвечает не двумястами - `http=2` и `HTTP: Response code: 500`.
@@ -24,9 +24,10 @@
 подтверждение, зачем нужны статусы получателей: у G4a и G4b код один и тот же,
 то есть глазами эти две поломки неразличимы.
 
-Тесты, которым облако нужно отвечающим, просят фикстуру `live_cloud`: адрес
-облака зашит в прошивке, и своего облака у стенда нет. Прогон без интернета -
-`pytest --nocloud`, такие тесты пропускаются.
+Облако здесь - стенда, а не cloud.waterius.ru: второй приёмник на этой же
+машине (`stand.cloud`), адрес которого стенд прописывает устройству сам.
+Интернет прогону не нужен, а проверяется то, за что отвечает прошивка: посылка
+ушла и ответ прочитан.
 """
 
 from __future__ import annotations
@@ -112,7 +113,7 @@ def expected_fields(esp_version: tuple[int, int, int] | None) -> dict[str, Any]:
 
 @pytest.mark.mqtt          # проверяет все три канала, включая брокер
 @pytest.mark.requires(esp='2.0.47')       # вердикт читается из строки Alarm confirm
-def test_G1_all_three_channels(stand: Stand, live_cloud: None) -> None:
+def test_G1_all_three_channels(stand: Stand) -> None:
     """Короткое нажатие: показания уходят во все три канала."""
     stand.reset_observers()
     stand.dut.press_button()
@@ -121,6 +122,11 @@ def test_G1_all_three_channels(stand: Stand, live_cloud: None) -> None:
 
     session.assert_confirm(waterius=SEND_OK, http=SEND_OK, mqtt=SEND_OK)
     assert session.payload is not None, 'приёмник не получил посылку'
+    # Последний, а не единственный: оборванную в эфире попытку прошивка повторяет
+    assert session.cloud_codes[-1:] == [200], (
+        f'ответы облака: {session.cloud_codes}\n{session.text}')
+    assert stand.cloud.wait_payload(timeout=0) is not None, (
+        'облако стенда не получило посылку')
 
     # Успех не моргается ни на одной модели (main.cpp). Спрашиваем про коды
     # отправки: код питания говорит о стенде, и про него предупреждает сам стенд
@@ -229,7 +235,7 @@ def test_G3_no_router(stand: Stand, net: Any) -> None:
 @pytest.mark.requires(esp='2.0.47')
 def test_G4a_cloud_unreachable(stand: Stand, net: Any) -> None:
     """
-    Облака waterius.ru нет, свой сервер жив.
+    Облака нет, свой сервер жив.
 
     Требует 2.0.47: статусы получателей поимённо печатает строка
     `Alarm confirm`, которой на младших прошивках нет вовсе.
@@ -247,8 +253,7 @@ def test_G4a_cloud_unreachable(stand: Stand, net: Any) -> None:
 
 
 @pytest.mark.requires(esp='2.0.47')
-def test_G4b_own_server_unreachable(stand: Stand, net: Any,
-                                    live_cloud: None) -> None:
+def test_G4b_own_server_unreachable(stand: Stand, net: Any) -> None:
     """
     Своего сервера нет, облако живо. Зеркало предыдущего теста.
 
@@ -273,8 +278,7 @@ def test_G4b_own_server_unreachable(stand: Stand, net: Any,
 
 @pytest.mark.mqtt
 @pytest.mark.requires(esp='2.0.47')       # младшие не печатают MQTT: Connecting failed
-def test_G5_broker_unreachable(stand: Stand, net: Any,
-                               live_cloud: None) -> None:
+def test_G5_broker_unreachable(stand: Stand, net: Any) -> None:
     """
     Брокер недоступен, облако живо.
 
@@ -296,7 +300,7 @@ def test_G5_broker_unreachable(stand: Stand, net: Any,
 
 
 @pytest.mark.requires(esp='2.0.47')
-def test_G7_server_answers_500(stand: Stand, live_cloud: None) -> None:
+def test_G7_server_answers_500(stand: Stand) -> None:
     """
     Свой сервер отвечает 500: сеть в порядке, данные не приняты.
 
@@ -350,7 +354,7 @@ def test_G8_own_server_over_https(stand: Stand) -> None:
 
 @pytest.mark.mqtt
 @pytest.mark.requires(esp='2.0.47')
-def test_G9_hanging_server(stand: Stand, live_cloud: None) -> None:
+def test_G9_hanging_server(stand: Stand) -> None:
     """
     Свой сервер принял соединение и молчит (#367).
 
