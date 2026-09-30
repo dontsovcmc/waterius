@@ -9,7 +9,7 @@
 
 * нет роутера - `WIFI: Connection failed.` и ни одной строки `Alarm confirm`:
   её печатают только после успешного подключения;
-* нет облака - `Alarm confirm: ... waterius=3 http=1`;
+* нет облака waterius.ru - `Alarm confirm: ... waterius=3 http=1`;
 * нет своего сервера - та же строка, но `waterius=1 http=3`;
 * нет брокера - `MQTT: Connect failed with state` и `mqtt=3`;
 * сервер отвечает не двумястами - `http=2` и `HTTP: Response code: 500`.
@@ -24,10 +24,11 @@
 подтверждение, зачем нужны статусы получателей: у G4a и G4b код один и тот же,
 то есть глазами эти две поломки неразличимы.
 
-Облако здесь - стенда, а не cloud.waterius.ru: второй приёмник на этой же
-машине (`stand.cloud`), адрес которого стенд прописывает устройству сам.
-Интернет прогону не нужен, а проверяется то, за что отвечает прошивка: посылка
-ушла и ответ прочитан.
+Облако и свой сервер - два получателя с отдельными тумблерами. Тесты, которые
+сверяют отправку в cloud.waterius.ru и его ответ (`G1`, `G4a`), просят фикстуру
+`live_cloud`. Прогон без интернета - `pytest --nocloud`: такие тесты
+пропускаются, тумблер облака у устройства выключен, а остальной блок идёт на
+своём сервере и ждёт от облака «пропущен» (`cloud_ok`).
 """
 
 from __future__ import annotations
@@ -99,6 +100,18 @@ RANGES: dict[str, tuple[float, float]] = {
     'period_min': (1, 65535),
 }
 
+def cloud_ok(stand: Stand) -> dict[str, int]:
+    """
+    Чего ждать от облака в сеансе, где ломают не его.
+
+    С `--nocloud` получатель выключен и в итог не входит, поэтому и про
+    «доставлено хоть кому-то» без него утверждать нечего.
+    """
+    if stand.cfg.nocloud:
+        return {'waterius': SEND_SKIPPED}
+    return {'waterius': SEND_OK, 'any': 1}
+
+
 # Период из ответа сервера в G1b: любой, отличный от эталона стенда
 RESEND_PERIOD_MIN = 95
 
@@ -113,7 +126,7 @@ def expected_fields(esp_version: tuple[int, int, int] | None) -> dict[str, Any]:
 
 @pytest.mark.mqtt          # проверяет все три канала, включая брокер
 @pytest.mark.requires(esp='2.0.47')       # вердикт читается из строки Alarm confirm
-def test_G1_all_three_channels(stand: Stand) -> None:
+def test_G1_all_three_channels(stand: Stand, live_cloud: None) -> None:
     """Короткое нажатие: показания уходят во все три канала."""
     stand.reset_observers()
     stand.dut.press_button()
@@ -121,12 +134,10 @@ def test_G1_all_three_channels(stand: Stand) -> None:
     session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
     session.assert_confirm(waterius=SEND_OK, http=SEND_OK, mqtt=SEND_OK)
-    assert session.payload is not None, 'приёмник не получил посылку'
     # Последний, а не единственный: оборванную в эфире попытку прошивка повторяет
     assert session.cloud_codes[-1:] == [200], (
         f'ответы облака: {session.cloud_codes}\n{session.text}')
-    assert stand.cloud.wait_payload(timeout=0) is not None, (
-        'облако стенда не получило посылку')
+    assert session.payload is not None, 'приёмник не получил посылку'
 
     # Успех не моргается ни на одной модели (main.cpp). Спрашиваем про коды
     # отправки: код питания говорит о стенде, и про него предупреждает сам стенд
@@ -233,9 +244,9 @@ def test_G3_no_router(stand: Stand, net: Any) -> None:
 
 
 @pytest.mark.requires(esp='2.0.47')
-def test_G4a_cloud_unreachable(stand: Stand, net: Any) -> None:
+def test_G4a_cloud_unreachable(stand: Stand, net: Any, live_cloud: None) -> None:
     """
-    Облака нет, свой сервер жив.
+    Облака waterius.ru нет, свой сервер жив.
 
     Требует 2.0.47: статусы получателей поимённо печатает строка
     `Alarm confirm`, которой на младших прошивках нет вовсе.
@@ -268,7 +279,7 @@ def test_G4b_own_server_unreachable(stand: Stand, net: Any) -> None:
         session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert session.wifi_connected, 'Wi-Fi должен был подняться: режем только трафик'
-    session.assert_confirm(waterius=SEND_OK, http=SEND_NO_CONNECTION, any=1)
+    session.assert_confirm(http=SEND_NO_CONNECTION, **cloud_ok(stand))
     assert session.payload is None, 'приёмник стенда отрезан, посылки быть не должно'
 
     # Тот же код, что и у G4a: вспышками эти две поломки не различить, и
@@ -296,7 +307,7 @@ def test_G5_broker_unreachable(stand: Stand, net: Any) -> None:
     assert session.blynk == BLYNK_MQTT, session.text
     assert 'MQTT: Connect failed with state' in session.text
     assert 'MQTT: Connecting failed' in session.text
-    assert session.confirm and session.confirm['waterius'] == SEND_OK
+    session.assert_confirm(http=SEND_OK, **cloud_ok(stand))
 
 
 @pytest.mark.requires(esp='2.0.47')
@@ -317,7 +328,7 @@ def test_G7_server_answers_500(stand: Stand) -> None:
         session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     assert session.wifi_connected, 'сеть цела: портится только ответ сервера'
-    session.assert_confirm(waterius=SEND_OK, http=SEND_BAD_ANSWER, any=1)
+    session.assert_confirm(http=SEND_BAD_ANSWER, **cloud_ok(stand))
     assert session.blynk == BLYNK_CLOUD_ANSWER, session.text
 
     # Прошивка повторяет отправку HTTP_SEND_ATTEMPTS раз (sender_http.h) и
@@ -373,7 +384,7 @@ def test_G9_hanging_server(stand: Stand) -> None:
 
     assert stand.receiver.hung > hung, 'прошивка не дошла до своего сервера'
     assert session.complete, f'сеанс оборван до сна\n{session.text}'
-    session.assert_confirm(waterius=SEND_OK, mqtt=SEND_OK)
+    session.assert_confirm(mqtt=SEND_OK, **cloud_ok(stand))
     assert session.confirm['http'] != SEND_OK, session.confirm
     assert session.payload is None, 'сервер не ответил, посылки в очереди быть не должно'
 

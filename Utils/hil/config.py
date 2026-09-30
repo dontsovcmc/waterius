@@ -99,11 +99,15 @@ class StandConfig:
     wifi_ssid: str
     wifi_password: str
 
+    # Прогон без cloud.waterius.ru (--nocloud): получатель «облако» у устройства
+    # выключен, а тесты, которые сверяют его ответ, пропускаются.
+    nocloud: bool
+
     # Ватериус в сети точки доступа
     dut_mac: str
     dut_ip: str
-    # Почта учётной записи: уезжает с каждой посылкой в облако. Пусто - стенд
-    # её не трогает.
+    # Почта учётной записи, к которой cloud.waterius.ru привязывает устройство:
+    # с пустой облако отвечает 404 на каждую посылку (прогон 29.09).
     dut_email: str
 
     # Приёмник посылок: адрес, который прошит в настройках Ватериуса
@@ -149,7 +153,8 @@ class StandConfig:
 
 
 def load(path: str | os.PathLike[str] | None = None,
-         search: bool = False, norouter: bool = False) -> StandConfig:
+         search: bool = False, norouter: bool = False,
+         nocloud: bool = False) -> StandConfig:
     """
     Прочитать stand.ini. Любое значение перекрывается переменной окружения
     вида HIL_METF_HOST - удобно, когда стендов два.
@@ -244,6 +249,7 @@ def load(path: str | os.PathLike[str] | None = None,
         ap_channel_other=int(get('router', 'ap_channel_other', '1')),
         ap_bandwidth=int(get('router', 'ap_bandwidth', '20')),
         norouter=norouter,
+        nocloud=nocloud,
         wifi_ssid=get('wifi', 'ssid', ''),
         wifi_password=get('wifi', 'password', ''),
         dut_mac=get('dut', 'mac', ''),

@@ -157,7 +157,7 @@ RE_WIFI_JOINED = re.compile(r'WIFI: SSID: (\S+) Channel: (\d+)')
 RE_WIFI_FAILED = re.compile(r'WIFI: Connection failed\.')
 RE_MQTT_JOINED = re.compile(r'MQTT: Connected\.')
 RE_MQTT_REFUSED = re.compile(r'MQTT: Connect(?:ing)? failed(?: with state (-?\d+))?')
-RE_CLOUD_START = re.compile(r'WATR: Send new data')
+RE_SEND_START = re.compile(r'(WATR|HTTP): Send new data')
 RE_SENT = re.compile(r'(WATR|HTTP): Data sent\. Time (\d+) ms')
 RE_SEND_FAILED = re.compile(r'(WATR|HTTP): Failed send data\. Time (\d+) ms')
 RE_SLEEP = re.compile(re.escape(SESSION_END))
@@ -482,25 +482,35 @@ class Session:
     def http_codes(self) -> list[int]:
         return [int(x) for x in RE_HTTP_CODE.findall(self.text)]
 
-    @property
-    def cloud_codes(self) -> list[int]:
+    def _sender_codes(self, sender: str) -> list[int]:
         """
-        Коды ответа облака, без ответов своего сервера.
+        Коды ответа одного получателя.
 
-        Строку `HTTP: Response code:` печатают оба получателя одним текстом
-        (https_helpers.cpp), поэтому облачные - те, что лежат между
-        `WATR: Send new data` и итогом этой отправки.
+        Строку `HTTP: Response code:` печатают облако и свой сервер одним
+        текстом (https_helpers.cpp), поэтому чьи они, видно только по месту:
+        между `<получатель>: Send new data` и итогом этой отправки.
         """
         codes: list[int] = []
         inside = False
         for line in self.lines:
-            if RE_CLOUD_START.search(line):
-                inside = True
+            start = RE_SEND_START.search(line)
+            if start:
+                inside = start.group(1) == sender
             elif inside and (RE_SENT.search(line) or RE_SEND_FAILED.search(line)):
                 inside = False
             elif inside:
                 codes += [int(x) for x in RE_HTTP_CODE.findall(line)]
         return codes
+
+    @property
+    def cloud_codes(self) -> list[int]:
+        """Коды ответа облака."""
+        return self._sender_codes('WATR')
+
+    @property
+    def own_codes(self) -> list[int]:
+        """Коды ответа своего сервера."""
+        return self._sender_codes('HTTP')
 
     @property
     def mqtt_published(self) -> list[tuple[str, int, bool]]:

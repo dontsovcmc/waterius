@@ -192,6 +192,7 @@ worse copy that nobody can find afterwards and that dies with the sandbox.
 python3 -m pytest Utils/hil --stand                    # лог сам, в logs/
 python3 -m pytest Utils/hil --stand -m "not slow"      # ~140 тестов, около часа
 python3 -m pytest Utils/hil --stand --norouter         # без платы WT32-ETH01
+python3 -m pytest Utils/hil --stand --nocloud          # без cloud.waterius.ru: его тумблер выключен
 python3 -m pytest Utils/hil --stand --reverse          # задом наперёд: ловит зависимость по порядку
 python3 -m hil.rescue                                  # вылечить стенд после упавшего прогона
 tail -f logs/$(ls -t logs | head -1)                   # следить за идущим прогоном
