@@ -16,7 +16,7 @@ import socket
 
 import pytest
 
-from ..receiver import Receiver, start_cloud
+from ..receiver import Receiver
 from . import free_port
 
 BODY = b'{"delta0":0,"ch0":100.09,'          # обрезано на середине
@@ -141,29 +141,3 @@ def test_снятый_заряд_не_достаётся_чужому_сеанс
 def test_снимать_нечего_когда_заряда_нет(receiver: Receiver) -> None:
     """Пустой приёмник снимается молча: вызов стоит перед каждым тестом."""
     assert receiver.forget_reply() is None
-
-
-def test_облако_встаёт_на_порт_по_умолчанию() -> None:
-    first = free_port()
-    cloud = start_cloud(first, 3, host='127.0.0.1')
-    try:
-        assert cloud.port == first
-    finally:
-        cloud.stop()
-
-
-def test_облако_уступает_занятый_порт(receiver: Receiver) -> None:
-    """Порт облака не настраивается: занятый уступает следующему по счёту."""
-    cloud = start_cloud(receiver.port, 3, host='127.0.0.1')
-    try:
-        assert cloud.port == receiver.port + 1
-        post(cloud, FULL)
-        assert cloud.wait_payload(timeout=2.0) == {'delta0': 0, 'ch0': 100.09}
-        assert receiver.wait_payload(timeout=0.2) is None, 'посылка ушла соседу по порту'
-    finally:
-        cloud.stop()
-
-
-def test_облаку_негде_встать_отказ_называет_порты(receiver: Receiver) -> None:
-    with pytest.raises(OSError, match=f'{receiver.port}-{receiver.port}'):
-        start_cloud(receiver.port, 1, host='127.0.0.1')

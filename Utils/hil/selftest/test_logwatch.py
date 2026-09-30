@@ -123,6 +123,7 @@ def test_коды_облака_отделены_от_своего_сервера
     assert session is not None
 
     assert session.cloud_codes == [-3, 200]
+    assert session.own_codes == [500]
     assert session.http_codes == [-3, 200, 500]
 
 

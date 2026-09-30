@@ -67,39 +67,11 @@ def self_signed(host: str, directory: Path) -> tuple[Path, Path]:
     return cert, key
 
 
-def start_cloud(first: int, tries: int, host: str = '0.0.0.0') -> Receiver:
-    """
-    Облако стенда: тот же приёмник на первом свободном порту из ряда.
-
-    Устройство шлёт сюда вместо cloud.waterius.ru, поэтому прогону не нужен
-    интернет. Порт не настраивается: занятый уступает следующему, а адрес
-    устройству стенд прописывает сам (`Stand.requirements`).
-    """
-    last = first + tries - 1
-    for port in range(first, last + 1):
-        try:
-            cloud = Receiver(host=host, port=port, wait=False, name='облако стенда')
-        except OSError as err:
-            if err.errno != errno.EADDRINUSE:
-                raise
-            logger.info(f'порт {port} занят, облако стенда пробует следующий')
-            continue
-        cloud.start()
-        return cloud
-    raise OSError(
-        f'облаку стенда негде встать: порты {first}-{last} заняты '
-        f'(lsof -nP -iTCP:{first}-{last} -sTCP:LISTEN)')
-
-
 class Receiver:
     """HTTP-приёмник в фоновом потоке."""
 
     def __init__(self, host: str = '0.0.0.0', port: int = 8000,
-                 cert_host: str = '127.0.0.1', wait: bool = True,
-                 name: str = 'приёмник') -> None:
-        self.name = name
-        # wait=False - занятый порт отдаёт ошибку сразу: так ищут свободный
-        self._wait = wait
+                 cert_host: str = '127.0.0.1') -> None:
         self.payloads: queue.Queue[dict[str, Any]] = queue.Queue()
         self.history: list[dict[str, Any]] = []
         # Тела, которые не разобрались: обрыв передачи на середине бывает и на
@@ -190,20 +162,12 @@ class Receiver:
         self._host = host
         # Тот же приём, что и для https: порт занимает сосед по машине, и
         # прогон иначе падает на `Errno 48` ещё до первого теста
-        try:
-            self._server = self._bind(host, port)
-        except OSError:
-            self._certs.cleanup()
-            raise
+        self._server = self._bind(host, port)
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
-
-    @property
-    def port(self) -> int:
-        return int(self._server.server_address[1])
 
     def start(self) -> None:
         self._thread.start()
-        logger.info(f'{self.name} слушает {self._server.server_address}')
+        logger.info(f'приёмник слушает {self._server.server_address}')
 
     def start_tls(self, port: int, host: str = '') -> None:
         """
@@ -240,8 +204,6 @@ class Receiver:
             try:
                 return ThreadingHTTPServer((host, port), self._handler)
             except OSError as err:
-                if err.errno == errno.EADDRINUSE and not self._wait:
-                    raise
                 if err.errno != errno.EADDRINUSE or time.monotonic() >= deadline:
                     raise OSError(
                         f'порт {port} занят не стендом и не освободился за '

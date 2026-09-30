@@ -188,9 +188,8 @@ START_VALID_TIME = 1704067201  # core/timekeeping.h: время раньше - �
 # sender_http.h: столько раз прошивка повторяет отправку, пока не получит 200
 HTTP_SEND_ATTEMPTS = 3
 
-# Облако стенда: порт не настраивается, занятый уступает следующему по счёту
-CLOUD_PORT = 8020
-CLOUD_PORT_TRIES = 10
+# setup.h: WATERIUS_DEFAULT_DOMAIN
+CLOUD_URL = 'https://cloud.waterius.ru'
 
 # core/portal_watchdog.h: портал закрывается через столько секунд без действий
 PORTAL_WATCHDOG_S = 600
