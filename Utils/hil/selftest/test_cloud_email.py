@@ -1,9 +1,9 @@
 """
-Почта учётной записи облака - без железа.
+Облако стенда и почта учётной записи в требованиях к устройству - без железа.
 
-Прогон 29.09: облако ответило 404 на все 662 посылки, и пять тестов блока G
-говорили о его ответе вместо прошивки. Почта у устройства была пуста, а стенд
-её не требовал - возвращал только после заводского сброса, из посылки.
+Адрес облака стенд прописывает устройству сам: прогон не ходит в интернет, а
+сверяет то, за что отвечает прошивка. Почта - из stand.ini, и пустую стенд не
+трогает.
 """
 
 from __future__ import annotations
@@ -14,7 +14,6 @@ from typing import Any
 import pytest
 
 from .. import config as stand_config
-from ..conftest import live_cloud
 from ..stand import Stand
 
 СТЕНД = """\
@@ -46,10 +45,14 @@ def файл(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return path
 
 
+ОБЛАКО = 'http://192.168.100.18:8020/cloud'
+
+
 class Стенд:
     """Стенд, у которого спрашивают только требования к устройству."""
 
     mqtt = None
+    cloud_url = ОБЛАКО
 
     def __init__(self, cfg: Any) -> None:
         self.cfg = cfg
@@ -63,27 +66,6 @@ class Настройки:
 
     def __init__(self, email: str) -> None:
         self.dut_email = email
-
-
-class Прогон:
-    """Запрос фикстуры: ключи командной строки и stand.ini."""
-
-    def __init__(self, nocloud: bool = False, stand: bool = True,
-                 email: str = 'test@waterius.ru') -> None:
-        self.config = self
-        self._keys = {'--nocloud': nocloud, '--stand': stand}
-        self._cfg = Настройки(email)
-
-    def getoption(self, name: str) -> bool:
-        return self._keys[name]
-
-    def getfixturevalue(self, name: str) -> Any:
-        assert name == 'cfg'
-        return self._cfg
-
-
-# Фикстуру зовут как обычную функцию: pytest оставляет её под __wrapped__.
-спросить = live_cloud.__wrapped__
 
 
 def test_почта_читается_из_файла(файл: Path) -> None:
@@ -109,24 +91,13 @@ def test_почта_попадает_в_общие_требования() -> Non
 def test_пустая_почта_требованием_не_становится() -> None:
     """Стенд без строки в файле не должен стирать почту устройству."""
     want = Stand.requirements(Стенд(Настройки('')))
-    assert 'waterius_email' not in want and 'waterius_on' not in want
+    assert 'waterius_email' not in want
 
 
-def test_прогон_без_облака_такой_тест_пропускает() -> None:
-    with pytest.raises(pytest.skip.Exception, match='--nocloud'):
-        спросить(Прогон(nocloud=True))
-
-
-def test_с_облаком_тест_идёт_как_обычно() -> None:
-    assert спросить(Прогон()) is None
-
-
-def test_стенд_без_почты_тест_не_гоняет() -> None:
-    """Молча сверять ответ облака чужой учётной записи хуже, чем не гонять."""
-    with pytest.raises(pytest.skip.Exception, match='email'):
-        спросить(Прогон(email=''))
-
-
-def test_без_стенда_фикстура_не_спрашивает_настроек() -> None:
-    """Сбор тестов без `--stand` идёт на машине, где stand.ini может не быть."""
-    assert спросить(Прогон(stand=False, email='')) is None
+def test_облако_стенда_в_общих_требованиях() -> None:
+    """Без него устройство слало бы в cloud.waterius.ru, и прогон зависел бы от интернета."""
+    want = Stand.requirements(Стенд(Настройки('')))
+    assert want['waterius_host'] == ОБЛАКО
+    # Адрес прошивка принимает только при включённом получателе
+    имена = list(want)
+    assert имена.index('waterius_on') < имена.index('waterius_host')
