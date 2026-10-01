@@ -23,6 +23,10 @@
 #define MQTT_MAX_PACKET_SIZE 256
 #define MQTT_DELAY_SUBSCRIPTION 100 // задержка для получения данных по подписке
 
+// Потерянный сегмент lwIP перепосылает не раньше чем через 500 мс, а flush
+// внутри PubSubClient::disconnect ждёт 300: хвост публикаций уходил в сон
+#define MQTT_FLUSH_TIMEOUT_MS 3000
+
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -233,6 +237,19 @@ void disconnect_mqtt(const Settings &sett)
     mqtt_unsubscribe(mqtt_client, mqtt_topic);
 
     mqtt_client.loop();
+
+    // QoS 0: подтверждение TCP - единственное свидетельство, что публикации
+    // дошли. Таймаут отсчитывается от последнего продвижения, а не от начала
+    const unsigned long flush_start = millis();
+    if (wifi_client.flush(MQTT_FLUSH_TIMEOUT_MS))
+    {
+        LOG_INFO(F("MQTT: Flushed in ") << millis() - flush_start << F(" ms"));
+    }
+    else
+    {
+        LOG_ERROR(F("MQTT: Flush failed, no ack for ") << MQTT_FLUSH_TIMEOUT_MS << F(" ms"));
+    }
+
     mqtt_client.disconnect();
 
     LOG_INFO(F("MQTT: Disconnect"));
