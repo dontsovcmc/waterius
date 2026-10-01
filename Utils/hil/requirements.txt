@@ -4,6 +4,6 @@ metf_python_client>=0.4     # serial_stat(): проверка потерь ло�
 loguru
 pyserial>=3.5
 paho-mqtt>=2.0
-amqtt>=0.12
+amqtt @ git+https://github.com/dontsovcmc/amqtt@v0.12.1-waterius.1   # форк: исправления рассылки и конца соединения (README, «Брокер»)
 jinja2>=3.1                 # I15: шаблоны автодискавери рендерятся, как их рендерит Home Assistant
 ruff>=0.5                   # линтер стенда: ruff check Utils/hil

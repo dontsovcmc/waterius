@@ -33,9 +33,9 @@ from loguru import logger
 # целиком; больше ждать нечего - дальше задачи снимаются принудительно
 SHUTDOWN_S = 10.0
 
-# Версия amqtt, с которой списан цикл клиента в StandBroker: в другой копия
-# молча разойдётся с оригиналом
-AMQTT_COPIED_FROM = '0.12.'
+# Метка сборки из форка dontsovcmc/amqtt (requirements.txt): в выпуске с PyPI
+# исправлений, на которые опирается стенд, нет
+AMQTT_FORK_LABEL = '+waterius.'
 
 # Свои клиенты стенда - наблюдатель, проба порта, разовый подписчик
 STAND_CLIENT_PREFIX = 'hil-'
@@ -137,137 +137,29 @@ class MqttBroker:
     @staticmethod
     def _broker_class(trace: Callable[[str, str, str], None]) -> type:
         """
-        amqtt с заплатами на рассылку и на конец соединения.
+        amqtt со счётом для `note()`.
 
-        Два дефекта в одном месте (`amqtt/broker.py`,
-        `_publish_retained_messages_for_subscription` и цикл
-        `for topic in self._subscriptions` в обработчике подключения), и оба
-        меняют поведение устройства, а не только отчёт.
-
-        Первый: при подключении клиента брокер рассылает ему удерживаемые
-        сообщения по всем фильтрам, какие зарегистрировал хоть кто-нибудь, а не
-        по его собственным. Ватериус на каждое полученное сообщение публикует
-        пустое с флагом retain (`ha/subscribe.cpp`, clear_retained), то есть
-        из-за подписки стенда на `#` он вычистил бы retain у собственных
-        показаний и у автодискавери.
-
-        Второй: сообщение, опубликованное с QoS 0, рассылается с QoS подписки -
-        в `min(qos, retained.qos or qos)` ноль считается «не задано». По
-        стандарту доставка идёт с наименьшим из двух (MQTT 3.1.1, 3.8.4), то
-        есть нулём, и подтверждения не требует. С QoS 1 требует: Ватериус ждёт
-        пакеты в буфер 256 байт (`senders/sender_mqtt.h`), свои же показания в
-        девять сотен не принимает и PUBACK не шлёт - брокер ждёт его пять
-        секунд и рвёт сеанс, а публикации этого пробуждения пропадают.
-
-        Заплата рассылает только тому, кто на фильтр подписан, и с тем QoS,
-        с каким сообщение опубликовали. Штатный путь (SUBSCRIBE) не страдает:
-        подписка заносится в список до рассылки.
-
-        Третий дефект - публикации, пришедшие одной пачкой с концом соединения,
-        пропадают (07_mqtt-tail-loss.md). Разобранные публикации ждут в очереди
-        доставки, а цикл клиента берёт из неё по одной и на конце соединения
-        выходит, бросая остаток. Из 83 публикаций пачкой доходила одна.
+        Только из форка (requirements.txt). Выпуск с PyPI рассылает
+        удерживаемые по чужим подпискам, поднимает QoS доставки до QoS подписки
+        и бросает публикации, пришедшие вместе с концом соединения, - все три
+        меняют то, что делает устройство и что видит наблюдатель (README, «Брокер»).
         """
         from importlib.metadata import version
 
         from amqtt.broker import Broker
         from amqtt.mqtt.disconnect import DisconnectPacket
 
-        # Только методы: `_retained_messages` и `_subscriptions` заводятся в
-        # конструкторе, у класса их нет, а пропажу видно первым же вызовом.
-        needed = ('_publish_retained_messages_for_subscription',
-                  '_get_handler', '_matches', '_broadcast_message',
-                  '_client_message_loop', '_handle_message_delivery', '_handle_disconnect',
-                  '_handle_subscription', '_handle_unsubscription')
-        missing = [name for name in needed if not hasattr(Broker, name)]
-        if missing:
+        if AMQTT_FORK_LABEL not in version('amqtt'):
             raise RuntimeError(
-                f'amqtt изменил внутренности ({missing}): заплаты брокера стенда '
-                'больше не накладываются, проверьте broker.py')
-        if not version('amqtt').startswith(AMQTT_COPIED_FROM):
-            raise RuntimeError(
-                f'amqtt {version("amqtt")}, а цикл клиента в broker.py списан с '
-                f'{AMQTT_COPIED_FROM}x: сверьте его с новым оригиналом')
+                f'amqtt {version("amqtt")} - выпуск без исправлений, на которые '
+                'опирается стенд: pip install -r Utils/hil/requirements.txt')
 
         class StandBroker(Broker):                       # type: ignore[misc, valid-type]
 
             async def _client_message_loop(self, client_session: object,
                                            handler: object) -> None:
-                # Копия оригинала (AMQTT_COPIED_FROM) с одним отличием: конец
-                # соединения обрабатывается последним, после доставки всего,
-                # что клиент успел прислать до него
                 trace(client_session.client_id, 'connected', '')
-                disconnect_waiter = asyncio.ensure_future(handler.wait_disconnect())
-                subscribe_waiter = asyncio.ensure_future(
-                    handler.get_next_pending_subscription())
-                unsubscribe_waiter = asyncio.ensure_future(
-                    handler.get_next_pending_unsubscription())
-                wait_deliver = asyncio.ensure_future(handler.mqtt_deliver_next_message())
-                connected = True
-
-                while connected:
-                    try:
-                        done, _ = await asyncio.wait(
-                            [disconnect_waiter, subscribe_waiter,
-                             unsubscribe_waiter, wait_deliver],
-                            return_when=asyncio.FIRST_COMPLETED)
-
-                        if subscribe_waiter in done:
-                            await self._handle_subscription(
-                                client_session, handler, subscribe_waiter)
-                            subscribe_waiter = asyncio.ensure_future(
-                                handler.get_next_pending_subscription())
-
-                        if unsubscribe_waiter in done:
-                            await self._handle_unsubscription(
-                                client_session, handler, unsubscribe_waiter)
-                            unsubscribe_waiter = asyncio.ensure_future(
-                                handler.get_next_pending_unsubscription())
-
-                        if wait_deliver in done:
-                            if not await self._handle_message_delivery(
-                                    client_session, handler, wait_deliver):
-                                break
-                            wait_deliver = asyncio.ensure_future(
-                                handler.mqtt_deliver_next_message())
-
-                        if disconnect_waiter in done:
-                            if not await self._deliver_queued(
-                                    client_session, handler, wait_deliver):
-                                break
-                            await self._handle_disconnect(
-                                client_session, handler, disconnect_waiter)
-                            connected = False
-                    except asyncio.CancelledError:
-                        break
-
-                pending_waiters = [disconnect_waiter, subscribe_waiter,
-                                   unsubscribe_waiter, wait_deliver]
-                for waiter in pending_waiters:
-                    waiter.cancel()
-                await asyncio.gather(*pending_waiters, return_exceptions=True)
-
-            async def _deliver_queued(self, client_session: object, handler: object,
-                                      wait_deliver: asyncio.Future) -> bool:
-                """Разнести остаток очереди доставки; False - клиент нарушил протокол."""
-                # Ждущий очереди снимаем первым: иначе он заберёт себе
-                # сообщение, пока мы разносим остальные, и оно пропадёт с ним
-                wait_deliver.cancel()
-                taken = await asyncio.gather(wait_deliver, return_exceptions=True)
-                messages = [m for m in taken
-                            if m is not None and not isinstance(m, BaseException)]
-                queue = client_session.delivered_message_queue
-                while not queue.empty():
-                    messages.append(queue.get_nowait())
-
-                loop = asyncio.get_running_loop()
-                for message in messages:
-                    ready = loop.create_future()
-                    ready.set_result(message)
-                    if not await self._handle_message_delivery(
-                            client_session, handler, ready):
-                        return False
-                return True
+                await super()._client_message_loop(client_session, handler)
 
             async def _handle_message_delivery(self, client_session: object,
                                                handler: object,
@@ -287,37 +179,6 @@ class MqttBroker:
                       else 'оборвано без DISCONNECT')
                 await super()._handle_disconnect(client_session, handler,
                                                  disconnect_waiter)
-
-            async def _publish_retained_messages_for_subscription(
-                    self, subscription: tuple, session: object) -> None:
-                topic_filter, qos = subscription
-                holders = self._subscriptions.get(topic_filter, [])
-                if not any(held is session for held, _ in holders):
-                    return
-
-                handler = self._get_handler(session)
-                if handler is None:
-                    return
-
-                for topic, retained in self._retained_messages.items():
-                    if not self._matches(topic, topic_filter):
-                        continue
-                    await handler.mqtt_publish(
-                        retained.topic, retained.data,
-                        min(qos, retained.qos or 0), retain=True)
-
-            async def _broadcast_message(self, session: object, topic: str,
-                                         data: bytes,
-                                         force_qos: int | None = None) -> None:
-                # Тот же дефект, что и у удерживаемых, но на живой рассылке:
-                # QoS публикации сюда не доезжает вовсе (amqtt зовёт нас без
-                # него из `_handle_message_delivery`), и доставка идёт с QoS
-                # подписки. Ватериус подписан единицей - значит брокер ждёт
-                # PUBACK от устройства, которое уже спит, по двадцать секунд на
-                # сообщение. Ноль - нижняя граница минимума из двух
-                # (MQTT 3.1.1, 3.8.4): на стенде никто не публикует выше.
-                await super()._broadcast_message(
-                    session, topic, data, 0 if force_qos is None else force_qos)
 
         return StandBroker
 
