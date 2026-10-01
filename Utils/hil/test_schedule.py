@@ -122,7 +122,7 @@ def test_H4_consumption_wakes_it_up(stand: Stand) -> None:
     assert idle is not None, f'нет строки Idle:\n{session.text}'
     assert idle['consumed'] == 1
     assert idle['transmit'] == 1
-    assert session.payload is not None and session.payload['delta1'] > 0
+    assert session.expect_payload()['delta1'] > 0
 
 
 def planned_wait(period: int) -> float:
@@ -228,14 +228,12 @@ def test_H8_missed_session_keeps_tuning(stand: Stand, net: Any) -> None:
     stand.setup(period_min=PERIOD_MIN)
     stand.reset_observers()
     before = stand.wait_session(timeout=planned_wait(PERIOD_MIN), mode=TRANSMIT_MODE)
-    assert before.payload is not None
-    tuned = before.payload['period_min_tuned']
+    tuned = before.expect_payload()['period_min_tuned']
 
     with net.ap_off():
         missed = stand.wait_session(timeout=planned_wait(PERIOD_MIN), mode=TRANSMIT_MODE)
         assert not missed.wifi_connected, missed.text
 
     after = stand.wait_session(timeout=planned_wait(PERIOD_MIN), mode=TRANSMIT_MODE)
-    assert after.payload is not None, 'после пропуска посылки нет'
-    now = after.payload['period_min_tuned']
+    now = after.expect_payload('после пропуска посылки нет')['period_min_tuned']
     assert abs(now - tuned) <= 0.3 * tuned, f'поправка уехала после пропуска: {tuned} -> {now}'

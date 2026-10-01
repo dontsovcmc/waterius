@@ -99,6 +99,10 @@ GLOBAL_PARAMS = {
 }
 
 
+# Сколько сеансов даём устройству на возврат в сеть после теста без сети. Каждый
+# неудачный стоит до полуминуты: две попытки прошивки по 10 с (ESP_CONNECT_TIMEOUT)
+REJOIN_TRIES = 3
+
 # Порог прошивки: `ESP8266/src/voltage.h`, ALERT_POWER_DIFF_MV
 ALERT_POWER_DIFF_MV = 100
 
@@ -497,6 +501,10 @@ class Stand:
             if session.complete:
                 return True
 
+    def slept_since(self, moment: float | None) -> bool:
+        """После `moment` (монотонные часы) стенд уже дождался конца сеанса."""
+        return moment is not None and self._session_at > moment
+
     def expect_no_session(self, timeout: float, mode: int | None = None) -> None:
         assert self.log.expect_no_session(timeout, mode), (
             f'ожидали тишину {timeout:.0f} с (mode={mode}), но сеанс состоялся\n'
@@ -569,6 +577,31 @@ class Stand:
             self.joined = False
             logger.warning(f'Ватериус: НЕ подключено к «{ssid}» '
                            f'(попыток {session.wifi_attempts}), ушёл в сон')
+
+    def rejoin(self, tries: int = REJOIN_TRIES) -> None:
+        """
+        Вернуть устройство в сеть после теста, который её отнимал.
+
+        Неудачный сеанс стирает у прошивки пару канал-BSSID (`wifi_connect`:
+        `sett.wifi_channel = 0`, и `store_config` в конце сеанса её сохраняет),
+        поэтому следующий сеанс подключается полным сканом эфира - 4-8 с вместо
+        секунды, а на слабом сигнале стенда бывает и две неудачи подряд. Так
+        30 сентября G2 в обратном прогоне упал сразу за G3: стенд вернул точку,
+        но не прошивке её канал. Удачный сеанс кладёт пару на место.
+        """
+        for attempt in range(1, tries + 1):
+            logger.info(f'возвращаем устройство в сеть после теста без сети: '
+                        f'нажатие {attempt} из {tries}')
+            self.reset_observers()
+            self.dut.press_button()
+            session = self.wait_session(timeout=BUTTON_SESSION_WAIT_S,
+                                        mode=MANUAL_TRANSMIT_MODE)
+            if session.wifi_connected:
+                return
+        raise AssertionError(
+            f'устройство не вернулось в сеть стенда за {tries} сеанса после теста, '
+            f'отнимавшего её: точка поднята, а подключения нет. Последний сеанс: '
+            f'{session.no_payload_note}\n{session.text}')
 
     def check_atboard(self, timeout: float = 10.0) -> None:
         """

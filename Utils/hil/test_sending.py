@@ -137,7 +137,7 @@ def test_G1_all_three_channels(stand: Stand, live_cloud: None) -> None:
     # Последний, а не единственный: оборванную в эфире попытку прошивка повторяет
     assert session.cloud_codes[-1:] == [200], (
         f'ответы облака: {session.cloud_codes}\n{session.text}')
-    assert session.payload is not None, 'приёмник не получил посылку'
+    session.expect_payload()
 
     # Успех не моргается ни на одной модели (main.cpp). Спрашиваем про коды
     # отправки: код питания говорит о стенде, и про него предупреждает сам стенд
@@ -199,8 +199,7 @@ def test_G2_payload_schema(stand: Stand) -> None:
     stand.dut.press_button()
     session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
-    payload = session.payload
-    assert payload is not None
+    payload = session.expect_payload()
 
     fields = expected_fields(stand.esp_version)
     missing = [name for name in fields if name not in payload]
@@ -259,7 +258,7 @@ def test_G4a_cloud_unreachable(stand: Stand, net: Any, live_cloud: None) -> None
 
     assert session.wifi_connected, 'Wi-Fi должен был подняться: режем только трафик'
     session.assert_confirm(waterius=SEND_NO_CONNECTION, http=SEND_OK, any=1)
-    assert session.payload is not None, 'свой сервер жив, посылка обязана дойти'
+    session.expect_payload('свой сервер жив, посылка обязана дойти')
     assert session.blynk == BLYNK_CLOUD, session.text
 
 
@@ -358,7 +357,7 @@ def test_G8_own_server_over_https(stand: Stand) -> None:
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     session.assert_confirm(http=SEND_OK, any=1)
-    assert session.payload is not None, 'посылка не дошла'
+    session.expect_payload('посылка не дошла')
     assert stand.receiver.tls_hits > before, (
         'посылка пришла, но не по https - адрес не сменился')
 
@@ -459,7 +458,7 @@ def test_G10_single_receiver(stand: Stand, alone: str) -> None:
             f'выключенный получатель - не ошибка, а плата моргает: '
             f'{blynk_name(session.blynk)}\n{session.text}')
         if alone == 'http_on':
-            assert session.payload is not None, 'свой сервер включён, а посылки нет'
+            session.expect_payload('свой сервер включён, а посылки нет')
         else:
             assert session.payload is None, 'свой сервер выключен, а посылка пришла'
             assert stand.mqtt.wait_prefix(stand.mqtt_root, timeout=30) is not None, (

@@ -160,8 +160,7 @@ class FreshDevice:
                 f'{self.stand.log.tail()}') from err
         self.left = True
         session = self.stand.wait_session(timeout=timeout)
-        assert session.payload is not None, (
-            f'после сброса и настройки посылка не дошла\n{session.text}')
+        session.expect_payload('после сброса и настройки посылка не дошла')
         первая = session.payloads[0]
         logger.info(f'после сброса: f0={первая.get("f0")}, '
                     f'f1={первая.get("f1")}, '

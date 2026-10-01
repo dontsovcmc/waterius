@@ -108,6 +108,32 @@ def test_ритм_импульсов_не_плывёт(clock: Clock) -> None:
         assert drift < 0.5, f'импульс {i} уехал на {drift:.3f} с'
 
 
+def test_догоняя_расписание_серия_не_сливает_замыкания(clock: Clock) -> None:
+    """
+    Осечка связи с платой посреди серии: следующие сроки уже в прошлом, но
+    замыкание всё равно не встаёт вплотную к предыдущему - attiny слил бы их
+    в один импульс (D7, 30 сентября: 8 из 10).
+    """
+    board, api = make(clock)
+    отлучка = {'после': 2, 'на': 4.0}
+    прижать = api.digitalWrite
+
+    def с_отлучкой(pin: int, value: int) -> None:
+        if value == dut_mod.LOW and len(api.lows) == отлучка['после']:
+            clock.sleep(отлучка['на'])              # плата не отвечала
+        прижать(pin, value)
+
+    api.digitalWrite = с_отлучкой                  # type: ignore[method-assign]
+
+    board.pulses(channel=1, count=5, gap=2.0, width_ms=500)
+
+    starts = api.lows
+    assert len(starts) == 5
+    for before, after in zip(starts, starts[1:], strict=False):
+        assert after - (before + 0.5) >= dut_mod.IMPULSE_GAP_S - 1e-9, (
+            f'пауза {after - before - 0.5:.2f} с: замыкания сольются')
+
+
 def test_без_вычитывателя_ведёт_себя_как_раньше(clock: Clock) -> None:
     """Dut портала создаётся без лога - для него ничего не изменилось."""
     board, api = make(clock, idle=None)

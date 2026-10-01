@@ -209,8 +209,7 @@ def test_удерживаемое_отдаётся_с_тем_же_qos(broker: Mq
 def test_ожидание_топика_переживает_опоздание(watch: Any) -> None:
     """
     Снимок сразу после сеанса - гонка: последние публикации устройства доходят
-    до подписчика позже строки ухода в сон. I0b 28 сентября так и упал -
-    устройство напечатало `MQTT: pub waterius/rssi`, а в стенде его не было.
+    до подписчика позже строки ухода в сон.
     """
     assert watch.last(f'{TOPIC}/rssi') is None
 
@@ -314,3 +313,108 @@ def test_стенд_убирает_дерево_брокером(broker: MqttBro
         assert not watch.history, f'уборка ушла в эфир: {watch.history}'
     finally:
         watch.close()
+
+
+# --- устройство на голом сокете ---
+
+def _пакет(kind: int, body: bytes) -> bytes:
+    size, head = len(body), b''
+    while True:
+        byte, size = size & 0x7F, size >> 7
+        head += bytes([byte | (0x80 if size else 0)])
+        if not size:
+            return bytes([kind]) + head + body
+
+
+def _строка(text: str) -> bytes:
+    raw = text.encode()
+    return len(raw).to_bytes(2, 'big') + raw
+
+
+ПУБЛИКАЦИЙ = 83
+ПРОЩАНИЕ = (_пакет(0xA2, (2).to_bytes(2, 'big') + _строка(f'{TOPIC}/#'))
+            + _пакет(0xE0, b''))
+
+
+def устройство(broker: MqttBroker, client_id: str = 'waterius-1') -> Any:
+    """Сокет, прошедший CONNECT, - как PubSubClient прошивки."""
+    import socket
+
+    sock = socket.create_connection((broker.host, broker.port), timeout=5)
+    sock.sendall(_пакет(0x10, _строка('MQTT') + bytes([4, 0x02])
+                        + (15).to_bytes(2, 'big') + _строка(client_id)))
+    assert sock.recv(4)[:1] == b'\x20', 'нет CONNACK'
+    return sock
+
+
+def публикации(n: int = ПУБЛИКАЦИЙ) -> bytes:
+    return b''.join(_пакет(0x31, _строка(f'{TOPIC}/f{i:02d}') + str(i).encode())
+                    for i in range(n))
+
+
+def дождаться_всех(watch: Any, n: int = ПУБЛИКАЦИЙ, timeout: float = 5.0) -> list[str]:
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        topics = watch.topics(f'{TOPIC}/')
+        if len(topics) >= n:
+            return topics
+        time.sleep(0.1)
+    return watch.topics(f'{TOPIC}/')
+
+
+@pytest.mark.parametrize('хвост', [ПРОЩАНИЕ, b''], ids=['DISCONNECT', 'только_FIN'])
+def test_пачка_перед_концом_соединения_доходит_целиком(
+        broker: MqttBroker, watch: Any, хвост: bytes) -> None:
+    """
+    Публикации, пришедшие в сокет одной пачкой с концом соединения, не теряются.
+
+    Так их отдаёт Ватериус на слабом эфире: сегмент застрял, TCP перепослал, и
+    хвост публикаций приехал вместе с DISCONNECT. amqtt без заплаты разносил
+    из такой пачки одну публикацию из 83 (docs: 07_mqtt-tail-loss.md).
+    """
+    sock = устройство(broker)
+    sock.sendall(публикации() + хвост)
+    sock.close()
+
+    topics = дождаться_всех(watch)
+
+    assert len(topics) == ПУБЛИКАЦИЙ, (
+        f'брокер разослал {len(topics)} из {ПУБЛИКАЦИЙ}, последний - '
+        f'{topics[-1] if topics else None}')
+
+
+def test_брокер_докладывает_об_оборванном_потоке(broker: MqttBroker, watch: Any) -> None:
+    """
+    Устройство уснуло посреди потока: брокер не получил ни DISCONNECT, ни FIN.
+
+    По логу устройства такое не отличить от потери в самом брокере - там
+    напечатаны все публикации. Отличает запись брокера: соединение открыто, и
+    видно, на каком топике поток встал.
+    """
+    sock = устройство(broker)
+    try:
+        sock.sendall(публикации(10))
+        assert len(дождаться_всех(watch, 10)) == 10
+
+        note = broker.note()
+    finally:
+        sock.close()
+
+    assert 'waterius-1' in note and '10 публикаций' in note, note
+    assert f'{TOPIC}/f09' in note, note
+    assert 'открыто' in note, note
+
+
+def test_брокер_докладывает_о_штатном_прощании(broker: MqttBroker, watch: Any) -> None:
+    sock = устройство(broker)
+    sock.sendall(публикации(5) + ПРОЩАНИЕ)
+    sock.close()
+    assert len(дождаться_всех(watch, 5)) == 5
+
+    end = time.monotonic() + 5
+    while 'DISCONNECT' not in broker.note() and time.monotonic() < end:
+        time.sleep(0.1)
+
+    note = broker.note()
+    assert '5 публикаций' in note and 'DISCONNECT' in note, note
+    assert 'hil-' not in note, f'свои клиенты стенда в отчёт не нужны: {note}'

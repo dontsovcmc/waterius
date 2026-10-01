@@ -122,8 +122,7 @@ def test_N1_manual_server_is_used(stand: Stand, clock: Any) -> None:
     assert 'NTP: Time synced' in session.text, (
         'синхронизация не состоялась\n' + session.text)
 
-    assert session.payload is not None
-    got = payload_epoch(session.payload)
+    got = payload_epoch(session.expect_payload())
     assert abs(got - board_epoch()) < SKEW_TOLERANCE, (
         f'в посылке {got}, а стенд отдавал около {board_epoch()}: '
         f'устройство взяло время не у нас')
@@ -239,16 +238,16 @@ def test_N5_unreachable_server_freezes_the_tuning(stand: Stand, clock: Any, net:
     stand.reset_observers()
     stand.dut.press_button()
     start = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
-    assert start.payload is not None
-    tuned = start.payload['period_min_tuned']
-    stamp = payload_epoch(start.payload)
+    payload = start.expect_payload()
+    tuned = payload['period_min_tuned']
+    stamp = payload_epoch(payload)
 
     with net.ntp_down():
         for failures in range(1, 4):      # номер неудачи, он же их счёт
             stand.reset_observers()
             stand.dut.press_button()
             session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
-            assert session.payload is not None
+            session.expect_payload()
 
             assert 'NTP: sync failed' in session.text, (
                 'время взять было неоткуда, а прошивка сочла синхронизацию '
@@ -293,6 +292,5 @@ def test_N7_bogus_time_is_rejected(stand: Stand, clock: Any) -> None:
         f'{ntp_said(session)}')
     assert 'NTP: Unable to sync time' in session.text, (
         'время 2023 года принято без возражений\n' + session.text)
-    assert session.payload is not None
-    got = payload_epoch(session.payload)
+    got = payload_epoch(session.expect_payload())
     assert got > START_VALID_TIME, f'в посылке время из прошлого: {got}'

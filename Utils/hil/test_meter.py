@@ -103,9 +103,9 @@ def test_D3_electricity_counts_kilowatt_hours(stand: Stand, channel: int) -> Non
     per_kwh = 10
     before = stand.setup(channel=channel, cname=ELECTRO, ctype=NAMUR,
                          factor=per_kwh, value='100')
-    assert before.payload is not None
-    kwh_before = float(before.payload[f'ch{channel}'])
-    imp_before = int(before.payload[f'imp{channel}'])
+    payload = before.expect_payload()
+    kwh_before = float(payload[f'ch{channel}'])
+    imp_before = int(payload[f'imp{channel}'])
 
     stand.reset_observers()
     подано = stand.dut.pulse(channel=channel, count=per_kwh)
@@ -144,9 +144,8 @@ def test_D4_readings_below_current_are_accepted(stand: Stand) -> None:
     stand.setup(channel=1, ctype=NAMUR, factor=BASE_FACTOR, value='500.000')
     lowered = stand.setup(channel=1, value='1.000')
 
-    assert lowered.payload is not None
-    assert abs(float(lowered.payload['ch1']) - 1.0) < 0.001, (
-        f"показания не сбросились: {lowered.payload['ch1']}")
+    ch1 = lowered.expect_payload()['ch1']
+    assert abs(float(ch1) - 1.0) < 0.001, f'показания не сбросились: {ch1}'
 
     stand.reset_observers()
     stand.dut.pulse(channel=1, count=PULSES)
@@ -272,8 +271,8 @@ def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
     stand.dut.press_button()
     second = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    assert first.payload is not None and second.payload is not None
-    got = first.payload['delta1'] + second.payload['delta1']
+    got = (first.expect_payload('первый сеанс')['delta1']
+           + second.expect_payload('второй сеанс')['delta1'])
     # Счётчик attiny в отказ: он делит вину. Насчитала attiny все импульсы -
     # прирост потеряла ЕСП; насчитала меньше - импульс не доехал до платы, и
     # виноват стенд или дребезг, а не прошивка

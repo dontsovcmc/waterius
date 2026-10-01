@@ -23,6 +23,8 @@ import socket
 import tempfile
 import threading
 import time
+from collections.abc import Callable
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from loguru import logger
@@ -30,6 +32,23 @@ from loguru import logger
 # Потолок гашения брокера. Десять секунд брались наугад и один раз истекли
 # целиком; больше ждать нечего - дальше задачи снимаются принудительно
 SHUTDOWN_S = 10.0
+
+# Версия amqtt, с которой списан цикл клиента в StandBroker: в другой копия
+# молча разойдётся с оригиналом
+AMQTT_COPIED_FROM = '0.12.'
+
+# Свои клиенты стенда - наблюдатель, проба порта, разовый подписчик
+STAND_CLIENT_PREFIX = 'hil-'
+
+
+@dataclass
+class ClientTrail:
+    """Что брокер видел от клиента за его последнее соединение."""
+
+    published: int = 0
+    last_topic: str = ''
+    # None - соединение ещё открыто
+    ended: str | None = None
 
 
 class MqttBroker:
@@ -49,6 +68,43 @@ class MqttBroker:
         self._broker: object | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
+        self._trails: dict[str, ClientTrail] = {}
+        self._trails_lock = threading.Lock()
+
+    def _trace(self, client_id: str, event: str, detail: str = '') -> None:
+        """Отметка из потока брокера: соединение, публикация или его конец."""
+        with self._trails_lock:
+            if event == 'connected':
+                self._trails[client_id] = ClientTrail()
+                return
+            trail = self._trails.setdefault(client_id, ClientTrail())
+            if event == 'published':
+                trail.published += 1
+                trail.last_topic = detail
+            elif event == 'ended':
+                trail.ended = detail
+
+    def note(self) -> str:
+        """
+        Что брокер видел от устройств - приписка к отказу про MQTT.
+
+        Строка «MQTT: pub» в логе прошивки значит, что публикация легла в буфер
+        TCP, а не что она доехала. Поэтому при расхождении с наблюдателем
+        только брокер говорит, чья потеря: он разнёс все публикации и
+        соединение закрыто - виноват путь к наблюдателю; поток встал, а
+        соединение так и не закрылось - хвост не ушёл из устройства.
+        """
+        with self._trails_lock:
+            trails = [(client_id, replace(trail))
+                      for client_id, trail in self._trails.items()
+                      if not client_id.startswith(STAND_CLIENT_PREFIX)]
+        if not trails:
+            return '\nБрокер: устройство к нему не подключалось'
+        parts = [f'{client_id} - {trail.published} публикаций, последняя '
+                 f'{trail.last_topic or "-"}, '
+                 f'{trail.ended or "соединение открыто: его конец до брокера не дошёл"}'
+                 for client_id, trail in trails]
+        return '\nЧто видел брокер: ' + '; '.join(parts)
 
     @staticmethod
     def available() -> bool:
@@ -79,9 +135,9 @@ class MqttBroker:
         return True
 
     @staticmethod
-    def _broker_class() -> type:
+    def _broker_class(trace: Callable[[str, str, str], None]) -> type:
         """
-        amqtt с заплатой на рассылку удерживаемых сообщений.
+        amqtt с заплатами на рассылку и на конец соединения.
 
         Два дефекта в одном месте (`amqtt/broker.py`,
         `_publish_retained_messages_for_subscription` и цикл
@@ -106,20 +162,131 @@ class MqttBroker:
         Заплата рассылает только тому, кто на фильтр подписан, и с тем QoS,
         с каким сообщение опубликовали. Штатный путь (SUBSCRIBE) не страдает:
         подписка заносится в список до рассылки.
+
+        Третий дефект - публикации, пришедшие одной пачкой с концом соединения,
+        пропадают (07_mqtt-tail-loss.md). Разобранные публикации ждут в очереди
+        доставки, а цикл клиента берёт из неё по одной и на конце соединения
+        выходит, бросая остаток. Из 83 публикаций пачкой доходила одна.
         """
+        from importlib.metadata import version
+
         from amqtt.broker import Broker
+        from amqtt.mqtt.disconnect import DisconnectPacket
 
         # Только методы: `_retained_messages` и `_subscriptions` заводятся в
         # конструкторе, у класса их нет, а пропажу видно первым же вызовом.
         needed = ('_publish_retained_messages_for_subscription',
-                  '_get_handler', '_matches', '_broadcast_message')
+                  '_get_handler', '_matches', '_broadcast_message',
+                  '_client_message_loop', '_handle_message_delivery', '_handle_disconnect',
+                  '_handle_subscription', '_handle_unsubscription')
         missing = [name for name in needed if not hasattr(Broker, name)]
         if missing:
             raise RuntimeError(
-                f'amqtt изменил внутренности ({missing}): заплата про удерживаемые '
-                'сообщения больше не накладывается, проверьте broker.py')
+                f'amqtt изменил внутренности ({missing}): заплаты брокера стенда '
+                'больше не накладываются, проверьте broker.py')
+        if not version('amqtt').startswith(AMQTT_COPIED_FROM):
+            raise RuntimeError(
+                f'amqtt {version("amqtt")}, а цикл клиента в broker.py списан с '
+                f'{AMQTT_COPIED_FROM}x: сверьте его с новым оригиналом')
 
         class StandBroker(Broker):                       # type: ignore[misc, valid-type]
+
+            async def _client_message_loop(self, client_session: object,
+                                           handler: object) -> None:
+                # Копия оригинала (AMQTT_COPIED_FROM) с одним отличием: конец
+                # соединения обрабатывается последним, после доставки всего,
+                # что клиент успел прислать до него
+                trace(client_session.client_id, 'connected', '')
+                disconnect_waiter = asyncio.ensure_future(handler.wait_disconnect())
+                subscribe_waiter = asyncio.ensure_future(
+                    handler.get_next_pending_subscription())
+                unsubscribe_waiter = asyncio.ensure_future(
+                    handler.get_next_pending_unsubscription())
+                wait_deliver = asyncio.ensure_future(handler.mqtt_deliver_next_message())
+                connected = True
+
+                while connected:
+                    try:
+                        done, _ = await asyncio.wait(
+                            [disconnect_waiter, subscribe_waiter,
+                             unsubscribe_waiter, wait_deliver],
+                            return_when=asyncio.FIRST_COMPLETED)
+
+                        if subscribe_waiter in done:
+                            await self._handle_subscription(
+                                client_session, handler, subscribe_waiter)
+                            subscribe_waiter = asyncio.ensure_future(
+                                handler.get_next_pending_subscription())
+
+                        if unsubscribe_waiter in done:
+                            await self._handle_unsubscription(
+                                client_session, handler, unsubscribe_waiter)
+                            unsubscribe_waiter = asyncio.ensure_future(
+                                handler.get_next_pending_unsubscription())
+
+                        if wait_deliver in done:
+                            if not await self._handle_message_delivery(
+                                    client_session, handler, wait_deliver):
+                                break
+                            wait_deliver = asyncio.ensure_future(
+                                handler.mqtt_deliver_next_message())
+
+                        if disconnect_waiter in done:
+                            if not await self._deliver_queued(
+                                    client_session, handler, wait_deliver):
+                                break
+                            await self._handle_disconnect(
+                                client_session, handler, disconnect_waiter)
+                            connected = False
+                    except asyncio.CancelledError:
+                        break
+
+                pending_waiters = [disconnect_waiter, subscribe_waiter,
+                                   unsubscribe_waiter, wait_deliver]
+                for waiter in pending_waiters:
+                    waiter.cancel()
+                await asyncio.gather(*pending_waiters, return_exceptions=True)
+
+            async def _deliver_queued(self, client_session: object, handler: object,
+                                      wait_deliver: asyncio.Future) -> bool:
+                """Разнести остаток очереди доставки; False - клиент нарушил протокол."""
+                # Ждущий очереди снимаем первым: иначе он заберёт себе
+                # сообщение, пока мы разносим остальные, и оно пропадёт с ним
+                wait_deliver.cancel()
+                taken = await asyncio.gather(wait_deliver, return_exceptions=True)
+                messages = [m for m in taken
+                            if m is not None and not isinstance(m, BaseException)]
+                queue = client_session.delivered_message_queue
+                while not queue.empty():
+                    messages.append(queue.get_nowait())
+
+                loop = asyncio.get_running_loop()
+                for message in messages:
+                    ready = loop.create_future()
+                    ready.set_result(message)
+                    if not await self._handle_message_delivery(
+                            client_session, handler, ready):
+                        return False
+                return True
+
+            async def _handle_message_delivery(self, client_session: object,
+                                               handler: object,
+                                               wait_deliver: asyncio.Future) -> bool:
+                delivered = await super()._handle_message_delivery(
+                    client_session, handler, wait_deliver)
+                message = wait_deliver.result()
+                if message is not None:
+                    trace(client_session.client_id, 'published', message.topic)
+                return delivered
+
+            async def _handle_disconnect(self, client_session: object, handler: object,
+                                         disconnect_waiter: asyncio.Future) -> None:
+                clean = isinstance(disconnect_waiter.result(), DisconnectPacket)
+                trace(client_session.client_id, 'ended',
+                      'закрыто штатно (DISCONNECT)' if clean
+                      else 'оборвано без DISCONNECT')
+                await super()._handle_disconnect(client_session, handler,
+                                                 disconnect_waiter)
 
             async def _publish_retained_messages_for_subscription(
                     self, subscription: tuple, session: object) -> None:
@@ -192,7 +359,7 @@ class MqttBroker:
             raise RuntimeError(
                 f'порт {self.port} уже занят - тесты читали бы чужой брокер')
 
-        broker_class = self._broker_class()
+        broker_class = self._broker_class(self._trace)
 
         # Плагины перечислены явно: по умолчанию amqtt включает ещё два логгера
         # (событий и пакетов) и дерево $SYS - в отчёте о прогоне это шум.
