@@ -675,3 +675,38 @@ TEST(WakeupLoop, SleepsStayCloseToPeriod)
     EXPECT_GE(device.min_sleep, 15 * 0.3);   // короче защита не пускает
     EXPECT_LE(device.max_sleep, 15 * 1.4);
 }
+
+TEST(WakeupLoop, RoundingErrorDoesNotPileUpBetweenSyncs)
+{
+    /*
+    Attiny принимает период в целых минутах, и 60 / 1.008 = 59.52 округляется
+    до 60: полминуты ошибки на каждый сон, всегда в одну сторону. При
+    синхронизации раз в сутки к её концу набегало до 9 минут, а доводка
+    выходила сном в 54 или 71 минуту вместо 60.
+
+    Проверяем каждое пробуждение, а не конец прогона: худший момент — перед
+    самой синхронизацией.
+    */
+    struct Case { uint16_t period; double drift; double max_phase; };
+    const Case cases[] = {
+        {60, 1.008, 1.0},   // синхронизация каждое пробуждение
+        {60, 0.97, 1.0},
+        {15, 1.02, 2.0},    // каждое третье: между ними копится до трёх округлений
+    };
+
+    for (const Case &c : cases)
+    {
+        Device device(c.period, c.drift);
+        device.run_days(1);   // прогрев и первые подстройки
+
+        double worst = 0;
+        const time_t finish = device.now + 3L * 24 * 3600;
+        while (device.now < finish)
+        {
+            device.one_wakeup();
+            worst = std::max(worst, fabs(device.phase_min()));
+        }
+
+        EXPECT_LT(worst, c.max_phase) << "период " << c.period << ", дрейф " << c.drift;
+    }
+}
