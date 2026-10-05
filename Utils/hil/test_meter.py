@@ -16,7 +16,7 @@ import pytest
 
 from . import portal as portal_mod
 from .constants import BASE_FACTOR, COLD, ELECTRO, ELECTRONIC, ELECTRONIC_HIGH, NAMUR
-from .dut import IMPULSE_GAP_S, IMPULSE_WIDTH_MS
+from .dut import IMPULSE_GAP_S, IMPULSE_WIDTH_MS, Series
 from .logwatch import MANUAL_TRANSMIT_MODE
 
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
@@ -229,10 +229,11 @@ DURING_GAP_S = 2.0
 PRESS_AFTER_S = 4.0
 
 
-def counted(session: Any) -> str:
-    """Строки attiny о счёте второго входа - чем платить за разбор потери."""
+def counted(session: Any, channel: int = 1) -> str:
+    """Строки attiny о счёте входа - чем платить за разбор потери."""
+    mark = f'impulses{channel}'
     return ' | '.join(line.split(': ', 1)[-1] for line in session.text.splitlines()
-                      if 'impulses1' in line) or 'в логе нет строк impulses1'
+                      if mark in line) or f'в логе нет строк {mark}'
 
 
 def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
@@ -286,6 +287,98 @@ def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
         f"приросты {first.payload['delta1']} + {second.payload['delta1']}, "
         f'плата выдала {DURING_PULSES} замыканий по {BASE_FACTOR} л\n'
         f'счёт attiny: {counted(first)} -> {counted(second)}')
+
+
+# Серия поверх пробуждения: 32 импульса с шагом 1,8 с идут около минуты, а
+# сеанс по кнопке - 8-20 с. Первые импульсы ложатся ещё во сне
+OVER_PULSES = 32
+OVER_STEP_MS = IMPULSE_WIDTH_MS + 1300
+OVER_PRESS_AFTER = 2
+
+# attiny включает ЕСП на первом же опросе с прижатой кнопкой (button.h,
+# ButtonB2), опрос - раз в 250 мс. Секунда - с запасом
+WAKE_MARGIN_MS = 1000
+
+# Меньше - серия не накрыла сеанс, и о счёте посреди него опыт не говорит
+MIN_INSIDE = 3
+
+
+def over_session(stand: Stand, shapes: dict[int, tuple[int, int]]
+                 ) -> tuple[Series, Any, Any]:
+    """Серия с нажатием посреди неё, её сеанс и следующий по кнопке."""
+    stand.reset_observers()
+    series = stand.dut.series(shapes, count=OVER_PULSES, step_ms=OVER_STEP_MS,
+                              press_after=OVER_PRESS_AFTER)
+    first = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    second = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    return series, first, second
+
+
+def assert_counted_over_session(series: Series, first: Any, second: Any,
+                                channel: int) -> None:
+    """
+    Импульсы входа поданы целиком, часть легла в сеанс ЕСП, а сумма двух
+    приростов равна поданному.
+
+    ЕСП включается не раньше нажатия, а её метки времени идут с включения,
+    поэтому `нажатие + длина сеанса` - не позже настоящего конца сеанса.
+    """
+    closures = series.closures[channel]
+    assert len(closures) == OVER_PULSES, (
+        f'на входе {channel} плата по расписке выдала {len(closures)} импульсов '
+        f'из {OVER_PULSES}: это про стенд, а не про прошивку')
+
+    length = first.length_ms
+    assert length is not None, (
+        f'у последней строки сеанса нет метки времени ЕСП\n{first.text}')
+    start, end = series.press[0] + WAKE_MARGIN_MS, series.press[0] + length
+    inside = [c for c in closures if start <= c[0] and c[1] <= end]
+    assert len(inside) >= MIN_INSIDE, (
+        f'в сеанс ЕСП [{start}, {end}] мс по часам платы легло {len(inside)} '
+        f'импульсов входа {channel}, нужно {MIN_INSIDE}: серия не накрыла сеанс, '
+        f'и это про стенд. Нажатие {series.press}, импульсы {closures}')
+
+    got = (first.expect_payload('первый сеанс')[f'delta{channel}']
+           + second.expect_payload('второй сеанс')[f'delta{channel}'])
+    assert got == OVER_PULSES * BASE_FACTOR, (
+        f"delta{channel}: {first.payload[f'delta{channel}']} + "
+        f"{second.payload[f'delta{channel}']}, а подано {OVER_PULSES} импульсов "
+        f'по {BASE_FACTOR} л, из них {len(inside)} посреди сеанса\n'
+        f'счёт attiny: {counted(first, channel)} -> {counted(second, channel)}')
+
+
+@pytest.mark.needs(ctype1=ELECTRONIC)
+def test_D7b_electronic_pulses_during_session_are_not_lost(stand: Stand) -> None:
+    """
+    Импульсы электронного входа посреди сеанса не теряются и не удваиваются.
+
+    В сеансе главный цикл attiny занят ЕСП: отвечает по i2c и пишет EEPROM, и
+    импульс в миллисекунду держит только защёлка в прерывании
+    (`Attiny85/src/electronic.h`). D5 проверяет её во сне, здесь - пока ЕСП
+    включена.
+    """
+    series, first, second = over_session(stand, {1: (SHORT_PULSE_MS, 0)})
+
+    assert_counted_over_session(series, first, second, channel=1)
+
+
+@pytest.mark.needs(ctype0=NAMUR, ctype1=ELECTRONIC, f0=BASE_FACTOR, f1=BASE_FACTOR)
+def test_D7c_two_input_types_count_during_session(stand: Stand) -> None:
+    """
+    Механический и электронный входы посреди сеанса считают каждый своё.
+
+    Форма та же, что в D11: импульс электронного входа ложится внутрь каждого
+    замыкания механического. D11 проверяет это во сне, здесь - пока attiny
+    ещё и обслуживает ЕСП.
+    """
+    series, first, second = over_session(
+        stand, {0: (IMPULSE_WIDTH_MS, 0), 1: (SHORT_PULSE_MS, INSIDE_MS)})
+
+    assert_counted_over_session(series, first, second, channel=0)
+    assert_counted_over_session(series, first, second, channel=1)
 
 
 PRESSES_WHILE_CLOSED = 4

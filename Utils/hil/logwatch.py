@@ -31,8 +31,9 @@ from .hostclock import host
 # лога проверяется без железа, и тянуть сюда клиент METF незачем
 NETWORK_ERRORS = (requests.RequestException, OSError)
 
-# Начало настоящей строки лога: MM:SS:mmm (Logging.h, LOG_FORMAT_TIME).
-LINE_START = re.compile(r'^\d{2}:\d{2}:\d{3}')
+# Начало настоящей строки лога: MM:SS:mmm (Logging.h, LOG_FORMAT_TIME) -
+# millis() ЕСП с её включения.
+LINE_START = re.compile(r'^(\d{2}):(\d{2}):(\d{3})')
 
 # Режимы пробуждения, core/types.h
 SETUP_MODE = 1
@@ -356,6 +357,15 @@ class Session:
         пишутся про `text`, а вот эти факты искать надо здесь.
         """
         return '\n'.join(self.preamble + self.lines)
+
+    @property
+    def length_ms(self) -> int | None:
+        """Сколько ЕСП была включена к концу сеанса - по метке его последней строки."""
+        m = LINE_START.match(self.lines[-1]) if self.lines else None
+        if m is None:
+            return None
+        minutes, seconds, ms = (int(part) for part in m.groups())
+        return (minutes * 60 + seconds) * 1000 + ms
 
     @property
     def mode(self) -> int | None:

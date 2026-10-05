@@ -836,3 +836,17 @@ def test_режим_настройки_не_ждёт_конца_сеанса() -
     начали = time.monotonic()
     assert watcher.settle() == 0.0
     assert time.monotonic() - начали < 1.0
+
+
+def test_длина_сеанса_по_метке_последней_строки() -> None:
+    """
+    По длине сеанса тест судит, легли ли импульсы внутрь него: метка - это
+    millis() ЕСП, MM:SS:mmm.
+    """
+    from ..logwatch import Session
+
+    сеанс = Session(lines=[fw('Startup mode: 3'), fw('Going to sleep')])
+
+    assert сеанс.length_ms == 83456
+    assert Session().length_ms is None
+    assert Session(lines=['без метки']).length_ms is None

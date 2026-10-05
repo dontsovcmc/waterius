@@ -935,7 +935,7 @@ already running`, а лог пуст — METF не получает ни стр�
 | #76, #337 | замкнутый вход и кнопка | `test_D8_input_held_closed_counts_once` |
 | #88 | режим «Я уехал» | `test_E10_vacation_works_without_factor`, `test_E18_vacation_off_clears_its_alarm`, `test_I3_remote_vacation_reaches_attiny` |
 | #108, #307 | пароль в разметке, звёздочки | `test_P5_saved_password_is_masked`, `test_C6_masked_password_keeps_the_old_one` |
-| #121, #238 | импульсы посреди сеанса | `test_D7_pulses_during_session_are_not_lost` |
+| #121, #238 | импульсы посреди сеанса | `test_D7_pulses_during_session_are_not_lost`; электронный вход - `test_D7b_electronic_pulses_during_session_are_not_lost`, оба типа сразу - `test_D7c_two_input_types_count_during_session` |
 | #150, #200, #371 | дребезг, короткие замыкания | `test_D9_glitches_and_bounce_are_not_counted` |
 | #181, #224 | серийный номер, пробелы по краям | `test_S3_text_is_trimmed` |
 | #202, #389 | тревоги | блоки E и F: `test_alarms.py`, `test_leak_sensor.py`, `test_confirm.py`; блок Y — тревога доехала до сервера: `test_cloud_alarms.py` |
