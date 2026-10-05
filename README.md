@@ -76,6 +76,8 @@
 ## DIY Сделать самому
 [Скачать прошивки](https://github.com/dontsovcmc/waterius/releases)
 
+Альфа-версия (сборка из ветки `dev`, для тех, кто готов проверять новое): [2.0.52-46-alpha](https://github.com/dontsovcmc/waterius/releases/tag/2.0.52-46-alpha)
+
 Народная инструкция в инфо Телеграм чата: [waterius_forum](https://t.me/waterius_forum)
 - [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
 - [Прошивка Attiny85 и ESP](https://github.com/dontsovcmc/waterius/blob/master/Firmware.md) 
