@@ -168,7 +168,7 @@ Disable modules via build_flags in `platformio.ini`:
 ### Library Versions (ESP8266)
 - ArduinoJson 7.4.3 (v7 API: `JsonDocument` without size template, `.to<JsonObject>()`)
 - PubSubClient 2.8.0
-- ESPAsyncWebServer 1.2.3 — fork `waterius/ESPAsyncWebServer#20230926` of me-no-dev
+- ESPAsyncWebServer 1.2.3 — fork `waterius/ESPAsyncWebServer#20230926` of me-no-dev, pinned by commit `f71e3d4` (PlatformIO 6.2 breaks on an all-digit tag)
 - ESPAsyncTCP 1.2.2 (me-no-dev), pulled in by the web server's `library.json` as `^1.2.2`
 
 ## Development Notes
