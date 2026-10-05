@@ -305,7 +305,8 @@ class Dut:
         return подано
 
     def series(self, shapes: Mapping[int, tuple[int, int]], count: int,
-               step_ms: int, press_after: int) -> Series:
+               step_ms: int, press_after: int,
+               min_gap_ms: int = int(IMPULSE_GAP_S * 1000)) -> Series:
         """
         Серия импульсов, внутри которой стенд жмёт кнопку.
 
@@ -322,12 +323,14 @@ class Dut:
         @param count   импульсов на каждый канал
         @param step_ms шаг между началами импульсов
         @param press_after сколько импульсов подать до нажатия
+        @param min_gap_ms  кратчайшая пауза, которую вход отличит от импульса:
+                           по умолчанию - механического входа
         """
         widest = max(width + offset for width, offset in shapes.values())
         lead = step_ms - widest
-        if lead < IMPULSE_GAP_S * 1000:
+        if lead < min_gap_ms:
             raise ValueError(f'пауза между импульсами {lead} мс короче '
-                             f'{IMPULSE_GAP_S * 1000:.0f}: замыкания сольются')
+                             f'{min_gap_ms}: импульсы сольются')
         per_wave = min(WAVE_MAX_PULSES,
                        (WAVE_MAX_MS - lead - widest) // step_ms + 1)
         if not 0 <= press_after < min(count, per_wave):
@@ -337,7 +340,7 @@ class Dut:
         if self._settle is not None:
             self._settle(BUTTON_SHORT_MS)
         # Посреди паузы перед следующим импульсом
-        press_at = lead + press_after * step_ms - lead // 2
+        press_at = lead + press_after * step_ms - (lead + BUTTON_SHORT_MS) // 2
         logger.info(f'кнопка: короткое нажатие {BUTTON_SHORT_MS} мс внутри '
                     f'серии, после {press_after}-го импульса')
 

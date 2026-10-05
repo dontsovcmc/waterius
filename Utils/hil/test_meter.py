@@ -289,26 +289,31 @@ def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
         f'счёт attiny: {counted(first)} -> {counted(second)}')
 
 
-# Серия поверх пробуждения: 32 импульса с шагом 1,8 с идут около минуты, а
-# сеанс по кнопке - 8-20 с. Первые импульсы ложатся ещё во сне
+# Серия поверх пробуждения, первые импульсы ложатся ещё во сне. Сеанс по
+# кнопке на стенде - около 5 с (замер 06.10), серия идёт в разы дольше
 OVER_PULSES = 32
-OVER_STEP_MS = IMPULSE_WIDTH_MS + 1300
 OVER_PRESS_AFTER = 2
+# Механическому входу нужна пауза IMPULSE_GAP_S, быстрее шага 1,8 с не подать
+OVER_STEP_MS = IMPULSE_WIDTH_MS + 1300
+# У электронного после засчитанного импульса мёртвое время в тик опроса
+# (electronic.h, dead_time): секунда - это два тика с запасом
+ELECTRONIC_STEP_MS = 1000
 
 # attiny включает ЕСП на первом же опросе с прижатой кнопкой (button.h,
 # ButtonB2), опрос - раз в 250 мс. Секунда - с запасом
 WAKE_MARGIN_MS = 1000
 
-# Меньше - серия не накрыла сеанс, и о счёте посреди него опыт не говорит
-MIN_INSIDE = 3
+# Меньше - серия не накрыла сеанс, и о счёте посреди него опыт не говорит.
+# В пятисекундный сеанс механический вход больше двух импульсов не вмещает
+MIN_INSIDE = 2
 
 
-def over_session(stand: Stand, shapes: dict[int, tuple[int, int]]
-                 ) -> tuple[Series, Any, Any]:
+def over_session(stand: Stand, shapes: dict[int, tuple[int, int]],
+                 **series_args: int) -> tuple[Series, Any, Any]:
     """Серия с нажатием посреди неё, её сеанс и следующий по кнопке."""
     stand.reset_observers()
-    series = stand.dut.series(shapes, count=OVER_PULSES, step_ms=OVER_STEP_MS,
-                              press_after=OVER_PRESS_AFTER)
+    series = stand.dut.series(shapes, count=OVER_PULSES,
+                              press_after=OVER_PRESS_AFTER, **series_args)
     first = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     stand.reset_observers()
@@ -360,7 +365,9 @@ def test_D7b_electronic_pulses_during_session_are_not_lost(stand: Stand) -> None
     (`Attiny85/src/electronic.h`). D5 проверяет её во сне, здесь - пока ЕСП
     включена.
     """
-    series, first, second = over_session(stand, {1: (SHORT_PULSE_MS, 0)})
+    series, first, second = over_session(
+        stand, {1: (SHORT_PULSE_MS, 0)}, step_ms=ELECTRONIC_STEP_MS,
+        min_gap_ms=ELECTRONIC_STEP_MS - SHORT_PULSE_MS)
 
     assert_counted_over_session(series, first, second, channel=1)
 
@@ -375,7 +382,8 @@ def test_D7c_two_input_types_count_during_session(stand: Stand) -> None:
     ещё и обслуживает ЕСП.
     """
     series, first, second = over_session(
-        stand, {0: (IMPULSE_WIDTH_MS, 0), 1: (SHORT_PULSE_MS, INSIDE_MS)})
+        stand, {0: (IMPULSE_WIDTH_MS, 0), 1: (SHORT_PULSE_MS, INSIDE_MS)},
+        step_ms=OVER_STEP_MS)
 
     assert_counted_over_session(series, first, second, channel=0)
     assert_counted_over_session(series, first, second, channel=1)
