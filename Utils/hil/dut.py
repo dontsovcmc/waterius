@@ -24,8 +24,9 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Any
 
 from loguru import logger
@@ -93,6 +94,14 @@ PUMP_TAIL_S = 0.25
 LED_PRESSED = '00FF00'
 LED_OFF = '000000'
 LED_BRIGHTNESS = 40
+
+
+@dataclass
+class Series:
+    """Серия с нажатием посреди неё по расписке платы, в мс её аптайма."""
+
+    closures: dict[int, list[tuple[int, int]]]   # канал -> (начало, конец) импульсов
+    press: tuple[int, int]
 
 
 class Dut:
@@ -214,8 +223,12 @@ class Dut:
         (`bench_routes.cpp`, pulse_tick). В высокоомное состояние линия уходит
         только по концу пачки, последним моментом расписки.
         """
-        return {'pin': self._ch[channel], 'value': value,
-                'at_ms': at_ms, 'edges': list(edges)}
+        return self._pin_line(self._ch[channel], edges, value, at_ms)
+
+    @staticmethod
+    def _pin_line(pin: int, edges: Sequence[int], value: int = LOW,
+                  at_ms: int = 0) -> dict[str, Any]:
+        return {'pin': pin, 'value': value, 'at_ms': at_ms, 'edges': list(edges)}
 
     def wave(self, *lines: dict[str, Any]) -> None:
         """
@@ -237,7 +250,9 @@ class Dut:
         искажался; расписка снята на плате, и если она разошлась с заказом -
         виноват стенд, а не устройство.
         """
-        pin = self._ch[channel]
+        return self._pin_moments(self._ch[channel])
+
+    def _pin_moments(self, pin: int) -> list[int]:
         stat = self.api.pulse_stat()
         for line in stat.get('lines', []):
             if line.get('pin') == pin:
@@ -288,6 +303,71 @@ class Dut:
             if осталось:
                 self._wait(time.monotonic() + gap)
         return подано
+
+    def series(self, shapes: Mapping[int, tuple[int, int]], count: int,
+               step_ms: int, press_after: int,
+               min_gap_ms: int = int(IMPULSE_GAP_S * 1000)) -> Series:
+        """
+        Серия импульсов, внутри которой стенд жмёт кнопку.
+
+        Нажатие едет линией той же пачки, что и импульсы: отмеряет его плата, а
+        нажатие отдельным запросом затёрло бы расписку пачки.
+
+        Серия длиннее пачки идёт пачками подряд. Каждая начинается с паузы
+        `step_ms` минус самый поздний конец импульса в шаге: задержка радио
+        между пачками только удлиняет паузу и не сливает два замыкания в одно.
+
+        @param shapes  канал -> (длина импульса, смещение от начала шага), мс
+        @param count   импульсов на каждый канал
+        @param step_ms шаг между началами импульсов
+        @param press_after сколько импульсов подать до нажатия
+        @param min_gap_ms  кратчайшая пауза, которую вход отличит от импульса:
+                           по умолчанию - механического входа
+        """
+        widest = max(width + offset for width, offset in shapes.values())
+        lead = step_ms - widest
+        if lead < min_gap_ms:
+            raise ValueError(f'пауза между импульсами {lead} мс короче '
+                             f'{min_gap_ms}: импульсы сольются')
+        per_wave = min(WAVE_MAX_PULSES,
+                       (WAVE_MAX_MS - lead - widest) // step_ms + 1)
+        if not 0 <= press_after < min(count, per_wave):
+            raise ValueError(f'нажатие после {press_after}-го импульса не '
+                             f'ложится в первую пачку из {min(count, per_wave)}')
+
+        if self._settle is not None:
+            self._settle(BUTTON_SHORT_MS)
+        # Сразу после отпускания импульса, в паузе: нажатие не накрывает импульс
+        press_at = press_after * step_ms + 1
+        logger.info(f'кнопка: короткое нажатие {BUTTON_SHORT_MS} мс внутри '
+                    f'серии, после {press_after}-го импульса')
+
+        closures: dict[int, list[tuple[int, int]]] = {ch: [] for ch in shapes}
+        press: tuple[int, int] | None = None
+        left = count
+        while left:
+            k = min(left, per_wave)
+            lines = []
+            for ch, (width, offset) in shapes.items():
+                edges = [width]
+                for _ in range(k - 1):
+                    edges += [step_ms - width, width]
+                lines.append(self.line(ch, edges, at_ms=lead + offset))
+            if press is None:
+                lines.append(self._pin_line(self.button_pin, [BUTTON_SHORT_MS],
+                                            at_ms=press_at))
+            total_s = self.api.wave(lines, wait=False)
+            self._wait(time.monotonic() + total_s)
+
+            for ch in shapes:
+                marks = self.moments(ch)
+                closures[ch] += list(zip(marks[0::2], marks[1::2], strict=False))
+            if press is None:
+                marks = self._pin_moments(self.button_pin)
+                press = (marks[0], marks[1])
+            left -= k
+        assert press is not None
+        return Series(closures=closures, press=press)
 
     def impulses_delivered(self, channel: int) -> int:
         """

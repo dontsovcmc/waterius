@@ -326,3 +326,68 @@ def test_после_пачки_подъёма_линия_возвращаетс�
 
     assert len(api.lows) == 1, (
         f'линию не вернули в покой после пачки: прижатий {len(api.lows)}')
+
+
+def test_серия_с_нажатием_режется_на_пачки(clock: Clock) -> None:
+    """
+    Пачка платы вмещает восемь импульсов, а серии поверх сеанса нужно больше.
+    Нажатие едет в первой пачке, иначе его момент не сравнить с импульсами.
+    """
+    board, api = waving(clock)
+
+    серия = board.series({0: (500, 0), 1: (1, 100)}, count=10, step_ms=1800,
+                         press_after=2)
+
+    assert [len(wave) for wave in api.waves] == [3, 2], (
+        f'линий по пачкам {[len(w) for w in api.waves]}: кнопка - только в первой')
+    кнопка = [line for line in api.waves[0] if line['pin'] == 1]
+    assert кнопка and кнопка[0]['edges'] == [BUTTON_SHORT_MS]
+    assert [len(серия.closures[ch]) for ch in (0, 1)] == [10, 10]
+    assert серия.press[1] - серия.press[0] == BUTTON_SHORT_MS
+
+
+def test_серия_держит_паузу_на_стыке_пачек(clock: Clock) -> None:
+    """
+    Между пачками стоит дорога по радио, и вплотную подданные замыкания attiny
+    честно сочла бы одним. Пауза на стыке не короче паузы внутри пачки.
+    """
+    board, _ = waving(clock)
+
+    серия = board.series({0: (500, 0)}, count=12, step_ms=1800, press_after=0)
+
+    замыкания = серия.closures[0]
+    паузы = [после[0] - до[1] for до, после in zip(замыкания, замыкания[1:], strict=False)]
+    assert min(паузы) >= 1300, f'паузы между замыканиями: {паузы}'
+
+
+def test_нажатие_ложится_между_импульсами(clock: Clock) -> None:
+    """Нажатие после второго импульса, а не поверх какого-нибудь из них."""
+    board, _ = waving(clock)
+
+    серия = board.series({0: (500, 0)}, count=4, step_ms=1800, press_after=2)
+
+    второй, третий = серия.closures[0][1], серия.closures[0][2]
+    assert второй[1] < серия.press[0] and серия.press[1] < третий[0], (
+        f'нажатие {серия.press}, импульсы {серия.closures[0]}')
+
+
+def test_серия_перед_нажатием_выжидает_сеанс(clock: Clock) -> None:
+    """Выдержку после прошлого сеанса нажатие внутри серии получает так же."""
+    выдержки: list[int] = []
+    api = WavingApi(clock)
+    board = dut_mod.Dut(api, button_pin=1, ch0_pin=2, ch1_pin=3, reset_pin=4,
+                        settle=выдержки.append)
+    board._led_ok = False
+
+    board.series({1: (1, 0)}, count=10, step_ms=1800, press_after=2)
+
+    assert выдержки == [BUTTON_SHORT_MS]
+
+
+def test_серия_со_слитыми_замыканиями_не_заказывается(clock: Clock) -> None:
+    board, api = waving(clock)
+
+    with pytest.raises(ValueError, match='сольются'):
+        board.series({0: (500, 0)}, count=4, step_ms=1000, press_after=1)
+    assert not api.waves
+
