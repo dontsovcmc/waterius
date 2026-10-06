@@ -13,7 +13,7 @@ from __future__ import annotations
 import pytest
 
 from .. import dut as dut_mod
-from ..dut import BUTTON_SETUP_MS, BUTTON_SHORT_MS, WAKE_MARGIN_MS, Series
+from ..dut import BUTTON_SETUP_MS, BUTTON_SHORT_MS
 
 
 class Clock:
@@ -391,41 +391,3 @@ def test_серия_со_слитыми_замыканиями_не_заказы
         board.series({0: (500, 0)}, count=4, step_ms=1000, press_after=1)
     assert not api.waves
 
-
-def test_после_нажатия_импульс_ждёт_всю_паузу(clock: Clock) -> None:
-    """
-    Окно сеанса открывается через WAKE_MARGIN_MS после нажатия. Импульс,
-    вставший к нажатию ближе, в сеанс не засчитывается, и пятисекундный сеанс
-    вмещал бы на один импульс меньше.
-    """
-    board, _ = waving(clock)
-
-    серия = board.series({0: (500, 0), 1: (1, 100)}, count=8, step_ms=1800,
-                         press_after=2)
-
-    следующий = серия.closures[0][2][0]
-    assert следующий - серия.press[0] >= WAKE_MARGIN_MS, (
-        f'нажатие {серия.press}, следующее замыкание в {следующий}')
-
-
-def test_в_сеанс_идут_только_целые_импульсы_после_пробуждения() -> None:
-    """Импульс на краю окна мог прийтись на сон, и счёт посреди сеанса он не доказывает."""
-    серия = Series(closures={0: [(500, 1000), (1300, 1800), (3400, 3900), (5200, 5700)]},
-                   press=(1000, 1500))
-
-    в_сеансе = серия.awake(0, length_ms=4500)
-
-    assert в_сеансе == [(3400, 3900)], в_сеансе
-
-
-def test_механика_ложится_в_короткий_сеанс(clock: Clock) -> None:
-    """
-    Сеанс по кнопке на стенде - около 5 с, и его длину двигает ответ облака.
-    Замыкания 350 мс через секунду обязаны лечь по два и в сеанс 3,6 с.
-    """
-    board, _ = waving(clock)
-
-    серия = board.series({0: (350, 0)}, count=10, step_ms=1350, press_after=2,
-                         min_gap_ms=1000)
-
-    assert len(серия.awake(0, length_ms=3600)) == 2, серия

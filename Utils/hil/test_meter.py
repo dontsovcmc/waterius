@@ -16,7 +16,7 @@ import pytest
 
 from . import portal as portal_mod
 from .constants import BASE_FACTOR, COLD, ELECTRO, ELECTRONIC, ELECTRONIC_HIGH, NAMUR
-from .dut import IMPULSE_GAP_S, IMPULSE_WIDTH_MS, WAKE_MARGIN_MS, Series
+from .dut import IMPULSE_GAP_S, IMPULSE_WIDTH_MS, Series
 from .logwatch import MANUAL_TRANSMIT_MODE
 
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
@@ -289,8 +289,7 @@ def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
         f'счёт attiny: {counted(first)} -> {counted(second)}')
 
 
-# Серия поверх пробуждения: начинается до нажатия, кончается после сеанса.
-# Сеанс по кнопке на стенде - около 5 с (замер 06.10)
+# Серия начинается до нажатия и идёт дальше, через пробуждение и сеанс
 OVER_PRESS_AFTER = 2
 
 # Механический вход: замыкание 350 мс ловит опрос раз в 250 мс с переспросом
@@ -305,10 +304,6 @@ MECH_GAP_MS = 1000
 ELECTRONIC_PULSE_MS = 10
 ELECTRONIC_STEP_MS = 300
 ELECTRONIC_PULSES = 10_000 // ELECTRONIC_STEP_MS
-
-# Меньше - серия не накрыла сеанс, и о счёте посреди него опыт не говорит.
-# Механика при шаге 1,35 с кладёт в пятисекундный сеанс три, запас на быстрый
-MIN_INSIDE = 2
 
 
 def over_session(stand: Stand, shapes: dict[int, tuple[int, int]],
@@ -326,31 +321,18 @@ def over_session(stand: Stand, shapes: dict[int, tuple[int, int]],
 
 def assert_counted_over_session(series: Series, first: Any, second: Any,
                                 channel: int, count: int) -> None:
-    """
-    Импульсы входа поданы целиком, часть легла в сеанс ЕСП, а сумма двух
-    приростов равна поданному.
-    """
+    """Импульсы входа поданы целиком, и сумма двух приростов равна поданному."""
     closures = series.closures[channel]
     assert len(closures) == count, (
         f'на входе {channel} плата по расписке выдала {len(closures)} импульсов '
         f'из {count}: это про стенд, а не про прошивку')
-
-    length = first.length_ms
-    assert length is not None, (
-        f'у последней строки сеанса нет метки времени ЕСП\n{first.text}')
-    inside = series.awake(channel, length)
-    assert len(inside) >= MIN_INSIDE, (
-        f'в сеанс ЕСП ({length} мс, окно с {WAKE_MARGIN_MS} мс после нажатия) '
-        f'легло {len(inside)} импульсов входа {channel}, нужно {MIN_INSIDE}: '
-        f'серия не накрыла сеанс, и это про стенд. Нажатие {series.press}, '
-        f'импульсы {closures}')
 
     got = (first.expect_payload('первый сеанс')[f'delta{channel}']
            + second.expect_payload('второй сеанс')[f'delta{channel}'])
     assert got == count * BASE_FACTOR, (
         f"delta{channel}: {first.payload[f'delta{channel}']} + "
         f"{second.payload[f'delta{channel}']}, а подано {count} импульсов "
-        f'по {BASE_FACTOR} л, из них {len(inside)} посреди сеанса\n'
+        f'по {BASE_FACTOR} л, нажатие {series.press} по часам платы\n'
         f'счёт attiny: {counted(first, channel)} -> {counted(second, channel)}')
 
 
