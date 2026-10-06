@@ -16,7 +16,7 @@ import pytest
 
 from . import portal as portal_mod
 from .constants import BASE_FACTOR, COLD, ELECTRO, ELECTRONIC, ELECTRONIC_HIGH, NAMUR
-from .dut import IMPULSE_GAP_S, IMPULSE_WIDTH_MS, Series
+from .dut import IMPULSE_GAP_S, IMPULSE_WIDTH_MS, WAKE_MARGIN_MS, Series
 from .logwatch import MANUAL_TRANSMIT_MODE
 
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
@@ -289,22 +289,25 @@ def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
         f'счёт attiny: {counted(first)} -> {counted(second)}')
 
 
-# Серия поверх пробуждения, первые импульсы ложатся ещё во сне. Сеанс по
-# кнопке на стенде - около 5 с (замер 06.10), серия идёт в разы дольше
-OVER_PULSES = 32
+# Серия поверх пробуждения: начинается до нажатия, кончается после сеанса.
+# Сеанс по кнопке на стенде - около 5 с (замер 06.10)
 OVER_PRESS_AFTER = 2
-# Механическому входу нужна пауза IMPULSE_GAP_S, быстрее шага 1,8 с не подать
-OVER_STEP_MS = IMPULSE_WIDTH_MS + 1300
-# У электронного после засчитанного импульса мёртвое время в тик опроса
-# (electronic.h, dead_time): секунда - это два тика с запасом
-ELECTRONIC_STEP_MS = 1000
 
-# attiny включает ЕСП на первом же опросе с прижатой кнопкой (button.h,
-# ButtonB2), опрос - раз в 250 мс. Секунда - с запасом
-WAKE_MARGIN_MS = 1000
+# Механический вход: замыкание 350 мс ловит опрос раз в 250 мс с переспросом
+# через 50 мс, конец - три пустых опроса (counter.h, discrete): секунда паузы
+# вмещает их и при такте watchdog 275 мс
+MECH_PULSES = 10
+MECH_PULSE_MS = 350
+MECH_GAP_MS = 1000
+
+# Электронный вход: после засчитанного импульса мёртвое время до следующего
+# такта 250 мс (electronic.h, take), шаг 300 мс - сразу за ним
+ELECTRONIC_PULSE_MS = 10
+ELECTRONIC_STEP_MS = 300
+ELECTRONIC_PULSES = 10_000 // ELECTRONIC_STEP_MS
 
 # Меньше - серия не накрыла сеанс, и о счёте посреди него опыт не говорит.
-# В пятисекундный сеанс механический вход больше двух импульсов не вмещает
+# Механика при шаге 1,35 с кладёт в пятисекундный сеанс три, запас на быстрый
 MIN_INSIDE = 2
 
 
@@ -312,8 +315,7 @@ def over_session(stand: Stand, shapes: dict[int, tuple[int, int]],
                  **series_args: int) -> tuple[Series, Any, Any]:
     """Серия с нажатием посреди неё, её сеанс и следующий по кнопке."""
     stand.reset_observers()
-    series = stand.dut.series(shapes, count=OVER_PULSES,
-                              press_after=OVER_PRESS_AFTER, **series_args)
+    series = stand.dut.series(shapes, press_after=OVER_PRESS_AFTER, **series_args)
     first = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
     stand.reset_observers()
@@ -323,34 +325,31 @@ def over_session(stand: Stand, shapes: dict[int, tuple[int, int]],
 
 
 def assert_counted_over_session(series: Series, first: Any, second: Any,
-                                channel: int) -> None:
+                                channel: int, count: int) -> None:
     """
     Импульсы входа поданы целиком, часть легла в сеанс ЕСП, а сумма двух
     приростов равна поданному.
-
-    ЕСП включается не раньше нажатия, а её метки времени идут с включения,
-    поэтому `нажатие + длина сеанса` - не позже настоящего конца сеанса.
     """
     closures = series.closures[channel]
-    assert len(closures) == OVER_PULSES, (
+    assert len(closures) == count, (
         f'на входе {channel} плата по расписке выдала {len(closures)} импульсов '
-        f'из {OVER_PULSES}: это про стенд, а не про прошивку')
+        f'из {count}: это про стенд, а не про прошивку')
 
     length = first.length_ms
     assert length is not None, (
         f'у последней строки сеанса нет метки времени ЕСП\n{first.text}')
-    start, end = series.press[0] + WAKE_MARGIN_MS, series.press[0] + length
-    inside = [c for c in closures if start <= c[0] and c[1] <= end]
+    inside = series.awake(channel, length)
     assert len(inside) >= MIN_INSIDE, (
-        f'в сеанс ЕСП [{start}, {end}] мс по часам платы легло {len(inside)} '
-        f'импульсов входа {channel}, нужно {MIN_INSIDE}: серия не накрыла сеанс, '
-        f'и это про стенд. Нажатие {series.press}, импульсы {closures}')
+        f'в сеанс ЕСП ({length} мс, окно с {WAKE_MARGIN_MS} мс после нажатия) '
+        f'легло {len(inside)} импульсов входа {channel}, нужно {MIN_INSIDE}: '
+        f'серия не накрыла сеанс, и это про стенд. Нажатие {series.press}, '
+        f'импульсы {closures}')
 
     got = (first.expect_payload('первый сеанс')[f'delta{channel}']
            + second.expect_payload('второй сеанс')[f'delta{channel}'])
-    assert got == OVER_PULSES * BASE_FACTOR, (
+    assert got == count * BASE_FACTOR, (
         f"delta{channel}: {first.payload[f'delta{channel}']} + "
-        f"{second.payload[f'delta{channel}']}, а подано {OVER_PULSES} импульсов "
+        f"{second.payload[f'delta{channel}']}, а подано {count} импульсов "
         f'по {BASE_FACTOR} л, из них {len(inside)} посреди сеанса\n'
         f'счёт attiny: {counted(first, channel)} -> {counted(second, channel)}')
 
@@ -361,15 +360,17 @@ def test_D7b_electronic_pulses_during_session_are_not_lost(stand: Stand) -> None
     Импульсы электронного входа посреди сеанса не теряются и не удваиваются.
 
     В сеансе главный цикл attiny занят ЕСП: отвечает по i2c и пишет EEPROM, и
-    импульс в миллисекунду держит только защёлка в прерывании
-    (`Attiny85/src/electronic.h`). D5 проверяет её во сне, здесь - пока ЕСП
-    включена.
+    импульс держит только защёлка в прерывании (`Attiny85/src/electronic.h`).
+    D5 проверяет её во сне, здесь - десять секунд импульсов так часто, как
+    вход их принимает, пока ЕСП включена.
     """
     series, first, second = over_session(
-        stand, {1: (SHORT_PULSE_MS, 0)}, step_ms=ELECTRONIC_STEP_MS,
-        min_gap_ms=ELECTRONIC_STEP_MS - SHORT_PULSE_MS)
+        stand, {1: (ELECTRONIC_PULSE_MS, 0)}, count=ELECTRONIC_PULSES,
+        step_ms=ELECTRONIC_STEP_MS,
+        min_gap_ms=ELECTRONIC_STEP_MS - ELECTRONIC_PULSE_MS)
 
-    assert_counted_over_session(series, first, second, channel=1)
+    assert_counted_over_session(series, first, second, channel=1,
+                                count=ELECTRONIC_PULSES)
 
 
 @pytest.mark.needs(ctype0=NAMUR, ctype1=ELECTRONIC, f0=BASE_FACTOR, f1=BASE_FACTOR)
@@ -382,11 +383,12 @@ def test_D7c_two_input_types_count_during_session(stand: Stand) -> None:
     ещё и обслуживает ЕСП.
     """
     series, first, second = over_session(
-        stand, {0: (IMPULSE_WIDTH_MS, 0), 1: (SHORT_PULSE_MS, INSIDE_MS)},
-        step_ms=OVER_STEP_MS)
+        stand, {0: (MECH_PULSE_MS, 0), 1: (ELECTRONIC_PULSE_MS, INSIDE_MS)},
+        count=MECH_PULSES, step_ms=MECH_PULSE_MS + MECH_GAP_MS,
+        min_gap_ms=MECH_GAP_MS)
 
-    assert_counted_over_session(series, first, second, channel=0)
-    assert_counted_over_session(series, first, second, channel=1)
+    assert_counted_over_session(series, first, second, channel=0, count=MECH_PULSES)
+    assert_counted_over_session(series, first, second, channel=1, count=MECH_PULSES)
 
 
 PRESSES_WHILE_CLOSED = 4

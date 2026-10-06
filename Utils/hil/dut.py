@@ -96,12 +96,28 @@ LED_OFF = '000000'
 LED_BRIGHTNESS = 40
 
 
+# attiny видит кнопку на ближайшем такте (button.h, ButtonB2; watchdog до ~275 мс)
+# и включает ЕСП через миллисекунды записи EEPROM (main.cpp). Полсекунды - с запасом
+WAKE_MARGIN_MS = 500
+
+
 @dataclass
 class Series:
     """Серия с нажатием посреди неё по расписке платы, в мс её аптайма."""
 
     closures: dict[int, list[tuple[int, int]]]   # канал -> (начало, конец) импульсов
     press: tuple[int, int]
+
+    def awake(self, channel: int, length_ms: int) -> list[tuple[int, int]]:
+        """
+        Импульсы канала, целиком лёгшие в сеанс ЕСП длиной `length_ms` по её меткам.
+
+        ЕСП включается не раньше нажатия, а метки идут с её включения, поэтому
+        `нажатие + длина` - не позже настоящего конца сеанса.
+        """
+        start = self.press[0] + WAKE_MARGIN_MS
+        end = self.press[0] + length_ms
+        return [c for c in self.closures[channel] if start <= c[0] and c[1] <= end]
 
 
 class Dut:
@@ -339,8 +355,9 @@ class Dut:
 
         if self._settle is not None:
             self._settle(BUTTON_SHORT_MS)
-        # Посреди паузы перед следующим импульсом
-        press_at = lead + press_after * step_ms - (lead + BUTTON_SHORT_MS) // 2
+        # В начале паузы: следующий импульс встаёт на всю паузу позже нажатия
+        # и успевает за WAKE_MARGIN_MS, а не теряется у края сеанса
+        press_at = press_after * step_ms + 1
         logger.info(f'кнопка: короткое нажатие {BUTTON_SHORT_MS} мс внутри '
                     f'серии, после {press_after}-го импульса')
 
