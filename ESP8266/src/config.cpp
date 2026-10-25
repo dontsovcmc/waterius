@@ -15,6 +15,7 @@
 #include "master_i2c.h"
 
 extern MasterI2C masterI2C;
+extern AttinyData data;
 
 
 // Конвертируем значение переменных компиляции в строку
@@ -424,6 +425,34 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
 }
 
 /*
+Показания attiny живут в её EEPROM, и обнулить их можно только командой 'R' (#326).
+*/
+static void clear_attiny_counters()
+{
+    if (data.version < ATTINY_VER_CLEAR_COUNTERS)
+    {
+        LOG_INFO(F("Factory reset: attiny ") << (int)data.version << F(" keeps impulses"));
+        return;
+    }
+
+    if (!masterI2C.clearCounters())
+    {
+        LOG_ERROR(F("Factory reset: attiny impulses not cleared"));
+        return;
+    }
+
+    // Итог проверяем чтением: ответа у команды нет, а стирание может оборвать пропавшее питание
+    delay(CLEAR_COUNTERS_WAIT_MS);
+    AttinyData now;
+    if (!masterI2C.getAttinyData(now) || now.impulses0 || now.impulses1)
+    {
+        LOG_ERROR(F("Factory reset: attiny impulses not cleared"));
+        return;
+    }
+    LOG_INFO(F("Factory reset: attiny impulses cleared"));
+}
+
+/*
 Сброс к заводским настройкам.
 
 Настройки возвращаются к объявленным умолчаниям присваиванием всей структуры,
@@ -435,8 +464,9 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
 Переживает сброс единственное - уникальный токен: им устройство опознаётся в
 облаке, и потерять его значит потерять привязку к аккаунту.
 
-Типы входов живут в EEPROM attiny, и стереть их отсюда нельзя - только
-командой. С attiny 42 она заодно снимает тревоги канала.
+Типы входов и показания живут в EEPROM attiny, и стереть их отсюда нельзя -
+только командами. Смена типа с attiny 42 заодно снимает тревоги канала,
+обнуление показаний есть с attiny 47.
 */
 void factory_reset(Settings &sett)
 {
@@ -457,6 +487,7 @@ void factory_reset(Settings &sett)
     {
         LOG_ERROR(F("Factory reset: attiny input types not reset"));
     }
+    clear_attiny_counters();
 
     sett = Settings();
     init_config(sett);

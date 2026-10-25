@@ -21,6 +21,7 @@ master.
 | `'E'` | `MasterI2C::extendWakeUp` | Продлить бодрствование: attiny отсчитывает `SETUP_TIME_MSEC` заново. Шлёт обновление по воздуху и портал на каждое действие пользователя — см. [setup-portal.md](setup-portal.md) |
 | `'A'` | `MasterI2C::setAlarmConfig` | Задать пороги тревог и снять тревоги, 13 байт + CRC. Шлётся в каждом сеансе: у attiny пороги, как и период сна, живут в ОЗУ — см. [alarms.md](alarms.md) |
 | `'K'` | `MasterI2C::confirmAlarm` | Тревога доставлена получателю: можно перестать будить ЕСП |
+| `'R'` | `MasterI2C::clearCounters` | Заводской сброс: обнулить показания обоих каналов и поставить период сна в сутки. С attiny 47 — см. [ota-and-reset.md](ota-and-reset.md) |
 | `'V'` | `MasterI2C::updateVoltage` | Перемерить напряжение |
 | `'Z'` | `MasterI2C::setSleep` | «Ухожу спать», можно снимать питание |
 

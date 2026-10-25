@@ -4,7 +4,7 @@
 `POST /api/reset` из портала стирает EEPROM и конфигурацию Wi-Fi самой ЕСП, а
 восстанавливает ровно одно - уникальный токен устройства (`config.cpp`,
 factory_reset). Это и проверяется: токен пережил сброс, всё остальное вернулось
-к умолчаниям `init_config`.
+к умолчаниям `init_config`, а показания attiny обнулились.
 
 Сам сброс и возврат стенда - в `reset.py`: тем же сбросом пользуются A10
 (`test_auto_factor.py`) и E10 (`test_alarms.py`), которым нужен незаданный вес
@@ -72,8 +72,7 @@ def test_R2_settings_return_to_defaults(after_reset: dict) -> None:
     Проверяется ровно то, что сбрасывает `factory_reset` (`config.cpp`):
     настройки ЕСП целиком - присваиванием `Settings()` и `init_config`, - плюс
     типы входов, которые живут в EEPROM attiny и стираются только командой
-    `setCountersType`. Больше из attiny сброс не трогает ничего: это
-    особенность платы.
+    `setCountersType`. Показания attiny проверяет R3.
 
     Вне списка три поля, которые к первой посылке успел задать стенд: сеть,
     `http_on` и `http_url`, - без них посылки не было бы вовсе. И
@@ -107,3 +106,23 @@ def test_R2_settings_return_to_defaults(after_reset: dict) -> None:
              if payload.get(name) != want}
     assert not wrong, (f'после сброса осталось не умолчание: {wrong}\n'
                        f'{after_reset["tail"]}')
+
+
+@pytest.mark.requires(attiny=47, esp='2.0.53')
+def test_R3_attiny_impulses_cleared(after_reset: dict) -> None:
+    """
+    Сброс обнуляет и показания attiny (#326).
+
+    Они живут в её EEPROM кольцом, и при старте побеждает блок с наибольшими
+    счётчиками: записать один нулевой блок мало, старые вернулись бы. Поэтому
+    attiny стирает всё кольцо по команде 'R'. Нули в первой посылке после
+    сброса показывают, что команда дошла и стирание завершилось: ЕСП после
+    сброса перезагружалась, и attiny отдала показания заново.
+    """
+    was = (after_reset['before'].get('imp0'), after_reset['before'].get('imp1'))
+    if not any(was):
+        pytest.skip(f'до сброса импульсов не было ({was}): нули ничего не докажут')
+    payload = after_reset['payload']
+    now = (payload.get('imp0'), payload.get('imp1'))
+    assert now == (0, 0), (f'импульсы после сброса {now}, до сброса {was}\n'
+                           f'{after_reset["tail"]}')
