@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from . import portal as portal_mod
-from .constants import BASE_FACTOR, COLD, ELECTRO, ELECTRONIC, ELECTRONIC_HIGH, NAMUR
+from .constants import BASE_FACTOR, COLD, ELECTRO, ELECTRONIC, NAMUR
 from .dut import IMPULSE_GAP_S, IMPULSE_WIDTH_MS, Series
 from .logwatch import MANUAL_TRANSMIT_MODE
 
@@ -33,10 +33,6 @@ PULSES = 3
 # Миллисекунда - предел стенда: выдержку отмеряет плата, а заказывается она в
 # миллисекундах
 SHORT_PULSE_MS = 1
-
-# Положительный импульс стенд отмеряет с компьютера, поэтому он длинный.
-# Длину проверяет соседний тест, здесь важна полярность
-HIGH_PULSE_MS = 30
 
 # Частый электронный вход - электросчётчик: 3200 имп/кВт·ч на 22 кВт (три фазы
 # по 32 А) дают 20 импульсов в секунду. Импульс 30 мс - нижний предел выхода
@@ -178,8 +174,7 @@ def test_D5_electronic_input_catches_short_pulses(stand: Stand) -> None:
     настоящая длительность.
 
     Источника уровня этому типу не нужно: подтяжку attiny держит включённой,
-    покой - высокий уровень, и стенду остаётся замкнуть на минус. Тип
-    «Электронный (+)» устроен наоборот, и его проверяет test_D6.
+    покой - высокий уровень, и стенду остаётся замкнуть на минус.
     """
     stand.reset_observers()
 
@@ -196,10 +191,9 @@ def test_D5b_electronic_input_counts_fast_pulses(stand: Stand) -> None:
     """
     Электронный вход во сне считает 20 импульсов в секунду.
 
-    Мёртвое время после импульса (`Attiny85/src/electronic.h`, take) есть только
-    у «Электронного (+)»: его высокоомный вход ловит эфир. Открытому стоку линию
-    держит подтяжка, и потолок в четыре импульса за такт опроса недосчитал бы
-    электросчётчик под нагрузкой.
+    Мёртвого времени после импульса у входа нет (`Attiny85/src/electronic.h`):
+    потолок в один импульс на такт опроса недосчитал бы электросчётчик под
+    нагрузкой.
     """
     stand.reset_observers()
 
@@ -213,44 +207,6 @@ def test_D5b_electronic_input_counts_fast_pulses(stand: Stand) -> None:
     session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
 
     session.assert_delta(channel=1, liters=FAST_PULSES * BASE_FACTOR)
-
-
-def test_D6_electronic_high_input_counts_rising_pulses(stand: Stand) -> None:
-    """
-    Тип «Электронный (+)»: импульс - подъём линии, а не замыкание.
-
-    Подтяжку attiny в этом типе выключает (`counter.h`, set_type), уровень
-    задаёт счётчик - и в опыте его задаёт стенд: в покое линия прижата к
-    земле, импульс - короткий подъём. Отпущенную линию высокоомный вход ловил
-    бы как эфир.
-
-    Уровень подъёма - 3,3 В платы, и на пятивольтовом attiny этого хватает:
-    порог высокого уровня 0,6·VCC = 3,0 В. Величина не теоретическая - в пачке
-    замыканий уровни чередуются, поэтому паузы плата держит теми же 3,3 В, и
-    зелёный test_D5 означает, что attiny берёт их за покой.
-
-    Тип - в теле, а не маркером: маркер выставил бы его фикстурой, до того как
-    стенд возьмёт линию, а этого делать нельзя. Смена типа гасит подтяжку, и
-    отпущенный высокоомный вход с включённым прерыванием ловит эфир - лишние
-    импульсы легли бы в проверяемую дельту и выглядели бы виной прошивки.
-    Поэтому сначала минус на линии, и только потом тип.
-    """
-    with stand.dut.driven(channel=1):
-        stand.setup(channel=1, ctype=ELECTRONIC_HIGH, factor=BASE_FACTOR)
-        stand.reset_observers()
-        подано = stand.dut.pulse_high(channel=1, count=PULSES,
-                                      width_ms=HIGH_PULSE_MS)
-        # Сначала приговор стенду: расхождение заказа и расписки платы - его
-        # беда, и отказ обязан это говорить, иначе недоданный импульс выглядит
-        # как недосчитавшая прошивка
-        assert подано == PULSES, (
-            f'стенд заказал {PULSES} импульсов подъёма по {HIGH_PULSE_MS} мс, '
-            f'а плата по своей расписке выдала {подано}: это про стенд, а не '
-            f'про прошивку\n{stand.dut.delivered(channel=1)}')
-        stand.dut.press_button()
-        session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
-
-    session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)
 
 
 # Серия поверх сеанса: импульс раз в две секунды двадцать секунд, нажатие на

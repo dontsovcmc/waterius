@@ -108,23 +108,22 @@ namespace
     };
 
     const uint8_t ALL_TYPES[] = {CounterType::NAMUR, CounterType::ELECTRONIC,
-                                 CounterType::ELECTRONIC_HIGH, CounterType::LEAKAGE,
-                                 CounterType::LEAKAGE_NC, CounterType::NONE};
+                                 CounterType::LEAKAGE, CounterType::LEAKAGE_NC,
+                                 CounterType::NONE};
 }
 
 TEST(ChannelEntities, InputTypeIsAlwaysPublished)
 {
     const uint8_t types[] = {CounterType::NAMUR, CounterType::ELECTRONIC,
-                             CounterType::ELECTRONIC_HIGH, CounterType::LEAKAGE,
-                             CounterType::LEAKAGE_NC, CounterType::NONE};
+                             CounterType::LEAKAGE, CounterType::LEAKAGE_NC,
+                             CounterType::NONE};
     for (uint8_t t : types)
         EXPECT_TRUE(channel_entity_wanted(t, ChannelEntity::INPUT_TYPE)) << (int)t;
 }
 
 TEST(ChannelEntities, MeterHasEverythingButWet)
 {
-    const uint8_t meters[] = {CounterType::NAMUR, CounterType::ELECTRONIC,
-                              CounterType::ELECTRONIC_HIGH};
+    const uint8_t meters[] = {CounterType::NAMUR, CounterType::ELECTRONIC};
     for (uint8_t t : meters)
     {
         for (ChannelEntity e : ALL)

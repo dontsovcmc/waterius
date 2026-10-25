@@ -52,10 +52,9 @@ const CounterName_PORTABLE_WATER = 5;
 const CounterName_OTHER = 6;
 const CounterName_HEAT_KWH = 7;
 
-// 1 (дискретный) и 3 (датчик Холла) сняты, числа остаются занятыми
+// 1 (дискретный), 3 (датчик Холла) и 4 (электронный +) сняты, числа остаются занятыми
 const CounterType_NAMUR = 0;
 const CounterType_ELECTRONIC = 2;
-const CounterType_ELECTRONIC_HIGH = 4;
 const CounterType_LEAKAGE = 5;
 const CounterType_LEAKAGE_NC = 6;
 const CounterType_NONE = 0xFF;
@@ -145,7 +144,6 @@ RESOURCES[CounterName_OTHER] = {
 const COUNTER_TYPES = {};
 COUNTER_TYPES[CounterType_NAMUR] = "Механический (Геркон, Намур)";
 COUNTER_TYPES[CounterType_ELECTRONIC] = "Электронный";
-COUNTER_TYPES[CounterType_ELECTRONIC_HIGH] = "Электронный (+)";
 COUNTER_TYPES[CounterType_LEAKAGE] = "Протечка (нормально-разомкнутый)";
 COUNTER_TYPES[CounterType_LEAKAGE_NC] = "Протечка (нормально-замкнутый)";
 COUNTER_TYPES[CounterType_NONE] = "Выключен";

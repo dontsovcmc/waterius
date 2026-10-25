@@ -177,7 +177,6 @@ bool is_valid_counter_type(const uint8_t counter_type)
     {
         case CounterType::NAMUR:
         case CounterType::ELECTRONIC:
-        case CounterType::ELECTRONIC_HIGH:
         case CounterType::LEAKAGE:
         case CounterType::LEAKAGE_NC:
         case CounterType::NONE:

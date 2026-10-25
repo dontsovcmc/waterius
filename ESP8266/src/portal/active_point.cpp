@@ -136,7 +136,7 @@ String replace_value(const String &var)
 
 String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ctype)
 {
-    if (ctype == CounterType::ELECTRONIC || ctype == CounterType::ELECTRONIC_HIGH)
+    if (ctype == CounterType::ELECTRONIC)
     {
         switch (input)
         {

@@ -25,8 +25,7 @@ def flag(entity_id: str) -> dict:
     return {'val_tpl': '{{ value_json.' + entity_id + ' | is_defined | int }}'}
 
 
-CTYPE_OPTIONS = ['MECHANIC', 'ELECTRONIC', 'ELECTRONIC_HIGH', 'LEAKAGE', 'LEAKAGE_NC',
-                 'NOT_USED']
+CTYPE_OPTIONS = ['MECHANIC', 'ELECTRONIC', 'LEAKAGE', 'LEAKAGE_NC', 'NOT_USED']
 
 
 def ctype(entity_id: str) -> dict:
@@ -34,7 +33,6 @@ def ctype(entity_id: str) -> dict:
         'options': CTYPE_OPTIONS,
         'val_tpl': (f'{{% if value_json.{entity_id}==0 %}} MECHANIC '
                     f'{{% elif value_json.{entity_id}==2 %}} ELECTRONIC '
-                    f'{{% elif value_json.{entity_id}==4 %}} ELECTRONIC_HIGH '
                     f'{{% elif value_json.{entity_id}==5 %}} LEAKAGE '
                     f'{{% elif value_json.{entity_id}==6 %}} LEAKAGE_NC '
                     f'{{% elif value_json.{entity_id}==255 %}} NOT_USED '

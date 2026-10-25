@@ -43,8 +43,8 @@ EEPROM layout (512 bytes, Attiny85):
   по offset 181 — setup_started_counter (вне ring buffer).
 
 Типы входов (CounterType):
-  0 = NAMUR, 2 = ELECTRONIC, 4 = ELECTRONIC_HIGH, 5 = LEAKAGE, 6 = LEAKAGE_NC,
-  255 = NONE. Значения 1 (DISCRETE) и 3 (HALL) сняты, но в старых дампах встречаются
+  0 = NAMUR, 2 = ELECTRONIC, 5 = LEAKAGE, 6 = LEAKAGE_NC, 255 = NONE.
+  Значения 1 (DISCRETE), 3 (HALL) и 4 (ELECTRONIC_HIGH) сняты, но в старых дампах встречаются
 
 Исходники Attiny85:
   Attiny85/src/Setup.h     — структуры Data, Config, Header
@@ -75,7 +75,7 @@ COUNTER_TYPE = {
     1: "DISCRETE (снят)",
     2: "ELECTRONIC",
     3: "HALL (снят)",
-    4: "ELECTRONIC_HIGH",
+    4: "ELECTRONIC_HIGH (снят)",
     5: "LEAKAGE",
     6: "LEAKAGE_NC",
     255: "NONE",

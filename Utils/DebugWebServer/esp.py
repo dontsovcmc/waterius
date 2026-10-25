@@ -20,10 +20,9 @@ class CounterName(Enum):
 
 
 class CounterType(Enum):
-    # 1 (дискретный) и 3 (датчик Холла) сняты, числа остаются занятыми
+    # 1 (дискретный), 3 (датчик Холла) и 4 (электронный +) сняты, числа остаются занятыми
     NAMUR = 0
     ELECTRONIC = 2
-    ELECTRONIC_HIGH = 4
     LEAKAGE = 5
     LEAKAGE_NC = 6
     NONE = 0xFF
