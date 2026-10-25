@@ -146,8 +146,8 @@ const COUNTER_TYPES = {};
 COUNTER_TYPES[CounterType_NAMUR] = "Механический (Геркон, Намур)";
 COUNTER_TYPES[CounterType_ELECTRONIC] = "Электронный";
 COUNTER_TYPES[CounterType_ELECTRONIC_HIGH] = "Электронный (+)";
-COUNTER_TYPES[CounterType_LEAKAGE] = "Датчик протечки (замыкание)";
-COUNTER_TYPES[CounterType_LEAKAGE_NC] = "Датчик протечки (размыкание)";
+COUNTER_TYPES[CounterType_LEAKAGE] = "Протечка (нормально-разомкнутый)";
+COUNTER_TYPES[CounterType_LEAKAGE_NC] = "Протечка (нормально-замкнутый)";
 COUNTER_TYPES[CounterType_NONE] = "Выключен";
 
 const S_COUNTER_DISABLED = "Отключён";
