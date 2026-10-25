@@ -462,7 +462,6 @@ TEST(CounterTypes, KnownTypesAreAccepted)
 {
     EXPECT_TRUE(is_valid_counter_type(CounterType::NAMUR));
     EXPECT_TRUE(is_valid_counter_type(CounterType::ELECTRONIC));
-    EXPECT_TRUE(is_valid_counter_type(CounterType::ELECTRONIC_HIGH));
     EXPECT_TRUE(is_valid_counter_type(CounterType::LEAKAGE));
     EXPECT_TRUE(is_valid_counter_type(CounterType::LEAKAGE_NC));
     EXPECT_TRUE(is_valid_counter_type(CounterType::NONE));
@@ -473,7 +472,7 @@ TEST(CounterTypes, EverySelectorOptionIsKnown)
     // Значения из селектора «Тип входа» в data/input_setup.html. Тип, который
     // страница предлагает, а функция не признаёт, вернётся на страницу как
     // NAMUR и затрёт настройку при следующем сохранении
-    const uint8_t options[] = {0, 2, 4, 5, 6, 255};
+    const uint8_t options[] = {0, 2, 5, 6, 255};
     for (uint8_t option : options)
     {
         EXPECT_TRUE(is_valid_counter_type(option)) << "тип входа " << (int)option;
@@ -488,10 +487,11 @@ TEST(CounterTypes, UnknownTypeIsRejected)
     EXPECT_FALSE(is_valid_counter_type(100));
     EXPECT_FALSE(is_valid_counter_type(254));
 
-    // Снятые типы: 1 - дискретный, 3 - датчик Холла. Числа остаются занятыми,
-    // но выставить их больше нельзя
+    // Снятые типы: 1 - дискретный, 3 - датчик Холла, 4 - электронный с
+    // положительным импульсом. Числа остаются занятыми, но выставить их нельзя
     EXPECT_FALSE(is_valid_counter_type(1));
     EXPECT_FALSE(is_valid_counter_type(3));
+    EXPECT_FALSE(is_valid_counter_type(4));
 }
 
 TEST(CounterTypes, ValuesMatchAttinyFirmware)
@@ -500,7 +500,6 @@ TEST(CounterTypes, ValuesMatchAttinyFirmware)
     // data/input_setup.html — менять нельзя
     EXPECT_EQ(CounterType::NAMUR, 0);
     EXPECT_EQ(CounterType::ELECTRONIC, 2);
-    EXPECT_EQ(CounterType::ELECTRONIC_HIGH, 4);
     EXPECT_EQ(CounterType::LEAKAGE, 5);
     EXPECT_EQ(CounterType::LEAKAGE_NC, 6);
     EXPECT_EQ(CounterType::NONE, 255);

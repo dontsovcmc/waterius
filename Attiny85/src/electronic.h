@@ -10,6 +10,9 @@
 снимается в самом прерывании по фронту и защёлкивается здесь, а главный цикл
 потом просто забирает готовый результат.
 
+Выход с открытым стоком: покой — высокий уровень от подтяжки attiny, импульс —
+замыкание на минус.
+
 Файл намеренно без Arduino.h и без обращений к регистрам: правило «что считать
 импульсом» проверяется хостовыми тестами (Attiny85/test/test_electronic).
 */
@@ -19,44 +22,42 @@
 struct ElectronicInput
 {
     /*
-    Полярность. У выхода с открытым стоком покой — высокий уровень, импульс —
-    замыкание на минус. У выхода, который сам выдаёт положительный импульс
-    (ELECTRONIC_HIGH), всё наоборот.
-    */
-    bool active_high;
-
-    /*
     Фронт, защёлкнутый прерыванием. volatile: пишется в ISR, читается в
     главном цикле.
     */
     volatile bool pending;
 
     /*
-    Линия сейчас в активном уровне. Пока это так, новый импульс не
-    засчитывается: один импульс — один переход из покоя.
+    Линия сейчас замкнута. Пока это так, новый импульс не засчитывается:
+    один импульс — один переход из покоя.
     */
     bool on_pulse;
 
-    /*
-    Мёртвое время в тиках опроса (250 мс). Защита от наводок: у высокоомного
-    входа свободный провод ловит эфир, а у механики — дребезг.
-    */
-    uint8_t dead_time;
+    // Включён электронным типом: так enable отличает прежний тип от нового.
+    bool enabled;
 
     ElectronicInput()
-        : active_high(false), pending(false), on_pulse(false), dead_time(0)
+        : pending(false), on_pulse(false), enabled(false)
     {
     }
 
     /*
-    Смена типа входа: старая защёлка к новому счётчику отношения не имеет.
+    Тот же тип - защёлку не трогаем: loop() включает вход в начале каждого сна,
+    и фронт с конца сеанса пропал бы. Новый тип - старая защёлка ему чужая.
     */
-    void reset(const bool high)
+    void enable()
     {
-        active_high = high;
+        if (enabled)
+            return;
+
+        enabled = true;
         pending = false;
         on_pulse = false;
-        dead_time = 0;
+    }
+
+    void disable()
+    {
+        enabled = false;
     }
 
     /*
@@ -64,9 +65,7 @@ struct ElectronicInput
     */
     void on_front(const bool level)
     {
-        const bool active = (level == active_high);
-
-        if (!active)
+        if (level)
         {
             on_pulse = false;
             return;
@@ -80,24 +79,15 @@ struct ElectronicInput
     }
 
     /*
-    Вызывается из главного цикла. time_event — сработал тик опроса 250 мс,
-    по нему истекает мёртвое время.
+    Вызывается из главного цикла.
 
     @return true если импульс засчитан
     */
-    bool take(const bool time_event)
+    bool take()
     {
-        if (time_event && dead_time)
-            dead_time--;
-
         const bool pulse = pending;
         pending = false;
-
-        if (!pulse || dead_time)
-            return false;
-
-        dead_time = 1;
-        return true;
+        return pulse;
     }
 };
 

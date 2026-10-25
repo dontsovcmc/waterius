@@ -24,8 +24,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable, Iterator, Mapping, Sequence
-from contextlib import contextmanager
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -473,71 +472,6 @@ class Dut:
         logger.info(f'канал {channel}: {count} импульсов раз в {interval} с')
         self.pulses(channel, count, interval, width_ms)
         return count
-
-    # --- электронный выход с положительным импульсом ---
-
-    @contextmanager
-    def driven(self, channel: int) -> Iterator[None]:
-        """
-        Взять линию входа под управление: покой - земля, а не высокоомное
-        состояние.
-
-        Нужно для типа «Электронный (+)»: подтяжку attiny в нём выключает
-        (`counter.h`, set_type), уровень задаёт счётчик, и в покое линию
-        обязан держать кто-то. Отпущенная линия у высокоомного входа ловит
-        эфир, и импульсы возьмутся из ниоткуда.
-
-        На выходе линия отпускается: для остальных типов входа стенд не
-        должен мешать устройству.
-        """
-        pin = self._ch[channel]
-        self.api.pinMode(pin, OUTPUT)
-        self.api.digitalWrite(pin, LOW)
-        try:
-            yield
-        finally:
-            self.api.pinMode(pin, INPUT)
-
-    def pulse_high(self, channel: int, count: int = 1,
-                   width_ms: int = IMPULSE_WIDTH_MS,
-                   gap: float = IMPULSE_GAP_S) -> int:
-        """
-        Импульс подъёмом линии - то, что делает счётчик с положительным
-        выходом. Звать только внутри `driven`: между импульсами линия обязана
-        оставаться прижатой к земле.
-
-        Возвращает, сколько импульсов выдала сама плата по своей расписке - тем
-        же числом, что и `pulse`, и по той же причине: без расписки «до входа
-        дошло меньше» не отличить от «стенд не довёл». Здесь это было особенно
-        дорого - фронты набирал компьютер двумя запросами на импульс, и в
-        тридцатимиллисекундный импульс укладывалась дорога по радио, а осечка
-        связи добавляла туда же паузу повтора.
-
-        Пачка заказывается с хвостовой паузой, поэтому кончается низким
-        уровнем: плата отпускает линию последним моментом, и отпустить её надо
-        с уровня покоя, иначе высокоомный вход поймает эфир. Уровень покоя
-        после пачки восстанавливает `driven`, к которой возвращается управление.
-        """
-        pin = self._ch[channel]
-        gap_ms = int(gap * 1000)
-        # Участков в пачке вдвое больше импульсов: на каждый подъём своя пауза
-        # следом. Предел платы в участках тот же, что у замыканий
-        шаг = width_ms + gap_ms
-        в_пачке = max(1, min(WAVE_MAX_PULSES, WAVE_MAX_MS // шаг))
-        подано = 0
-        осталось = count
-        while осталось:
-            сколько = min(осталось, в_пачке)
-            edges = [width_ms, gap_ms] * сколько
-            total_s = self.api.wave(
-                [self.line(channel, edges, value=HIGH)], wait=False)
-            self._wait(time.monotonic() + total_s)
-            подано += self.impulses_delivered(channel)
-            осталось -= сколько
-            # Линию плата отпустила: вернуть её в покой до следующей пачки
-            self.api.pinMode(pin, OUTPUT)
-            self.api.digitalWrite(pin, LOW)
-        return подано
 
     # --- датчик протечки ---
 

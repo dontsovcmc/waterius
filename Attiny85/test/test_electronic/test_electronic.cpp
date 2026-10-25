@@ -10,11 +10,8 @@
 прерывании, а не по уровню, прочитанному позже.
 
 Ниже FRONT — это вызов из ISR с уровнем пина, TAKE — забор результата главным
-циклом. Тик опроса (250 мс) отмечен как time_event.
+циклом. Выход с открытым стоком: покой высокий, импульс замыкает на минус.
 */
-
-static const bool TIME_TICK = true;
-static const bool NO_TICK = false;
 
 static const bool HIGH_LEVEL = true;
 static const bool LOW_LEVEL = false;
@@ -22,12 +19,8 @@ static const bool LOW_LEVEL = false;
 /*
 Копировать ElectronicInput нельзя: volatile-поле удаляет конструктор копии.
 Поэтому вход настраивается на месте, а не возвращается фабрикой.
-
-ACTIVE_LOW — выход с открытым стоком: покой высокий, импульс замыкает на минус.
-ACTIVE_HIGH — ELECTRONIC_HIGH: счётчик сам выдаёт положительный импульс.
 */
-#define ACTIVE_LOW(name)  ElectronicInput name; name.reset(false)
-#define ACTIVE_HIGH(name) ElectronicInput name; name.reset(true)
+#define ENABLED(name) ElectronicInput name; name.enable()
 
 TEST(Electronic, ShortPulseIsNotLost)
 {
@@ -36,119 +29,101 @@ TEST(Electronic, ShortPulseIsNotLost)
     фронта пришли до take(), и уровень к этому моменту снова в покое —
     импульс всё равно обязан быть засчитан.
     */
-    ACTIVE_LOW(input);
+    ENABLED(input);
 
     input.on_front(LOW_LEVEL);   // начало импульса
     input.on_front(HIGH_LEVEL);  // конец импульса, 0,7 мс спустя
 
-    EXPECT_TRUE(input.take(NO_TICK));
+    EXPECT_TRUE(input.take());
 }
 
 TEST(Electronic, PulseCountedOnceUntilIdle)
 {
     // Дребезг внутри импульса не должен превращаться в несколько импульсов
-    ACTIVE_LOW(input);
+    ENABLED(input);
 
     input.on_front(LOW_LEVEL);
     input.on_front(LOW_LEVEL);
     input.on_front(LOW_LEVEL);
 
-    EXPECT_TRUE(input.take(NO_TICK));
-    EXPECT_FALSE(input.take(NO_TICK));
+    EXPECT_TRUE(input.take());
+    EXPECT_FALSE(input.take());
 }
 
-TEST(Electronic, ActiveLowCountsFallingEdge)
+TEST(Electronic, CountsFallingEdge)
 {
-    ACTIVE_LOW(input);
+    ENABLED(input);
 
     input.on_front(HIGH_LEVEL);  // покой, импульса нет
-    EXPECT_FALSE(input.take(NO_TICK));
+    EXPECT_FALSE(input.take());
 
     input.on_front(LOW_LEVEL);
-    EXPECT_TRUE(input.take(NO_TICK));
-}
-
-TEST(Electronic, ActiveHighCountsRisingEdge)
-{
-    ACTIVE_HIGH(input);
-
-    input.on_front(LOW_LEVEL);   // покой, импульса нет
-    EXPECT_FALSE(input.take(NO_TICK));
-
-    input.on_front(HIGH_LEVEL);
-    EXPECT_TRUE(input.take(NO_TICK));
+    EXPECT_TRUE(input.take());
 }
 
 TEST(Electronic, SecondPulseCountedAfterReturnToIdle)
 {
-    // Два настоящих импульса подряд считаются оба — если между ними прошёл
-    // тик опроса, то есть мёртвое время истекло
-    ACTIVE_LOW(input);
+    ENABLED(input);
 
     input.on_front(LOW_LEVEL);
-    EXPECT_TRUE(input.take(NO_TICK));
+    EXPECT_TRUE(input.take());
 
     input.on_front(HIGH_LEVEL);
-    EXPECT_FALSE(input.take(TIME_TICK));
+    EXPECT_FALSE(input.take());
 
     input.on_front(LOW_LEVEL);
-    EXPECT_TRUE(input.take(NO_TICK));
+    EXPECT_TRUE(input.take());
 }
 
-TEST(Electronic, DeadTimeDropsFastRepeat)
+TEST(Electronic, FastPulsesAllCounted)
 {
     /*
-    Наводка на высокоомном входе выглядит как пачка фронтов. Мёртвое время
-    оставляет от неё один импульс, а не десяток.
+    Электросчётчик 3200 имп/кВт·ч на 22 кВт - это 20 импульсов в секунду, а тик
+    опроса четыре раза в секунду. Каждый импульс считается и без тика между ними.
     */
-    ACTIVE_HIGH(input);
+    ENABLED(input);
 
-    input.on_front(HIGH_LEVEL);
-    EXPECT_TRUE(input.take(NO_TICK));
-
-    input.on_front(LOW_LEVEL);
-    input.on_front(HIGH_LEVEL);
-    EXPECT_FALSE(input.take(NO_TICK));
-
-    input.on_front(LOW_LEVEL);
-    input.on_front(HIGH_LEVEL);
-    EXPECT_FALSE(input.take(NO_TICK));
-}
-
-TEST(Electronic, DeadTimeExpiresOnTimeEvent)
-{
-    // Мёртвое время меряется тиками опроса: один тик — 250 мс
-    ACTIVE_HIGH(input);
-
-    input.on_front(HIGH_LEVEL);
-    EXPECT_TRUE(input.take(NO_TICK));
-
-    EXPECT_FALSE(input.take(TIME_TICK));   // тик истёк, импульсов не было
-
-    input.on_front(LOW_LEVEL);
-    input.on_front(HIGH_LEVEL);
-    EXPECT_TRUE(input.take(NO_TICK));
+    for (int i = 0; i < 20; i++)
+    {
+        input.on_front(LOW_LEVEL);
+        EXPECT_TRUE(input.take()) << "импульс " << i;
+        input.on_front(HIGH_LEVEL);
+        EXPECT_FALSE(input.take());
+    }
 }
 
 TEST(Electronic, TakeWithoutFrontReturnsFalse)
 {
-    // Тики времени сами по себе импульсов не создают
-    ACTIVE_LOW(input);
+    ENABLED(input);
 
-    EXPECT_FALSE(input.take(TIME_TICK));
-    EXPECT_FALSE(input.take(TIME_TICK));
-    EXPECT_FALSE(input.take(NO_TICK));
+    EXPECT_FALSE(input.take());
+    EXPECT_FALSE(input.take());
 }
 
-TEST(Electronic, ResetClearsState)
+TEST(Electronic, ReturnToElectronicClearsLatch)
 {
-    // Смена типа входа не должна отдавать импульс, защёлкнутый прошлым
-    ACTIVE_LOW(input);
+    // Электронный -> механический -> электронный: защёлка с прошлого раза чужая
+    ENABLED(input);
 
     input.on_front(LOW_LEVEL);
-    input.reset(true);
+    input.disable();
+    input.enable();
 
-    EXPECT_FALSE(input.take(NO_TICK));
+    EXPECT_FALSE(input.take());
+}
+
+TEST(Electronic, SameTypeKeepsLatch)
+{
+    /*
+    loop() включает вход заново в начале каждого сна. Фронт, пришедший между
+    последним опросом сеанса и этим включением, обязан дожить до take().
+    */
+    ENABLED(input);
+
+    input.on_front(LOW_LEVEL);
+    input.enable();
+
+    EXPECT_TRUE(input.take());
 }
 
 TEST(Electronic, IdleLevelAtStartDoesNotCount)
@@ -157,12 +132,9 @@ TEST(Electronic, IdleLevelAtStartDoesNotCount)
     Первый фронт после включения входа приходит с уровнем покоя — например
     линия отпущена. Импульсом это не считается.
     */
-    ACTIVE_LOW(low);
-    ACTIVE_HIGH(high);
+    ENABLED(input);
 
-    low.on_front(HIGH_LEVEL);
-    high.on_front(LOW_LEVEL);
+    input.on_front(HIGH_LEVEL);
 
-    EXPECT_FALSE(low.take(NO_TICK));
-    EXPECT_FALSE(high.take(NO_TICK));
+    EXPECT_FALSE(input.take());
 }

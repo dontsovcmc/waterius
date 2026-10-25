@@ -59,14 +59,14 @@ enum CounterState
 
 /*
 Тип входа. Число присылает ЕСП командой 'C' и оно же лежит в EEPROM, поэтому
-переиспользовать значения нельзя: 1 (дискретный) и 3 (датчик Холла) заняты
-снятыми типами и попадают в ветку "вход выключен".
+переиспользовать значения нельзя: 1 (дискретный), 3 (датчик Холла) и 4
+(электронный с положительным импульсом) заняты снятыми типами и попадают в
+ветку "вход выключен".
 */
 enum CounterType 
 {
     NAMUR = 0,          // механический: геркон, сухой контакт, namur
     ELECTRONIC = 2,     // электронный выход, импульс — замыкание на минус
-    ELECTRONIC_HIGH = 4, // электронный выход, импульс — подъём линии (issue #379)
     LEAKAGE = 5,        // датчик протечки: проводимость - тревога, а не импульс,
                         // вода это десятки и сотни килоом, см. wet.h (issue #202)
     LEAKAGE_NC = 6,     // нормально-замкнутый датчик: норма - замкнутый шлейф
@@ -113,22 +113,18 @@ struct CounterB
                 DDRB &= ~_BV(_pin);                 // Вход
                 PORTB |= _BV(_pin);                 // Включить pull-up: выход с открытым стоком сам высокий уровень не держит
                 PCMSK |= _BV(_pin);                 // Включем прерывание по фронту
-                input.reset(false);                 // импульс — замыкание на минус
-                break;
-            case CounterType::ELECTRONIC_HIGH:
-                DDRB &= ~_BV(_pin);                 // Вход
-                PORTB &= ~_BV(_pin);                // Отключить pull-up: счётчик сам выдаёт уровень, а подтяжка нагружает его линию
-                PCMSK |= _BV(_pin);                 // Включем прерывание по фронту
-                input.reset(true);                  // импульс — подъём линии
+                input.enable();
                 break;
             case CounterType::NAMUR:
             case CounterType::LEAKAGE:
             case CounterType::LEAKAGE_NC:
                 DDRB &= ~_BV(_pin);                 // Вход
                 PCMSK &= ~_BV(_pin);                // Прерывание по фронту не нужно: опрос раз в 250мс
+                input.disable();
                 break;
             default:
                 PCMSK &= ~_BV(_pin);                // Выключенный вход attiny не будит
+                input.disable();
                 break;
         }
     }
@@ -141,7 +137,7 @@ struct CounterB
     */
     inline void on_front(const uint8_t pins)
     {
-        if (type != CounterType::ELECTRONIC && type != CounterType::ELECTRONIC_HIGH)
+        if (type != CounterType::ELECTRONIC)
             return;
 
         input.on_front((pins & _BV(_pin)) != 0);
@@ -154,7 +150,7 @@ struct CounterB
         return analogRead(_apin);
     }
 
-    bool electronic(CounterEvent event)
+    bool electronic()
     {
         if (on_time)
             on_time -= 1;
@@ -163,7 +159,7 @@ struct CounterB
         // Прерывания на время чтения гасим: ISR пишет в тот же флаг, и фронт,
         // пришедший между чтением и сбросом, потерялся бы.
         noInterrupts();
-        const bool pulse = input.take(event == CounterEvent::TIME);
+        const bool pulse = input.take();
         interrupts();
 
         if (!pulse)
@@ -274,8 +270,7 @@ struct CounterB
         switch (type) 
         {
             case CounterType::ELECTRONIC:
-            case CounterType::ELECTRONIC_HIGH:
-                return electronic(event);
+                return electronic();
             case CounterType::NAMUR:
                 return discrete(event);
             case CounterType::LEAKAGE:

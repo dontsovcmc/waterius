@@ -982,7 +982,7 @@ already running`, а лог пуст — METF не получает ни стр�
 | #336, #361 | только при расходе | `test_H3_silent_when_no_consumption`, `test_H4_consumption_wakes_it_up` |
 | #363 | обновление по воздуху | `test_J1_ota_updates_both_images`, `test_J3_low_battery_refuses`, `test_J4_bad_url_is_reported`, `test_J6_md5_mismatch_is_refused`, `test_J7_ota_command_with_broken_json` |
 | #367 | сервер принял соединение и молчит | `test_G9_hanging_server` |
-| #379 | короткий импульс газового счётчика | `test_D5_electronic_input_catches_short_pulses` |
+| #379 | короткий импульс газового счётчика | `test_D5_electronic_input_catches_short_pulses`; 20 импульсов в секунду электросчётчика - `test_D5b_electronic_input_counts_fast_pulses` |
 | #380 | ручное пробуждение и расписание | `test_H6_manual_wakeup_restarts_schedule` |
 | #405 | протечка от одного импульса | `test_E3n_single_pulse_is_not_a_leak` |
 | #406 | повторная посылка не доходит до брокера | `test_G1b_resend_after_settings_reaches_broker` |
