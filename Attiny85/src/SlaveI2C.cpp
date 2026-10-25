@@ -16,6 +16,7 @@ extern void set_alarm_config(const uint8_t *data);
 extern void reset_alarms(const uint8_t mask);
 extern void set_counter_types(const uint8_t *data);
 extern void confirm_alarm();
+extern volatile bool clear_requested;
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -97,6 +98,11 @@ void SlaveI2C::receiveEvent(int howMany)
         break;
     case 'K': // ESP подтверждает, что доложила о тревоге получателю
         confirm_alarm();
+        break;
+    case 'R': // Заводской сброс: обнулить показания. Стирает главный цикл
+              // (apply_clear_counters) - ~0,6 с записи EEPROM обработчику не по силам
+        clear_requested = true;
+        wakeup_period = WAKEUP_PERIOD_RESET;
         break;
     case 'V': // обновить напряжение
         info.voltage = readVcc();

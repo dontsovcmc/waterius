@@ -24,6 +24,9 @@
 #define COUNTER_TYPES_ATTEMPTS 3
 #define COUNTER_TYPES_RETRY_MS 50
 
+// attiny стирает кольцо показаний в главном цикле: 180 байт EEPROM, ~0,6 с
+#define CLEAR_COUNTERS_WAIT_MS 1000
+
 // Класс для синхронизации запросов к i2c, которые могут быть из разных потоков в AsyncWebServer
 // В ESP отсутствуют мьютексы, поэтому будем считать, что это проще сдела
 class BusyGuard {
@@ -75,6 +78,7 @@ public:
     bool getAttinyData(AttinyData &data);
     bool setWakeUpPeriod(uint16_t per);
     bool setCountersType(const uint8_t type0, const uint8_t type1);
+    bool clearCounters();
     bool setAlarmConfig(const AlarmThresholds &ch0, const AlarmThresholds &ch1,
                         const uint8_t reset_mask);
     bool confirmAlarm();

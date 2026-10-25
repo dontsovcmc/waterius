@@ -31,6 +31,9 @@ TinyDebugSerial mySerial;
 	   тип = вход выключен.
 	3. Защёлку электронного входа сбрасывает смена типа, а не каждый вход в
 	   сон: фронт с последней миллисекунды сеанса больше не теряется.
+	4. Команда 'R': заводской сброс в ЕСП обнуляет и показания attiny (#326),
+	   а период пробуждения до первого сеанса - сутки. Служебные счётчики
+	   (resets, setup_started_counter) сброс не трогает.
 
 46 - 2026.09.26 - dontsov
 	1. Время в сеансе отмеряется часами, а не оборотами цикла. Такт опроса
@@ -313,6 +316,7 @@ volatile CounterEvent 	event;
 volatile uint8_t		storage_write_limit = 0;
 
 volatile bool			types_changed = false;
+volatile bool			clear_requested = false;
 
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR(WDT_vect)
@@ -609,6 +613,25 @@ void apply_counter_types()
 }
 
 /*
+Обнуление показаний по команде 'R' (заводской сброс, #326). Стирается всё
+кольцо, а не пишется один нулевой блок: init() при старте берёт блок с
+наибольшими счётчиками, и старые вернулись бы после первой перезагрузки.
+Стёртый блок недействителен (CRC восьми нулей 0xDD, отметка 0): питание,
+пропавшее посреди стирания, мусора не даст - худшее, вернутся старые показания.
+*/
+void apply_clear_counters()
+{
+	if (!clear_requested)
+		return;
+
+	clear_requested = false;
+	storage.clear();
+	info.data.value0 = 0;
+	info.data.value1 = 0;
+	storage.add(info.data);
+}
+
+/*
 Один оборот опроса входов, пока ЕСП на связи: время отмеряют часы, а не обороты
 цикла - оборот дороже миллисекунды, и замыкание 350 мс терялось.
 
@@ -619,6 +642,7 @@ void poll_inputs(unsigned long &last_poll)
 {
 	wdt_reset();
 	apply_counter_types();
+	apply_clear_counters();
 
 	if (millis() - last_poll >= POLL_PERIOD_MSEC)
 	{

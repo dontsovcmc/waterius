@@ -268,6 +268,22 @@ bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
     return false;
 }
 
+bool MasterI2C::clearCounters()
+{
+    BusyGuard guard(i2c_busy);
+
+    // Сразу после 'C' attiny ещё пишет типы в EEPROM и отвечает NACK
+    for (uint8_t attempt = 0; attempt < COUNTER_TYPES_ATTEMPTS; attempt++)
+    {
+        if (sendCmd('R'))
+        {
+            return true;
+        }
+        delay(COUNTER_TYPES_RETRY_MS);
+    }
+    return false;
+}
+
 /*
 Пороги тревог и снятие для attiny (issue #202).
 

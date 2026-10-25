@@ -972,7 +972,7 @@ already running`, а лог пуст — METF не получает ни стр�
 | #313, #330, #332, #353 | запятая, адрес брокера, показания без литров | `test_S1_readings_accept_a_comma`, `test_C1_water_readings_need_liters`, `test_C2_broker_over_tls_is_refused`, `test_C3_port_belongs_to_its_own_field`, `test_C8_valid_forms_are_accepted` |
 | #320 | без облака не уходит MQTT | `test_G10_single_receiver` |
 | #325 | ноль из HA | путь показаний из HA и с сервера один (`apply_settings`) - `test_S1_readings_accept_a_comma`; ноль - хостовый `ParseDecimal.ZeroIsValid` |
-| #326 | сброс к заводским | `test_R2_settings_return_to_defaults` |
+| #326 | сброс к заводским | `test_R2_settings_return_to_defaults`, `test_R3_attiny_impulses_cleared` |
 | #331, #356 | тепло в HA | `test_I6_heat_carries_its_own_unit` |
 | #333 | электричество на красном входе | `test_D3_electricity_counts_kilowatt_hours` |
 | #340, #281, #382 | канал в списке сетей, повторы | `test_W1_wizard_configures_the_device`, `test_W1b_networks_list` |
