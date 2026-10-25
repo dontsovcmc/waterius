@@ -26,8 +26,8 @@ static const bool LOW_LEVEL = false;
 ACTIVE_LOW — выход с открытым стоком: покой высокий, импульс замыкает на минус.
 ACTIVE_HIGH — ELECTRONIC_HIGH: счётчик сам выдаёт положительный импульс.
 */
-#define ACTIVE_LOW(name)  ElectronicInput name; name.reset(false)
-#define ACTIVE_HIGH(name) ElectronicInput name; name.reset(true)
+#define ACTIVE_LOW(name)  ElectronicInput name; name.enable(false)
+#define ACTIVE_HIGH(name) ElectronicInput name; name.enable(true)
 
 TEST(Electronic, ShortPulseIsNotLost)
 {
@@ -81,18 +81,33 @@ TEST(Electronic, ActiveHighCountsRisingEdge)
 
 TEST(Electronic, SecondPulseCountedAfterReturnToIdle)
 {
-    // Два настоящих импульса подряд считаются оба — если между ними прошёл
-    // тик опроса, то есть мёртвое время истекло
     ACTIVE_LOW(input);
 
     input.on_front(LOW_LEVEL);
     EXPECT_TRUE(input.take(NO_TICK));
 
     input.on_front(HIGH_LEVEL);
-    EXPECT_FALSE(input.take(TIME_TICK));
+    EXPECT_FALSE(input.take(NO_TICK));
 
     input.on_front(LOW_LEVEL);
     EXPECT_TRUE(input.take(NO_TICK));
+}
+
+TEST(Electronic, ActiveLowHasNoDeadTime)
+{
+    /*
+    Электросчётчик 3200 имп/кВт·ч на 22 кВт - это 20 импульсов в секунду, а тик
+    опроса четыре раза в секунду. Каждый импульс считается и без тика между ними.
+    */
+    ACTIVE_LOW(input);
+
+    for (int i = 0; i < 20; i++)
+    {
+        input.on_front(LOW_LEVEL);
+        EXPECT_TRUE(input.take(NO_TICK)) << "импульс " << i;
+        input.on_front(HIGH_LEVEL);
+        EXPECT_FALSE(input.take(NO_TICK));
+    }
 }
 
 TEST(Electronic, DeadTimeDropsFastRepeat)
@@ -140,14 +155,55 @@ TEST(Electronic, TakeWithoutFrontReturnsFalse)
     EXPECT_FALSE(input.take(NO_TICK));
 }
 
-TEST(Electronic, ResetClearsState)
+TEST(Electronic, PolarityChangeClearsLatch)
 {
     // Смена типа входа не должна отдавать импульс, защёлкнутый прошлым
     ACTIVE_LOW(input);
 
     input.on_front(LOW_LEVEL);
-    input.reset(true);
+    input.enable(true);
 
+    EXPECT_FALSE(input.take(NO_TICK));
+}
+
+TEST(Electronic, ReturnToSameTypeClearsLatch)
+{
+    // Электронный -> механический -> электронный: защёлка с прошлого раза чужая
+    ACTIVE_LOW(input);
+
+    input.on_front(LOW_LEVEL);
+    input.disable();
+    input.enable(false);
+
+    EXPECT_FALSE(input.take(NO_TICK));
+}
+
+TEST(Electronic, SameTypeKeepsLatch)
+{
+    /*
+    loop() включает вход заново в начале каждого сна. Фронт, пришедший между
+    последним опросом сеанса и этим включением, обязан дожить до take().
+    */
+    ACTIVE_LOW(input);
+
+    input.on_front(LOW_LEVEL);
+    input.enable(false);
+
+    EXPECT_TRUE(input.take(NO_TICK));
+}
+
+TEST(Electronic, SameTypeKeepsDeadTime)
+{
+    // Повторное включение не обнуляет и мёртвое время: пачка наводок у
+    // ELECTRONIC_HIGH не становится вторым импульсом на границе сеанса
+    ACTIVE_HIGH(input);
+
+    input.on_front(HIGH_LEVEL);
+    EXPECT_TRUE(input.take(NO_TICK));
+
+    input.enable(true);
+    input.on_front(LOW_LEVEL);
+    input.on_front(HIGH_LEVEL);
     EXPECT_FALSE(input.take(NO_TICK));
 }
 

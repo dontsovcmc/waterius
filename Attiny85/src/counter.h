@@ -113,22 +113,24 @@ struct CounterB
                 DDRB &= ~_BV(_pin);                 // Вход
                 PORTB |= _BV(_pin);                 // Включить pull-up: выход с открытым стоком сам высокий уровень не держит
                 PCMSK |= _BV(_pin);                 // Включем прерывание по фронту
-                input.reset(false);                 // импульс — замыкание на минус
+                input.enable(false);                // импульс — замыкание на минус
                 break;
             case CounterType::ELECTRONIC_HIGH:
                 DDRB &= ~_BV(_pin);                 // Вход
                 PORTB &= ~_BV(_pin);                // Отключить pull-up: счётчик сам выдаёт уровень, а подтяжка нагружает его линию
                 PCMSK |= _BV(_pin);                 // Включем прерывание по фронту
-                input.reset(true);                  // импульс — подъём линии
+                input.enable(true);                 // импульс — подъём линии
                 break;
             case CounterType::NAMUR:
             case CounterType::LEAKAGE:
             case CounterType::LEAKAGE_NC:
                 DDRB &= ~_BV(_pin);                 // Вход
                 PCMSK &= ~_BV(_pin);                // Прерывание по фронту не нужно: опрос раз в 250мс
+                input.disable();
                 break;
             default:
                 PCMSK &= ~_BV(_pin);                // Выключенный вход attiny не будит
+                input.disable();
                 break;
         }
     }

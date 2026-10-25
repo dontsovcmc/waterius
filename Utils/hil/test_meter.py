@@ -38,6 +38,13 @@ SHORT_PULSE_MS = 1
 # Длину проверяет соседний тест, здесь важна полярность
 HIGH_PULSE_MS = 30
 
+# Частый электронный вход - электросчётчик: 3200 имп/кВт·ч на 22 кВт (три фазы
+# по 32 А) дают 20 импульсов в секунду. Импульс 30 мс - нижний предел выхода
+# S0 по IEC 62053-31, на шаг 50 мс остаётся пауза 20 мс
+FAST_PULSE_MS = 30
+FAST_STEP_MS = 50
+FAST_PULSES = 40
+
 
 def test_D2a_missed_session_keeps_consumption(stand: Stand, net: Any) -> None:
     """
@@ -184,6 +191,30 @@ def test_D5_electronic_input_catches_short_pulses(stand: Stand) -> None:
     session.assert_delta(channel=1, liters=PULSES * BASE_FACTOR)
 
 
+@pytest.mark.needs(ctype1=ELECTRONIC)
+def test_D5b_electronic_input_counts_fast_pulses(stand: Stand) -> None:
+    """
+    Электронный вход во сне считает 20 импульсов в секунду.
+
+    Мёртвое время после импульса (`Attiny85/src/electronic.h`, take) есть только
+    у «Электронного (+)»: его высокоомный вход ловит эфир. Открытому стоку линию
+    держит подтяжка, и потолок в четыре импульса за такт опроса недосчитал бы
+    электросчётчик под нагрузкой.
+    """
+    stand.reset_observers()
+
+    подано = stand.dut.pulse(channel=1, count=FAST_PULSES, width_ms=FAST_PULSE_MS,
+                             gap=(FAST_STEP_MS - FAST_PULSE_MS) / 1000)
+    assert подано == FAST_PULSES, (
+        f'стенд заказал {FAST_PULSES} импульсов по {FAST_PULSE_MS} мс, а плата '
+        f'по своей расписке выдала {подано}: это про стенд, а не про прошивку\n'
+        f'{stand.dut.delivered(channel=1)}')
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
+
+    session.assert_delta(channel=1, liters=FAST_PULSES * BASE_FACTOR)
+
+
 def test_D6_electronic_high_input_counts_rising_pulses(stand: Stand) -> None:
     """
     Тип «Электронный (+)»: импульс - подъём линии, а не замыкание.
@@ -299,11 +330,10 @@ MECH_PULSES = 10
 MECH_PULSE_MS = 350
 MECH_GAP_MS = 1000
 
-# Электронный вход: после засчитанного импульса мёртвое время до следующего
-# такта 250 мс (electronic.h, take), шаг 300 мс - сразу за ним
+# Импульс электронного входа внутри замыкания механического (D7c, D11)
 ELECTRONIC_PULSE_MS = 10
-ELECTRONIC_STEP_MS = 300
-ELECTRONIC_PULSES = 10_000 // ELECTRONIC_STEP_MS
+# Серия D7b - частый вход, как в D5b, десять секунд
+ELECTRONIC_PULSES = 10_000 // FAST_STEP_MS
 
 
 def over_session(stand: Stand, shapes: dict[int, tuple[int, int]],
@@ -343,13 +373,12 @@ def test_D7b_electronic_pulses_during_session_are_not_lost(stand: Stand) -> None
 
     В сеансе главный цикл attiny занят ЕСП: отвечает по i2c и пишет EEPROM, и
     импульс держит только защёлка в прерывании (`Attiny85/src/electronic.h`).
-    D5 проверяет её во сне, здесь - десять секунд импульсов так часто, как
-    вход их принимает, пока ЕСП включена.
+    D5 и D5b проверяют её во сне, здесь - десять секунд импульсов частого входа,
+    пока ЕСП включена.
     """
     series, first, second = over_session(
-        stand, {1: (ELECTRONIC_PULSE_MS, 0)}, count=ELECTRONIC_PULSES,
-        step_ms=ELECTRONIC_STEP_MS,
-        min_gap_ms=ELECTRONIC_STEP_MS - ELECTRONIC_PULSE_MS)
+        stand, {1: (FAST_PULSE_MS, 0)}, count=ELECTRONIC_PULSES,
+        step_ms=FAST_STEP_MS, min_gap_ms=FAST_STEP_MS - FAST_PULSE_MS)
 
     assert_counted_over_session(series, first, second, channel=1,
                                 count=ELECTRONIC_PULSES)

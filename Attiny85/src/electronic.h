@@ -38,25 +38,38 @@ struct ElectronicInput
     bool on_pulse;
 
     /*
-    Мёртвое время в тиках опроса (250 мс). Защита от наводок: у высокоомного
-    входа свободный провод ловит эфир, а у механики — дребезг.
+    Мёртвое время в тиках опроса (250 мс), только у ELECTRONIC_HIGH: высокоомный
+    вход со свободным проводом ловит эфир. Открытому стоку линию держит подтяжка.
     */
     uint8_t dead_time;
 
+    // Включён электронным типом: так enable отличает прежний тип от нового.
+    bool enabled;
+
     ElectronicInput()
-        : active_high(false), pending(false), on_pulse(false), dead_time(0)
+        : active_high(false), pending(false), on_pulse(false), dead_time(0), enabled(false)
     {
     }
 
     /*
-    Смена типа входа: старая защёлка к новому счётчику отношения не имеет.
+    Тот же тип - защёлку не трогаем: loop() включает вход в начале каждого сна,
+    и фронт с конца сеанса пропал бы. Новый тип - старая защёлка ему чужая.
     */
-    void reset(const bool high)
+    void enable(const bool high)
     {
+        if (enabled && active_high == high)
+            return;
+
+        enabled = true;
         active_high = high;
         pending = false;
         on_pulse = false;
         dead_time = 0;
+    }
+
+    void disable()
+    {
+        enabled = false;
     }
 
     /*
@@ -81,7 +94,7 @@ struct ElectronicInput
 
     /*
     Вызывается из главного цикла. time_event — сработал тик опроса 250 мс,
-    по нему истекает мёртвое время.
+    по нему истекает мёртвое время ELECTRONIC_HIGH.
 
     @return true если импульс засчитан
     */
@@ -96,7 +109,8 @@ struct ElectronicInput
         if (!pulse || dead_time)
             return false;
 
-        dead_time = 1;
+        if (active_high)
+            dead_time = 1;
         return true;
     }
 };
