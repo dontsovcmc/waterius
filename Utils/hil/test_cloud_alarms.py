@@ -23,9 +23,9 @@ from .logwatch import ALARM_MODE, SEND_OK
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand  # а сбор тестов должен работать без них
 
-# Тревог до attiny 41 не существует, а статусы получателей поимённо печатает
+# Ниже attiny 44 тревог ЕСП не читает, а статусы получателей поимённо печатает
 # строка `Alarm confirm`, которой нет на ЕСП младше 2.0.47
-pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=41, esp='2.0.47')]
+pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=44, esp='2.0.47')]
 
 
 @pytest.mark.needs(ctype1=LEAKAGE)

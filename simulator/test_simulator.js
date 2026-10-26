@@ -238,7 +238,7 @@ function testWizard() {
 
     // Без связи с attiny тип входа не сохраняется
     state.attiny.link = false;
-    const noLink = call('/api/save_input_type', { input: '0', counter_type: '1' });
+    const noLink = call('/api/save_input_type', { input: '0', counter_type: '2' });
     if (noLink.json.errors.counter_type !== '16') problems.push('без attiny тип входа сохранился');
     if (SimApi.handle('/api/status/0', 'GET', [], state, 0).json.error !== '7') problems.push('без attiny вход не сообщил об ошибке');
 
@@ -290,6 +290,60 @@ function testAlarmStates() {
     });
 
     check('страница тревог приезжает в нужном состоянии', problems);
+}
+
+/*
+Датчик протечки на attiny старее ATTINY_VER_ALARM: она не знает типов 5 и 6 и
+молча выключает вход. Поэтому страница их не предлагает, сохранение отвергает,
+а уже записанный тип показывается как NAMUR - иначе в списке не нашлось бы
+выбранного пункта.
+*/
+function testLeakTypesNeedAttiny() {
+    const problems = [];
+    const D = globalThis.SIM_GENERATED.defines;
+    const CT = globalThis.SIM_GENERATED.enums.CounterType;
+    const params = (object) => Object.keys(object).map((name) => ({ name, value: String(object[name]) }));
+
+    [
+        { name: 'старая attiny', version: D.ATTINY_VER_ALARM - 1, offered: false },
+        { name: 'attiny с датчиком протечки', version: D.ATTINY_VER_ALARM, offered: true },
+    ].forEach((c) => {
+        const state = SimState.newSession(SimState.defaultState());
+        state.attiny.version = c.version;
+        state.attiny.counter_type0 = CT.LEAKAGE;
+
+        const html = SimProcessor.render(read('input_setup.html'), state, 0);
+        const select = html.match(/<select[^>]*id="counter_type"[^>]*>([\s\S]*?)<\/select>/);
+        if (!select) {
+            problems.push(c.name + ': нет списка типов');
+            return;
+        }
+        const off = (select[1].match(/<option[^>]*>/g) || [])
+            .filter((o) => /\sdisabled/.test(o))
+            .map((o) => Number(o.match(/value="(\d+)"/)[1]))
+            .sort((a, b) => a - b);
+        const expectOff = c.offered ? [] : [CT.LEAKAGE, CT.LEAKAGE_NC];
+        if (JSON.stringify(off) !== JSON.stringify(expectOff)) {
+            problems.push(c.name + ': убираются пункты ' + JSON.stringify(off) +
+                          ', ожидались ' + JSON.stringify(expectOff));
+        }
+
+        const shown = select[0].match(/option-value="([^"]*)"/)[1];
+        const expectShown = String(c.offered ? CT.LEAKAGE : CT.NAMUR);
+        if (shown !== expectShown) problems.push(c.name + ': выбран тип ' + shown + ', ожидался ' + expectShown);
+
+        state.attiny.counter_type0 = CT.NAMUR;
+        const saved = SimApi.handle('/api/save_input_type', 'POST',
+                                    params({ input: '0', counter_type: String(CT.LEAKAGE_NC) }), state, 0);
+        const rejected = saved.json.errors.counter_type === '15';
+        if (rejected === c.offered) problems.push(c.name + ': сохранение ' + (rejected ? 'отвергнуто' : 'принято'));
+        const expectType = c.offered ? CT.LEAKAGE_NC : CT.NAMUR;
+        if (state.attiny.counter_type0 !== expectType) {
+            problems.push(c.name + ': на входе тип ' + state.attiny.counter_type0 + ', ожидался ' + expectType);
+        }
+    });
+
+    check('датчик протечки только для attiny, которая его знает', problems);
 }
 
 /*
@@ -427,6 +481,7 @@ testGenerated();
 testParseBool();
 testAlarmStates();
 testAlarmReset();
+testLeakTypesNeedAttiny();
 testPultAlarmBits();
 testWizard();
 

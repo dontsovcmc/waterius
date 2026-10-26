@@ -189,11 +189,14 @@
             if (input === 0) saveUint8(p, state, 'counter0_name', errors, true);
             else if (input === 1) saveUint8(p, state, 'counter1_name', errors, true);
         } else if (name === P().PARAM_COUNTER_TYPE || name === P().s_ctype) {
-            if (input === 0 || input === 1) {
+            var ctype = parseInt(p.value, 10) || 0;
+            if (ctype < 0 || ctype > 255 || !C().counterTypeSupported(ctype, state.attiny.version)) {
+                errors[p.name] = String(E().PARAM_ERR_VALUE);
+            } else if (input === 0 || input === 1) {
                 if (!state.attiny.link) {
                     errors[p.name] = ERR_ATTINY; // masterI2C.setCountersType не ответил
                 } else {
-                    state.attiny['counter_type' + input] = parseInt(p.value, 10) || 0;
+                    state.attiny['counter_type' + input] = ctype;
                 }
             }
         } else if (name === P().PARAM_ALARM_VOL || name === P().s_av) {

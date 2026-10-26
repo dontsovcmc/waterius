@@ -185,6 +185,19 @@ bool is_valid_counter_type(const uint8_t counter_type)
     return false;
 }
 
+bool counter_type_supported(const uint8_t counter_type, const uint8_t attiny_version)
+{
+    if (!is_valid_counter_type(counter_type))
+    {
+        return false;
+    }
+    if (counter_type == CounterType::LEAKAGE || counter_type == CounterType::LEAKAGE_NC)
+    {
+        return attiny_version >= ATTINY_VER_ALARM;
+    }
+    return true;
+}
+
 bool is_water_counter(const uint8_t counter_name)
 {
     return counter_name == CounterName::WATER_COLD

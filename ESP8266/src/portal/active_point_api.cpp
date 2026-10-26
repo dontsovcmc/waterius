@@ -906,6 +906,13 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
     }
     else if (name == FPSTR(PARAM_COUNTER_TYPE) || name == FPSTR(s_ctype))  // portal || ha
     {
+        const long ctype = p->value().toInt();
+        if (ctype < 0 || ctype > UINT8_MAX || !counter_type_supported(ctype, runtime_data.version))
+        {
+            LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
+            errorsObj[p->name()] = String(F("15"));  // Неверное значение
+            return;
+        }
         switch (input)
         {
             case INPUT0_RED:

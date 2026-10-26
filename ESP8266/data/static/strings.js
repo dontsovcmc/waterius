@@ -211,6 +211,10 @@ function fill_resource_options() {
     var types = document.getElementById('counter_type');
     if (types) {
         types.querySelectorAll('option').forEach(function(o) {
+            if (o.disabled) {
+                o.remove();   // этот тип attiny не знает
+                return;
+            }
             var name = COUNTER_TYPES[Number(o.value)];
             if (name) o.textContent = name;
         });

@@ -88,6 +88,16 @@
         return G().valid_counter_types.indexOf(counterType) >= 0;
     }
 
+    // Порт counter_type_supported(): датчик протечки старая attiny не знает
+    function counterTypeSupported(counterType, attinyVersion) {
+        var CT = G().enums.CounterType;
+        if (!isValidCounterType(counterType)) return false;
+        if (counterType === CT.LEAKAGE || counterType === CT.LEAKAGE_NC) {
+            return attinyVersion >= G().defines.ATTINY_VER_ALARM;
+        }
+        return true;
+    }
+
     function isWaterCounter(counterName) {
         var CN = G().enums.CounterName;
         return counterName === CN.WATER_COLD || counterName === CN.WATER_HOT ||
@@ -275,6 +285,7 @@
         parseUint8: parseUint8,
         parseBool: parseBool,
         isValidCounterType: isValidCounterType,
+        counterTypeSupported: counterTypeSupported,
         isWaterCounter: isWaterCounter,
         checkReading: checkReading,
         countsImpulses: countsImpulses,

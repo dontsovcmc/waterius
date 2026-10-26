@@ -173,7 +173,7 @@ String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ct
 
 String valid_counter_type(const uint8_t ctype)
 {
-    if (is_valid_counter_type(ctype))
+    if (counter_type_supported(ctype, runtime_data.version))
         return String(ctype);
 
     return String(CounterType::NAMUR);
@@ -343,6 +343,10 @@ String processor_main(const String &var, const uint8_t input)
     else if (var == FPSTR(PARAM_THRESHOLDS_OFF1))
         return template_disabled(alarm_input_state(runtime_data.counter_type1, sett.factor1,
                                                    runtime_data.version) != ALARM_INPUT_NO_FACTOR);
+
+    // Тип, которого attiny не знает, страница не предлагает: strings.js убирает такие пункты
+    else if (var == FPSTR(PARAM_LEAK_OFF))
+        return template_disabled(counter_type_supported(CounterType::LEAKAGE, runtime_data.version));
 
     else if (var == FPSTR(PARAM_COUNTER_IMG))
     {
