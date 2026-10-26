@@ -1,7 +1,7 @@
-# Ватериус 2.0.50
+# Ватериус 2.0.53
 ## Wi-Fi приставка для импульсных счётчиков воды, газа, тепла
 
-<a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
+<a href="https://github.com/dontsovcmc/waterius/actions/workflows/ci.yml" target="_blank"><img src="https://github.com/dontsovcmc/waterius/actions/workflows/ci.yml/badge.svg?branch=master"></a>
 
 ![waterius2-phone_](https://user-images.githubusercontent.com/3930496/149906477-6aa47cdd-f714-4546-85ff-5541c60260a2.jpeg)
 
@@ -32,7 +32,8 @@
 
 ✅ Электронные счётчики тепла: Sanext Monu CU, Берил ITELMA СТЭ 31 [подробнее](https://github.com/dontsovcmc/waterius/issues/233)
 
-✅ Счётчики электричества: Энергомера CE101, Энергомера ЦЭ6803В 10-100А М7 Р31 и возможно другие импульсные
+✅ Счётчики электричества: Энергомера CE101, Энергомера ЦЭ6803В 10-100А М7 Р31 и возможно другие импульсные.
+Электронный вход проверен на 20 импульсах в секунду: этого хватает счётчику на 3200 имп/кВт·ч до 22 кВт (прошивка attiny 47 и новее)
 
 
 ### Где купить
@@ -50,7 +51,7 @@
   между электродами, а не только замыкание контактов ([Тревоги](Alarms.md))
 - ручная настройка веса импульса
 - дискавери для Home Assistant (есть и интеграция в HAOS)
-- возможно указать свои: веб сервер, MQTT брокер, сервер Blynk, NTP сервер
+- возможно указать свои: веб сервер, MQTT брокер, NTP сервер
 - поддержка SprutHub
 - поддержка WirenBoard
 
@@ -76,7 +77,9 @@
 ## DIY Сделать самому
 [Скачать прошивки](https://github.com/dontsovcmc/waterius/releases)
 
-Альфа-версия (сборка из ветки `dev`, для тех, кто готов проверять новое): [2.0.52-46-alpha](https://github.com/dontsovcmc/waterius/releases/tag/2.0.52-46-alpha)
+[Прошить ESP из браузера](https://waterius.github.io/update/): страница заливает скачанный `.bin` в ESP8266 по USB-TTL, без установки программ (Chrome или Edge)
+
+Альфа-версия (сборка из ветки `dev`, для тех, кто готов проверять новое): [2.0.53-47-alpha](https://github.com/dontsovcmc/waterius/releases/tag/2.0.53-47-alpha)
 
 Народная инструкция в инфо Телеграм чата: [waterius_forum](https://t.me/waterius_forum)
 - [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
@@ -108,9 +111,15 @@
 устройстве, а импульсы, кнопка и Wi-Fi имитируются с пульта. Полезен, чтобы посмотреть
 портал, не собирая прошивку: [simulator/README.md](simulator/README.md).
 
+**Как устроена прошивка** — [docs/README.md](docs/README.md): счёт импульсов, расписание, отправка, тревоги, портал, OTA.
+
+**Тесты:**
+- бизнес-логика ЕСП на компьютере, без железа: `ESP8266/scripts/run_tests.sh`, attiny — `Attiny85/scripts/run_tests.sh`;
+- стенд на живом железе: настоящий Ватериус, управляемая точка доступа и свой брокер — [Utils/hil/README.md](Utils/hil/README.md).
+
 Из актуальных задач остались сложные:
 - Реализовать запись лога в файл (LittleFS), чтобы можно было скачать (/logs.html)
-- OTA обновления: предложить код прошивки и пример веб-сервера (можно на базе NodeMCU)
+- ~~OTA обновления: предложить код прошивки и пример веб-сервера~~ — решено в [2.0.43-beta](https://github.com/dontsovcmc/waterius/releases/tag/v.2.0.43-beta): Ватериус 2 обновляется по воздуху командой сервера или MQTT ([описание](ESP8266/doc/ota.md))
 
 ### Модификации
 [ветка attiny84](https://github.com/dontsovcmc/waterius/tree/attiny84) поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками и 2мя датчиками протечек.
