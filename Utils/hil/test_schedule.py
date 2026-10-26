@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from . import portal as portal_mod
-from .constants import NAMUR
+from .constants import NAMUR, RST_SOFT_RESTART
 from .logwatch import MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
 
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
@@ -165,29 +165,28 @@ def test_H6_manual_wakeup_restarts_schedule(stand: Stand) -> None:
 
 @pytest.mark.slow
 @pytest.mark.portal
-@pytest.mark.requires(attiny=40, esp='2.0.47')
+@pytest.mark.requires(attiny=40, esp='2.0.53')
 def test_H7_esp_reset_keeps_period(stand: Stand, cfg: Any) -> None:
     """
-    Перезагрузка ЕСП без ведома attiny: флаг перезагрузки поднят, период цел
-    (#354, #350, #242).
+    Перезагрузка ЕСП без ведома attiny: период цел, а штатная перезагрузка не
+    выдаётся за сбой (#354, #350, #242).
 
     #242, #350: после перезагрузки ЕСП устройство переходило на период по
-    умолчанию и выходило на связь каждые 15 минут вместо часа. Флаг - слово
-    самой прошивки (`main.cpp`, строка `esp restarted:`), по нему портал
-    показывает плашку 22. Обычный сеанс в начале теста - негативный контроль.
+    умолчанию и выходило на связь каждые 15 минут вместо часа.
 
     Перезагружаемся выходом из режима настройки, а не линией сброса стенда:
     она заведена на вывод reset attiny и перезагружает всю плату, а тут нужна
     одна ЕСП. Выход из портала даёт ровно это: `/api/turnoff` ставит
     `exit_portal_flag`, и прошивка зовёт `ESP.restart()` (`main.cpp`), не
-    сказав attiny «ухожу спать». Питание остаётся поданным, attiny держит
-    взведённым ESP_POWERED_LONG, и по нему прошивка на следующей загрузке
-    узнаёт себя перезагруженной - тот же признак, что и после падения по
-    сторожевому таймеру.
+    сказав attiny «ухожу спать». Питание остаётся поданным, и attiny держит
+    взведённым ESP_POWERED_LONG. Флаг «перезагрузилась внештатно» (`main.cpp`,
+    строка `esp restarted:`, по нему портал показывает плашку 22) обязан при
+    этом остаться нулём: причина ресета RST_SOFT_RESTART говорит, что
+    перезагрузку вызвала сама прошивка (`core/restart.cpp`). Срабатывание
+    флага на настоящем падении стенд вызвать не может - его проверяет
+    `test_restart` на хосте.
 
-    Сам путь описан в `docs/setup-portal.md`, раздел «Завершение и сброс»; то,
-    что плашка о перезагрузке после него показывается штатно, - в
-    `docs/known-gaps.md`.
+    Сам путь описан в `docs/setup-portal.md`, раздел «Завершение и сброс».
     """
     if not cfg.atboard_port:
         pytest.skip('нет AT-платы: [atboard] port в stand.ini')
@@ -206,7 +205,9 @@ def test_H7_esp_reset_keeps_period(stand: Stand, cfg: Any) -> None:
         board.close()
 
     rebooted = stand.wait_session(timeout=180)
-    assert 'esp restarted: 1' in rebooted.full_text, rebooted.full_text
+    assert rebooted.reset_reason == (RST_SOFT_RESTART, False), (
+        f'после ESP.restart() ждали причину {RST_SOFT_RESTART} и флаг 0, а в логе '
+        f'{rebooted.reset_reason}\n{rebooted.full_text}')
     assert rebooted.complete, rebooted.text
     done = time.monotonic()
 

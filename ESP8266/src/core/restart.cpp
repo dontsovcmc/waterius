@@ -14,6 +14,12 @@ bool esp_restarted(const uint8_t reset_reason,
         return true;
     }
 
+    // ESP.restart() зовёт только сама прошивка, библиотеки - нет: перезагрузка штатная
+    if (reset_reason == RST_SOFT_RESTART)
+    {
+        return false;
+    }
+
     // Старая прошивка attiny шлёт в этом байте резерв, а не флаги
     if (attiny_version < ATTINY_VER_POWER_FLAGS)
     {

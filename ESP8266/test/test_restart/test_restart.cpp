@@ -30,9 +30,11 @@ TEST(EspRestarted, PowerOnIsNotRestart)
 
 TEST(EspRestarted, SoftRestartIsNotRestart)
 {
-    // Наш собственный ESP.restart() в конце настройки: питание ещё живо,
-    // но флаг attiny в этот момент не взведён - прошло меньше 5 секунд
+    // Наш собственный ESP.restart(): конец настройки, заводской сброс,
+    // обновление. Питание не снималось, и attiny честно говорит "давно"
     EXPECT_FALSE(esp_restarted(RST_SOFT_RESTART, NEW_ATTINY, NO_FLAGS));
+    EXPECT_FALSE(esp_restarted(RST_SOFT_RESTART, NEW_ATTINY, POWERED_LONG));
+    EXPECT_FALSE(esp_restarted(RST_SOFT_RESTART, OLD_ATTINY, 0xFF));
 }
 
 TEST(EspRestarted, DeepSleepWakeIsNotRestart)

@@ -18,13 +18,17 @@ from typing import Any
 
 import pytest
 
+from . import portal as portal_mod
 from .constants import (
     AS_COLD_CHANNEL,
     AUTO_IMPULSE_FACTOR,
     DEFAULT_WAKEUP_PERIOD_MIN,
+    ESP_RESTARTED,
+    RST_SOFT_RESTART,
     WATER_COLD,
     WATER_HOT,
 )
+from .logwatch import parse_reset_reason
 from .reset import FreshDevice
 
 pytestmark = [pytest.mark.stand, pytest.mark.reset,
@@ -45,10 +49,15 @@ def after_reset(cfg: Any, stand: Any) -> Iterator[dict]:
         pytest.skip('нет AT-платы: [atboard] port в stand.ini')
     device = FreshDevice.reset(cfg, stand)
     try:
+        # Загрузку и плашки снимаем в портале, до выхода из него: потом их не будет
+        boot = '\n'.join(stand.log.lines)
+        banners = {str(item.get('error'))
+                   for item in portal_mod.get_json(device.board, '/api/main_status')}
         session = device.leave()
         # Судим по первой посылке: во второй уже то, что ответил приёмник
         yield {'before': device.before, 'session': session,
-               'payload': session.payloads[0], 'tail': stand.log.tail(60)}
+               'payload': session.payloads[0], 'tail': stand.log.tail(60),
+               'boot': boot, 'banners': banners}
     finally:
         device.close()
 
@@ -126,3 +135,24 @@ def test_R3_attiny_impulses_cleared(after_reset: dict) -> None:
     now = (payload.get('imp0'), payload.get('imp1'))
     assert now == (0, 0), (f'импульсы после сброса {now}, до сброса {was}\n'
                            f'{after_reset["tail"]}')
+
+
+@pytest.mark.requires(esp='2.0.53')
+def test_R4_reset_is_not_a_crash(after_reset: dict) -> None:
+    """
+    После сброса портал не пугает плашкой «внештатно перезагрузился».
+
+    Сброс перезагружает ЕСП при живом питании, и attiny честно отвечает
+    «питание подано давно». Штатной перезагрузку прошивка узнаёт по своей же
+    причине ресета: `factory_reset` зовёт `ESP.restart()`, и загрузка видит
+    RST_SOFT_RESTART (`core/restart.cpp`). Причина сверяется отдельно - это
+    слово SDK, а не наше.
+    """
+    reason = parse_reset_reason(after_reset['boot'])
+    assert reason, f'в логе загрузки после сброса нет причины ресета\n{after_reset["boot"]}'
+    code, restarted = reason
+    assert code == RST_SOFT_RESTART, (
+        f'после ESP.restart() причина ресета {code}, а не {RST_SOFT_RESTART}')
+    assert not restarted, 'прошивка сочла сброс внештатной перезагрузкой'
+    assert ESP_RESTARTED not in after_reset['banners'], (
+        f'плашка о внештатной перезагрузке после сброса: {sorted(after_reset["banners"])}')

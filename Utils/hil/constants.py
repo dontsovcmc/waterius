@@ -70,7 +70,11 @@ ERR_NO_COMMA = '19'
 ERR_TLS = '20'
 ERR_PORT_IN_HOST = '21'
 
+# Причина ресета ЕСП, core/restart.h: так загружается ЕСП после своего же ESP.restart()
+RST_SOFT_RESTART = 4
+
 # Коды плашек главной страницы (active_point_api.cpp, get_api_main_status)
+ESP_RESTARTED = '22'   # «Ватериус внештатно перезагрузился»
 FACTOR_TOO_BIG = '23'
 INPUT_SILENT = '24'
 

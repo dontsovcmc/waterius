@@ -497,5 +497,5 @@ void factory_reset(Settings &sett)
 
     delay(500);
 
-    ESP.reset();
+    ESP.restart();   // не reset(): по RST_SOFT_RESTART загрузка узнаёт штатную перезагрузку
 }
