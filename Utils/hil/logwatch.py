@@ -78,6 +78,7 @@ def blynk_name(code: int | None) -> str:
 
 RE_MODE = re.compile(r'Startup mode: (\d)')
 RE_ATTINY_VER = re.compile(r'attiny firmware ver: (\d+)')
+RE_RESET_REASON = re.compile(r'Reset reason: (\d+), esp restarted: ([01])')
 RE_ESP_VER = re.compile(r'Firmware ver: (\d+)\.(\d+)\.(\d+)')
 RE_MAC = re.compile(r'MAC Address:\s*((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})')
 RE_IMP0 = re.compile(r'\bimp0:(\d+)')
@@ -199,6 +200,12 @@ WAKE_SESSION = 'session'        # attiny ответила, сеанс начал
 WAKE_NO_ATTINY = 'no_attiny'    # ЕСП жива, attiny молчит на i2c
 WAKE_SILENT = 'silent'          # на UART ни строки
 WAKE_STUCK = 'stuck'            # ЕСП печатает, но ни сеанса, ни ошибки attiny
+
+
+def parse_reset_reason(text: str) -> tuple[int, bool] | None:
+    """Строка `Reset reason: N, esp restarted: X` из лога загрузки ЕСП."""
+    m = RE_RESET_REASON.search(text)
+    return (int(m.group(1)), m.group(2) == '1') if m else None
 
 
 @dataclass
@@ -366,6 +373,11 @@ class Session:
     def attiny_version(self) -> int | None:
         m = RE_ATTINY_VER.search(self.full_text)
         return int(m.group(1)) if m else None
+
+    @property
+    def reset_reason(self) -> tuple[int, bool] | None:
+        """Причина ресета ЕСП и вывод прошивки «перезагрузилась внештатно» (`main.cpp`)."""
+        return parse_reset_reason(self.full_text)
 
     @property
     def esp_version(self) -> tuple[int, int, int] | None:
