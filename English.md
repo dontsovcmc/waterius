@@ -52,7 +52,7 @@ The electronic input has been tested at 20 pulses per second: enough for a 3200 
 - no need to know the water meter output type: "dry contact" or "NAMUR"
 - configurable sending period
 - a floor water sensor can be wired to an input instead of a meter: the alarm is raised by water
-  between the probes, not only by a contact closure ([Alarms](Alarms.md))
+  between the probes, not only by a contact closure ([Alarms](Alarms.md), attiny firmware 44 or newer)
 - manual pulse weight setting
 - Home Assistant discovery (there is also a HAOS integration)
 - your own web server, MQTT broker and NTP server can be set
@@ -82,6 +82,8 @@ The electronic input has been tested at 20 pulses per second: enough for a 3200 
 [Download firmware](https://github.com/dontsovcmc/waterius/releases)
 
 [Flash the ESP from a browser](https://waterius.github.io/update/): the page writes a downloaded `.bin` to the ESP8266 over USB-TTL, with nothing to install (Chrome or Edge)
+
+[Update Waterius 2 over the air](https://account.waterius.ru/update/) from your personal account: upload the firmware and the file system, and the update starts when the device next connects
 
 Alpha version (built from the `dev` branch, for those ready to try new things): [2.0.53-47-alpha](https://github.com/dontsovcmc/waterius/releases/tag/2.0.53-47-alpha)
 
@@ -123,7 +125,7 @@ building the firmware: [simulator/README.md](simulator/README.md).
 
 Hard tasks still open:
 - Write the log to a file (LittleFS) so it can be downloaded (/logs.html)
-- ~~OTA updates: propose firmware code and a sample web server~~ — done in [2.0.43-beta](https://github.com/dontsovcmc/waterius/releases/tag/v.2.0.43-beta): Waterius 2 updates over the air on a command from the server or MQTT ([description](ESP8266/doc/ota.md))
+- ~~OTA updates: propose firmware code and a sample web server~~ — done in [2.0.43-beta](https://github.com/dontsovcmc/waterius/releases/tag/v.2.0.43-beta): Waterius 2 updates over the air on a command from the server or MQTT, from the personal account on the [update page](https://account.waterius.ru/update/) ([description](ESP8266/doc/ota.md))
 
 ### Modifications
 The [attiny84 branch](https://github.com/dontsovcmc/waterius/tree/attiny84) supports the [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) board with 4 meters and 2 leak sensors.
