@@ -89,6 +89,7 @@ static const char PARAM_ALARM_STATE0[] PROGMEM = "alarm_state0";
 static const char PARAM_ALARM_STATE1[] PROGMEM = "alarm_state1";
 static const char PARAM_THRESHOLDS_OFF0[] PROGMEM = "thresholds_off0";
 static const char PARAM_THRESHOLDS_OFF1[] PROGMEM = "thresholds_off1";
+static const char PARAM_LEAK_OFF[] PROGMEM = "leak_off";
 static const char CLASS_NO_FACTOR[] PROGMEM = "no-factor";
 static const char CLASS_NO_ATTINY[] PROGMEM = "no-attiny";
 static const char CLASS_NO_INPUT[] PROGMEM = "no-input";

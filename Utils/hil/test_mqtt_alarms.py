@@ -9,7 +9,7 @@ Assistant доезжает до ОЗУ attiny.
 применяются одним `apply_settings` (`main.cpp`). Их проверяют блоки E и F
 ответом приёмника, а доставку команды из брокера - I4.
 
-Группе нужны attiny 41 и ЕСП 2.0.47: ниже в attiny нет `alarm_bits`, а в
+Группе нужны attiny 44 и ЕСП 2.0.47: ниже в attiny нет `alarm_bits`, а в
 посылке - `vac`, `ar1` и `ackm`. Требование стоит на модуле, поэтому на
 младшей прошивке пропускается эта группа, а не весь блок MQTT.
 
@@ -33,7 +33,7 @@ if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
 pytestmark = [
     pytest.mark.stand,
     pytest.mark.mqtt,
-    pytest.mark.requires(attiny=41, esp='2.0.47'),
+    pytest.mark.requires(attiny=44, esp='2.0.47'),
 ]
 
 

@@ -89,6 +89,12 @@ Home Assistant и уезжает в attiny командой 'C': чужое чи
 bool is_valid_counter_type(const uint8_t counter_type);
 
 /*
+Умеет ли attiny такой тип входа. Датчик протечки старая attiny не знает и
+молча выключает вход: ни импульсов, ни тревоги.
+*/
+bool counter_type_supported(const uint8_t counter_type, const uint8_t attiny_version);
+
+/*
 Есть ли в строке десятичный разделитель — точка или запятая.
 */
 bool has_decimal_separator(const char *value);

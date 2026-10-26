@@ -467,6 +467,25 @@ TEST(CounterTypes, KnownTypesAreAccepted)
     EXPECT_TRUE(is_valid_counter_type(CounterType::NONE));
 }
 
+TEST(CounterTypes, LeakSensorNeedsAlarmAttiny)
+{
+    // Типы 5 и 6 старая attiny не знает: вход молча перестаёт и считать, и тревожить
+    EXPECT_FALSE(counter_type_supported(CounterType::LEAKAGE, ATTINY_VER_ALARM - 1));
+    EXPECT_FALSE(counter_type_supported(CounterType::LEAKAGE_NC, ATTINY_VER_ALARM - 1));
+    EXPECT_TRUE(counter_type_supported(CounterType::LEAKAGE, ATTINY_VER_ALARM));
+    EXPECT_TRUE(counter_type_supported(CounterType::LEAKAGE_NC, ATTINY_VER_ALARM));
+}
+
+TEST(CounterTypes, CounterTypesWorkOnAnyAttiny)
+{
+    const uint8_t types[] = {CounterType::NAMUR, CounterType::ELECTRONIC, CounterType::NONE};
+    for (uint8_t type : types)
+    {
+        EXPECT_TRUE(counter_type_supported(type, 0)) << "тип входа " << (int)type;
+    }
+    EXPECT_FALSE(counter_type_supported(1, ATTINY_VER_ALARM)) << "снятый тип";
+}
+
 TEST(CounterTypes, EverySelectorOptionIsKnown)
 {
     // Значения из селектора «Тип входа» в data/input_setup.html. Тип, который

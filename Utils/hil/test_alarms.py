@@ -1,7 +1,7 @@
 """
 Тревоги на живом железе - блок E ручного плана.
 
-Предусловие всей группы: attiny 41 и строка `Alarm config:` в логе. Пороги
+Предусловие всей группы: attiny 44 и строка `Alarm config:` в логе. Пороги
 живут в оперативной памяти attiny и уезжают туда командой в конце сеанса, так
 что тест, не проверивший эту строку, зеленеет на выключенных тревогах. За
 проверкой следит stand.setup_alarms().
@@ -51,9 +51,9 @@ from .logwatch import ALARM_MODE, MANUAL_TRANSMIT_MODE, TRANSMIT_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand  # а сбор тестов должен работать без них
 
-# Тревог до attiny 41 не существует: alarm_bits всегда 0, а send_alarm_config
+# Ниже attiny 44 тревог ЕСП не читает: alarm_bits всегда 0, а send_alarm_config
 # выходит на первой строке - вся группа бессмысленна.
-pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=41)]
+pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=44)]
 
 
 # Протечка: «расход не падал ниже 40 л/ч в течение часа». При весе 10 это квант

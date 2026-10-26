@@ -82,9 +82,10 @@
         return input === 0 ? 'meter-cold-0.png' : 'meter-cold-1.png';
     }
 
-    // Порт valid_counter_type(): неизвестный тип показывается как NAMUR
-    function validCounterType(ctype) {
-        return root.SimCore.isValidCounterType(ctype) ? String(ctype) : String(G().enums.CounterType.NAMUR);
+    // Порт valid_counter_type(): тип, которого attiny не знает, показывается как NAMUR
+    function validCounterType(ctype, version) {
+        return root.SimCore.counterTypeSupported(ctype, version) ? String(ctype)
+                                                                 : String(G().enums.CounterType.NAMUR);
     }
 
     // Порт ветки PARAM_WIFI_CONNECT_STATUS: код строки для strings.js
@@ -148,14 +149,17 @@
                                function () { return String(sett.counter1_name); });
             case P.PARAM_COUNTER0_NAME: return String(sett.counter0_name);
             case P.PARAM_COUNTER1_NAME: return String(sett.counter1_name);
+            case P.PARAM_LEAK_OFF:
+                return templateDisabled(root.SimCore.counterTypeSupported(G().enums.CounterType.LEAKAGE,
+                                                                          attiny.version));
             case P.PARAM_COUNTER_IMG:
                 return byInput(function () { return counterImg(0, sett.counter0_name, attiny.counter_type0); },
                                function () { return counterImg(1, sett.counter1_name, attiny.counter_type1); });
             case P.PARAM_COUNTER_TYPE:
-                return byInput(function () { return validCounterType(attiny.counter_type0); },
-                               function () { return validCounterType(attiny.counter_type1); });
-            case P.PARAM_COUNTER0_TYPE: return validCounterType(attiny.counter_type0);
-            case P.PARAM_COUNTER1_TYPE: return validCounterType(attiny.counter_type1);
+                return byInput(function () { return validCounterType(attiny.counter_type0, attiny.version); },
+                               function () { return validCounterType(attiny.counter_type1, attiny.version); });
+            case P.PARAM_COUNTER0_TYPE: return validCounterType(attiny.counter_type0, attiny.version);
+            case P.PARAM_COUNTER1_TYPE: return validCounterType(attiny.counter_type1, attiny.version);
             case P.PARAM_FACTOR:
                 return byInput(function () { return String(sett.factor0); },
                                function () { return String(sett.factor1); });
@@ -247,7 +251,7 @@
             'PARAM_ALARM_STOP0', 'PARAM_ALARM_STOP1', 'PARAM_VACATION', 'PARAM_SEND_ON_CONSUMPTION',
             'PARAM_CONFIRM_WATERIUS', 'PARAM_CONFIRM_HTTP', 'PARAM_CONFIRM_MQTT',
             'PARAM_ALARM_RAISED', 'PARAM_ALARM_STATE0', 'PARAM_ALARM_STATE1',
-            'PARAM_THRESHOLDS_OFF0', 'PARAM_THRESHOLDS_OFF1',
+            'PARAM_THRESHOLDS_OFF0', 'PARAM_THRESHOLDS_OFF1', 'PARAM_LEAK_OFF',
             'PARAM_ACK_OFF_WATERIUS', 'PARAM_ACK_OFF_HTTP', 'PARAM_ACK_OFF_MQTT',
         ];
         return names.map(function (key) { return P[key]; }).filter(Boolean);

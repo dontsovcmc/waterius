@@ -34,8 +34,8 @@ from .logwatch import ALARM_MODE
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand  # а сбор тестов должен работать без них
 
-# Тревог до attiny 41 не существует: alarm_bits всегда 0
-pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=41)]
+# Ниже attiny 44 тревог ЕСП не читает: alarm_bits всегда 0
+pytestmark = [pytest.mark.stand, pytest.mark.requires(attiny=44)]
 
 
 @pytest.mark.slow

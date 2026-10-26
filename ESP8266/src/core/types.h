@@ -108,7 +108,8 @@ WET:  датчик протечки на входе замкнут.
 #define ATTINY_ALARM_SHIFT0 1
 #define ATTINY_ALARM_SHIFT1 4
 #define ATTINY_ALARM_MASK 0x07
-#define ATTINY_VER_ALARM 41
+// Граница общая с датчиком протечки: attiny 41–43 в поле не выходили
+#define ATTINY_VER_ALARM 44
 
 /*
 Команда 'R' - заводской сброс обнуляет показания attiny (#326). Attiny младше

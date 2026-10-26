@@ -28,7 +28,7 @@ from .constants import (
 from .reset import FreshDevice
 
 pytestmark = [pytest.mark.stand, pytest.mark.reset,
-              pytest.mark.requires(attiny=41)]
+              pytest.mark.requires(attiny=44)]
 
 
 @pytest.fixture(scope='module')

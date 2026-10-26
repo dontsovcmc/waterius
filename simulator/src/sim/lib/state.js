@@ -45,7 +45,7 @@
         return {
             sett: defaultSettings(),
             attiny: {
-                version: 41, // с 41 приезжают тревоги (#202); пульт умеет понизить
+                version: 47, // текущая attiny; пульт умеет понизить
 
                 model: 1,
                 voltage: 3100,
