@@ -380,7 +380,7 @@ struct Settings
     */
     uint32_t ip = 0;
     uint32_t gateway = 0;
-    uint32_t mask = 0;
+    uint32_t mask = 0x00FFFFFF; // 255.255.255.0, как DEFAULT_MASK; байты в порядке IPAddress
 
     /*
     Период пробуждение для отправки данных, мин
