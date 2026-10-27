@@ -185,3 +185,28 @@ def test_C6b_masked_password_keeps_fast_connect(stand: Stand) -> None:
     assert session.wifi_connected, session.text
     assert 'WIFI: begin channel:' in session.text, (
         f'первая попытка - полным сканом: кэш сброшен\n{session.text}')
+
+
+@pytest.mark.mqtt
+@pytest.mark.needs(mqtt_auto_discovery=0)
+@pytest.mark.requires(esp='2.0.53')
+def test_S5_flag_after_its_field(stand: Stand) -> None:
+    """
+    Флаг, пришедший позже своего поля, поле не теряет.
+
+    Топик автодискавери прошивка принимает только при включённом
+    автодискавери (`applyNonCheckBoxParameter`), а порядок ключей ответа не
+    гарантирован: сервер хранит настройки в jsonb, и тот переставляет ключи.
+    Поэтому поле идёт первым, а флаг, который его открывает, - вторым.
+    """
+    assert same_value((stand.state or {}).get('mqtt_auto_discovery'), 0), (
+        'стенд: автодискавери до теста не выключено, порядок не проверяется: '
+        f"mqtt_auto_discovery={(stand.state or {}).get('mqtt_auto_discovery')!r}")
+
+    session = apply(stand, {'mqtt_discovery_topic': 'homeassistant',
+                            'mqtt_auto_discovery': '1'})
+
+    assert session.saved.get('mqtt_discovery_topic') == 'homeassistant', (
+        f'топик пришёл раньше флага и не сохранён; сохранено: {session.saved}'
+        f'\n{session.text}')
+
