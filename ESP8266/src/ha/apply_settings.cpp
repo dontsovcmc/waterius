@@ -14,6 +14,19 @@ void apply_settings(const JsonDocument &json_settings_received,
     JsonObject errorsObj = errors_doc.to<JsonObject>();
 
     JsonObjectConst root = json_settings_received.as<JsonObjectConst>();
+
+    // Вначале флаги: поля под ними принимаются только при включённом флаге,
+    // а порядок ключей не гарантирован
+    for (JsonPairConst kv : root)
+    {
+        String name = kv.key().c_str();
+        if (!name.endsWith(F("0")) && !name.endsWith(F("1")))
+        {
+            AsyncWebParameter p(name, kv.value().as<String>());
+            applyCheckBoxParameter(&p, errorsObj);
+        }
+    }
+
     for (JsonPairConst kv : root)
     {
         String name = kv.key().c_str();
@@ -36,7 +49,6 @@ void apply_settings(const JsonDocument &json_settings_received,
         else
         {
             AsyncWebParameter p(name, payload);
-            applyCheckBoxParameter(&p, errorsObj);
             applyNonCheckBoxParameter(&p, errorsObj);
         }
     }

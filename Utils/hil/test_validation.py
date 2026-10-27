@@ -129,6 +129,23 @@ def test_C7_disabled_transport_is_not_parsed(board: AtBoard) -> None:
         assert save(board, '/api/save', mqtt_on=1) == {}
 
 
+def test_C11_flag_after_its_field(board: AtBoard) -> None:
+    """
+    Поле, пришедшее в форме раньше своего флага, разбирается.
+
+    Адрес брокера прошивка разбирает только при включённом MQTT, поэтому
+    флаг обязан примениться раньше полей при любом порядке (`applySettings`).
+    Битый адрес отвергается и не сохраняется: отказ TLS доказывает, что поле
+    разобрано, и брокер остаётся прежним.
+    """
+    try:
+        assert save(board, '/api/save', mqtt_on=0) == {}
+        assert save(board, '/api/save', mqtt_host='mqtts://broker',
+                    mqtt_on=1) == {'mqtt_host': ERR_TLS}
+    finally:
+        assert save(board, '/api/save', mqtt_on=1) == {}
+
+
 def test_C8_valid_forms_are_accepted(board: AtBoard, cfg: Any, stand: Any) -> None:
     """
     Зеркало C1-C3: верное значение принимается - с запятой, с пятью целыми
