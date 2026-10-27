@@ -379,7 +379,7 @@ struct Settings
     Статический адрес
     */
     uint32_t ip = 0;
-    uint32_t gateway = 0;
+    uint32_t gateway = 0x0100A8C0; // 192.168.0.1, как DEFAULT_GATEWAY; байты в порядке IPAddress
     uint32_t mask = 0x00FFFFFF; // 255.255.255.0, как DEFAULT_MASK; байты в порядке IPAddress
 
     /*
