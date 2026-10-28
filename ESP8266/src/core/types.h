@@ -592,11 +592,14 @@ struct Settings
     */
     uint32_t discovery_signature = 0;
 
+    // Флаг «батарейки сели» прошлого сеанса: нужен гистерезису (core/power.h)
+    uint8_t battery_low = 0;
+
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved9[27] = {0};
+    uint8_t reserved9[26] = {0};
 
 }; // 960 байт
 

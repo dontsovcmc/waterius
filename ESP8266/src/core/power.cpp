@@ -1,31 +1,49 @@
 #include "power.h"
 
-#include <math.h>
-
 bool usb_powered(const uint16_t avg_mv)
 {
     return avg_mv > USB_VOLTAGE_MV;
 }
 
-bool low_voltage(const uint16_t avg_mv, const uint16_t diff_mv)
+bool low_voltage(const uint16_t avg_mv, const bool was_low)
 {
-    if (usb_powered(avg_mv))
-        return false;
-
-    return (diff_mv >= ALERT_POWER_DIFF_MV) || (avg_mv < BATTERY_LOW_THRESHOLD_MV);
+    const uint16_t threshold = was_low ? BATTERY_LOW_MV + BATTERY_LOW_HYSTERESIS_MV : BATTERY_LOW_MV;
+    return avg_mv < threshold;
 }
 
-uint8_t battery_level(const uint16_t avg_mv, const uint16_t diff_mv)
+uint8_t battery_level_w2(const uint16_t avg_mv)
 {
-    // https://mysku.club/blog/diy/81535.html - поведение батареек при разрядке
-    if (usb_powered(avg_mv))
+    // Точки шкалы: напряжение трёх элементов, мВ -> остаток, %
+    static const struct
+    {
+        uint16_t mv;
+        uint8_t level;
+    } SCALE[] = {
+        {2500, 0}, {2700, 3}, {3000, 8}, {3300, 20},
+        {3600, 40}, {3900, 65}, {4200, 90}, {4500, 100},
+    };
+    const int last = sizeof(SCALE) / sizeof(SCALE[0]) - 1;
+
+    if (avg_mv <= SCALE[0].mv)
+        return 0;
+    if (avg_mv >= SCALE[last].mv)
         return 100;
 
-    if (low_voltage(avg_mv, diff_mv))
-        return 0;
+    int i = 1;
+    while (avg_mv > SCALE[i].mv)
+        i++;
+    const uint32_t span_mv = SCALE[i].mv - SCALE[i - 1].mv;
+    const uint32_t span_level = SCALE[i].level - SCALE[i - 1].level;
+    return (uint8_t)(SCALE[i - 1].level + (avg_mv - SCALE[i - 1].mv) * span_level / span_mv);
+}
 
-    if (diff_mv > LOW_BATTERY_DIFF_MV)
-        return (uint8_t)round((ALERT_POWER_DIFF_MV - diff_mv) * 0.5);
-
-    return (uint8_t)(25 + round((LOW_BATTERY_DIFF_MV - diff_mv) * 1.5));
+uint8_t battery_level(const uint16_t avg_mv, const bool low)
+{
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+    (void)low;
+    return battery_level_w2(avg_mv);
+#else
+    (void)avg_mv;
+    return low ? 0 : 100;
+#endif
 }

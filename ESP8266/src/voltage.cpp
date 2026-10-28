@@ -67,9 +67,9 @@ uint16_t Voltage::value()
 /**
  * @brief Возвращает признак, что батарейки требуют замены
  */
-bool Voltage::low_voltage()
+bool Voltage::low_voltage(const bool was_low)
 {
-    return ::low_voltage(average(), diff());
+    return ::low_voltage(average(), was_low);
 }
 
 /**
@@ -77,9 +77,9 @@ bool Voltage::low_voltage()
  *
  * @return уровень батареи в процентах.
  */
-uint8_t Voltage::get_battery_level()
+uint8_t Voltage::get_battery_level(const bool low)
 {
-    return ::battery_level(average(), diff());
+    return ::battery_level(average(), low);
 }
 
 /**

@@ -292,6 +292,7 @@ void loop()
             if (connected)
             {
                 voltage.update();
+                sett.battery_low = voltage.low_voltage(sett.battery_low);
                 log_system_info();
 
                 JsonDocument json_data;
@@ -475,7 +476,7 @@ void loop()
     // config_loaded остаётся false и когда attiny не ответил по i2c: код
     // ошибки тот же, что и при испорченной конфигурации
     status.config_loaded = config_loaded;
-    status.low_voltage = voltage.low_voltage();
+    status.low_voltage = sett.battery_low;
 
     // Коды ошибок моргаются на обеих моделях (#355). На классике светодиод
     // сидит на линии TX: на время вспышек лог замолкает, blynk_led поднимает

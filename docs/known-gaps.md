@@ -17,12 +17,3 @@
 
 Настоящие логи идут в UART и доступны только при сборке с `LOG_LEVEL_INFO` или
 `LOG_LEVEL_DEBUG`.
-
-## Часть сущностей Home Assistant закомментирована
-
-В `ESP8266/src/ha/resources.h` объявлены, но не публикуются `ENTITY_VOLTAGE_LOW`,
-`ENTITY_BATTERY` и `ENTITY_PERIOD_MIN_TUNED`. Поля при этом уходят в payload, то есть данные
-есть, а сущностей в HA нет.
-
-Заряд батареи (`battery`) в payload помечен в [Export.md](../Export.md) как «фейковый» — он
-считается из просадки напряжения, а не из реального заряда.

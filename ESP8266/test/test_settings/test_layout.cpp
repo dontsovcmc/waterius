@@ -47,6 +47,8 @@ TEST(SettingsLayout, NewFieldsLiveInTheReservedTail)
     EXPECT_LT(offsetof(Settings, alarm_confirm), 960u);
     EXPECT_GT(offsetof(Settings, discovery_signature), offsetof(Settings, alarm_confirm));
     EXPECT_LT(offsetof(Settings, discovery_signature), 960u);
+    EXPECT_GT(offsetof(Settings, battery_low), offsetof(Settings, discovery_signature));
+    EXPECT_LT(offsetof(Settings, battery_low), 960u);
 }
 
 TEST(SettingsLayout, RepurposedReservedByteStayedInPlace)
