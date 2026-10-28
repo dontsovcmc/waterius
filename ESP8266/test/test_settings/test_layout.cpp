@@ -16,6 +16,13 @@
 раскладка, с которой устройства ходят в поле.
 */
 
+TEST(SettingsVersion, BumpNeedsMigration)
+{
+    // Смена версии стирает настройки, кроме ключа и периода (config.cpp:load_config).
+    // Поднимаешь номер - сначала перенос всех полей, порядок в docs/ota-and-reset.md
+    EXPECT_EQ(CURRENT_VERSION, VER_11);
+}
+
 TEST(SettingsLayout, SizeIsFixed)
 {
     // Тот же размер проверяет static_assert в types.h — здесь он нужен,
