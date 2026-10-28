@@ -42,7 +42,6 @@
 
     var FILES = {
         '/favicon.ico': 'favicon.ico',
-        '/waterius_logs.txt': 'waterius_logs.txt',
         '/ssid.txt': 'ssid.txt',
     };
 

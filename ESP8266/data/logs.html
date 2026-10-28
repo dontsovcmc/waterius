@@ -23,12 +23,13 @@
                 </header>
                 <main>
                     <h2>Логи</h2>
-                    <p class="text">Здесь отображаются события, которые происходят под капотом Ватериуса, эти данные могут пригодиться при обращении в поддержку</p>
+                    <p class="text">Что делал Ватериус с момента входа в настройку, в том числе при подключении к роутеру. Если Ватериус не подключается, скачайте журнал и список сетей и пришлите их в поддержку.</p>
                     <textarea id="logs" class="mt20" disabled></textarea>
                     <button type="button" class="btn-serv mt16" onclick="copyInput('logs')">Скопировать</button>
                 </main>
                 <footer class="btns">
-                    <a class="btn" download href="/waterius_logs.txt">Скачать</a>
+                    <a class="btn btn2" download="ssid.txt" href="/ssid.txt">Скачать список сетей</a>
+                    <a class="btn mt10" download="waterius_log.txt" href="/api/log">Скачать журнал</a>
                 </footer>
             </div>
         </div>

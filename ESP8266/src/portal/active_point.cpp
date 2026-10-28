@@ -9,6 +9,7 @@
 #include "AsyncJson.h"
 #include "setup.h"
 #include "Logging.h"
+#include "log_capture.h"
 #include "master_i2c.h"
 #include "utils.h"
 #include "config.h"
@@ -72,6 +73,26 @@ static void get_api_portal_time(AsyncWebServerRequest *request)
              (unsigned long)portal_idle_seconds_left(now, portal_watchdog_feed_ms));
 
     request->send(200, F("application/json"), body);
+}
+
+/*
+Журнал портала (core/log_ring.h) потоком: копия в String заняла бы ещё
+столько же памяти. Имя файла задаёт заголовок, а не адрес.
+*/
+static void get_api_log(AsyncWebServerRequest *request)
+{
+    LOG_INFO(F("GET ") << request->url());
+
+    uint32_t pos = log_ring_oldest(log_capture());
+    const uint32_t end = log_capture().written;
+
+    AsyncWebServerResponse *response = request->beginChunkedResponse(
+        F("text/plain; charset=utf-8"),
+        [pos, end](uint8_t *buffer, size_t max_len, size_t) mutable -> size_t
+        { return log_ring_read(log_capture(), pos, end, buffer, max_len); });
+
+    response->addHeader(F("Content-Disposition"), F("attachment; filename=\"waterius_log.txt\""));
+    request->send(response);
 }
 
 /*
@@ -513,6 +534,11 @@ void on_root(AsyncWebServerRequest *request)
 
 void start_active_point(Settings &sett, CalculatedData &cdata)
 {
+    if (!log_capture_begin(LOG_CAPTURE_SIZE))
+    {
+        LOG_ERROR(F("LOG: no memory for portal journal"));
+    }
+
     if (!LittleFS.begin())
     {
         LOG_INFO(F("FS: Mounting LittleFS error"));
@@ -697,9 +723,6 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     server->on("/start.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { send_page(request, "/start.html", processor); });
 
-    server->on("/waterius_logs.txt", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/waterius_logs.txt", F("text/plain")); });
-
     // Процесс подключения к Wi-fi
     server->on("/wifi_connect.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { send_page(request, "/wifi_connect.html", processor); });
@@ -732,6 +755,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     server->on("/api/status/0", HTTP_GET, get_api_status_0);                       // Статус 0-го входа (ХВС)  (из setup_cold_welcome.html)
     server->on("/api/status/1", HTTP_GET, get_api_status_1);                       // Статус 1-го входа (ГВС)  (из setup_cold_welcome.html)
     server->on("/api/portal_time", HTTP_GET, get_api_portal_time);                 // Сколько осталось до закрытия портала (#305)
+    server->on("/api/log", HTTP_GET, get_api_log);                                 // Журнал портала (logs.html)
     server->on("/api/turnoff", HTTP_GET, get_api_turnoff);                         // Выйти из режима настройки
     server->on("/api/reset", HTTP_POST, post_api_reset);                           // Сброс к заводским настройкам
 

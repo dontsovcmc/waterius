@@ -195,11 +195,6 @@ async def start():
     return template_response("start.html")
 
 
-@app.get("/waterius_logs.txt")
-async def waterius_logs():
-    return FileResponse(os.path.join(ROOT_PATH, "waterius_logs.txt"))
-
-
 @app.get("/wifi_list.html")
 async def wifi_list():
     return template_response("wifi_list.html")

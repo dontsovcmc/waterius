@@ -374,7 +374,7 @@ function finishTimer(btn, sec){
     setTimeout(() => finishTimer(btn, sec), 1000);
 }
 function getLogs(){
-    ajax('/waterius_logs.txt', {}, data => document.getElementById('logs').value = data);
+    ajax('/api/log', {}, data => document.getElementById('logs').value = data);
 }
 function _goto(next = false){
     if(!next) 

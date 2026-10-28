@@ -1,7 +1,7 @@
 
 from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, PlainTextResponse
 from esp import (settings, AUTO_IMPULSE_FACTOR, AS_COLD_CHANNEL,
                  CounterName, CounterType, input1_settings, input0_settings)
 from api_debug import input1_runtime, input0_runtime
@@ -247,6 +247,12 @@ async def save_input_type(form_data: InputModel = Depends()):
             res["redirect"] = "/input/1/detect.html"
     json = jsonable_encoder(res)
     return JSONResponse(content=json)
+
+
+@api_app.get("/log")
+async def log_journal():
+    data = '00:00:037-036/04%  INFO  : AP started on channel=1 , ssid=waterius-12345\r\n'
+    return PlainTextResponse(data, headers={'Content-Disposition': 'attachment; filename="waterius_log.txt"'})
 
 
 @api_app.get("/turnoff")

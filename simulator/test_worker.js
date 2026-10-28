@@ -116,6 +116,14 @@ async function run() {
         'impulses' in status ? null : 'нет поля impulses: ' + JSON.stringify(status),
     ].filter(Boolean));
 
+    const journal = await ask(worker, '/api/log');
+    const journalText = await journal.text();
+    check('журнал скачивается файлом', [
+        /attachment; filename="waterius_log.txt"/.test(journal.headers.get('Content-Disposition') || '')
+            ? null : 'нет имени файла: ' + journal.headers.get('Content-Disposition'),
+        journalText.includes('AP started on channel=') ? null : 'в журнале нет строк портала',
+    ].filter(Boolean));
+
     const saved = await (await ask(worker, '/api/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

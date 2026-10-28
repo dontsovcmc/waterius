@@ -126,3 +126,17 @@ def test_P5_saved_password_is_masked(board: AtBoard, cfg: Any) -> None:
     assert 'value="********"' in page, (
         'поле пароля пустое, хотя пароль сохранён: форма уйдёт без него, и '
         'прошивка примет пустой пароль за новый')
+
+
+def test_P6_log_journal(board: AtBoard, stand: Any) -> None:
+    """
+    Журнал портала скачивается файлом, и это живой лог, а не заглушка из
+    образа: в нём есть строка о самом этом запросе.
+    """
+    want = portal_mod.tree_version(REPO_ROOT)
+    if want is None or stand.esp_version != want:
+        pytest.skip(f'на устройстве {stand.version_str}: журнала может не быть')
+    answer = board.get('/api/log', portal_mod.HOST)
+    assert answer.status == 200, f'/api/log: {answer.status}'
+    assert 'filename="waterius_log.txt"' in answer.headers.get('content-disposition', ''), answer.headers
+    assert 'GET /api/log' in answer.text, answer.text[-400:]

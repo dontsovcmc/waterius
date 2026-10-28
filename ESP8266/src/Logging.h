@@ -2,6 +2,7 @@
 #define _WATERIUS_LOGGING_h
 
 #include "setup.h"
+#include "log_capture.h"
 
 #include <Arduino.h>
 
@@ -26,7 +27,7 @@ inline Print &operator<<(Print &obj, T arg)
 		char logFormattedTime[17];                                                                    \
 		snprintf_P(logFormattedTime, sizeof(logFormattedTime),                                        \
 				   PSTR("%02u:%02u:%03u"), minutes, seconds, ms);                                     \
-		Serial.print(logFormattedTime);                                                                \
+		log_output.print(logFormattedTime);                                                                \
 	} while (0)
 
 #ifdef LOG_FREE_HEAP
@@ -37,7 +38,7 @@ inline Print &operator<<(Print &obj, T arg)
 	{                                                                                       \
 		char logHeap[18];                                                                   \
 		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d/%02d%%"), int(ESP.getFreeHeap() / 1024), ESP.getHeapFragmentation()); \
-		Serial.print(logHeap);                                                              \
+		log_output.print(logHeap);                                                              \
 	} while (0)
 #else
 #define LOG_FREE_HEAP                                                  \
@@ -46,7 +47,7 @@ inline Print &operator<<(Print &obj, T arg)
 		char logHeap[15];                                              \
 		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d/%02d"),       \
 				   ESP_getFreeHeap1024(), ESP_getHeapFragmentation()); \
-		Serial.print(logHeap);                                         \
+		log_output.print(logHeap);                                         \
 	} while (0)
 #endif
 #else
@@ -89,7 +90,7 @@ inline Print &operator<<(Print &obj, T arg)
 	{                                                \
 		LOG_FORMAT_TIME;                             \
 		LOG_FREE_HEAP;                               \
-		Serial << "  ERROR : " << content << "\r\n"; \
+		log_output << "  ERROR : " << content << "\r\n"; \
 	} while (0)
 
 #undef LOG_INFO
@@ -98,7 +99,7 @@ inline Print &operator<<(Print &obj, T arg)
 	{                                                \
 		LOG_FORMAT_TIME;                             \
 		LOG_FREE_HEAP;                               \
-		Serial << "  INFO  : " << content << "\r\n"; \
+		log_output << "  INFO  : " << content << "\r\n"; \
 	} while (0)
 
 #ifdef LOG_LEVEL_DEBUG
@@ -108,7 +109,7 @@ inline Print &operator<<(Print &obj, T arg)
 	{                                                \
 		LOG_FORMAT_TIME;                             \
 		LOG_FREE_HEAP;                               \
-		Serial << "  DEBUG : " << content << "\r\n"; \
+		log_output << "  DEBUG : " << content << "\r\n"; \
 	} while (0)
 #endif
 #endif
