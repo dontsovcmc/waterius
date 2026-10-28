@@ -7,7 +7,7 @@
 #include "setup.h"
 #include "voltage.h"
 
-#define OTA_MIN_VOLTAGE_MV 3300
+#define OTA_MIN_VOLTAGE_MV W2_BATTERY_LOW_MV
 
 bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &sett, Voltage &voltage);
 

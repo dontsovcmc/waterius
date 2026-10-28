@@ -83,9 +83,9 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
 
     // Battery & Voltage
     root[F("voltage")] = voltage.average() / 1000.0;
-    root[F("voltage_low")] = voltage.low_voltage();
+    root[F("voltage_low")] = sett.battery_low != 0;
     root[F("voltage_diff")] = (float)voltage.diff() / 1000.0;
-    root[F("battery")] = voltage.get_battery_level();
+    root[F("battery")] = voltage.get_battery_level(sett.battery_low);
 
     // Wifi и сеть
     root[F("channel")] = WiFi.channel();

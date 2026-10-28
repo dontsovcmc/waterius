@@ -23,8 +23,8 @@ public:
     uint16_t value();
     uint16_t average();
     uint16_t diff();
-    bool low_voltage();
-    uint8_t get_battery_level();
+    bool low_voltage(const bool was_low);
+    uint8_t get_battery_level(const bool low);
 };
 
 #endif

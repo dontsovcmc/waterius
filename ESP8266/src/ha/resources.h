@@ -172,12 +172,13 @@ static const char s_moisture[] PROGMEM = "moisture";
  *
  */
 
-/* Некорректно это считать, т.к. напряжение измеряется после регулятора. И просадка может скакать.
-static const char *const ENTITY_VOLTAGE_LOW[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_sensor, s_bat_low_name, s_voltage_low, "", "", "", s_diagnostic, s_icon_ba, ""};               // voltage_low Батарейка разряжена >
-static const char *const ENTITY_BATTERY[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_sensor, s_bat_name, s_battery, s_measurement, s_battery, s_perc, s_diagnostic, "", ""};        // процент зарядки батареи
-*/
+// Пороги и шкала - core/power.h. У binary_sensor класса battery «включён» значит «разряжена»
+static const char *const ENTITY_VOLTAGE_LOW[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_bat_low_name, s_voltage_low, "", s_battery, "", s_diagnostic, "", ""};
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+static const char *const ENTITY_BATTERY[MQTT_PARAM_COUNT] PROGMEM =
+    {s_sensor, s_bat_name, s_battery, s_measurement, s_battery, s_perc, s_diagnostic, "", ""};
+#endif
 static const char *const ENTITY_RESETS[MQTT_PARAM_COUNT] PROGMEM =    
     {s_sensor, s_resets_name, s_resets, s_measurement, "", "", s_diagnostic, s_icon_cog_refresh, ""}; // resets
 static const char *const ENTITY_TIMESTAMP[MQTT_PARAM_COUNT] PROGMEM =    
@@ -217,8 +218,9 @@ static const char *const ENTITY_ACK_MQTT[MQTT_PARAM_COUNT] PROGMEM =
 
 static const char *const ENTITY_PERIOD_MIN[MQTT_PARAM_COUNT] PROGMEM =  
     {s_number, s_period_min_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50};
-//static const char *const ENTITY_PERIOD_MIN_TUNED[MQTT_PARAM_COUNT] PROGMEM =  
-//    {s_sensor, s_period_min_tuned_name, s_period_min_tuned, "", "", "", s_config, s_icon_bed_clock, s_format50}; // скорректированное значение пробуждения
+// Минуты по часам attiny, а не настоящие, поэтому без device_class duration
+static const char *const ENTITY_PERIOD_MIN_TUNED[MQTT_PARAM_COUNT] PROGMEM =
+    {s_sensor, s_period_min_tuned_name, s_period_min_tuned, s_measurement, "", s_min, s_diagnostic, s_icon_bed_clock, ""};
     /* Сенсор с атрибутами  Группа №1 */
 static const char *const ENTITY_VOLTAGE[MQTT_PARAM_COUNT] PROGMEM =  
     {s_sensor, s_bvolt_name, s_voltage, s_measurement, s_voltage, s_v, s_diagnostic, "", ""};      // voltage
