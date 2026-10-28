@@ -51,6 +51,23 @@ TEST(SettingsLayout, NewFieldsLiveInTheReservedTail)
     EXPECT_LT(offsetof(Settings, battery_low), 960u);
 }
 
+TEST(SettingsLayout, ReserveHoldsOnlyBytesThatWereZero)
+{
+    // В релизах с 1.0.2 по 2.0.44 резерв кончался на 955-м байте, дальше было
+    // выравнивание компилятора с непредсказуемым содержимым
+    EXPECT_EQ(offsetof(Settings, reserved9) + sizeof(Settings::reserved9), 956u);
+    EXPECT_EQ(offsetof(Settings, padding5), 956u);
+}
+
+TEST(SettingsLayout, FormerAlignmentBytesAreDeclared)
+{
+    EXPECT_EQ(offsetof(Settings, padding0), 530u);
+    EXPECT_EQ(offsetof(Settings, padding1), 574u);
+    EXPECT_EQ(offsetof(Settings, padding2), 882u);
+    EXPECT_EQ(offsetof(Settings, padding3), 903u);
+    EXPECT_EQ(offsetof(Settings, padding4), 926u);
+}
+
 TEST(SettingsLayout, RepurposedReservedByteStayedInPlace)
 {
     // ntp_sync_count занял бывший reserved8. Смещение то же самое, значит
