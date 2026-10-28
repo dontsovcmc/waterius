@@ -24,6 +24,10 @@ voltage. Просадку не учитываем: на Ватериусе-2 о�
 // Шаг АЦП attiny около 18 мВ: без запаса флаг у порога переключался бы каждый сеанс
 #define W2_BATTERY_LOW_HYSTERESIS_MV 50
 
+// Ватериус-2: ниже ESP за стабилизатором не держит Wi-Fi, это 0 %. Выше - запас до свежих батареек
+#define W2_BATTERY_EMPTY_MV 3200
+#define W2_BATTERY_FULL_MV 4500
+
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
 #define BATTERY_LOW_MV W2_BATTERY_LOW_MV
 #define BATTERY_LOW_HYSTERESIS_MV W2_BATTERY_LOW_HYSTERESIS_MV
@@ -43,8 +47,8 @@ bool usb_powered(const uint16_t avg_mv);
 bool low_voltage(const uint16_t avg_mv, const bool was_low);
 
 /*
-Ватериус-2: остаток трёх щелочных элементов, 0-100 %, от 2500 до 4500 мВ.
-Шкала неравномерная: основная ёмкость щелочного элемента отдаётся выше 1,1 В.
+Ватериус-2: запас до отказа Wi-Fi, 0-100 %, линейно от W2_BATTERY_EMPTY_MV
+до W2_BATTERY_FULL_MV.
 */
 uint8_t battery_level_w2(const uint16_t avg_mv);
 

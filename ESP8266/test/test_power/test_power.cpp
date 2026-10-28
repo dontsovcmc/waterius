@@ -44,15 +44,17 @@ TEST(LowVoltage, FlagIsReleasedOnlyAboveHysteresis)
 
 TEST(BatteryLevelW2, Ends)
 {
-    EXPECT_EQ(0, battery_level_w2(2000));
     EXPECT_EQ(0, battery_level_w2(2500));
+    EXPECT_EQ(0, battery_level_w2(3200));
+    EXPECT_EQ(1, battery_level_w2(3213));
+    EXPECT_EQ(50, battery_level_w2(3850));
     EXPECT_EQ(100, battery_level_w2(4500));
     EXPECT_EQ(100, battery_level_w2(USB));
 }
 
-TEST(BatteryLevelW2, LowThresholdIsTwentyPercent)
+TEST(BatteryLevelW2, LowFlagComesBeforeZero)
 {
-    EXPECT_EQ(20, battery_level_w2(W2_BATTERY_LOW_MV));
+    EXPECT_EQ(7, battery_level_w2(W2_BATTERY_LOW_MV));
 }
 
 TEST(BatteryLevelW2, FallsAsVoltageFalls)
