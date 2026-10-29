@@ -126,11 +126,7 @@ INVALID = [
     pytest.param('period_min', '70000', id='period_overflow'),    # сохранялось 4464 (PR #378)
     pytest.param('ch1', 'abc', id='water_reading_text'),
     pytest.param('f1', '-1', id='factor_negative'),
-    pytest.param('ctype1', '3', id='ctype_unknown', marks=pytest.mark.xfail(
-        strict=True,
-        reason='тип входа из ответа сервера и из HA уходит в attiny без '
-               'is_valid_counter_type (active_point_api.cpp, applyInputParameter): '
-               'проверку делает только страница портала')),
+    pytest.param('ctype1', '3', id='ctype_unknown'),
 ]
 
 

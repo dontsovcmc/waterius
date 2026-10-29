@@ -59,7 +59,7 @@ inline void send_json_response(AsyncWebServerRequest *request, JsonDocument &jso
  */
 void get_api_connect_status(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
@@ -93,7 +93,7 @@ void get_api_connect_status(AsyncWebServerRequest *request)
  */
 void get_api_networks(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     int n = WiFi.scanComplete();
     if (n == WIFI_SCAN_FAILED)
@@ -111,7 +111,8 @@ void get_api_networks(AsyncWebServerRequest *request)
             LOG_INFO(WiFi.SSID(i) << " " << WiFi.RSSI(i));
             JsonObject obj = array.add<JsonObject>();
             obj["ssid"] = WiFi.SSID(i);
-            obj["level"] = int(round(map(WiFi.RSSI(i), -100, -50, 1, 4)));
+            // Портал рисует уровни 1-4, а map у роутера рядом даёт 5 и 6
+            obj["level"] = constrain(map(WiFi.RSSI(i), -100, -50, 1, 4), 1, 4);
 
             // Канал и BSSID именно этой сети, а не текущего подключения:
             // портал вернёт их в форме, и первый коннект пойдёт без скана
@@ -175,7 +176,7 @@ bool save_fast_connect(AsyncWebServerRequest *request)
 void post_api_save_connect(AsyncWebServerRequest *request)
 {
     feed_portal_watchdog();   // продлеваем режим настройки (#305)
-    LOG_INFO(F("POST ") << request->url());
+    LOG_REQUEST(F("POST ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
@@ -338,7 +339,7 @@ static void add_consumption_stopped(JsonArray &array, const uint8_t input,
  */
 void get_api_main_status(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     g_json_doc.clear();
     JsonArray array = g_json_doc.to<JsonArray>();
@@ -444,7 +445,7 @@ void get_api_status_1(AsyncWebServerRequest *request)
  */
 void get_api_status(AsyncWebServerRequest *request, const int index)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
@@ -539,6 +540,14 @@ static void report_param_error(const AsyncWebParameter *p, JsonObject &errorsObj
     // напомнит про незакрытую ветку
 }
 
+// Пароли в лог не пишем: журнал портала скачивают и отправляют в поддержку
+String log_param_value(const String &name, const String &value)
+{
+    if (name == FPSTR(PARAM_PASSWORD) || name == FPSTR(PARAM_MQTT_PASSWORD))
+        return F("****");
+    return value;
+}
+
 void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required /*true*/)
 {
     ParamError err = parse_text(dest, size, p->value().c_str(), required);
@@ -549,7 +558,7 @@ void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject 
     }
     else if (err == PARAM_OK)
     {
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << dest);
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << log_param_value(p->name(), dest));
     }
     else
     {
@@ -856,7 +865,6 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
 {
     const String &name = p->name();
 
-    LOG_INFO(F("parameter ") << name << "=" << p->value());
     if (name == FPSTR(PARAM_CHANNEL_START) || name == FPSTR(s_ch)) // portal || ha
     {
         switch (input)
@@ -1064,7 +1072,6 @@ void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
 {
     const String &name = p->name();
 
-    LOG_INFO(F("parameter ") << name << "=" << p->value());
     if (name == FPSTR(PARAM_WATERIUS_ON))
     {
         save_bool_param(p, sett.waterius_on, errorsObj);
@@ -1269,7 +1276,7 @@ static void save_uint16_param(AsyncWebServerRequest *request, const String &name
 void post_api_save(AsyncWebServerRequest *request)
 {
     feed_portal_watchdog();   // продлеваем режим настройки (#305)
-    LOG_INFO(F("POST ") << request->url());
+    LOG_REQUEST(F("POST ") << request->url());
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
@@ -1295,7 +1302,7 @@ void post_api_save(AsyncWebServerRequest *request)
 void post_api_save_alarms(AsyncWebServerRequest *request)
 {
     feed_portal_watchdog();   // продлеваем режим настройки (#305)
-    LOG_INFO(F("POST ") << request->url());
+    LOG_REQUEST(F("POST ") << request->url());
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
@@ -1342,7 +1349,7 @@ void post_api_save_alarms(AsyncWebServerRequest *request)
 void post_api_save_input_type(AsyncWebServerRequest *request)
 {
     feed_portal_watchdog();   // продлеваем режим настройки (#305)
-    LOG_INFO(F("POST ") << request->url());
+    LOG_REQUEST(F("POST ") << request->url());
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
@@ -1415,7 +1422,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
 
 void get_api_turnoff(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
     exit_portal_flag = true;
     AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "");
     request->send(response);
@@ -1424,7 +1431,7 @@ void get_api_turnoff(AsyncWebServerRequest *request)
 void post_api_reset(AsyncWebServerRequest *request)
 {
     feed_portal_watchdog();   // продлеваем режим настройки (#305)
-    LOG_INFO(F("POST ") << request->url());
+    LOG_REQUEST(F("POST ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();

@@ -210,7 +210,7 @@ class Settings:
     @property
     def wifi_connect_status(self):
         if system_info.wifi_connect_status in [WL_NO_SSID_AVAIL, WL_CONNECT_FAILED, WL_CONNECTION_LOST]:
-            return '8'  # S_WIFI_CONNECTION_LOST "Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.";
+            return '8'  # S_WL_CONNECTION_LOST: что может помочь и ссылка на журнал, текст в strings.js
         elif system_info.wifi_connect_status == WL_WRONG_PASSWORD:
             return '9'  # S_WL_WRONG_PASSWORD "Ошибка подключения: Некорректный пароль";
         elif system_info.wifi_connect_status == WL_IDLE_STATUS:

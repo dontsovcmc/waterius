@@ -9,6 +9,7 @@
 #include "AsyncJson.h"
 #include "setup.h"
 #include "Logging.h"
+#include "log_capture.h"
 #include "master_i2c.h"
 #include "utils.h"
 #include "config.h"
@@ -72,6 +73,32 @@ static void get_api_portal_time(AsyncWebServerRequest *request)
              (unsigned long)portal_idle_seconds_left(now, portal_watchdog_feed_ms));
 
     request->send(200, F("application/json"), body);
+}
+
+/*
+Журнал портала (core/log_ring.h) потоком: копия в String заняла бы ещё
+столько же памяти. Отдаётся текстом, не файлом: окно портала в телефоне
+может не сохранять файлы, а текст покажет. Имя файла задаёт кнопка в logs.html.
+*/
+static void get_api_log(AsyncWebServerRequest *request)
+{
+    LOG_INFO(F("GET ") << request->url());
+
+    if (!log_capture().buf)
+    {
+        request->send(200, F("text/plain; charset=utf-8"), F("Журнал не ведётся: не хватило памяти\r\n"));
+        return;
+    }
+
+    uint32_t pos = log_ring_oldest(log_capture());
+    const uint32_t end = log_capture().written;
+
+    AsyncWebServerResponse *response = request->beginChunkedResponse(
+        F("text/plain; charset=utf-8"),
+        [pos, end](uint8_t *buffer, size_t max_len, size_t) mutable -> size_t
+        { return log_ring_read(log_capture(), pos, end, buffer, max_len); });
+
+    request->send(response);
 }
 
 /*
@@ -448,7 +475,7 @@ String processor_main(const String &var, const uint8_t input)
             case WL_NO_SSID_AVAIL:
             case WL_CONNECT_FAILED:
             case WL_CONNECTION_LOST:
-                return String(F("8")); //S_WIFI_CONNECTION_LOST "Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.";
+                return String(F("8")); //S_WL_CONNECTION_LOST: что может помочь и ссылка на журнал, текст в strings.js
             case WL_WRONG_PASSWORD:
                 return String(F("9")); //S_WL_WRONG_PASSWORD "Ошибка подключения: Некорректный пароль";
             case WL_IDLE_STATUS:
@@ -481,7 +508,7 @@ void onRedirectIP(AsyncWebServerRequest *request)
 
 void on_root(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("on_root GET ") << request->url());
+    LOG_REQUEST(F("on_root GET ") << request->url());
 
     LOG_INFO(F("WIFI: wifi_connect_status=") << wifi_connect_status);
 
@@ -513,6 +540,11 @@ void on_root(AsyncWebServerRequest *request)
 
 void start_active_point(Settings &sett, CalculatedData &cdata)
 {
+    if (!log_capture_begin(LOG_CAPTURE_SIZE))
+    {
+        LOG_ERROR(F("LOG: no memory for portal journal"));
+    }
+
     if (!LittleFS.begin())
     {
         LOG_INFO(F("FS: Mounting LittleFS error"));
@@ -697,9 +729,6 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     server->on("/start.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { send_page(request, "/start.html", processor); });
 
-    server->on("/waterius_logs.txt", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/waterius_logs.txt", F("text/plain")); });
-
     // Процесс подключения к Wi-fi
     server->on("/wifi_connect.html", HTTP_GET, [](AsyncWebServerRequest *request)
                { send_page(request, "/wifi_connect.html", processor); });
@@ -732,6 +761,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     server->on("/api/status/0", HTTP_GET, get_api_status_0);                       // Статус 0-го входа (ХВС)  (из setup_cold_welcome.html)
     server->on("/api/status/1", HTTP_GET, get_api_status_1);                       // Статус 1-го входа (ГВС)  (из setup_cold_welcome.html)
     server->on("/api/portal_time", HTTP_GET, get_api_portal_time);                 // Сколько осталось до закрытия портала (#305)
+    server->on("/api/log", HTTP_GET, get_api_log);                                 // Журнал портала (logs.html)
     server->on("/api/turnoff", HTTP_GET, get_api_turnoff);                         // Выйти из режима настройки
     server->on("/api/reset", HTTP_POST, post_api_reset);                           // Сброс к заводским настройкам
 

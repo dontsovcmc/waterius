@@ -353,6 +353,58 @@
         } };
     }
 
+    // В прошивке /api/log - хвост настоящего лога, здесь строки того же вида.
+    // Причины - коды SDK (WiFiDisconnectReason), подобраны для наглядности
+    var LOG_REASONS = {
+        wrong_password: '15 4WAY_HANDSHAKE_TIMEOUT',
+        no_ssid: '201 NO_AP_FOUND',
+        connect_failed: '202 AUTH_FAIL',
+        connection_lost: '200 BEACON_TIMEOUT',
+    };
+
+    function getLog(state) {
+        var WL = root.SimState.WL;
+        var ms = 0;
+        var lines = [];
+
+        function log(level, text) {
+            ms += 37;
+            var stamp = ('0' + Math.floor(ms / 60000)).slice(-2) + ':'
+                + ('0' + Math.floor(ms / 1000) % 60).slice(-2) + ':' + ('00' + ms % 1000).slice(-3);
+            lines.push(stamp + '-036/04%  ' + level + ' : ' + text);
+        }
+
+        log('INFO ', 'FS: LittleFS mounted');
+        log('INFO ', 'AP started on channel=' + (state.sett.wifi_channel || 1) + ' , ssid=waterius-12345');
+        log('INFO ', 'HTTP server started');
+        // Запрос портала - одна строка: всё, что пишет обработчик, идёт в неё
+        log('INFO ', 'GET /api/networks' + state.wifi.networks.map(function (net) {
+            return ' ' + net.ssid + ' ' + (-100 + net.level * 12);
+        }).join(''));
+
+        var status = state.wifi.status;
+        if (status !== WL.DISCONNECTED) logConnect(log, state, status === WL.CONNECTED);
+
+        return { text: lines.join('\r\n') + '\r\n' };
+    }
+
+    function logConnect(log, state, connected) {
+        log('INFO ', 'Start connect');
+        log('INFO ', 'WIFI: Connecting...');
+        for (var attempt = 1; attempt <= 2; attempt++) {
+            log('INFO ', 'WIFI: Attempt #' + attempt + ' from 2');
+            log('INFO ', 'WIFI: begin');
+            if (connected) {
+                log('INFO ', 'WIFI: Connected.');
+                return;
+            }
+            var reason = LOG_REASONS[state.wifi.outcome];
+            if (reason) log('ERROR', 'WIFI: disconnected, reason ' + reason);
+            log('ERROR', 'WIFI: connect timeout');
+            log('ERROR', 'WIFI: Connection failed.');
+        }
+    }
+
     function getNetworks(state) {
         return { json: state.wifi.networks.map(function (net) {
             return { ssid: net.ssid, level: net.level, wifi_channel: net.wifi_channel, bssid: net.bssid };
@@ -602,6 +654,7 @@
             case '/api/status/1': return inputStatus(state, 1);
             case '/api/turnoff': return turnoff(state);
             case '/api/reset': return factoryReset(state);
+            case '/api/log': return getLog(state);
             default: return null;
         }
     }
@@ -609,7 +662,7 @@
     function routes() {
         return ['/api/networks', '/api/save_connect', '/api/start_connect', '/api/connect_status',
                 '/api/save', '/api/save_alarms', '/api/save_input_type', '/api/main_status',
-                '/api/status/0', '/api/status/1', '/api/turnoff', '/api/reset'];
+                '/api/status/0', '/api/status/1', '/api/turnoff', '/api/reset', '/api/log'];
     }
 
     var SimApi = {

@@ -190,7 +190,6 @@ extern void generateSha256Token(char *token, const int token_len, const char *em
 		token[i + 1] = digits[*hash & 0xF];
 	}
 
-	LOG_INFO(F("SHA256 token: ") << token);
 	LOG_INFO(F("-- END --"));
 }
 

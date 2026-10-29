@@ -112,7 +112,7 @@ bool init_config(Settings &sett)
 #pragma message(VAR_NAME_VALUE(MQTT_PASSWORD))
     String mqtt_password = VALUE(MQTT_PASSWORD);
     strncpy0(sett.mqtt_password, mqtt_password.c_str(), MQTT_PASSWORD_LEN);
-    LOG_INFO("default mqtt_password=" << mqtt_password);
+    LOG_INFO(F("default mqtt_password set"));
 #endif
 
 #ifdef WATERIUS_EMAIL
@@ -123,7 +123,6 @@ bool init_config(Settings &sett)
 
     LOG_INFO(F("Generate waterius key"));
     generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
-    LOG_INFO(F("waterius key=") << sett.waterius_key);
 
 #ifdef WIFI_SSID
 #pragma message(VAR_NAME_VALUE(WIFI_SSID))
@@ -158,7 +157,7 @@ bool load_config(Settings &sett)
             bool ret = init_config(sett);
             
             strncpy0(sett.waterius_key, tmp_sett.waterius_key, WATERIUS_KEY_LEN);
-            LOG_INFO(F("Restore waterius_key=") << sett.waterius_key);
+            LOG_INFO(F("Restore waterius_key"));
 
             /*
             Период пробуждения переживает смену версии конфига (#350). Иначе
@@ -470,7 +469,7 @@ static void clear_attiny_counters()
 */
 void factory_reset(Settings &sett)
 {
-    LOG_INFO(F("Save waterius_key=") << sett.waterius_key);
+    LOG_INFO(F("Save waterius_key"));
     String waterius_key = sett.waterius_key;
 
     ESP.eraseConfig();
@@ -492,7 +491,7 @@ void factory_reset(Settings &sett)
     sett = Settings();
     init_config(sett);
     strncpy0(sett.waterius_key, waterius_key.c_str(), WATERIUS_KEY_LEN);
-    LOG_INFO(F("Restore waterius_key=") << sett.waterius_key);
+    LOG_INFO(F("Restore waterius_key"));
     store_config(sett);
 
     delay(500);

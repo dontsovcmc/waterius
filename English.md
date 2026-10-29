@@ -124,7 +124,7 @@ building the firmware: [simulator/README.md](simulator/README.md).
 - hardware-in-the-loop bench: a real Waterius, a controlled access point and its own broker — [Utils/hil/README.md](Utils/hil/README.md).
 
 Hard tasks still open:
-- Write the log to a file (LittleFS) so it can be downloaded (/logs.html)
+- ~~Write the log to a file (LittleFS) so it can be downloaded (/logs.html)~~ — done: the portal journal is kept in memory and downloaded from the "Логи" page ([description](docs/setup-portal.md#журнал-и-список-сетей))
 - ~~OTA updates: propose firmware code and a sample web server~~ — done in [2.0.43-beta](https://github.com/dontsovcmc/waterius/releases/tag/v.2.0.43-beta): Waterius 2 updates over the air on a command from the server or MQTT, from the personal account on the [update page](https://account.waterius.ru/update/) ([description](ESP8266/doc/ota.md))
 
 ### Modifications

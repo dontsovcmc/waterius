@@ -116,6 +116,14 @@ async function run() {
         'impulses' in status ? null : 'нет поля impulses: ' + JSON.stringify(status),
     ].filter(Boolean));
 
+    const journal = await ask(worker, '/api/log');
+    const journalText = await journal.text();
+    check('журнал отдаётся текстом, а не файлом', [
+        (journal.headers.get('Content-Type') || '').startsWith('text/plain') ? null : 'тип ' + journal.headers.get('Content-Type'),
+        journal.headers.get('Content-Disposition') ? 'окно портала в телефоне не покажет вложение' : null,
+        journalText.includes('AP started on channel=') ? null : 'в журнале нет строк портала',
+    ].filter(Boolean));
+
     const saved = await (await ask(worker, '/api/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
