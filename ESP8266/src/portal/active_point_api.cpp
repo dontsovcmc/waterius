@@ -864,7 +864,6 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
 {
     const String &name = p->name();
 
-    LOG_INFO(F("parameter ") << name << "=" << p->value());
     if (name == FPSTR(PARAM_CHANNEL_START) || name == FPSTR(s_ch)) // portal || ha
     {
         switch (input)
@@ -1072,7 +1071,6 @@ void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
 {
     const String &name = p->name();
 
-    LOG_INFO(F("parameter ") << name << "=" << log_param_value(name, p->value()));
     if (name == FPSTR(PARAM_WATERIUS_ON))
     {
         save_bool_param(p, sett.waterius_on, errorsObj);

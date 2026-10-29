@@ -154,7 +154,7 @@ class FreshDevice:
                                  self.cfg.dut_password, self.cfg.http_url)
         except Exception as err:
             # «Форма не дошла» и «потерялся ответ» выглядят одинаково, различает
-            # их лог устройства: строки `parameter <имя>=` печатаются до ответа
+            # их лог устройства: строки `POST /api/save_connect` и `/api/save` печатаются до ответа
             raise AssertionError(
                 f'настройка портала после сброса не удалась: {err}\n'
                 f'{self.stand.log.tail()}') from err
