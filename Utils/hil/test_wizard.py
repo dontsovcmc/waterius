@@ -351,7 +351,10 @@ def test_W2b_journal_explains_failed_connect(board: AtBoard, cfg: Any, stand: An
     assert answer.headers.get('content-type', '').startswith('text/plain'), answer.headers
     assert 'content-disposition' not in answer.headers, answer.headers
     assert WRONG_PASSWORD not in journal, 'пароль Wi-Fi попал в журнал'
-    assert RE_JOURNAL_ATTEMPT.search(journal), f'начало попытки вытеснено: {journal[:300]!r}'
+    attempt = RE_JOURNAL_ATTEMPT.search(journal)
+    assert attempt, f'начало попытки вытеснено: {journal[:300]!r}'
+    # Запас: столько ещё можно дописать после попытки, прежде чем её вытеснит
+    logger.info(f'до начала попытки в журнале {len(journal[:attempt.start()].encode())} байт')
     reason = RE_JOURNAL_REASON.search(journal)
     assert reason, f'причины отказа в журнале нет: {journal[-600:]!r}'
     logger.info(f'причина отказа: {reason.group(1)} {reason.group(2)}')
