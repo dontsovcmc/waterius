@@ -390,8 +390,7 @@ node simulator/test_simulator.js && node simulator/test_worker.js
 ```
 
 **Известные расхождения** — не заводить как новые дефекты, они перечислены в
-[known-gaps.md](known-gaps.md) и в разделе «Найденное по дороге»
-`ESP8266/plan/tests_plan.md`.
+разделе «Найденное по дороге» `ESP8266/plan/tests_plan.md`.
 
 **Вне стенда:** классика — другой набор пинов и светодиод на линии TX; attiny
 старее 41 — только через симулятор, L1; тесты на живом железе из `Utils/tests/`
