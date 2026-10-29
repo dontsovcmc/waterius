@@ -130,12 +130,7 @@ function handleApi(request, url, state) {
         return putState(state).then(function () {
             notify();
             if (result.redirect) return Response.redirect(new URL(result.redirect, self.location.origin).href, 302);
-            if (result.text !== undefined) {
-                var headers = { 'Content-Type': TYPES.txt };
-                // Имя файла при скачивании задаёт заголовок, как в прошивке
-                if (result.filename) headers['Content-Disposition'] = 'attachment; filename="' + result.filename + '"';
-                return new Response(result.text, { headers: headers });
-            }
+            if (result.text !== undefined) return new Response(result.text, { headers: { 'Content-Type': TYPES.txt } });
             return json(result.json);
         });
     });

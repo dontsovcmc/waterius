@@ -24,6 +24,7 @@ void save_broker_host(const AsyncWebParameter *p, char *dest, size_t size, JsonO
 void save_ip_param(const AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj);
 
 bool find_wizard_param(AsyncWebServerRequest *request);
+String log_param_value(const String &name, const String &value);
 void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, const uint8_t input);
 void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, const uint8_t input);
 void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj);

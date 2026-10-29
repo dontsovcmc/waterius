@@ -32,7 +32,7 @@ void apply_settings(const JsonDocument &json_settings_received,
         String name = kv.key().c_str();
         String payload = kv.value().as<String>();
 
-        LOG_INFO(F("Apply setting: ") << name << F("=") << payload);
+        LOG_INFO(F("Apply setting: ") << name << F("=") << log_param_value(name, payload));
 
         if (name.endsWith(F("0")))
         {

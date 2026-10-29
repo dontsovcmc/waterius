@@ -66,6 +66,18 @@ TEST(LogRing, OverflowKeepsTheTail)
     EXPECT_EQ(snapshot(ring), "23456789");
 }
 
+TEST(LogRing, WriteLongerThanBufferKeepsItsTail)
+{
+    char mem[8];
+    LogRing ring{mem, sizeof(mem)};
+    write(ring, "abc");
+
+    write(ring, "0123456789");
+
+    EXPECT_EQ(ring.written, 13u);
+    EXPECT_EQ(snapshot(ring), "23456789");
+}
+
 TEST(LogRing, ChunksAcrossTheWrapJoinInOrder)
 {
     // Сервер отдаёт кусками по размеру окна TCP, граница куска - где придётся

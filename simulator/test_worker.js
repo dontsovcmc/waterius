@@ -118,9 +118,9 @@ async function run() {
 
     const journal = await ask(worker, '/api/log');
     const journalText = await journal.text();
-    check('журнал скачивается файлом', [
-        /attachment; filename="waterius_log.txt"/.test(journal.headers.get('Content-Disposition') || '')
-            ? null : 'нет имени файла: ' + journal.headers.get('Content-Disposition'),
+    check('журнал отдаётся текстом, а не файлом', [
+        (journal.headers.get('Content-Type') || '').startsWith('text/plain') ? null : 'тип ' + journal.headers.get('Content-Type'),
+        journal.headers.get('Content-Disposition') ? 'окно портала в телефоне не покажет вложение' : null,
         journalText.includes('AP started on channel=') ? null : 'в журнале нет строк портала',
     ].filter(Boolean));
 

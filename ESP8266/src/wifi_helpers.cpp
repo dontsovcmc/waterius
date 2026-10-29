@@ -9,6 +9,7 @@
 
 static WiFiEventHandler disconnected_handler;
 static WiFiDisconnectReason last_disconnect_reason;
+static bool connecting = false;
 
 // Без атрибута GCC сворачивает switch в таблицу на 204 указателя, а она живёт в RAM
 __attribute__((optimize("no-tree-switch-conversion")))
@@ -50,11 +51,12 @@ static const __FlashStringHelper *disconnect_reason_title(const WiFiDisconnectRe
 
 /*
 Почему роутер не пустил: статус после попытки этого не говорит, а причина
-приходит только событием. SDK повторяет его на каждом переподключении.
+приходит только событием. Вне попытки событие порождает наш же disconnect или
+фоновое переподключение SDK, а повтор той же причины ничего не добавляет.
 */
 static void on_disconnected(const WiFiEventStationModeDisconnected &event)
 {
-    if (event.reason == last_disconnect_reason)
+    if (!connecting || event.reason == last_disconnect_reason)
         return;
 
     last_disconnect_reason = event.reason;
@@ -136,6 +138,7 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
     delay(100); // подождем чтобы проинициализировалась сеть
 
     last_disconnect_reason = (WiFiDisconnectReason)0;
+    connecting = true;
 
     if (sett.wifi_channel)
     {
@@ -154,6 +157,7 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
     }
 
     int8_t ret = WiFi.waitForConnectResult(ESP_CONNECT_TIMEOUT); //        ждем результата подключения
+    connecting = false;
     if (ret == -1) 
     {
         LOG_ERROR(F("WIFI: connect timeout"));

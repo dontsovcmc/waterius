@@ -384,7 +384,7 @@
         var status = state.wifi.status;
         if (status !== WL.DISCONNECTED) logConnect(log, state, status === WL.CONNECTED);
 
-        return { text: lines.join('\r\n') + '\r\n', filename: 'waterius_log.txt' };
+        return { text: lines.join('\r\n') + '\r\n' };
     }
 
     function logConnect(log, state, connected) {

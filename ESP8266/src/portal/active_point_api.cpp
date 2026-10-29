@@ -539,6 +539,14 @@ static void report_param_error(const AsyncWebParameter *p, JsonObject &errorsObj
     // напомнит про незакрытую ветку
 }
 
+// Пароли в лог не пишем: журнал портала скачивают и отправляют в поддержку
+String log_param_value(const String &name, const String &value)
+{
+    if (name == FPSTR(PARAM_PASSWORD) || name == FPSTR(PARAM_MQTT_PASSWORD))
+        return F("****");
+    return value;
+}
+
 void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required /*true*/)
 {
     ParamError err = parse_text(dest, size, p->value().c_str(), required);
@@ -549,7 +557,7 @@ void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject 
     }
     else if (err == PARAM_OK)
     {
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << dest);
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << log_param_value(p->name(), dest));
     }
     else
     {
@@ -1064,7 +1072,7 @@ void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
 {
     const String &name = p->name();
 
-    LOG_INFO(F("parameter ") << name << "=" << p->value());
+    LOG_INFO(F("parameter ") << name << "=" << log_param_value(name, p->value()));
     if (name == FPSTR(PARAM_WATERIUS_ON))
     {
         save_bool_param(p, sett.waterius_on, errorsObj);

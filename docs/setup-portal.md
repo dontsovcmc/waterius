@@ -260,7 +260,7 @@ ESPAsyncWebServer. Вся подстановка — `active_point.cpp:processor
 | `GET /api/turnoff` | `get_api_turnoff` | Завершить настройку |
 | `POST /api/reset` | `post_api_reset` | Сброс к заводским |
 | `GET /api/portal_time` | `get_api_portal_time` | Сколько секунд осталось до закрытия портала |
-| `GET /api/log` | `get_api_log` | Журнал портала, скачивается как `waterius_log.txt` |
+| `GET /api/log` | `get_api_log` | Журнал портала, текстом |
 
 **Значения настроек берутся только из тела запроса.** Так их шлют все формы
 (`formSubmit`: POST, `application/x-www-form-urlencoded`), и так настройку
@@ -297,9 +297,13 @@ SDK из `WiFiDisconnectReason` (`ESP8266/src/wifi_helpers.cpp:on_disconnected`)
 попытки причину не называет. Пока идёт попытка подключения, телефон от портала отваливается
 (`ESP8266/data/wifi_connect.html`), поэтому опрос страницы журнал не засоряет.
 
-`/api/log` отдаёт кольцо потоком (chunked), без копии в `String`. Имя файла задаёт заголовок
-`Content-Disposition`, поэтому и ссылка в тексте ошибки, открытая под чужим именем хоста,
-сохраняет файл как `waterius_log.txt`.
+`/api/log` отдаёт кольцо потоком (chunked), без копии в `String`, и текстом, а не вложением:
+ссылку из текста ошибки открывают в окне портала телефона, а оно может не уметь сохранять файлы; текст
+покажет. Имя файла `waterius_log.txt` задаёт атрибут `download` у кнопки в `logs.html`. Если
+память под журнал не выделилась, `/api/log` так и отвечает.
+
+Пароли Wi-Fi и MQTT в лог не пишутся вовсе (`log_param_value` в `active_point_api.cpp`), ключ
+waterius тоже: журнал отправляют в поддержку, а точка портала открыта без пароля.
 
 **Список сетей** — `/ssid.txt`. Его попутно пишет `get_api_networks`
 (`ESP8266/src/wifi_helpers.cpp:write_ssid_to_file`): полный дамп `bss_info` по каждой сети.

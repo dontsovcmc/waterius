@@ -77,11 +77,18 @@ static void get_api_portal_time(AsyncWebServerRequest *request)
 
 /*
 Журнал портала (core/log_ring.h) потоком: копия в String заняла бы ещё
-столько же памяти. Имя файла задаёт заголовок, а не адрес.
+столько же памяти. Отдаётся текстом, не файлом: окно портала в телефоне
+может не сохранять файлы, а текст покажет. Имя файла задаёт кнопка в logs.html.
 */
 static void get_api_log(AsyncWebServerRequest *request)
 {
     LOG_INFO(F("GET ") << request->url());
+
+    if (!log_capture().buf)
+    {
+        request->send(200, F("text/plain; charset=utf-8"), F("Журнал не ведётся: не хватило памяти\r\n"));
+        return;
+    }
 
     uint32_t pos = log_ring_oldest(log_capture());
     const uint32_t end = log_capture().written;
@@ -91,7 +98,6 @@ static void get_api_log(AsyncWebServerRequest *request)
         [pos, end](uint8_t *buffer, size_t max_len, size_t) mutable -> size_t
         { return log_ring_read(log_capture(), pos, end, buffer, max_len); });
 
-    response->addHeader(F("Content-Disposition"), F("attachment; filename=\"waterius_log.txt\""));
     request->send(response);
 }
 
@@ -469,7 +475,7 @@ String processor_main(const String &var, const uint8_t input)
             case WL_NO_SSID_AVAIL:
             case WL_CONNECT_FAILED:
             case WL_CONNECTION_LOST:
-                return String(F("8")); //S_WIFI_CONNECTION_LOST "Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.";
+                return String(F("8")); //S_WL_CONNECTION_LOST: что может помочь и ссылка на журнал, текст в strings.js
             case WL_WRONG_PASSWORD:
                 return String(F("9")); //S_WL_WRONG_PASSWORD "Ошибка подключения: Некорректный пароль";
             case WL_IDLE_STATUS:

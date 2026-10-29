@@ -308,6 +308,55 @@ def test_W2_wrong_password_returns_to_wifi_settings(board: AtBoard, cfg: Any,
                     password=cfg.dut_password) == {}
 
 
+# Строки журнала (`wifi_helpers.cpp`): начало попытки и причина отказа роутера
+RE_JOURNAL_ATTEMPT = re.compile(r'WIFI: Connecting\.\.\.')
+RE_JOURNAL_REASON = re.compile(r'WIFI: disconnected, reason (\d+) (\S*)')
+# Свободная куча в префиксе строки лога: "-036/04%" (`Logging.h`, LOG_FREE_HEAP)
+RE_JOURNAL_HEAP = re.compile(r'-(\d{3})/\d+%')
+
+
+def test_W2b_journal_explains_failed_connect(board: AtBoard, cfg: Any, stand: Any) -> None:
+    """
+    Журнал портала после неудачного подключения - то, ради чего он есть:
+    человек вернулся в портал, походил по страницам и открыл «Логи». В 2 КБ
+    к этому моменту обязаны уцелеть начало попытки и причина отказа роутера,
+    а пароль в журнал не попадает: его отправляют в поддержку.
+
+    Журнал отдаётся текстом, а не вложением: ссылку на него из текста ошибки
+    открывают в окне портала телефона.
+    """
+    want = portal_mod.tree_version(REPO_ROOT)
+    if want is None or stand.esp_version != want:
+        pytest.skip(f'на устройстве {stand.version_str}: журнала может не быть')
+    ssid = stand.ap_ssid
+    try:
+        assert save(board, '/api/save_connect', ssid=ssid, password=WRONG_PASSWORD,
+                    wizard='true') == {}
+        start_connect(board)
+        redirect, _ = wait_redirect(board, {CONNECTED, NOT_CONNECTED})
+        assert redirect == NOT_CONNECTED, f'с неверным паролем мастер пошёл дальше: {redirect}'
+
+        for url in ('/', NOT_CONNECTED, '/index.html', '/logs.html'):
+            board.get(url, portal_mod.HOST)
+        answer = board.get('/api/log', portal_mod.HOST)
+    finally:
+        assert save(board, '/api/save_connect', ssid=ssid,
+                    password=cfg.dut_password) == {}
+
+    journal = answer.text
+    heap = [int(m) for m in RE_JOURNAL_HEAP.findall(journal)]
+    logger.info(f'журнал {len(answer.body)} байт, свободно в куче '
+                f'{min(heap) if heap else "?"}-{max(heap) if heap else "?"} КБ')
+    assert answer.status == 200, f'/api/log: {answer.status}'
+    assert answer.headers.get('content-type', '').startswith('text/plain'), answer.headers
+    assert 'content-disposition' not in answer.headers, answer.headers
+    assert WRONG_PASSWORD not in journal, 'пароль Wi-Fi попал в журнал'
+    assert RE_JOURNAL_ATTEMPT.search(journal), f'начало попытки вытеснено: {journal[:300]!r}'
+    reason = RE_JOURNAL_REASON.search(journal)
+    assert reason, f'причины отказа в журнале нет: {journal[-600:]!r}'
+    logger.info(f'причина отказа: {reason.group(1)} {reason.group(2)}')
+
+
 def find_network(board: AtBoard, ssid: str, channel: int | None = None,
                  timeout: float = 90.0) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
     """

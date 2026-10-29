@@ -252,7 +252,7 @@ async def save_input_type(form_data: InputModel = Depends()):
 @api_app.get("/log")
 async def log_journal():
     data = '00:00:037-036/04%  INFO  : AP started on channel=1 , ssid=waterius-12345\r\n'
-    return PlainTextResponse(data, headers={'Content-Disposition': 'attachment; filename="waterius_log.txt"'})
+    return PlainTextResponse(data)
 
 
 @api_app.get("/turnoff")
