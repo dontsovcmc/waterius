@@ -70,7 +70,7 @@ function _init(_pages) {
         document.querySelector('main').classList.add('ssid');
         
         if(queryParams.level && !isNaN(queryParams.level))
-            document.querySelector('.link-row .icon').classList.add('l' + queryParams.level);
+            document.querySelector('.link-row .icon').classList.add(wifiIcon(queryParams.level));
 
         return;
     }
@@ -142,11 +142,15 @@ function getWifiList(_pages){
 function refreshPage() {
     location.reload();
 }
+// Класс значка сети: в спрайте у l4 дуги как у l3, а l6 - шестерёнка меню
+function wifiIcon(level) {
+    return 'l' + (level >= 4 ? 5 : level);
+}
 function getWifiRow(data, index) {
     let cl = ''
     if(index > 9) cl = ' hd';
     return `<a class="link-row${cl}" href="/wifi_password.html?ssid=${encodeURIComponent(data.ssid)}&level=${data.level}&wifi_channel=${data.wifi_channel}&bssid=${data.bssid}${queryParams.wizard ? `&wizard=true` : ''}">
-        <div class="icon l${data.level}">
+        <div class="icon ${wifiIcon(data.level)}">
             <img src="/images/icons.png">
         </div>
         ${data.ssid}
