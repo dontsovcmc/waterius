@@ -82,34 +82,46 @@ inline Print &operator<<(Print &obj, T arg)
 	{                      \
 	} while (0)
 
+#define LOG_REQUEST(content) \
+	do                       \
+	{                        \
+	} while (0)
+
 #if defined(LOG_LEVEL_INFO) || defined(LOG_LEVEL_DEBUG)
 // Depending on log level, add code for logging
 #undef LOG_ERROR
-#define LOG_ERROR(content)                           \
-	do                                               \
-	{                                                \
-		LOG_FORMAT_TIME;                             \
-		LOG_FREE_HEAP;                               \
-		log_output << "  ERROR : " << content << "\r\n"; \
+#define LOG_ERROR(content)        \
+	do                            \
+	{                             \
+		log_head(LogTag::error);  \
+		log_output << content;    \
+		log_tail();               \
 	} while (0)
 
 #undef LOG_INFO
-#define LOG_INFO(content)                            \
-	do                                               \
-	{                                                \
-		LOG_FORMAT_TIME;                             \
-		LOG_FREE_HEAP;                               \
-		log_output << "  INFO  : " << content << "\r\n"; \
+#define LOG_INFO(content)         \
+	do                            \
+	{                             \
+		log_head(LogTag::info);   \
+		log_output << content;    \
+		log_tail();               \
 	} while (0)
+
+// Строка на весь запрос портала: LOG_* обработчика дописываются в неё до его выхода
+#undef LOG_REQUEST
+#define LOG_REQUEST(content) \
+	log_head(LogTag::info);  \
+	log_output << content;   \
+	LogLine log_request_line
 
 #ifdef LOG_LEVEL_DEBUG
 #undef LOG_DEBUG
-#define LOG_DEBUG(content)                           \
-	do                                               \
-	{                                                \
-		LOG_FORMAT_TIME;                             \
-		LOG_FREE_HEAP;                               \
-		log_output << "  DEBUG : " << content << "\r\n"; \
+#define LOG_DEBUG(content)        \
+	do                            \
+	{                             \
+		log_head(LogTag::debug);  \
+		log_output << content;    \
+		log_tail();               \
 	} while (0)
 #endif
 #endif

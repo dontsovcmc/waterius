@@ -377,9 +377,10 @@
         log('INFO ', 'FS: LittleFS mounted');
         log('INFO ', 'AP started on channel=' + (state.sett.wifi_channel || 1) + ' , ssid=waterius-12345');
         log('INFO ', 'HTTP server started');
-        state.wifi.networks.forEach(function (net) {
-            log('INFO ', net.ssid + ' ' + (-100 + net.level * 12));
-        });
+        // Запрос портала - одна строка: всё, что пишет обработчик, идёт в неё
+        log('INFO ', 'GET /api/networks' + state.wifi.networks.map(function (net) {
+            return ' ' + net.ssid + ' ' + (-100 + net.level * 12);
+        }).join(''));
 
         var status = state.wifi.status;
         if (status !== WL.DISCONNECTED) logConnect(log, state, status === WL.CONNECTED);

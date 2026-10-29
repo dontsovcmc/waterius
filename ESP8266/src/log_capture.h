@@ -16,6 +16,28 @@ public:
 
 extern LogOutput log_output;
 
+enum class LogTag : uint8_t
+{
+    info,
+    error,
+    debug
+};
+
+// Приставка и конец записи LOG_*
+void log_head(LogTag tag);
+void log_tail();
+
+/*
+Пока объект жив, LOG_* дописываются в начатую строку, а не начинают свою:
+запрос портала в журнале занимает одну строку с одной приставкой.
+*/
+class LogLine
+{
+public:
+    LogLine();
+    ~LogLine();
+};
+
 /*
 Начать журнал. Только в портале: в обычном сеансе эта память нужна HTTPS.
 */

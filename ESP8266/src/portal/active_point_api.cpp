@@ -59,7 +59,7 @@ inline void send_json_response(AsyncWebServerRequest *request, JsonDocument &jso
  */
 void get_api_connect_status(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
@@ -93,7 +93,7 @@ void get_api_connect_status(AsyncWebServerRequest *request)
  */
 void get_api_networks(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     int n = WiFi.scanComplete();
     if (n == WIFI_SCAN_FAILED)
@@ -175,7 +175,7 @@ bool save_fast_connect(AsyncWebServerRequest *request)
 void post_api_save_connect(AsyncWebServerRequest *request)
 {
     feed_portal_watchdog();   // продлеваем режим настройки (#305)
-    LOG_INFO(F("POST ") << request->url());
+    LOG_REQUEST(F("POST ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
@@ -338,7 +338,7 @@ static void add_consumption_stopped(JsonArray &array, const uint8_t input,
  */
 void get_api_main_status(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     g_json_doc.clear();
     JsonArray array = g_json_doc.to<JsonArray>();
@@ -444,7 +444,7 @@ void get_api_status_1(AsyncWebServerRequest *request)
  */
 void get_api_status(AsyncWebServerRequest *request, const int index)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
@@ -1277,7 +1277,7 @@ static void save_uint16_param(AsyncWebServerRequest *request, const String &name
 void post_api_save(AsyncWebServerRequest *request)
 {
     feed_portal_watchdog();   // продлеваем режим настройки (#305)
-    LOG_INFO(F("POST ") << request->url());
+    LOG_REQUEST(F("POST ") << request->url());
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
@@ -1303,7 +1303,7 @@ void post_api_save(AsyncWebServerRequest *request)
 void post_api_save_alarms(AsyncWebServerRequest *request)
 {
     feed_portal_watchdog();   // продлеваем режим настройки (#305)
-    LOG_INFO(F("POST ") << request->url());
+    LOG_REQUEST(F("POST ") << request->url());
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
@@ -1350,7 +1350,7 @@ void post_api_save_alarms(AsyncWebServerRequest *request)
 void post_api_save_input_type(AsyncWebServerRequest *request)
 {
     feed_portal_watchdog();   // продлеваем режим настройки (#305)
-    LOG_INFO(F("POST ") << request->url());
+    LOG_REQUEST(F("POST ") << request->url());
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
@@ -1423,7 +1423,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
 
 void get_api_turnoff(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
     exit_portal_flag = true;
     AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "");
     request->send(response);
@@ -1432,7 +1432,7 @@ void get_api_turnoff(AsyncWebServerRequest *request)
 void post_api_reset(AsyncWebServerRequest *request)
 {
     feed_portal_watchdog();   // продлеваем режим настройки (#305)
-    LOG_INFO(F("POST ") << request->url());
+    LOG_REQUEST(F("POST ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();

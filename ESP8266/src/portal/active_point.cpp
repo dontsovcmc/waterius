@@ -508,7 +508,7 @@ void onRedirectIP(AsyncWebServerRequest *request)
 
 void on_root(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("on_root GET ") << request->url());
+    LOG_REQUEST(F("on_root GET ") << request->url());
 
     LOG_INFO(F("WIFI: wifi_connect_status=") << wifi_connect_status);
 

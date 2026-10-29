@@ -355,6 +355,11 @@ def test_W2b_journal_explains_failed_connect(board: AtBoard, cfg: Any, stand: An
     assert attempt, f'начало попытки вытеснено: {journal[:300]!r}'
     # Запас: столько ещё можно дописать после попытки, прежде чем её вытеснит
     logger.info(f'до начала попытки в журнале {len(journal[:attempt.start()].encode())} байт')
+    # Запрос портала - одна строка (`Logging.h`, LOG_REQUEST), форма в ней целиком
+    saved = re.search(r'POST /api/save_connect[^\r\n]*', journal)
+    assert saved and f'Saved: ssid={ssid}' in saved.group(), (
+        f'сохранение сети не одной строкой: {saved.group() if saved else journal[:300]!r}')
+    logger.info(f'сохранение сети - одна строка, {len(saved.group().encode())} байт: {saved.group()}')
     reason = RE_JOURNAL_REASON.search(journal)
     assert reason, f'причины отказа в журнале нет: {journal[-600:]!r}'
     logger.info(f'причина отказа: {reason.group(1)} {reason.group(2)}')
