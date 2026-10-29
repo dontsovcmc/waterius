@@ -111,7 +111,8 @@ void get_api_networks(AsyncWebServerRequest *request)
             LOG_INFO(WiFi.SSID(i) << " " << WiFi.RSSI(i));
             JsonObject obj = array.add<JsonObject>();
             obj["ssid"] = WiFi.SSID(i);
-            obj["level"] = int(round(map(WiFi.RSSI(i), -100, -50, 1, 4)));
+            // Портал рисует уровни 1-4, а map у роутера рядом даёт 5 и 6
+            obj["level"] = constrain(map(WiFi.RSSI(i), -100, -50, 1, 4), 1, 4);
 
             // Канал и BSSID именно этой сети, а не текущего подключения:
             // портал вернёт их в форме, и первый коннект пойдёт без скана

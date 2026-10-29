@@ -248,7 +248,7 @@ ESPAsyncWebServer. Вся подстановка — `active_point.cpp:processor
 
 | Маршрут | Функция | Назначение |
 |---|---|---|
-| `GET /api/networks` | `get_api_networks` | Список сетей: `ssid`, `level` 1–6, `wifi_channel`, `bssid` |
+| `GET /api/networks` | `get_api_networks` | Список сетей: `ssid`, `level` 1–4, `wifi_channel`, `bssid` |
 | `POST /api/save_connect` | `post_api_save_connect` | Сохранить SSID и пароль |
 | `GET /api/start_connect` | `get_api_start_connect` | Начать подключение (ставит флаг) |
 | `GET /api/connect_status` | `get_api_connect_status` | Опрос результата, раз в 2 с |

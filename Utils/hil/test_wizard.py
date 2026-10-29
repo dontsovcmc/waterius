@@ -197,7 +197,7 @@ def test_W1_wizard_configures_the_device(board: AtBoard, cfg: Any,
     # Сортировка по уровню - дело страницы (common.js, getWifiList), и
     # проверяет её браузерный тест симулятора
     for net in networks:
-        assert 1 <= net['level'] <= 6, net
+        assert 1 <= net['level'] <= 4, net
         assert net['bssid'] and net['wifi_channel'], net
 
     # A4: сеть и пароль, с парой канал-BSSID из скана - как их шлёт страница
