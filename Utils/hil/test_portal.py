@@ -22,6 +22,7 @@ import pytest
 from . import portal as portal_mod
 from .atboard import AtBoard
 from .constants import REPO_ROOT
+from .test_wizard import networks_list
 
 pytestmark = [pytest.mark.stand, pytest.mark.portal]
 
@@ -140,3 +141,22 @@ def test_P6_log_journal(board: AtBoard, stand: Any) -> None:
     assert answer.status == 200, f'/api/log: {answer.status}'
     assert 'content-disposition' not in answer.headers, answer.headers
     assert 'GET /api/log' in answer.text, answer.text[-400:]
+    assert 'ssid_len:' not in answer.text, 'список сетей попал на экран'
+
+
+def test_P6b_log_download_has_networks(board: AtBoard, stand: Any) -> None:
+    """
+    Кнопка «Скачать журнал» отдаёт журнал и за ним весь /ssid.txt: файл из флеша
+    идёт тем же потоком, что и кольцо в памяти, и не должен обрываться.
+    """
+    want = portal_mod.tree_version(REPO_ROOT)
+    if want is None or stand.esp_version != want:
+        pytest.skip(f'на устройстве {stand.version_str}: журнала может не быть')
+    networks_list(board)  # /ssid.txt пишется при отдаче списка после скана
+    ssid_file = board.get('/ssid.txt', portal_mod.HOST)
+    assert ssid_file.status == 200, f'/ssid.txt: {ssid_file.status}'
+    answer = board.get('/api/log?networks=1', portal_mod.HOST)
+    assert answer.status == 200, f'/api/log?networks=1: {answer.status}'
+    assert 'content-disposition' not in answer.headers, answer.headers
+    assert 'GET /api/log' in answer.text, answer.text[:400]
+    assert answer.text.endswith(ssid_file.text), answer.text[-400:]

@@ -362,7 +362,14 @@
         connection_lost: '200 BEACON_TIMEOUT',
     };
 
-    function getLog(state) {
+    /* Файл ssid.txt пишет прошивка после сканирования сетей. */
+    function ssidText(state) {
+        return state.wifi.networks.map(function (net) {
+            return net.ssid + '\t' + net.level + '\tch' + net.wifi_channel;
+        }).join('\n') + '\n';
+    }
+
+    function getLog(state, params) {
         var WL = root.SimState.WL;
         var ms = 0;
         var lines = [];
@@ -385,7 +392,8 @@
         var status = state.wifi.status;
         if (status !== WL.DISCONNECTED) logConnect(log, state, status === WL.CONNECTED);
 
-        return { text: lines.join('\r\n') + '\r\n' };
+        var networks = findParam(params, 'networks') ? '\n' + ssidText(state) : '';
+        return { text: lines.join('\r\n') + '\r\n' + networks };
     }
 
     function logConnect(log, state, connected) {
@@ -654,7 +662,7 @@
             case '/api/status/1': return inputStatus(state, 1);
             case '/api/turnoff': return turnoff(state);
             case '/api/reset': return factoryReset(state);
-            case '/api/log': return getLog(state);
+            case '/api/log': return getLog(state, params);
             default: return null;
         }
     }
@@ -669,6 +677,7 @@
         handle: handle,
         routes: routes,
         savedParams: savedParams,
+        ssidText: ssidText,
         applySettings: applySettings,
         applyInputSettings: applyInputSettings,
         parseIp: parseIp,
