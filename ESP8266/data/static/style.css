@@ -211,7 +211,6 @@ textarea {
 /* Окно лога забирает высоту экрана, чтобы прокручивался лог, а не страница */
 main.fill{display:flex;flex-direction:column;}
 main.fill textarea{flex:1;height:auto;min-height:96px;}
-main.fill button{flex-shrink:0;}
 
 .toggle,.radio{margin-top:16px;}
 .toggle input,.radio input{display:none;}
