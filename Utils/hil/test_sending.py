@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from .constants import HTTP_SEND_ATTEMPTS
+from .constants import HTTP_SEND_ATTEMPTS, WIFI_CONNECT_ATTEMPTS
 from .logwatch import (
     BLYNK_CLOUD,
     BLYNK_CLOUD_ANSWER,
@@ -337,6 +337,63 @@ def test_G7_server_answers_500(stand: Stand) -> None:
     assert len(session.payloads) == HTTP_SEND_ATTEMPTS, (
         f'посылок дошло {len(session.payloads)}, попыток {HTTP_SEND_ATTEMPTS}'
         + session.air_note)
+
+
+def press_for_payload(stand: Stand) -> dict[str, Any]:
+    """Сеанс кнопкой и посылка, с которой он закончился."""
+    stand.reset_observers()
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    assert session.payloads, session.text
+    return session.payloads[-1]
+
+
+def missed_session(stand: Stand, net: Any) -> None:
+    """Сеанс при погашенной точке доступа: посылки нет, ошибки копятся."""
+    stand.reset_observers()
+    with net.ap_off():
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+        assert not session.wifi_connected, session.text
+
+
+@pytest.mark.requires(esp='2.0.53')
+def test_G7a_connect_log_after_outage(stand: Stand, net: Any) -> None:
+    """
+    Ошибки роутера приезжают со следующей посылкой, а новую ошибку с прежним
+    кодом видно по счётчику: строка журнала при этом не меняется.
+    """
+    errors = press_for_payload(stand)['wifi_connect_errors']
+
+    missed_session(stand, net)
+    missed_session(stand, net)
+    payload = press_for_payload(stand)
+    assert payload['wifi_connect_errors'] == errors + 2 * WIFI_CONNECT_ATTEMPTS, payload
+    log = payload['connect_log'].split(',')
+    assert all(entry.startswith('wifi:') for entry in log), log
+
+    # Посылка без новых ошибок счётчик не двигает
+    assert press_for_payload(stand)['wifi_connect_errors'] == payload['wifi_connect_errors']
+
+    missed_session(stand, net)
+    again = press_for_payload(stand)
+    assert again['wifi_connect_errors'] == payload['wifi_connect_errors'] + WIFI_CONNECT_ATTEMPTS, again
+    assert again['connect_log'] == payload['connect_log'], 'код прежний, журнал тот же'
+
+
+@pytest.mark.requires(esp='2.0.53')
+def test_G7b_connect_log_server_answer(stand: Stand) -> None:
+    """Ответ 500 записывается за каждую попытку и приезжает со следующей посылкой."""
+    errors = press_for_payload(stand)['wifi_connect_errors']
+
+    stand.reset_observers()
+    with stand.receiver.answering(500):
+        stand.dut.press_button()
+        stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    payload = press_for_payload(stand)
+    assert payload['wifi_connect_errors'] == errors + HTTP_SEND_ATTEMPTS, payload
+    assert payload['connect_log'] == ','.join(['http:500'] * HTTP_SEND_ATTEMPTS), payload
 
 
 @pytest.mark.requires(esp='2.0.47')

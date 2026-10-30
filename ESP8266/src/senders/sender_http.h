@@ -16,11 +16,12 @@
 #include "Logging.h"
 #include "json.h"
 #include "https_helpers.h"
+#include "core/connect_log.h"
 #include "utils.h"
 
 #define HTTP_SEND_ATTEMPTS 3
 
-SendStatus send_http(const Settings &sett, JsonDocument &jsonData, JsonDocument &json_settings)
+SendStatus send_http(Settings &sett, JsonDocument &jsonData, JsonDocument &json_settings)
 {
     // то же правило, что и в is_http(): было продублировано вручную
     if (!is_http(sett))
@@ -40,10 +41,16 @@ SendStatus send_http(const Settings &sett, JsonDocument &jsonData, JsonDocument 
 
     int attempts = HTTP_SEND_ATTEMPTS;
     SendStatus result = SEND_NO_CONNECTION;
+    int16_t code = 0;
     do
     {
         LOG_INFO(F("HTTP: Attempt #") << HTTP_SEND_ATTEMPTS - attempts + 1 << F(" from ") << HTTP_SEND_ATTEMPTS);
-        result = post_data(url, sett.waterius_key, sett.waterius_email, payload, json_settings);
+        result = post_data(url, sett.waterius_key, sett.waterius_email, payload, json_settings, code);
+        if (result != SEND_OK)
+        {
+            // Имя проверяем один раз: попытки и так потратили время на сбой
+            connect_log_push(sett, CONNECT_HTTP, attempts == 1 ? connect_code(url.c_str(), code) : code);
+        }
 
     } while (result != SEND_OK && --attempts);
 

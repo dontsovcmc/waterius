@@ -30,6 +30,14 @@ TEST(SettingsLayout, SizeIsFixed)
     EXPECT_EQ(sizeof(Settings), 960u);
 }
 
+TEST(SettingsLayout, ConnectLogFitsReservedSpace)
+{
+    EXPECT_EQ(sizeof(ConnectError), 3u);
+    EXPECT_EQ(offsetof(Settings, connect_log), 933u);
+    EXPECT_EQ(offsetof(Settings, wifi_connect_errors), 942u);
+    EXPECT_EQ(offsetof(Settings, reserved9), 944u);
+}
+
 TEST(SettingsLayout, ExistingFieldsDidNotMove)
 {
     EXPECT_EQ(offsetof(Settings, version), 0u);

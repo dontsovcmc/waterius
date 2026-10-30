@@ -4,13 +4,13 @@
 #include <WiFiUdp.h>
 #include <ESP8266WiFi.h>
 #include <time.h>
+#include "core/connect_log.h"
 
 // Модуль основан на следующих модулях
 // https://github.com/arduino-libraries/NTPClient/blob/master/NTPClient.cpp
 // https://github.com/letscontrolit/ESPEasy/blob/mega/src/src/Helpers/ESPEasy_time.cpp
 // https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_support/support_wifi.ino
 
-#define DNS_TIMEOUT 1000              // 1 секунда
 #define NTP_TIMEOUT 300               // обычно ответ приходит за 30-50 мсек
 #define NTP_PORT 123
 #define USEC 1000000UL
@@ -18,6 +18,13 @@
 #define TIME_FORMAT "%FT%T%z"
 #define UDP_PORT_ATTEMPTS 3
 #define NTP_ATTEMPTS 5
+
+// Причина последней неудачи: одна запись на сбой, а попыток до шести
+#define NTP_ERR_NO_PORT -1
+#define NTP_ERR_NOT_SENT -2
+#define NTP_ERR_NO_REPLY -3
+#define NTP_ERR_BAD_REPLY -4
+static int16_t ntp_last_error = 0;
 
 // NTP_PACKET_SIZE — в core/timekeeping.h
 uint8_t packet_buffer[NTP_PACKET_SIZE]; // Buffer to hold incoming & outgoing packets
@@ -105,6 +112,7 @@ uint64_t get_ntp_response(WiFiUDP &udp)
             if (ntp_nanos == 0)
             {
                 LOG_ERROR(F("NTP: bad reply"));
+                ntp_last_error = NTP_ERR_BAD_REPLY;
                 return 0;
             }
 
@@ -123,6 +131,7 @@ uint64_t get_ntp_response(WiFiUDP &udp)
     }
     // Timeout.
     LOG_ERROR(F("NTP: No reply from NTP server"));
+    ntp_last_error = NTP_ERR_NO_REPLY;
     udp.stop();
     return 0;
 }
@@ -178,6 +187,7 @@ uint64_t get_ntp_nanos(const String &ntp_server_name)
     if (WiFi.hostByName(ntp_server_name.c_str(), ntp_server_ip, DNS_TIMEOUT) != 1)
     {
         LOG_ERROR(F("NTP: Unable to resolve ") << ntp_server_name);
+        ntp_last_error = CONNECT_CODE_DNS;
         return 0;
     }
 
@@ -190,6 +200,7 @@ uint64_t get_ntp_nanos(const String &ntp_server_name)
     if (!begin_udp_random_port(udp))
     {
         LOG_ERROR(F("NTP: Unable to open udp port "));
+        ntp_last_error = NTP_ERR_NO_PORT;
         return 0;
     }
 
@@ -198,6 +209,7 @@ uint64_t get_ntp_nanos(const String &ntp_server_name)
     if (!send_ntp_request(udp, ntp_server_ip))
     {
         LOG_ERROR(F("NTP: Unable to send"));
+        ntp_last_error = NTP_ERR_NOT_SENT;
         return 0;
     }
 
@@ -244,6 +256,10 @@ bool sync_ntp_time(const String &ntp_server_name, const time_t known_good)
     else
     {
         LOG_ERROR(F("NTP: Unable to sync time"));
+        if (ntp_nanos)
+        {
+            ntp_last_error = NTP_ERR_BAD_REPLY;
+        }
         return false;
     }
 }
@@ -339,6 +355,7 @@ bool maybe_sync_time(Settings &sett)
             sett.ntp_error_counter++;
         }
         LOG_ERROR(F("NTP: sync failed, failures in row: ") << sett.ntp_error_counter);
+        connect_log_push(sett, CONNECT_NTP, ntp_last_error);
         return false;
     }
 

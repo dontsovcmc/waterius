@@ -82,3 +82,34 @@ ParamError parse_broker_host(char *dest, const size_t size, const char *value)
 
     return parse_text(dest, size, host, true);
 }
+
+bool url_host(const char *url, char *dest, const size_t size)
+{
+    const char *scheme_end = strstr(url, SCHEME_SEPARATOR);
+    const char *begin = scheme_end ? scheme_end + strlen(SCHEME_SEPARATOR) : url;
+    const char *end = begin + strcspn(begin, "/?#");
+
+    for (const char *p = begin; p < end; ++p)
+    {
+        if (*p == '@')
+        {
+            begin = p + 1;
+        }
+    }
+
+    const char *port = (const char *)memchr(begin, ':', end - begin);
+    if (port)
+    {
+        end = port;
+    }
+
+    const size_t len = end - begin;
+    if (len == 0 || len >= size)
+    {
+        return false;
+    }
+
+    memcpy(dest, begin, len);
+    dest[len] = '\0';
+    return true;
+}
