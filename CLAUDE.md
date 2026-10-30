@@ -81,6 +81,11 @@ Plan and suite list: `ESP8266/plan/tests_plan.md`.
 
 **Local secrets:** Copy `ESP8266/secrets.ini.template` to `ESP8266/secrets.ini` and fill in credentials.
 
+### Publishing a release
+
+«Выложи релиз» — the whole procedure is in **[docs/release.md](docs/release.md)**.
+Read it in full before starting.
+
 ### Flashing over wires
 
 Ready-to-run procedure — ports, model detection, build artifact names, avrdude
