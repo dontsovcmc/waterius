@@ -259,6 +259,7 @@ def test_N5_unreachable_server_freezes_the_tuning(stand: Stand, clock: Any, net:
             assert session.payload['ntp_errors'] >= failures, (
                 f"счётчик неудач {session.payload['ntp_errors']} "
                 f'меньше числа неудач {failures}')
+            stand.assert_last_error(session, 'ntp:-3')
 
             now = payload_epoch(session.payload)
             assert now >= stamp, f'часы пошли назад: {stamp} -> {now}'

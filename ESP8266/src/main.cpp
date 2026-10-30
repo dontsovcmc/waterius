@@ -17,6 +17,7 @@
 #include "utils.h"
 #include "porting.h"
 #include "sync_time.h"
+#include "core/connect_log.h"
 #include "wifi_helpers.h"
 #include "config.h"
 #include "wleds.h"
@@ -470,6 +471,11 @@ void loop()
             // Сохраняем всегда: даже в молчаливом пробуждении изменились
             // счётчики, а без них не наступит ни срок отметки, ни срок NTP
             store_config(sett);  // т.к. сохраняем число ошибок подключения
+
+            // Посылка уже ушла: ошибки этого сеанса видны только здесь
+            char connect_log[CONNECT_LOG_TEXT_LEN];
+            connect_log_text(sett, connect_log, sizeof(connect_log));
+            LOG_INFO(F("Connect log: ") << connect_log << F(", errors: ") << sett.wifi_connect_errors);
         }
     }
 

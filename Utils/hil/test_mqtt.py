@@ -893,5 +893,6 @@ def test_I20_lost_broker_is_not_reported_as_delivered(stand: Stand, cfg: Any,
         assert 'MQTT: Connected.' in session.text, session.text
         assert cutting_broker.cut.is_set(), 'брокер не порвал соединение - проверять нечего'
         session.assert_confirm(mqtt=SEND_NO_CONNECTION)
+        stand.assert_last_error(session, 'mqtt:-3')
     finally:
         stand.setup(mqtt_port=cfg.broker_port)

@@ -240,6 +240,7 @@ def test_G3_no_router(stand: Stand, net: Any) -> None:
     assert session.confirm is None, f'сеанс без сети, а получатели отчитались\n{session.text}'
     assert session.payload is None, 'приёмник не мог получить посылку без сети'
     assert session.blynk == BLYNK_ROUTER, session.text
+    stand.assert_last_error(session, 'wifi:201')
 
 
 @pytest.mark.requires(esp='2.0.47')
@@ -260,6 +261,7 @@ def test_G4a_cloud_unreachable(stand: Stand, net: Any, live_cloud: None) -> None
     session.assert_confirm(waterius=SEND_NO_CONNECTION, http=SEND_OK, any=1)
     session.expect_payload('свой сервер жив, посылка обязана дойти')
     assert session.blynk == BLYNK_CLOUD, session.text
+    stand.assert_last_error(session, 'wtr:-1')
 
 
 @pytest.mark.requires(esp='2.0.47')
@@ -284,6 +286,7 @@ def test_G4b_own_server_unreachable(stand: Stand, net: Any) -> None:
     # Тот же код, что и у G4a: вспышками эти две поломки не различить, и
     # именно поэтому тесты смотрят на статусы получателей, а не на код
     assert session.blynk == BLYNK_CLOUD, session.text
+    stand.assert_last_error(session, 'http:-1')
 
 
 @pytest.mark.mqtt
@@ -307,6 +310,7 @@ def test_G5_broker_unreachable(stand: Stand, net: Any) -> None:
     assert 'MQTT: Connect failed with state' in session.text
     assert 'MQTT: Connecting failed' in session.text
     session.assert_confirm(http=SEND_OK, **cloud_ok(stand))
+    stand.assert_last_error(session, 'mqtt:-2')
 
 
 @pytest.mark.requires(esp='2.0.47')
@@ -337,6 +341,7 @@ def test_G7_server_answers_500(stand: Stand) -> None:
     assert len(session.payloads) == HTTP_SEND_ATTEMPTS, (
         f'посылок дошло {len(session.payloads)}, попыток {HTTP_SEND_ATTEMPTS}'
         + session.air_note)
+    stand.assert_last_error(session, 'http:500')
 
 
 def press_for_payload(stand: Stand) -> dict[str, Any]:
@@ -443,6 +448,7 @@ def test_G9_hanging_server(stand: Stand) -> None:
     session.assert_confirm(mqtt=SEND_OK, **cloud_ok(stand))
     assert session.confirm['http'] != SEND_OK, session.confirm
     assert session.payload is None, 'сервер не ответил, посылки в очереди быть не должно'
+    stand.assert_last_error(session, 'http:-11')
 
 
 # Получатели по именам параметров прошивки (portal/resources.h)

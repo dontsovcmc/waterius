@@ -191,6 +191,7 @@ START_VALID_TIME = 1704067201  # core/timekeeping.h: время раньше - �
 # sender_http.h: столько раз прошивка повторяет отправку, пока не получит 200
 HTTP_SEND_ATTEMPTS = 3
 WIFI_CONNECT_ATTEMPTS = 2  # ESP8266/src/setup.h
+CONNECT_LOG_ESP = (2, 0, 53)  # с этой версии прошивка печатает журнал ошибок связи
 
 # setup.h: WATERIUS_DEFAULT_DOMAIN
 CLOUD_URL = 'https://cloud.waterius.ru'
