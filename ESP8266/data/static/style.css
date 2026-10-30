@@ -30,6 +30,8 @@ header{
 header *{color:#232323;}
 .main-logo{padding-left:16px;float:left;font-weight:700;color:#000;}
 .main-logo .icon{width:12.5px;height:12.5px;left:0;}
+/* Спрайт вчетверо крупнее клеток, чтобы на Retina значки были гладкими. Выше .main-logo img: там своя ширина */
+.icon img{width:48px;}
 .main-logo img{width:38px;}
 .logo.icon{left:50%;top:0;margin-left:-8px;width:16px;height:16px;}
 header .icon img{position:absolute;bottom:0;}
