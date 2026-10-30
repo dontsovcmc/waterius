@@ -15,8 +15,8 @@ var PORTAL_LINKS = [
     { path: '/input/0/setup.html', text: 'Вход 0 (красный)' },
     { path: '/setup_send.html', text: 'Отправка показаний' },
     { path: '/alarms.html', text: 'Тревоги' },
-    { path: '/about.html', text: 'О программе' },
     { path: '/logs.html', text: 'Логи' },
+    { path: '/about.html', text: 'О программе' },
     { path: '/reset.html', text: 'Сброс к заводским' },
 ];
 
