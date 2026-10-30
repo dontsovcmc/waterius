@@ -114,12 +114,8 @@ function readParams(request, url) {
     });
 }
 
-/* Файл ssid.txt пишет прошивка после сканирования сетей. */
 function ssidFile(state) {
-    var lines = state.wifi.networks.map(function (net) {
-        return net.ssid + '\t' + net.level + '\tch' + net.wifi_channel;
-    });
-    return new Response(lines.join('\n') + '\n', { headers: { 'Content-Type': TYPES.txt } });
+    return new Response(self.SimApi.ssidText(state), { headers: { 'Content-Type': TYPES.txt } });
 }
 
 function handleApi(request, url, state) {

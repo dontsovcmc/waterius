@@ -79,6 +79,7 @@ static void get_api_portal_time(AsyncWebServerRequest *request)
 Журнал портала (core/log_ring.h) потоком: копия в String заняла бы ещё
 столько же памяти. Отдаётся текстом, не файлом: окно портала в телефоне
 может не сохранять файлы, а текст покажет. Имя файла задаёт кнопка в logs.html.
+С ?networks за журналом идёт /ssid.txt: поддержке нужны оба, а кнопка на экране одна.
 */
 static void get_api_log(AsyncWebServerRequest *request)
 {
@@ -93,10 +94,19 @@ static void get_api_log(AsyncWebServerRequest *request)
     uint32_t pos = log_ring_oldest(log_capture());
     const uint32_t end = log_capture().written;
 
+    File networks;
+    if (request->hasParam(F("networks")))
+    {
+        networks = LittleFS.open("/ssid.txt", "r");
+    }
+
     AsyncWebServerResponse *response = request->beginChunkedResponse(
         F("text/plain; charset=utf-8"),
-        [pos, end](uint8_t *buffer, size_t max_len, size_t) mutable -> size_t
-        { return log_ring_read(log_capture(), pos, end, buffer, max_len); });
+        [pos, end, networks](uint8_t *buffer, size_t max_len, size_t) mutable -> size_t
+        {
+            const size_t len = log_ring_read(log_capture(), pos, end, buffer, max_len);
+            return len ? len : networks.read(buffer, max_len);
+        });
 
     request->send(response);
 }

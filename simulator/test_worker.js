@@ -122,6 +122,13 @@ async function run() {
         (journal.headers.get('Content-Type') || '').startsWith('text/plain') ? null : 'тип ' + journal.headers.get('Content-Type'),
         journal.headers.get('Content-Disposition') ? 'окно портала в телефоне не покажет вложение' : null,
         journalText.includes('AP started on channel=') ? null : 'в журнале нет строк портала',
+        journalText.includes('\tch') ? 'список сетей попал на экран' : null,
+    ].filter(Boolean));
+
+    const download = await (await ask(worker, '/api/log?networks=1')).text();
+    check('скачанный журнал идёт вместе со списком сетей', [
+        download.includes('AP started on channel=') ? null : 'нет строк журнала',
+        download.includes('\tch') ? null : 'нет списка сетей',
     ].filter(Boolean));
 
     const saved = await (await ask(worker, '/api/save', {
