@@ -322,6 +322,7 @@ def assert_counted_over_session(series: Series, first: Any, second: Any,
         f'счёт attiny: {counted(first, channel)} -> {counted(second, channel)}')
 
 
+@pytest.mark.requires(attiny=47)         # младшие: потолок 4 импульса/с или потеря в сеансе
 @pytest.mark.needs(ctype1=ELECTRONIC)
 def test_D7b_electronic_pulses_during_session_are_not_lost(stand: Stand) -> None:
     """
@@ -340,6 +341,7 @@ def test_D7b_electronic_pulses_during_session_are_not_lost(stand: Stand) -> None
                                 count=ELECTRONIC_PULSES)
 
 
+@pytest.mark.requires(attiny=39)         # защёлка фронта в прерывании
 @pytest.mark.needs(ctype0=NAMUR, ctype1=ELECTRONIC, f0=BASE_FACTOR, f1=BASE_FACTOR)
 def test_D7c_two_input_types_count_during_session(stand: Stand) -> None:
     """
@@ -533,6 +535,7 @@ TOGETHER = 3
 INSIDE_MS = 100
 
 
+@pytest.mark.requires(attiny=39)         # защёлка фронта в прерывании
 @pytest.mark.needs(ctype0=NAMUR, ctype1=ELECTRONIC, f0=BASE_FACTOR, f1=BASE_FACTOR)
 def test_D11_two_input_types_count_together(stand: Stand) -> None:
     """

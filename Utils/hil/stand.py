@@ -63,6 +63,9 @@ CHANNEL_PARAMS = {
     'value': 'ch',
 }
 
+# Значения паролей прошивка в лог не пишет (active_point_api.cpp, log_param_value)
+MASKED_IN_LOG = ('password', 'mqtt_password')
+
 # Настройки устройства, которые требуются от него в каждом тесте, если тест не
 # объявил другие (маркер needs). Без них результат зависит от того, что оставил
 # предыдущий: test_I5 выключает квитанцию MQTT, а test_G1 ничего не настраивает
@@ -1029,6 +1032,8 @@ class Stand:
             assert name in saved, (
                 f'{name} не виден ни в посылке, ни строкой Saved: '
                 f'прошивка его не приняла\n{session.text}')
+            if name in MASKED_IN_LOG:
+                continue
             assert saved[name] == str(value), (
                 f'{name}: просили {value}, прошивка сохранила {saved[name]}')
 
