@@ -6,6 +6,7 @@
 #include "porting.h"
 #include "voltage.h"
 #include "sync_time.h"
+#include "core/connect_log.h"
 #include "wifi_helpers.h"
 #include "core/alarm.h"
 #include "core/idle.h"
@@ -93,6 +94,10 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("wifi_phy_mode_s")] = wifi_phy_mode_title((WiFiPhyMode_t)sett.wifi_phy_mode);
     root[F("wifi_connect_errors")] = sett.wifi_connect_errors;
     root[F("wifi_connect_attempt")] = sett.wifi_connect_attempt;
+
+    char connect_log[CONNECT_LOG_TEXT_LEN];
+    connect_log_text(sett, connect_log, sizeof(connect_log));
+    root[F("connect_log")] = String(connect_log);
 
     uint8_t *bssid = WiFi.BSSID();
     char router_mac[18] = {0};

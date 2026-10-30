@@ -6,6 +6,8 @@
 #include "config.h"
 #include "json.h"
 #include "utils.h"
+#include "https_helpers.h"
+#include "core/connect_log.h"
 #include "portal/active_point_api.h"
 
 
@@ -202,6 +204,8 @@ bool mqtt_connect(Settings &sett, PubSubClient &mqtt_client)
             return true;
         }
         LOG_ERROR(F("MQTT: Connect failed with state ") << mqtt_client.state());
+        const bool no_dns = attempts == 1 && mqtt_client.state() == MQTT_CONNECT_FAILED && !name_resolves(sett.mqtt_host);
+        connect_log_push(sett, CONNECT_MQTT, no_dns ? CONNECT_CODE_DNS : mqtt_client.state());
         delay(MQTT_CONNECT_DELAY);
     } while (--attempts);
 

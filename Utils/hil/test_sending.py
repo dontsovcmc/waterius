@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from .constants import HTTP_SEND_ATTEMPTS
+from .constants import HTTP_SEND_ATTEMPTS, WIFI_CONNECT_ATTEMPTS
 from .logwatch import (
     BLYNK_CLOUD,
     BLYNK_CLOUD_ANSWER,
@@ -240,6 +240,7 @@ def test_G3_no_router(stand: Stand, net: Any) -> None:
     assert session.confirm is None, f'сеанс без сети, а получатели отчитались\n{session.text}'
     assert session.payload is None, 'приёмник не мог получить посылку без сети'
     assert session.blynk == BLYNK_ROUTER, session.text
+    stand.assert_last_error(session, 'wifi:201')
 
 
 @pytest.mark.requires(esp='2.0.47')
@@ -260,6 +261,7 @@ def test_G4a_cloud_unreachable(stand: Stand, net: Any, live_cloud: None) -> None
     session.assert_confirm(waterius=SEND_NO_CONNECTION, http=SEND_OK, any=1)
     session.expect_payload('свой сервер жив, посылка обязана дойти')
     assert session.blynk == BLYNK_CLOUD, session.text
+    stand.assert_last_error(session, 'wtr:-1')
 
 
 @pytest.mark.requires(esp='2.0.47')
@@ -284,6 +286,7 @@ def test_G4b_own_server_unreachable(stand: Stand, net: Any) -> None:
     # Тот же код, что и у G4a: вспышками эти две поломки не различить, и
     # именно поэтому тесты смотрят на статусы получателей, а не на код
     assert session.blynk == BLYNK_CLOUD, session.text
+    stand.assert_last_error(session, 'http:-1')
 
 
 @pytest.mark.mqtt
@@ -307,6 +310,7 @@ def test_G5_broker_unreachable(stand: Stand, net: Any) -> None:
     assert 'MQTT: Connect failed with state' in session.text
     assert 'MQTT: Connecting failed' in session.text
     session.assert_confirm(http=SEND_OK, **cloud_ok(stand))
+    stand.assert_last_error(session, 'mqtt:-2')
 
 
 @pytest.mark.requires(esp='2.0.47')
@@ -337,6 +341,64 @@ def test_G7_server_answers_500(stand: Stand) -> None:
     assert len(session.payloads) == HTTP_SEND_ATTEMPTS, (
         f'посылок дошло {len(session.payloads)}, попыток {HTTP_SEND_ATTEMPTS}'
         + session.air_note)
+    stand.assert_last_error(session, 'http:500')
+
+
+def press_for_payload(stand: Stand) -> dict[str, Any]:
+    """Сеанс кнопкой и посылка, с которой он закончился."""
+    stand.reset_observers()
+    stand.dut.press_button()
+    session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    assert session.payloads, session.text
+    return session.payloads[-1]
+
+
+def missed_session(stand: Stand, net: Any) -> None:
+    """Сеанс при погашенной точке доступа: посылки нет, ошибки копятся."""
+    stand.reset_observers()
+    with net.ap_off():
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+        assert not session.wifi_connected, session.text
+
+
+@pytest.mark.requires(esp='2.0.53')
+def test_G7a_connect_log_after_outage(stand: Stand, net: Any) -> None:
+    """
+    Ошибки роутера приезжают со следующей посылкой, а новую ошибку с прежним
+    кодом видно по счётчику: строка журнала при этом не меняется.
+    """
+    errors = press_for_payload(stand)['wifi_connect_errors']
+
+    missed_session(stand, net)
+    missed_session(stand, net)
+    payload = press_for_payload(stand)
+    assert payload['wifi_connect_errors'] == errors + 2 * WIFI_CONNECT_ATTEMPTS, payload
+    log = payload['connect_log'].split(',')
+    assert all(entry.startswith('wifi:') for entry in log), log
+
+    # Посылка без новых ошибок счётчик не двигает
+    assert press_for_payload(stand)['wifi_connect_errors'] == payload['wifi_connect_errors']
+
+    missed_session(stand, net)
+    again = press_for_payload(stand)
+    assert again['wifi_connect_errors'] == payload['wifi_connect_errors'] + WIFI_CONNECT_ATTEMPTS, again
+    assert again['connect_log'] == payload['connect_log'], 'код прежний, журнал тот же'
+
+
+@pytest.mark.requires(esp='2.0.53')
+def test_G7b_connect_log_server_answer(stand: Stand) -> None:
+    """Ответ 500 записывается за каждую попытку и приезжает со следующей посылкой."""
+    errors = press_for_payload(stand)['wifi_connect_errors']
+
+    stand.reset_observers()
+    with stand.receiver.answering(500):
+        stand.dut.press_button()
+        stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    payload = press_for_payload(stand)
+    assert payload['wifi_connect_errors'] == errors + HTTP_SEND_ATTEMPTS, payload
+    assert payload['connect_log'] == ','.join(['http:500'] * HTTP_SEND_ATTEMPTS), payload
 
 
 @pytest.mark.requires(esp='2.0.47')
@@ -386,6 +448,7 @@ def test_G9_hanging_server(stand: Stand) -> None:
     session.assert_confirm(mqtt=SEND_OK, **cloud_ok(stand))
     assert session.confirm['http'] != SEND_OK, session.confirm
     assert session.payload is None, 'сервер не ответил, посылки в очереди быть не должно'
+    stand.assert_last_error(session, 'http:-11')
 
 
 # Получатели по именам параметров прошивки (portal/resources.h)

@@ -111,6 +111,7 @@ RE_MQTT_FLUSH_FAILED = re.compile(r'MQTT: Flush failed, no ack for (\d+) ms')
 # Код ошибки, который прошивка собралась моргать (wleds.cpp, blynk_error).
 # Успех не моргается вовсе, поэтому строки в удачном сеансе нет.
 RE_BLYNK = re.compile(r'Blynk: code=(\d+)')
+RE_CONNECT_LOG = re.compile(r'Connect log: (\S*), errors: \d+')
 RE_PERIOD_ATTINY = re.compile(r'Wakeup period, min \(attiny\):(\d+)')
 RE_APPLY = re.compile(r'Apply setting: (\S+)=(\S*)')
 # Значение, прошедшее валидацию и попавшее в настройки. Единственный
@@ -611,6 +612,12 @@ class Session:
         return SESSION_END in self.text
 
     # --- утверждения на языке предметной области ---
+
+    @property
+    def last_error(self) -> str | None:
+        """Последняя запись журнала ошибок связи: `этап:код`."""
+        match = RE_CONNECT_LOG.search(self.text)
+        return match.group(1).split(',')[-1] if match else None
 
     @property
     def blynk(self) -> int | None:

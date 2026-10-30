@@ -34,6 +34,7 @@
 #include "Logging.h"
 #include "json.h"
 #include "ha/publish_data.h"
+#include "core/connect_log.h"
 #include "ha/publish_discovery.h"
 #include "ha/subscribe.h"
 #include "core/blink.h"
@@ -155,6 +156,10 @@ SendStatus send_mqtt(Settings &sett, const AttinyData &data, JsonDocument &json_
     mqtt_client.loop();
 
     LOG_INFO(F("MQTT: Publish finished. ") << millis() - start_time << F(" milliseconds elapsed"));
+    if (!published)
+    {
+        connect_log_push(sett, CONNECT_MQTT, mqtt_client.state());
+    }
     return published ? SEND_OK : SEND_NO_CONNECTION;
 }
 

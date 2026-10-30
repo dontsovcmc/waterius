@@ -25,6 +25,7 @@ from .air import check as air_check
 from .clock import BoardClock
 from .config import StandConfig
 from .constants import (
+    CONNECT_LOG_ESP,
     BASE_FACTOR,
     BUTTON_SESSION_WAIT_S,
     CLOUD_URL,
@@ -504,6 +505,14 @@ class Stand:
     def slept_since(self, moment: float | None) -> bool:
         """После `moment` (монотонные часы) стенд уже дождался конца сеанса."""
         return moment is not None and self._session_at > moment
+
+    def assert_last_error(self, session: Session, expected: str) -> None:
+        """
+        Последняя ошибка связи в журнале. Журнал уезжает со следующей посылкой,
+        поэтому смотрим строку лога: лишний сеанс ради проверки не нужен.
+        """
+        if self.esp_version and self.esp_version >= CONNECT_LOG_ESP:
+            assert session.last_error == expected, session.text
 
     def expect_no_session(self, timeout: float, mode: int | None = None) -> None:
         assert self.log.expect_no_session(timeout, mode), (

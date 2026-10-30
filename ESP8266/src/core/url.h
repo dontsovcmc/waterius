@@ -11,6 +11,12 @@
 #include "input.h"
 
 /*
+Имя хоста из адреса получателя: https://user@host:8080/path -> host.
+false - имени нет или оно не помещается в dest.
+*/
+bool url_host(const char *url, char *dest, const size_t size);
+
+/*
 Адрес MQTT брокера.
 
 Пользователи привычно пишут адрес как URL: mqtt://broker, http://192.168.0.20,

@@ -2,6 +2,7 @@
 #include "Logging.h"
 #include "utils.h"
 #include "core/wifi.h"
+#include "core/connect_log.h"
 #include <LittleFS.h>
 #include <ESP8266WiFiScan.h>
 
@@ -222,9 +223,9 @@ bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
         }
         sett.wifi_channel = 0;
         LOG_ERROR(F("WIFI: Connection failed."));
+        connect_log_push(sett, CONNECT_WIFI, last_disconnect_reason);
     } while (--sett.wifi_connect_attempt);
 
-    sett.wifi_connect_errors++;
     LOG_ERROR(F("WIFI: Connection failed.") << millis() - start_time << F(" ms"));
     return false;
 }

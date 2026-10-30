@@ -292,6 +292,28 @@ struct CalculatedData
 };
 
 /*
+Попытка связи, которая не удалась. Журнал - core/connect_log.h.
+*/
+enum ConnectStage : uint8_t
+{
+    CONNECT_NONE = 0,
+    CONNECT_WIFI,
+    CONNECT_WATERIUS,
+    CONNECT_HTTP,
+    CONNECT_MQTT,
+    CONNECT_NTP
+};
+
+// packed: код лежит в Settings с нечётного смещения
+struct __attribute__((packed)) ConnectError
+{
+    uint8_t stage;
+    int16_t code;
+};
+
+#define CONNECT_LOG_SIZE 3
+
+/*
 Настройки хранящиеся EEPROM
 
 Каждый байт структуры объявлен явно: смещение поля считается по тексту, без
@@ -343,7 +365,7 @@ struct Settings
     /*
     Статистика подключений к Wi-Fi
     */
-    uint8_t wifi_connect_errors = 0;
+    uint8_t padding_wifi_errors = 0; // прежний счётчик: wifi_connect_errors стал двухбайтовым
     uint8_t wifi_connect_attempt = 0;
 
     /*
@@ -602,11 +624,17 @@ struct Settings
     // Флаг «батарейки сели» прошлого сеанса: нужен гистерезису (core/power.h)
     uint8_t battery_low = 0;
 
+    // Последние неудачные попытки связи (core/connect_log.h)
+    ConnectError connect_log[CONNECT_LOG_SIZE] = {};
+
+    // Сколько всего попыток не удалось, не сбрасывается
+    uint16_t wifi_connect_errors = 0;
+
     /*
     Зарезервируем кучу места, чтобы не писать конвертер конфигураций.
     Будет актуально для On-the-Air обновлений
     */
-    uint8_t reserved9[23] = {0};
+    uint8_t reserved9[12] = {0};
 
     uint8_t padding5[4] = {0};
 

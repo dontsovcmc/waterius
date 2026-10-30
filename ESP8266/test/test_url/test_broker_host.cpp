@@ -189,3 +189,23 @@ TEST(BrokerHost, ErrorCodesMatchWebInterface)
     EXPECT_EQ(PARAM_ERR_TLS, 20);
     EXPECT_EQ(PARAM_ERR_PORT_IN_HOST, 21);
 }
+
+TEST(UrlHost, TakesHostFromUrl)
+{
+    char host[32];
+    EXPECT_TRUE(url_host("https://cloud.waterius.ru/api", host, sizeof(host)));
+    EXPECT_STREQ(host, "cloud.waterius.ru");
+    EXPECT_TRUE(url_host("http://192.168.0.20:8080/x?y=1", host, sizeof(host)));
+    EXPECT_STREQ(host, "192.168.0.20");
+    EXPECT_TRUE(url_host("https://user:pass@example.com:443/path", host, sizeof(host)));
+    EXPECT_STREQ(host, "example.com");
+    EXPECT_TRUE(url_host("example.com", host, sizeof(host)));
+    EXPECT_STREQ(host, "example.com");
+}
+
+TEST(UrlHost, RejectsEmptyAndTooLong)
+{
+    char host[8];
+    EXPECT_FALSE(url_host("http:///path", host, sizeof(host)));
+    EXPECT_FALSE(url_host("http://example.com", host, sizeof(host)));
+}
