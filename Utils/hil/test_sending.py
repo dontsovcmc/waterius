@@ -405,7 +405,7 @@ def test_G7b_connect_log_server_answer(stand: Stand) -> None:
     assert payload['connect_log'] == ','.join(['http:500'] * HTTP_SEND_ATTEMPTS), payload
 
 
-@pytest.mark.requires(esp='2.0.53')
+@pytest.mark.requires(esp='2.0.54')
 def test_G7c_silent_dns_does_not_block_sending(stand: Stand, net: Any, live_cloud: None) -> None:
     """
     DNS молчит, а NTP идёт первым: кнопка синхронизирует время всегда.
