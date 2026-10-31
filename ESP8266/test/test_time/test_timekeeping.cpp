@@ -199,9 +199,9 @@ TEST(NtpPool, NegativeStartsFromFirst)
 
 TEST(NtpTimeout, GrowsWithAttempt)
 {
-    EXPECT_EQ(ntp_reply_timeout_ms(1), 300u);
-    EXPECT_EQ(ntp_reply_timeout_ms(2), 600u);
-    EXPECT_EQ(ntp_reply_timeout_ms(3), 900u);
-    EXPECT_EQ(ntp_reply_timeout_ms(4), 1200u);
-    EXPECT_EQ(ntp_reply_timeout_ms(5), 1500u);
+    EXPECT_EQ(ntp_reply_timeout_ms(1), 1000u);
+    EXPECT_EQ(ntp_reply_timeout_ms(2), 2000u);
+    EXPECT_EQ(ntp_reply_timeout_ms(3), 3000u);
+    EXPECT_EQ(ntp_reply_timeout_ms(4), 4000u);
+    EXPECT_EQ(ntp_reply_timeout_ms(5), 5000u);
 }
