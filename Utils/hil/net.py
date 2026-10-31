@@ -27,6 +27,7 @@ from .router import NatRouter
 
 HTTPS_PORT = 443
 NTP_PORT = 123
+DNS_PORT = 53
 
 # Список, в котором режется исходящий трафик клиента точки. Имя обманчиво:
 # пакет клиента приходит на интерфейс точки, а обработчик входа сверяется с
@@ -140,6 +141,17 @@ class Net:
         self.verify_dut()
         logger.info('сеть: режем udp/123, остальное оставляем')
         self.router.block_udp_port(self.dut_ip, NTP_PORT)
+        try:
+            yield
+        finally:
+            self.router.acl_clear()
+
+    @contextmanager
+    def dns_down(self) -> Iterator[None]:
+        """DNS молчит, а не отказывает: запрос пропадает, и прошивка ждёт ответа."""
+        self.verify_dut()
+        logger.info('сеть: режем udp/53, остальное оставляем')
+        self.router.block_udp_port(self.dut_ip, DNS_PORT)
         try:
             yield
         finally:
