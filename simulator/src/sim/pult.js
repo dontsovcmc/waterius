@@ -174,7 +174,7 @@ function drawWifi() {
 var ALARM_BITS = [
     { name: 'ALARM_FLOW', text: 'много воды сразу' },
     { name: 'ALARM_LEAK', text: 'протечка' },
-    { name: 'ALARM_WET', text: 'датчик протечки' },
+    { name: 'ALARM_WET', text: 'датчик протечки или сигнализация' },
 ];
 
 function defines() {

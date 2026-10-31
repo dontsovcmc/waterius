@@ -25,13 +25,13 @@ from .air import check as air_check
 from .clock import BoardClock
 from .config import StandConfig
 from .constants import (
-    CONNECT_LOG_ESP,
     BASE_FACTOR,
     BUTTON_SESSION_WAIT_S,
     CLOUD_URL,
-    LEAKAGE_NC,
+    CONNECT_LOG_ESP,
     NAMUR,
     SESSION_TAIL_S,
+    SIGNAL_NC,
     WAKE_FIRST_LINE_S,
     WAKE_SETTLE_S,
     WATER_COLD,
@@ -1109,10 +1109,10 @@ class Stand:
 
         for channel, found in raised.items():
             if 'alarm_wet' in found:
-                # У нормально-замкнутого датчика спокойное состояние - замкнутый
-                # контакт, у обычного - разомкнутый.
+                # У сигнализации спокойное состояние - замкнутый контакт, у датчика
+                # протечки - разомкнутый.
                 ctype = payload.get(f'ctype{channel}')
-                self.dut.wet(channel=channel, closed=(ctype == LEAKAGE_NC))
+                self.dut.wet(channel=channel, closed=(ctype == SIGNAL_NC))
 
         left: list[str] = []
         for _ in range(CLEAR_TRIES):

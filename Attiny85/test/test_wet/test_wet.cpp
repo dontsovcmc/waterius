@@ -98,9 +98,8 @@ TEST(Wet, OnlyOpenLineIsDry)
 }
 
 /*
-Нормально-замкнутый: отдельное соглашение. В норме шлейф замкнут перемычкой или
-резистором 5к6, тревога - сопротивление выше. Обрыв отдельно не ловим: он
-даёт 1023 и попадает в ту же тревогу.
+Сигнализация: отдельное соглашение. В норме шлейф замкнут перемычкой или
+резистором 5к6, тревога - сопротивление выше порога.
 */
 TEST(WetNc, IntactLoopIsNormal)
 {
@@ -111,7 +110,7 @@ TEST(WetNc, IntactLoopIsNormal)
             for (double loop : loops)
             {
                 const uint16_t adc = adc_code(loop, pullup, series);
-                EXPECT_TRUE(adc_below(adc, LIMIT_WET_NC))
+                EXPECT_TRUE(adc_below(adc, LIMIT_SIGNAL_NC))
                     << "шлейф " << loop << "к, подтяжка " << pullup
                     << "к, плата " << series << "к, adc=" << adc;
             }
@@ -122,7 +121,7 @@ TEST(WetNc, WorstCaseLoopKeepsMargin)
     // Худший случай исправного шлейфа - 5к6 при самой слабой подтяжке.
     const uint16_t worst = adc_code(5.6, PULLUP_MIN, SERIES_CLASSIC);
     EXPECT_EQ(worst, 322);
-    EXPECT_GT(LIMIT_WET_NC - worst, 100);
+    EXPECT_GT(LIMIT_SIGNAL_NC - worst, 100);
 }
 
 TEST(WetNc, HighResistanceAndBreakAreAlarm)
@@ -131,21 +130,21 @@ TEST(WetNc, HighResistanceAndBreakAreAlarm)
         for (double series : BOARDS)
         {
             const uint16_t adc = adc_code(100.0, pullup, series);
-            EXPECT_FALSE(adc_below(adc, LIMIT_WET_NC))
+            EXPECT_FALSE(adc_below(adc, LIMIT_SIGNAL_NC))
                 << "подтяжка " << pullup << "к, плата " << series
                 << "к, adc=" << adc;
         }
 
-    EXPECT_FALSE(adc_below(ADC_OPEN, LIMIT_WET_NC));
+    EXPECT_FALSE(adc_below(ADC_OPEN, LIMIT_SIGNAL_NC));
 }
 
 /*
-Пороги не пересекаются и оба ниже разомкнутой линии: иначе у "замыкания"
-мокрым стал бы неподключённый вход, а у "размыкания" тревога не отличалась бы
+Пороги не пересекаются и оба ниже разомкнутой линии: иначе у датчика протечки
+мокрым стал бы неподключённый вход, а у сигнализации тревога не отличалась бы
 от нормы.
 */
 TEST(Limits, AreOrdered)
 {
-    EXPECT_LT(LIMIT_WET_NC, LIMIT_WET);
+    EXPECT_LT(LIMIT_SIGNAL_NC, LIMIT_WET);
     EXPECT_LT(LIMIT_WET, ADC_OPEN_LEAKY);
 }

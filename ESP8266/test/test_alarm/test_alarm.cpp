@@ -150,7 +150,7 @@ TEST(Thresholds, NoImpulsesNoThresholds)
 {
     for (const uint8_t type : {(uint8_t)CounterType::NONE,
                                (uint8_t)CounterType::LEAKAGE,
-                               (uint8_t)CounterType::LEAKAGE_NC})
+                               (uint8_t)CounterType::SIGNAL_NC})
     {
         const AlarmThresholds t = alarm_thresholds(false, type, 300, 10, 24, 10);
         EXPECT_EQ(t.vol_pulses, 0u);
@@ -332,7 +332,7 @@ TEST(AlarmInput, NoInputBeatsEverything)
     // Датчик протечки и выключенный вход импульсов не дают: ни новая attiny,
     // ни заданный вес тут ничего не меняют
     EXPECT_EQ(alarm_input_state(CounterType::LEAKAGE, 10, ATTINY_VER_ALARM), ALARM_INPUT_NO_INPUT);
-    EXPECT_EQ(alarm_input_state(CounterType::LEAKAGE_NC, 10, ATTINY_VER_ALARM), ALARM_INPUT_NO_INPUT);
+    EXPECT_EQ(alarm_input_state(CounterType::SIGNAL_NC, 10, ATTINY_VER_ALARM), ALARM_INPUT_NO_INPUT);
     EXPECT_EQ(alarm_input_state(CounterType::NONE, 10, ATTINY_VER_ALARM), ALARM_INPUT_NO_INPUT);
 }
 

@@ -218,5 +218,5 @@ TEST(ConsumptionStopped, OnlyForInputsThatCount)
 
     EXPECT_FALSE(counts_impulses(CounterType::NONE));
     EXPECT_FALSE(counts_impulses(CounterType::LEAKAGE));
-    EXPECT_FALSE(counts_impulses(CounterType::LEAKAGE_NC));
+    EXPECT_FALSE(counts_impulses(CounterType::SIGNAL_NC));
 }

@@ -69,7 +69,7 @@ enum CounterType
     ELECTRONIC = 2,     // электронный выход, импульс — замыкание на минус
     LEAKAGE = 5,        // датчик протечки: проводимость - тревога, а не импульс,
                         // вода это десятки и сотни килоом, см. wet.h (issue #202)
-    LEAKAGE_NC = 6,     // нормально-замкнутый датчик: норма - замкнутый шлейф
+    SIGNAL_NC = 6,      // сигнализация: норма - замкнутый шлейф
                         // (0 Ом или 5к6), тревога - сопротивление выше (issue #202)
     NONE = 0xFF
 };
@@ -117,7 +117,7 @@ struct CounterB
                 break;
             case CounterType::NAMUR:
             case CounterType::LEAKAGE:
-            case CounterType::LEAKAGE_NC:
+            case CounterType::SIGNAL_NC:
                 DDRB &= ~_BV(_pin);                 // Вход
                 PCMSK &= ~_BV(_pin);                // Прерывание по фронту не нужно: опрос раз в 250мс
                 input.disable();
@@ -187,7 +187,7 @@ struct CounterB
                 adc = a;
             }
         }
-        else if (type == CounterType::LEAKAGE || type == CounterType::LEAKAGE_NC)
+        else if (type == CounterType::LEAKAGE || type == CounterType::SIGNAL_NC)
         {
             /*
             Вода - это сопротивление в десятки и сотни килоом, а не замыкание
@@ -198,7 +198,7 @@ struct CounterB
             */
             delayMicroseconds(DELAY_WET_READY_US);
             adc = aRead();
-            const uint16_t limit = (type == CounterType::LEAKAGE) ? LIMIT_WET : LIMIT_WET_NC;
+            const uint16_t limit = (type == CounterType::LEAKAGE) ? LIMIT_WET : LIMIT_SIGNAL_NC;
             state = adc_below(adc, limit) ? CounterState::CLOSE : CounterState::OPEN;
         }
         else
@@ -274,7 +274,7 @@ struct CounterB
             case CounterType::NAMUR:
                 return discrete(event);
             case CounterType::LEAKAGE:
-            case CounterType::LEAKAGE_NC:
+            case CounterType::SIGNAL_NC:
                 // Срабатывание датчика - это тревога, а не показания: считаем его
                 // тем же кодом (там уже есть подтверждение через 50мс, #371),
                 // но импульс не возвращаем. Состояние берётся из on_pulse, а

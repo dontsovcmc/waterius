@@ -45,14 +45,15 @@
 | `Alarm: continuous flow` | `binary_sensor`, класс `problem` | протечка: расход не падал до нуля |
 | `Alarm: consumption stopped` | `binary_sensor`, класс `problem` | расхода не было слишком долго |
 | `Alarm: water sensor` | `binary_sensor`, класс **`moisture`** | сработал датчик протечки на полу |
+| `Alarm: signal` | `binary_sensor`, класс `problem` | сработала сигнализация: разомкнут шлейф |
 | `Alarm volume per 30 min` (`av`), `Alarm zero flow rate` (`ar`), `Alarm leak hours` (`ah`), `Alarm stop hours` (`as`) | `number` | пороги, ноль выключает тревогу |
 | `Clear alarms` | `button` | снять все тревоги (шлёт `63` в топик `arst/set`) |
 | `Away mode` | `switch` | режим «Я уехал» |
 | `Alarm ack: waterius.ru / own server / MQTT` | `switch` | кто обязан подтвердить доставку тревоги |
-| `Input Type` | `select` | тип входа, включая оба датчика протечки |
+| `Input Type` | `select` | тип входа, включая датчик протечки и сигнализацию |
 
-У входа, занятого датчиком протечки, показаний нет: для него создаются только `Input Type` и
-`Alarm: water sensor`. Уровень АЦП такого входа (`adc0`/`adc1`) отдельной сущностью не
+У входа с датчиком протечки или сигнализацией показаний нет: для него создаются только `Input Type`
+и `Alarm: water sensor` или `Alarm: signal`. Уровень АЦП такого входа (`adc0`/`adc1`) отдельной сущностью не
 публикуется — его видно в самой посылке.
 
 Тревоги по расходу приезжают с прошивкой attiny 44 и новее. На более старой сущности всё
@@ -122,7 +123,7 @@ homeassistant:
     "binary_sensor.waterius_*_alarm_leak*":
       friendly_name: "Тревога: протечка"
     "binary_sensor.waterius_*_alarm_wet*":
-      friendly_name: "Тревога: датчик протечки"
+      friendly_name: "Тревога: датчик или сигнализация"
     "binary_sensor.waterius_*_alarm_stop*":
       friendly_name: "Тревога: расход остановился"
     "number.waterius_*_av*":

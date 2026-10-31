@@ -92,7 +92,7 @@
     function counterTypeSupported(counterType, attinyVersion) {
         var CT = G().enums.CounterType;
         if (!isValidCounterType(counterType)) return false;
-        if (counterType === CT.LEAKAGE || counterType === CT.LEAKAGE_NC) {
+        if (counterType === CT.LEAKAGE || counterType === CT.SIGNAL_NC) {
             return attinyVersion >= G().defines.ATTINY_VER_ALARM;
         }
         return true;
@@ -118,7 +118,7 @@
 
     function countsImpulses(counterType) {
         var CT = G().enums.CounterType;
-        return counterType !== CT.NONE && counterType !== CT.LEAKAGE && counterType !== CT.LEAKAGE_NC;
+        return counterType !== CT.NONE && counterType !== CT.LEAKAGE && counterType !== CT.SIGNAL_NC;
     }
 
     /* ---- url.cpp: адрес брокера ---- */

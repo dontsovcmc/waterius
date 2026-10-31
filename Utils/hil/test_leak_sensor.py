@@ -1,5 +1,5 @@
 """
-Датчик протечки - вход типа LEAKAGE и LEAKAGE_NC (E4a, E5, E12).
+Датчик протечки и сигнализация - входы типа LEAKAGE и SIGNAL_NC (E4a, E5, E12).
 
 Не путать с протечкой по расходу (E3, `test_alarms.py`): там вода течёт через
 счётчик и не останавливается, и тревогу считают по импульсам. У датчика
@@ -23,10 +23,10 @@ import pytest
 from .constants import (
     ALARM_WAIT_S,
     LEAKAGE,
-    LEAKAGE_NC,
     NAMUR,
     PLANNED_PERIOD_MIN,
     PLANNED_WAIT_S,
+    SIGNAL_NC,
     SILENCE_S,
 )
 from .logwatch import ALARM_MODE
@@ -73,13 +73,10 @@ def test_E4a_sensor_bounce_gives_one_session(stand: Stand, quiet: None) -> None:
 @pytest.mark.slow
 def test_E5_normally_closed_sensor_detects_cut_wire(stand: Stand, quiet: None) -> None:
     """
-    Нормально-замкнутый датчик: обрыв провода - это тревога.
-
-    Ради этого он и нужен: у нормально-разомкнутого перекушенный провод выглядит
-    как «всё в порядке», и владелец считает себя защищённым.
+    Сигнализация: разомкнутый провод - это тревога.
     """
     stand.dut.wet(channel=0, closed=True)        # спокойное состояние - замкнуто
-    stand.setup(channel=0, ctype=LEAKAGE_NC)
+    stand.setup(channel=0, ctype=SIGNAL_NC)
     stand.reset_observers()
 
     stand.dut.wet(channel=0, closed=False)       # обрыв

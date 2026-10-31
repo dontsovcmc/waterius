@@ -123,6 +123,7 @@ static const char s_alarm_leak[] PROGMEM = "alarm_leak";
 static const char s_alarm_leak_name[] PROGMEM = "Alarm: continuous flow";
 static const char s_alarm_wet[] PROGMEM = "alarm_wet";
 static const char s_alarm_wet_name[] PROGMEM = "Alarm: water sensor";
+static const char s_alarm_signal_name[] PROGMEM = "Alarm: signal";
 static const char s_as[] PROGMEM = "as";
 static const char s_as_name[] PROGMEM = "Alarm stop hours";
 static const char s_alarm_stop[] PROGMEM = "alarm_stop";
@@ -343,6 +344,8 @@ static const char *const ENTITY_CHANNEL_ALARM_LEAK[MQTT_PARAM_COUNT] PROGMEM =
     {s_binary_sensor, s_alarm_leak_name, s_alarm_leak, "", s_problem, "", "", s_icon_water_sync, ""};
 static const char *const ENTITY_CHANNEL_ALARM_WET[MQTT_PARAM_COUNT] PROGMEM =
     {s_binary_sensor, s_alarm_wet_name, s_alarm_wet, "", s_moisture, "", "", "", ""};
+static const char *const ENTITY_CHANNEL_ALARM_SIGNAL[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_alarm_signal_name, s_alarm_wet, "", s_problem, "", "", "", ""};
 static const char *const ENTITY_CHANNEL_ALARM_STOP_CFG[MQTT_PARAM_COUNT] PROGMEM =
     {s_number, s_as_name, s_as, "", "", s_hour, s_config, s_icon_water_off, s_format50z};      // asN Часов без расхода
 /*

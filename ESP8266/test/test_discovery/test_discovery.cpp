@@ -108,14 +108,14 @@ namespace
     };
 
     const uint8_t ALL_TYPES[] = {CounterType::NAMUR, CounterType::ELECTRONIC,
-                                 CounterType::LEAKAGE, CounterType::LEAKAGE_NC,
+                                 CounterType::LEAKAGE, CounterType::SIGNAL_NC,
                                  CounterType::NONE};
 }
 
 TEST(ChannelEntities, InputTypeIsAlwaysPublished)
 {
     const uint8_t types[] = {CounterType::NAMUR, CounterType::ELECTRONIC,
-                             CounterType::LEAKAGE, CounterType::LEAKAGE_NC,
+                             CounterType::LEAKAGE, CounterType::SIGNAL_NC,
                              CounterType::NONE};
     for (uint8_t t : types)
         EXPECT_TRUE(channel_entity_wanted(t, ChannelEntity::INPUT_TYPE)) << (int)t;
@@ -136,7 +136,7 @@ TEST(ChannelEntities, MeterHasEverythingButWet)
 
 TEST(ChannelEntities, LeakSensorHasOnlyTypeAndWet)
 {
-    const uint8_t sensors[] = {CounterType::LEAKAGE, CounterType::LEAKAGE_NC};
+    const uint8_t sensors[] = {CounterType::LEAKAGE, CounterType::SIGNAL_NC};
     for (uint8_t t : sensors)
     {
         for (ChannelEntity e : ALL)

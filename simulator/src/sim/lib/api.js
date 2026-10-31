@@ -456,7 +456,8 @@
     function addAlarms(list, state, input) {
         var D = G().defines;
         var bits = C().alarmBits(state.attiny.alarm_flags, input, state.attiny.version);
-        var each = [[D.ALARM_FLOW, '27'], [D.ALARM_LEAK, '28'], [D.ALARM_WET, '29']];
+        var wet = state.attiny['counter_type' + input] === G().enums.CounterType.SIGNAL_NC ? '32' : '29';
+        var each = [[D.ALARM_FLOW, '27'], [D.ALARM_LEAK, '28'], [D.ALARM_WET, wet]];
 
         each.forEach(function (pair) {
             if (!(bits & pair[0])) return;
@@ -619,8 +620,8 @@
             var factor = input === 0 ? state.sett.factor0 : state.sett.factor1;
             var firstSetup = input === 0 ? D.AS_COLD_CHANNEL : D.AUTO_IMPULSE_FACTOR;
 
-            // Датчик протечки - не счётчик: ни веса импульса, ни показаний (#202)
-            if (type === CT.LEAKAGE || type === CT.LEAKAGE_NC) redirect = '/index.html';
+            // Датчик протечки и сигнализация - не счётчики: ни веса импульса, ни показаний (#202)
+            if (type === CT.LEAKAGE || type === CT.SIGNAL_NC) redirect = '/index.html';
             else if (name === CN.ELECTRO) redirect = '/input/' + input + '/input_electro_detect.html';
             else if (type === CT.NONE) redirect = '/index.html';
             else if (factor === firstSetup) redirect = '/input/' + input + '/detect.html';
