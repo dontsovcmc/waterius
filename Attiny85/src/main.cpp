@@ -361,7 +361,7 @@ inline void alarm_tick(CounterEvent ev)
 
 	/*
 	Сигнализация (SIGNAL_NC) - то же состояние наоборот: тревога не замыкание, а
-	размыкание. Голые электроды тут бесполезны: вода только снижает сопротивление.
+	размыкание.
 	*/
 	if (counter0.type == CounterType::LEAKAGE)
 		alarm0.set_wet(counter0.on_pulse);
