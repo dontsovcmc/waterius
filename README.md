@@ -1,4 +1,4 @@
-# Ватериус 2.0.53
+# Ватериус 2.0.54
 ## Wi-Fi приставка для импульсных счётчиков воды, газа, тепла
 
 <a href="https://github.com/dontsovcmc/waterius/actions/workflows/ci.yml" target="_blank"><img src="https://github.com/dontsovcmc/waterius/actions/workflows/ci.yml/badge.svg?branch=master"></a>
@@ -81,7 +81,7 @@
 
 [Обновить Ватериус 2 по воздуху](https://account.waterius.ru/update/) из личного кабинета: загрузите прошивку и файловую систему, обновление начнётся, когда устройство выйдет на связь
 
-Альфа-версия (сборка из ветки `dev`, для тех, кто готов проверять новое): [2.0.53-47-alpha](https://github.com/dontsovcmc/waterius/releases/tag/2.0.53-47-alpha)
+Альфа-версия (сборка из ветки `dev`, для тех, кто готов проверять новое): [2.0.54-47-alpha](https://github.com/dontsovcmc/waterius/releases/tag/2.0.54-47-alpha)
 
 Народная инструкция в инфо Телеграм чата: [waterius_forum](https://t.me/waterius_forum)
 - [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
