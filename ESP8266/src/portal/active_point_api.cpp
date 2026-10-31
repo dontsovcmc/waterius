@@ -1361,7 +1361,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
 
     if (input == INPUT0_RED)
     {
-        // Датчик протечки - не счётчик: ни веса импульса, ни показаний (#202)
+        // Датчик протечки и сигнализация - не счётчики: ни веса импульса, ни показаний (#202)
         if (runtime_data.counter_type0 == CounterType::LEAKAGE ||
             runtime_data.counter_type0 == CounterType::SIGNAL_NC)
         {
@@ -1386,7 +1386,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     }
     else if (input == INPUT1_BLUE)
     {
-        // Датчик протечки - не счётчик: ни веса импульса, ни показаний (#202)
+        // Датчик протечки и сигнализация - не счётчики: ни веса импульса, ни показаний (#202)
         if (runtime_data.counter_type1 == CounterType::LEAKAGE ||
             runtime_data.counter_type1 == CounterType::SIGNAL_NC)
         {

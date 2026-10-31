@@ -123,7 +123,7 @@ homeassistant:
     "binary_sensor.waterius_*_alarm_leak*":
       friendly_name: "Тревога: протечка"
     "binary_sensor.waterius_*_alarm_wet*":
-      friendly_name: "Тревога: датчик протечки"
+      friendly_name: "Тревога: датчик или сигнализация"
     "binary_sensor.waterius_*_alarm_stop*":
       friendly_name: "Тревога: расход остановился"
     "number.waterius_*_av*":

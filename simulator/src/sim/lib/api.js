@@ -620,7 +620,7 @@
             var factor = input === 0 ? state.sett.factor0 : state.sett.factor1;
             var firstSetup = input === 0 ? D.AS_COLD_CHANNEL : D.AUTO_IMPULSE_FACTOR;
 
-            // Датчик протечки - не счётчик: ни веса импульса, ни показаний (#202)
+            // Датчик протечки и сигнализация - не счётчики: ни веса импульса, ни показаний (#202)
             if (type === CT.LEAKAGE || type === CT.SIGNAL_NC) redirect = '/index.html';
             else if (name === CN.ELECTRO) redirect = '/input/' + input + '/input_electro_detect.html';
             else if (type === CT.NONE) redirect = '/index.html';
