@@ -196,3 +196,4 @@ TEST(NtpPool, NegativeStartsFromFirst)
 {
     EXPECT_EQ(next_ntp_server_id(-1), 0);
 }
+

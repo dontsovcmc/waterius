@@ -102,7 +102,7 @@ SendStatus post_data(const String &url, const char *key, const char *email, cons
 bool name_resolves(const char *host)
 {
     IPAddress ip;
-    return WiFi.hostByName(host, ip, DNS_TIMEOUT) == 1;
+    return WiFi.hostByName(host, ip) == 1;
 }
 
 int16_t connect_code(const char *url, int16_t code)

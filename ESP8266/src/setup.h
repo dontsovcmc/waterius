@@ -14,6 +14,18 @@
 /*
 Версии прошивки для ESP
 
+2.0.54  - 2026.10.31 - dontsovcmc
+                      1. NTP спрашивает три разных сервера пула вместо пяти
+                         попыток. Ожидание ответа растёт с номером попытки:
+                         1 с, 2 с и 3 с.
+                      2. Ожидание DNS в NTP и проверке имени - как у отправки, до
+                         10 с вместо 1 с. Запросы NTP больше не забивают таблицу
+                         DNS: из-за неё отправка могла упасть без единого запроса.
+                      3. Повторы отправки начинаются только в первые 60 с:
+                         attiny снимает питание через 120 с.
+                      4. Ватериус 2 моргает кодом ошибки зелёным светодиодом, а не
+                         светодиодом входа 0: на зелёный смотрит пользователь.
+
 2.0.53  - 2026.10.25 - dontsovcmc
                       1. Типы входа датчика протечки называются по исполнению
                          датчика: "Протечка (нормально-разомкнутый)" и "Протечка
@@ -481,7 +493,10 @@
 #define ESP_CONNECT_TIMEOUT 10000UL // Время подключения к точке доступа, ms
 
 #define SERVER_TIMEOUT 12000UL // Время ответа сервера, ms
-#define DNS_TIMEOUT 1000 // Ожидание ответа DNS, ms
+
+// Attiny снимает питание через 120 с, а попытка по HTTPS длится до 52 с.
+// Сравнивается с millis(): они идут от включения ЕСП, то есть от начала сеанса
+#define SEND_RETRY_LIMIT_MS 60000UL
 
 #define I2C_SLAVE_ADDR 10 // i2c адрес Attiny85
 
@@ -511,21 +526,13 @@
 
 #define LOG_BAUD 115200 // скорость лога на TX
 #define LOG_CAPTURE_SIZE 2048 // журнал портала в памяти, байт
-#define UART_TX_PIN 1   // на классике на нём же висит светодиод
+#define UART_TX_PIN 1   // на нём же висит светодиод кодов ошибок
 
 // waterius-2
 #define CH0_LED_PIN 12
 #define CH1_LED_PIN 13
 #define BUTTON_STATE_PIN 14
 
-#if WATERIUS_MODEL == WATERIUS_MODEL_1
-#define GREEN_LED_PIN 1
-#define ERROR_RED_LED_PIN 1
-#endif
-#if WATERIUS_MODEL == WATERIUS_MODEL_2
-#define GREEN_LED_PIN 19
-#define ERROR_RED_LED_PIN CH0_LED_PIN 
-#endif
 
 
 #endif

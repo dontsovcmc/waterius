@@ -37,13 +37,14 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from .constants import HTTP_SEND_ATTEMPTS, WIFI_CONNECT_ATTEMPTS
+from .constants import DEFAULT_NTP_SERVER, HTTP_SEND_ATTEMPTS, WIFI_CONNECT_ATTEMPTS
 from .logwatch import (
     BLYNK_CLOUD,
     BLYNK_CLOUD_ANSWER,
     BLYNK_MQTT,
     BLYNK_ROUTER,
     MANUAL_TRANSMIT_MODE,
+    RE_SEND_FAILED,
     SEND_BAD_ANSWER,
     SEND_NO_CONNECTION,
     SEND_OK,
@@ -57,6 +58,9 @@ if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .stand import Stand
 
 pytestmark = pytest.mark.stand
+
+# Раньше одного сервера lwIP не сдаётся: запросы на 0, x, x+1, x+3, отказ на x+6 с
+LWIP_DNS_GIVES_UP_MS = 6000
 
 # Поля, которые обязаны быть в каждой посылке. Проверяем не только наличие, но
 # и тип с диапазоном: поле, ставшее всегда нулевым, список имён не поймает.
@@ -399,6 +403,35 @@ def test_G7b_connect_log_server_answer(stand: Stand) -> None:
     payload = press_for_payload(stand)
     assert payload['wifi_connect_errors'] == errors + HTTP_SEND_ATTEMPTS, payload
     assert payload['connect_log'] == ','.join(['http:500'] * HTTP_SEND_ATTEMPTS), payload
+
+
+@pytest.mark.requires(esp='2.0.54')
+def test_G7c_silent_dns_does_not_block_sending(stand: Stand, net: Any, live_cloud: None) -> None:
+    """
+    DNS молчит, а NTP идёт первым: кнопка синхронизирует время всегда.
+
+    Запрос живёт в таблице DNS до 7 с после своего начала (lwIP, dns_check_entry),
+    и если NTP забьёт её три ячейки, отправка упадёт за миллисекунды, не спросив
+    имя. Поэтому смотрим время: попытка отправки обязана дождаться отказа lwIP.
+    """
+    # Часы платы заданы адресом и DNS не трогают, а нужны имена пула
+    stand.setup(ntp_server=DEFAULT_NTP_SERVER)
+    stand.reset_observers()
+    with net.dns_down():
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    text = session.text
+    assert 'NTP: Attempt #2' in text, f'второй сервер NTP не спрошен:\n{text}'
+
+    spent = RE_SEND_FAILED.search(text)
+    assert spent is not None, f'нет итога отправки в облако:\n{text}'
+    assert int(spent.group(2)) >= LWIP_DNS_GIVES_UP_MS, (
+        f'отправка упала за {spent.group(2)} мс, не дождавшись DNS:\n{text}')
+    assert 'WATR: Attempt #2' in text, f'сеанс упёрся в срок раньше повтора:\n{text}'
+
+    # Возврат доказывается удачным исходом самого устройства
+    press_for_payload(stand)
 
 
 @pytest.mark.requires(esp='2.0.47')

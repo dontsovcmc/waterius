@@ -11,15 +11,15 @@
 // https://github.com/letscontrolit/ESPEasy/blob/mega/src/src/Helpers/ESPEasy_time.cpp
 // https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_support/support_wifi.ino
 
-#define NTP_TIMEOUT 300               // обычно ответ приходит за 30-50 мсек
+#define NTP_TIMEOUT 1000              // в первой попытке, дальше растёт
 #define NTP_PORT 123
 #define USEC 1000000UL
 #define MSEC 1000UL
 #define TIME_FORMAT "%FT%T%z"
 #define UDP_PORT_ATTEMPTS 3
-#define NTP_ATTEMPTS 5
+#define NTP_ATTEMPTS 3
 
-// Причина последней неудачи: одна запись на сбой, а попыток до шести
+// Причина последней неудачи: одна запись на сбой, а попыток до четырёх
 #define NTP_ERR_NO_PORT -1
 #define NTP_ERR_NOT_SENT -2
 #define NTP_ERR_NO_REPLY -3
@@ -92,13 +92,14 @@ bool begin_udp_random_port(WiFiUDP &udp)
  * @brief Парсинг ответа NTP сервера
  *
  * @param udp
+ * @param timeout_ms сколько ждать ответ
  * @return uint64_t
  */
-uint64_t get_ntp_response(WiFiUDP &udp)
+uint64_t get_ntp_response(WiFiUDP &udp, const uint32_t timeout_ms)
 {
     uint32_t begin_wait = millis();
 
-    while (millis() - begin_wait < NTP_TIMEOUT)
+    while (millis() - begin_wait < timeout_ms)
     {
         uint32_t size = udp.parsePacket();
         uint32_t remote_port = udp.remotePort();
@@ -178,13 +179,14 @@ bool send_ntp_request(WiFiUDP &udp, IPAddress &ntp_server_ip)
  * @brief Возвращает текущее время с сервера NTP в наносекундах
  *
  * @param ntp_server_name  имя сервера NTP
+ * @param attempt номер попытки, с единицы
  * @return uint_64t  время с сервера NTP в наносекундах
  */
-uint64_t get_ntp_nanos(const String &ntp_server_name)
+uint64_t get_ntp_nanos(const String &ntp_server_name, const int attempt)
 {
     IPAddress ntp_server_ip;
 
-    if (WiFi.hostByName(ntp_server_name.c_str(), ntp_server_ip, DNS_TIMEOUT) != 1)
+    if (WiFi.hostByName(ntp_server_name.c_str(), ntp_server_ip) != 1)
     {
         LOG_ERROR(F("NTP: Unable to resolve ") << ntp_server_name);
         ntp_last_error = CONNECT_CODE_DNS;
@@ -215,7 +217,7 @@ uint64_t get_ntp_nanos(const String &ntp_server_name)
 
     yield();
 
-    uint64_t ntp_nanos = get_ntp_response(udp);
+    uint64_t ntp_nanos = get_ntp_response(udp, NTP_TIMEOUT * attempt);
 
     yield();
 
@@ -226,10 +228,11 @@ uint64_t get_ntp_nanos(const String &ntp_server_name)
  * @brief Синхронизирует время c указанным сервером
  *
  * @param ntp_server_name имя сервера
+ * @param attempt номер попытки, с единицы
  * @return true время синхронизировано
  * @return false время НЕ синхронизировано
  */
-bool sync_ntp_time(const String &ntp_server_name, const time_t known_good)
+bool sync_ntp_time(const String &ntp_server_name, const time_t known_good, const int attempt)
 {
     struct timeval tv;
     // Часы приходится выставить до запроса, и при неудаче устройство останется
@@ -241,7 +244,7 @@ bool sync_ntp_time(const String &ntp_server_name, const time_t known_good)
 
     uint32_t start_time = millis();
 
-    uint64_t ntp_nanos = get_ntp_nanos(ntp_server_name);
+    uint64_t ntp_nanos = get_ntp_nanos(ntp_server_name, attempt);
 
     tv.tv_sec = ntp_nanos / NSEC;
     tv.tv_usec = (ntp_nanos % NSEC) / 1000;
@@ -276,18 +279,23 @@ bool sync_ntp_time(const time_t known_good)
     LOG_INFO(F("NTP: Sync time..."));
     String ntp_server_name;
 
-    int attempts = NTP_ATTEMPTS;
-
-    do
+    // Каждая попытка идёт к другому серверу пула:
+    // - RFC 4330: нельзя опрашивать сервер чаще раза в 15 с. Повторять запрос тому же
+    //   серверу он советует только если запасного нет, а при запасном велит чередовать.
+    // - RFC 8633: держать несколько источников, чтобы пережить отказ одного.
+    // - Правила pool.ntp.org: не использовать приёмы вроде burst, это только лишняя
+    //   нагрузка на серверы волонтёров. Если сервер перестал отвечать, надо заново
+    //   запросить DNS.
+    for (int attempt = 1; attempt <= NTP_ATTEMPTS; attempt++)
     {
-        LOG_INFO(F("NTP: Attempt #") << NTP_ATTEMPTS - attempts + 1 << F(" from ") << NTP_ATTEMPTS);
+        LOG_INFO(F("NTP: Attempt #") << attempt << F(" from ") << NTP_ATTEMPTS);
         ntp_server_name = get_next_ntp_server_name();
-        if (sync_ntp_time(ntp_server_name, known_good))
+        if (sync_ntp_time(ntp_server_name, known_good, attempt))
         {
             LOG_INFO(F("NTP: Time successfully synced. Total time spent ") << millis() - start_time << F(" msec"));
             return true;
         };
-    } while (--attempts);
+    }
 
     LOG_ERROR(F("NTP: Time could not synced. Total time spent ") << millis() - start_time << F(" msec"));
     return false;

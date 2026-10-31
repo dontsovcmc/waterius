@@ -5,19 +5,8 @@
 
 // Сколько держать светодиод погашенным перед вспышками кода, мс
 #define LED_OFF_BEFORE_CODE_MS 300
-
-/*
-На классическом Ватериусе светодиод сидит на GPIO1 — это линия TX. Пока пин
-занят под моргание, UART не работает, поэтому после вспышек лог поднимаем
-заново: дальше по коду ещё пишутся строки про сон.
-*/
-static void restore_serial(uint8_t pin)
-{
-    if (pin == UART_TX_PIN)
-    {
-        LOG_BEGIN(LOG_BAUD);
-    }
-}
+#define LED_FLASH_MS 200
+#define LED_PAUSE_MS 400
 
 
 void setup_leds()
@@ -25,7 +14,6 @@ void setup_leds()
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
     pinMode(CH0_LED_PIN, OUTPUT);
     pinMode(CH1_LED_PIN, OUTPUT);
-    pinMode(GREEN_LED_PIN, OUTPUT);
     pinMode(BUTTON_STATE_PIN, INPUT);
 
     digitalWrite(CH0_LED_PIN, LOW);
@@ -37,7 +25,6 @@ void release_leds()
 {
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
     pinMode(BUTTON_STATE_PIN, INPUT);
-    pinMode(GREEN_LED_PIN, INPUT);
     pinMode(CH0_LED_PIN, INPUT);
     pinMode(CH1_LED_PIN, INPUT);
 #endif
@@ -69,48 +56,36 @@ uint8_t wait_button_release()
     return MANUAL_TRANSMIT_MODE;
 }
 
-void blynk_led(uint8_t pin, uint8_t times, uint16_t delay_ms /* 200 */, uint16_t pause_ms /* 400 */)
-{
-    pinMode(pin, OUTPUT);
-
-    /*
-    Пауза перед первой вспышкой. Светодиод зажигается высоким уровнем, а
-    на классике этот же вывод - линия TX, которая в покое как раз высокая:
-    светодиод там горит постоянно, пока идёт лог. Без паузы первая вспышка
-    сливалась бы с этим свечением, и код было бы не сосчитать.
-    */
-    digitalWrite(pin, LOW);
-    delay(LED_OFF_BEFORE_CODE_MS);
-
-    while (times--)
-    {
-        yield();
-        digitalWrite(pin, HIGH);
-        delay(delay_ms);
-        digitalWrite(pin, LOW);
-        if (times)
-        {
-            yield();
-            delay(pause_ms);
-        }
-    }
-    pinMode(pin, INPUT);
-
-    restore_serial(pin);
-}
-
 void blynk_error(enum ErrorBlynks code)
 {
-    // До первой вспышки: на классике светодиод сидит на линии TX, и дальше
-    // UART молчит до restore_serial
     LOG_INFO(F("Blynk: code=") << (int)code);
 
-    if (code == ErrorBlynks::ERROR_OK)
+    // Светодиод сидит на линии TX, и пока он моргает, UART не работает: хвост
+    // лога дописываем заранее, а после вспышек поднимаем лог заново
+    LOG_END();
+    pinMode(UART_TX_PIN, OUTPUT);
+
+    /*
+    Пауза перед первой вспышкой. Светодиод классики зажигается высоким
+    уровнем, а линия TX в покое как раз высокая: светодиод там горит
+    постоянно, пока идёт лог. Без паузы первая вспышка сливалась бы с этим
+    свечением, и код было бы не сосчитать.
+    */
+    digitalWrite(UART_TX_PIN, LOW);
+    delay(LED_OFF_BEFORE_CODE_MS);
+
+    uint8_t times = code;
+    while (times--)
     {
-        blynk_led(GREEN_LED_PIN, 1);
+        digitalWrite(UART_TX_PIN, HIGH);
+        delay(LED_FLASH_MS);
+        digitalWrite(UART_TX_PIN, LOW);
+        if (times)
+        {
+            delay(LED_PAUSE_MS);
+        }
     }
-    else
-    {
-        blynk_led(ERROR_RED_LED_PIN, (uint8_t)code);
-    }
+
+    pinMode(UART_TX_PIN, INPUT);
+    LOG_BEGIN(LOG_BAUD);
 }

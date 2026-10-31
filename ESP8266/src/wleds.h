@@ -15,8 +15,6 @@
 // Коды вспышек и их выбор по итогам сеанса — в чистом ядре, под тестами
 #include "core/blink.h"
 
-void blynk_led(uint8_t pin, uint8_t times, uint16_t delay_ms=200, uint16_t pause_ms=400);
-
 void blynk_error(enum ErrorBlynks code);
 
 void setup_leds();
