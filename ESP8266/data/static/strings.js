@@ -170,6 +170,13 @@ function fill_resource_options() {
     }
 }
 
+// Значение скрытого поля всё равно уходит с формой
+function toggle_counter_name() {
+    var type = Number(document.getElementById('counter_type').value);
+    var sensor = type == CounterType_LEAKAGE || type == CounterType_SIGNAL_NC;
+    document.getElementById('counter_name_row').classList.toggle('hd', sensor);
+}
+
 function format_number(value) {
     var s = Number(value).toFixed(3);
     if (s.indexOf(".") >= 0) {
