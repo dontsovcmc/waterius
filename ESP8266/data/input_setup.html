@@ -13,7 +13,7 @@
         back_wizard: '/wifi_list.html?wizard=true',
         next: '/index.html',
         next_wizard: '/index.html'
-    });">
+    }); toggle_counter_name();">
         <form onsubmit="formSubmit(event, this, '/api/save_input_type');">
             <div class="wrap">
                 <div class="container f1">
@@ -35,7 +35,7 @@
                         <p class="form-error hd"></p>
                         <div class="f-row">
                             <label for="counter_type">Тип счётчика</label>
-                            <select class="slct" id="counter_type" name="counter_type" option-value="%counter_type%">
+                            <select class="slct" id="counter_type" name="counter_type" option-value="%counter_type%" onchange="toggle_counter_name()">
                               <option selected="" value="0">Механический (Геркон, Намур)</option>
                               <option value="2">Электронный</option>
                               <option value="5" %leak_off%>Протечка (нормально-разомкнутый)</option>
@@ -45,7 +45,7 @@
                             <p class="error hd" id="counter_type-error">Некорректное значение</p>
                         </div>
 
-                        <div class="f-row">
+                        <div class="f-row" id="counter_name_row">
                             <label for="counter_name">Что считает</label>
                             <select class="slct" id="counter_name" name="counter_name" option-value="%counter_name%">
                               <option selected="" value="0">Холодную воду</option>

@@ -158,6 +158,7 @@ async function run() {
         check('на страницах мастера нет ошибок в скриптах', crashes);
         await pagesOutsideWizard(page, origin);
         await wrongPassword(page, origin);
+        await sensorHidesResource(page, origin);
     } finally {
         await browser.close();
         server.close();
@@ -264,6 +265,30 @@ async function alarms(page, origin) {
     }
 
     check('тревоги поднимаются галочками и доезжают до портала', problems);
+}
+
+async function sensorHidesResource(page, origin) {
+    const problems = [];
+    const row = page.locator('#counter_name_row');
+
+    await page.goto(origin + '/input/0/setup.html', { waitUntil: 'networkidle' });
+    if (!(await row.isVisible())) problems.push('у счётчика поле скрыто');
+
+    for (const type of ['5', '6']) {
+        await page.selectOption('#counter_type', type);
+        if (await row.isVisible()) problems.push('у типа ' + type + ' поле видно');
+    }
+
+    await page.selectOption('#counter_type', '0');
+    if (!(await row.isVisible())) problems.push('поле не вернулось у счётчика');
+
+    await page.selectOption('#counter_type', '6');
+    await page.click('button[type=submit]');
+    await page.waitForURL(/index\.html/, { timeout: 10000 });
+    await page.goto(origin + '/input/0/setup.html', { waitUntil: 'networkidle' });
+    if (await row.isVisible()) problems.push('у сохранённой сигнализации поле видно');
+
+    check('«Что считает» скрыто у датчика протечки и сигнализации', problems);
 }
 
 async function placeholders(page, origin) {
