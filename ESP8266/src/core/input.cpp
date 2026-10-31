@@ -178,7 +178,7 @@ bool is_valid_counter_type(const uint8_t counter_type)
         case CounterType::NAMUR:
         case CounterType::ELECTRONIC:
         case CounterType::LEAKAGE:
-        case CounterType::LEAKAGE_NC:
+        case CounterType::SIGNAL_NC:
         case CounterType::NONE:
             return true;
     }
@@ -191,7 +191,7 @@ bool counter_type_supported(const uint8_t counter_type, const uint8_t attiny_ver
     {
         return false;
     }
-    if (counter_type == CounterType::LEAKAGE || counter_type == CounterType::LEAKAGE_NC)
+    if (counter_type == CounterType::LEAKAGE || counter_type == CounterType::SIGNAL_NC)
     {
         return attiny_version >= ATTINY_VER_ALARM;
     }

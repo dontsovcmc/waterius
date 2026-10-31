@@ -360,9 +360,14 @@ bool publish_discovery_channel_entities(PubSubClient &mqtt_client,
         total_cfg = ENTITY_WATER_TOTAL_CFG;
     }
 
+    // Сигнализация и датчик протечки делят бит ALARM_WET, поле посылки и топик
+    const char *const *alarm_wet = counter_type == CounterType::SIGNAL_NC
+                                       ? ENTITY_CHANNEL_ALARM_SIGNAL
+                                       : ENTITY_CHANNEL_ALARM_WET;
+
     const ChannelEntityRef entities[] = {
         {ENTITY_CHANNEL_CTYPE, ChannelEntity::INPUT_TYPE},
-        {ENTITY_CHANNEL_ALARM_WET, ChannelEntity::WET},
+        {alarm_wet, ChannelEntity::WET},
         {total, ChannelEntity::READINGS},
         {total_cfg, ChannelEntity::READINGS},
         {ENTITY_CHANNEL_SERIAL, ChannelEntity::SERIAL_NUMBER},

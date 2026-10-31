@@ -56,7 +56,7 @@ const CounterName_HEAT_KWH = 7;
 const CounterType_NAMUR = 0;
 const CounterType_ELECTRONIC = 2;
 const CounterType_LEAKAGE = 5;
-const CounterType_LEAKAGE_NC = 6;
+const CounterType_SIGNAL_NC = 6;
 const CounterType_NONE = 0xFF;
 
 // Спецзначения веса импульса, ESP8266/src/core/types.h
@@ -145,7 +145,7 @@ const COUNTER_TYPES = {};
 COUNTER_TYPES[CounterType_NAMUR] = "Механический (Геркон, Намур)";
 COUNTER_TYPES[CounterType_ELECTRONIC] = "Электронный";
 COUNTER_TYPES[CounterType_LEAKAGE] = "Протечка (нормально-разомкнутый)";
-COUNTER_TYPES[CounterType_LEAKAGE_NC] = "Протечка (нормально-замкнутый)";
+COUNTER_TYPES[CounterType_SIGNAL_NC] = "Сигнализация (нормально-замкнутый)";
 COUNTER_TYPES[CounterType_NONE] = "Выключен";
 
 const S_COUNTER_DISABLED = "Отключён";
@@ -370,6 +370,7 @@ const S_ALARM_LEAK = 28;
 const S_ALARM_WET = 29;
 const S_ALARM_STOP = 30;
 const S_ALARM_CLEAR = 31;
+const S_ALARM_SIGNAL = 32;
 
 // Маска всех шести тревог обоих каналов, core/types.h:ALARM_RESET_ALL
 const ALARM_RESET_ALL = 63;
@@ -418,6 +419,7 @@ function tr_text(id) {
         case S_ALARM_WET: return "Обнаружена протечка %s. Уберите влагу с датчика и снимите тревогу.";
         case S_ALARM_STOP: return "Расхода нет %s дольше заданного времени. Проверьте, не перекрыта ли вода и на месте ли провод счётчика. Снимется сама при первом расходе.";
         case S_ALARM_CLEAR: return "Снять тревогу";
+        case S_ALARM_SIGNAL: return "Сработала сигнализация %s. Проверьте провод и снимите тревогу.";
         default:
             return "Незвестный id строки: " + String(id);
     }

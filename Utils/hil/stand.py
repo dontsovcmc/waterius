@@ -29,7 +29,7 @@ from .constants import (
     BASE_FACTOR,
     BUTTON_SESSION_WAIT_S,
     CLOUD_URL,
-    LEAKAGE_NC,
+    SIGNAL_NC,
     NAMUR,
     SESSION_TAIL_S,
     WAKE_FIRST_LINE_S,
@@ -1109,10 +1109,10 @@ class Stand:
 
         for channel, found in raised.items():
             if 'alarm_wet' in found:
-                # У нормально-замкнутого датчика спокойное состояние - замкнутый
-                # контакт, у обычного - разомкнутый.
+                # У сигнализации спокойное состояние - замкнутый контакт, у датчика
+                # протечки - разомкнутый.
                 ctype = payload.get(f'ctype{channel}')
-                self.dut.wet(channel=channel, closed=(ctype == LEAKAGE_NC))
+                self.dut.wet(channel=channel, closed=(ctype == SIGNAL_NC))
 
         left: list[str] = []
         for _ in range(CLEAR_TRIES):

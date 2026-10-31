@@ -51,7 +51,7 @@ bool channel_entity_wanted(uint8_t counter_type, ChannelEntity entity)
     case ChannelEntity::RETIRED:
         return false;
     case ChannelEntity::WET:
-        return counter_type == CounterType::LEAKAGE || counter_type == CounterType::LEAKAGE_NC;
+        return counter_type == CounterType::LEAKAGE || counter_type == CounterType::SIGNAL_NC;
     default:
         return counts_impulses(counter_type);
     }

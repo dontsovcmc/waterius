@@ -24,7 +24,7 @@ class CounterType(Enum):
     NAMUR = 0
     ELECTRONIC = 2
     LEAKAGE = 5
-    LEAKAGE_NC = 6
+    SIGNAL_NC = 6
     NONE = 0xFF
 
 

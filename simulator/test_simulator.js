@@ -322,7 +322,7 @@ function testLeakTypesNeedAttiny() {
             .filter((o) => /\sdisabled/.test(o))
             .map((o) => Number(o.match(/value="(\d+)"/)[1]))
             .sort((a, b) => a - b);
-        const expectOff = c.offered ? [] : [CT.LEAKAGE, CT.LEAKAGE_NC];
+        const expectOff = c.offered ? [] : [CT.LEAKAGE, CT.SIGNAL_NC];
         if (JSON.stringify(off) !== JSON.stringify(expectOff)) {
             problems.push(c.name + ': убираются пункты ' + JSON.stringify(off) +
                           ', ожидались ' + JSON.stringify(expectOff));
@@ -334,10 +334,10 @@ function testLeakTypesNeedAttiny() {
 
         state.attiny.counter_type0 = CT.NAMUR;
         const saved = SimApi.handle('/api/save_input_type', 'POST',
-                                    params({ input: '0', counter_type: String(CT.LEAKAGE_NC) }), state, 0);
+                                    params({ input: '0', counter_type: String(CT.SIGNAL_NC) }), state, 0);
         const rejected = saved.json.errors.counter_type === '15';
         if (rejected === c.offered) problems.push(c.name + ': сохранение ' + (rejected ? 'отвергнуто' : 'принято'));
-        const expectType = c.offered ? CT.LEAKAGE_NC : CT.NAMUR;
+        const expectType = c.offered ? CT.SIGNAL_NC : CT.NAMUR;
         if (state.attiny.counter_type0 !== expectType) {
             problems.push(c.name + ': на входе тип ' + state.attiny.counter_type0 + ', ожидался ' + expectType);
         }
@@ -378,6 +378,15 @@ function testAlarmReset() {
     const want = [D.ALARM_FLOW, D.ALARM_WET << D.ALARM_RESET_SHIFT1].sort((a, b) => a - b);
     if (String(masks) !== String(want)) {
         problems.push('маски снятия ' + masks + ', ожидались ' + want);
+    }
+
+    // Тот же бит на входе сигнализации: своя строка, а не «протечка»
+    const signal = SimState.newSession(SimState.defaultState());
+    signal.attiny.counter_type1 = globalThis.SIM_GENERATED.enums.CounterType.SIGNAL_NC;
+    raised(signal);
+    const codes = statusOf(signal).filter((m) => m.reset !== undefined).map((m) => m.error).sort();
+    if (String(codes) !== '27,32') {
+        problems.push('коды плашек сигнализации ' + codes + ', ожидались 27,32');
     }
 
     // Снимаем одну - вторая остаётся

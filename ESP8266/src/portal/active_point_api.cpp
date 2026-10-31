@@ -308,8 +308,9 @@ static void add_alarms(JsonArray &array, const uint8_t input)
         add_alarm_raised(array, F("28"), input, ALARM_LEAK);
     }
     if (bits & ALARM_WET)
-    {   // S_ALARM_WET "Сработал датчик протечки %s..."
-        add_alarm_raised(array, F("29"), input, ALARM_WET);
+    {   // S_ALARM_SIGNAL "Сработала сигнализация %s...", S_ALARM_WET "Обнаружена протечка %s..."
+        const uint8_t type = input == INPUT0_RED ? runtime_data.counter_type0 : runtime_data.counter_type1;
+        add_alarm_raised(array, type == CounterType::SIGNAL_NC ? F("32") : F("29"), input, ALARM_WET);
     }
 }
 
@@ -1362,7 +1363,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     {
         // Датчик протечки - не счётчик: ни веса импульса, ни показаний (#202)
         if (runtime_data.counter_type0 == CounterType::LEAKAGE ||
-            runtime_data.counter_type0 == CounterType::LEAKAGE_NC)
+            runtime_data.counter_type0 == CounterType::SIGNAL_NC)
         {
             ret[F("redirect")] = F("/index.html");
         }
@@ -1387,7 +1388,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     {
         // Датчик протечки - не счётчик: ни веса импульса, ни показаний (#202)
         if (runtime_data.counter_type1 == CounterType::LEAKAGE ||
-            runtime_data.counter_type1 == CounterType::LEAKAGE_NC)
+            runtime_data.counter_type1 == CounterType::SIGNAL_NC)
         {
             ret[F("redirect")] = F("/index.html");
         }

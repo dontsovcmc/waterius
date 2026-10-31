@@ -463,7 +463,7 @@ TEST(CounterTypes, KnownTypesAreAccepted)
     EXPECT_TRUE(is_valid_counter_type(CounterType::NAMUR));
     EXPECT_TRUE(is_valid_counter_type(CounterType::ELECTRONIC));
     EXPECT_TRUE(is_valid_counter_type(CounterType::LEAKAGE));
-    EXPECT_TRUE(is_valid_counter_type(CounterType::LEAKAGE_NC));
+    EXPECT_TRUE(is_valid_counter_type(CounterType::SIGNAL_NC));
     EXPECT_TRUE(is_valid_counter_type(CounterType::NONE));
 }
 
@@ -471,9 +471,9 @@ TEST(CounterTypes, LeakSensorNeedsAlarmAttiny)
 {
     // Типы 5 и 6 старая attiny не знает: вход молча перестаёт и считать, и тревожить
     EXPECT_FALSE(counter_type_supported(CounterType::LEAKAGE, ATTINY_VER_ALARM - 1));
-    EXPECT_FALSE(counter_type_supported(CounterType::LEAKAGE_NC, ATTINY_VER_ALARM - 1));
+    EXPECT_FALSE(counter_type_supported(CounterType::SIGNAL_NC, ATTINY_VER_ALARM - 1));
     EXPECT_TRUE(counter_type_supported(CounterType::LEAKAGE, ATTINY_VER_ALARM));
-    EXPECT_TRUE(counter_type_supported(CounterType::LEAKAGE_NC, ATTINY_VER_ALARM));
+    EXPECT_TRUE(counter_type_supported(CounterType::SIGNAL_NC, ATTINY_VER_ALARM));
 }
 
 TEST(CounterTypes, CounterTypesWorkOnAnyAttiny)
@@ -520,6 +520,6 @@ TEST(CounterTypes, ValuesMatchAttinyFirmware)
     EXPECT_EQ(CounterType::NAMUR, 0);
     EXPECT_EQ(CounterType::ELECTRONIC, 2);
     EXPECT_EQ(CounterType::LEAKAGE, 5);
-    EXPECT_EQ(CounterType::LEAKAGE_NC, 6);
+    EXPECT_EQ(CounterType::SIGNAL_NC, 6);
     EXPECT_EQ(CounterType::NONE, 255);
 }

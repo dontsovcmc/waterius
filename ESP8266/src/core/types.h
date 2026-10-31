@@ -97,7 +97,7 @@ HEADER_ALARM_* в Attiny85/src/Setup.h.
 
 FLOW: расход выше порога - прорыв трубы.
 LEAK: расход не прекращается дольше заданного времени - капающий кран.
-WET:  датчик протечки на входе замкнут.
+WET:  сработал датчик протечки или сигнализация на входе.
 
 Приезжают с версии ATTINY_VER_ALARM. Разбирает core/alarm.h.
 */
@@ -187,7 +187,7 @@ enum CounterType
     NAMUR = 0,             // механический: геркон, сухой контакт, namur
     ELECTRONIC = 2,        // электронный выход, импульс — замыкание на минус
     LEAKAGE = 5,           // датчик протечки: замыкание — тревога, а не импульс (issue #202)
-    LEAKAGE_NC = 6,        // нормально-замкнутый датчик: тревога — размыкание (issue #202)
+    SIGNAL_NC = 6,         // сигнализация: тревога — разомкнутый контакт (issue #202)
     NONE = 0xFF   // 255
 };
 
@@ -203,7 +203,7 @@ inline bool counts_impulses(const uint8_t counter_type)
 {
     return counter_type != CounterType::NONE &&
            counter_type != CounterType::LEAKAGE &&
-           counter_type != CounterType::LEAKAGE_NC;
+           counter_type != CounterType::SIGNAL_NC;
 }
 
 /*
