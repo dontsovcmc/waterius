@@ -17,6 +17,7 @@
 #define TIME_FORMAT "%FT%T%z"
 #define UDP_PORT_ATTEMPTS 3
 #define NTP_ATTEMPTS 5
+#define NTP_TIME_LIMIT_MS 15000UL // Показания важнее времени: сеанс нужен отправке
 
 // Причина последней неудачи: одна запись на сбой, а попыток до шести
 #define NTP_ERR_NO_PORT -1
@@ -185,7 +186,7 @@ uint64_t get_ntp_nanos(const String &ntp_server_name, const int attempt)
 {
     IPAddress ntp_server_ip;
 
-    if (WiFi.hostByName(ntp_server_name.c_str(), ntp_server_ip, DNS_TIMEOUT) != 1)
+    if (WiFi.hostByName(ntp_server_name.c_str(), ntp_server_ip) != 1)
     {
         LOG_ERROR(F("NTP: Unable to resolve ") << ntp_server_name);
         ntp_last_error = CONNECT_CODE_DNS;
@@ -269,12 +270,12 @@ bool sync_ntp_time(const String &ntp_server_name, const time_t known_good, const
 /**
  * @brief Синхронизация времени по протоколу NTP
  *
+ * @param start_time начало синхронизации: пользовательский сервер тоже тратит лимит
  * @return true время синхронизировано
  * @return false время НЕ синхронизировано
  */
-bool sync_ntp_time(const time_t known_good)
+bool sync_ntp_time(const time_t known_good, const uint32_t start_time)
 {
-    uint32_t start_time = millis();
     LOG_INFO(F("NTP: Sync time..."));
     String ntp_server_name;
 
@@ -290,7 +291,7 @@ bool sync_ntp_time(const time_t known_good)
             LOG_INFO(F("NTP: Time successfully synced. Total time spent ") << millis() - start_time << F(" msec"));
             return true;
         };
-    } while (--attempts);
+    } while (--attempts && millis() - start_time < NTP_TIME_LIMIT_MS);
 
     LOG_ERROR(F("NTP: Time could not synced. Total time spent ") << millis() - start_time << F(" msec"));
     return false;
@@ -305,7 +306,7 @@ bool sync_ntp_time(const time_t known_good)
  */
 bool sync_ntp_time(const Settings &sett)
 {
-
+    const uint32_t start_time = millis();
     String ntp_server = sett.ntp_server;
     const time_t known_good = clock_before_sync(sett.last_send);
 
@@ -319,7 +320,7 @@ bool sync_ntp_time(const Settings &sett)
     }
     // если не удалось с пользовательского сервера получить время
     // то берем время по серврам из пула
-    return sync_ntp_time(known_good);
+    return sync_ntp_time(known_good, start_time);
 }
 
 /**

@@ -50,7 +50,7 @@ SendStatus send_waterius(Settings &sett, JsonDocument &jsonData, JsonDocument &j
             connect_log_push(sett, CONNECT_WATERIUS, attempts == 1 ? connect_code(url.c_str(), code) : code);
         }
 
-    } while (result != SEND_OK && --attempts);
+    } while (result != SEND_OK && --attempts && may_retry_send());
 
     if (result == SEND_OK)
     {
