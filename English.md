@@ -1,4 +1,4 @@
-# Waterius 2.0.53
+# Waterius 2.0.54
 ## Wi-Fi add-on for pulse-output water, gas and heat meters
 
 <a href="https://github.com/dontsovcmc/waterius/actions/workflows/ci.yml" target="_blank"><img src="https://github.com/dontsovcmc/waterius/actions/workflows/ci.yml/badge.svg?branch=master"></a>
@@ -85,7 +85,7 @@ The electronic input has been tested at 20 pulses per second: enough for a 3200 
 
 [Update Waterius 2 over the air](https://account.waterius.ru/update/) from your personal account: upload the firmware and the file system, and the update starts when the device next connects
 
-Alpha version (built from the `dev` branch, for those ready to try new things): [2.0.53-47-alpha](https://github.com/dontsovcmc/waterius/releases/tag/2.0.53-47-alpha)
+Alpha version (built from the `dev` branch, for those ready to try new things): [2.0.54-47-alpha](https://github.com/dontsovcmc/waterius/releases/tag/2.0.54-47-alpha)
 
 Community guide in the Telegram chat info: [waterius_forum](https://t.me/waterius_forum)
 - [Parts list and making the board](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
