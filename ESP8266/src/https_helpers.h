@@ -18,7 +18,4 @@ extern SendStatus post_data(const String &url, const char *key, const char *emai
 extern int16_t connect_code(const char *url, int16_t code);
 extern bool name_resolves(const char *host);
 
-// millis() считается с включения ЕСП, то есть от начала сеанса
-extern bool may_retry_send();
-
 #endif

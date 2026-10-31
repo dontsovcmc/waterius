@@ -11,15 +11,15 @@
 // https://github.com/letscontrolit/ESPEasy/blob/mega/src/src/Helpers/ESPEasy_time.cpp
 // https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_support/support_wifi.ino
 
+#define NTP_TIMEOUT 1000              // в первой попытке, дальше растёт
 #define NTP_PORT 123
 #define USEC 1000000UL
 #define MSEC 1000UL
 #define TIME_FORMAT "%FT%T%z"
 #define UDP_PORT_ATTEMPTS 3
-#define NTP_ATTEMPTS 5
-#define NTP_TIME_LIMIT_MS 15000UL // Показания важнее времени: сеанс нужен отправке
+#define NTP_ATTEMPTS 3
 
-// Причина последней неудачи: одна запись на сбой, а попыток до шести
+// Причина последней неудачи: одна запись на сбой, а попыток до четырёх
 #define NTP_ERR_NO_PORT -1
 #define NTP_ERR_NOT_SENT -2
 #define NTP_ERR_NO_REPLY -3
@@ -217,7 +217,7 @@ uint64_t get_ntp_nanos(const String &ntp_server_name, const int attempt)
 
     yield();
 
-    uint64_t ntp_nanos = get_ntp_response(udp, ntp_reply_timeout_ms(attempt));
+    uint64_t ntp_nanos = get_ntp_response(udp, NTP_TIMEOUT * attempt);
 
     yield();
 
@@ -270,20 +270,17 @@ bool sync_ntp_time(const String &ntp_server_name, const time_t known_good, const
 /**
  * @brief Синхронизация времени по протоколу NTP
  *
- * @param start_time начало синхронизации: пользовательский сервер тоже тратит лимит
  * @return true время синхронизировано
  * @return false время НЕ синхронизировано
  */
-bool sync_ntp_time(const time_t known_good, const uint32_t start_time)
+bool sync_ntp_time(const time_t known_good)
 {
+    uint32_t start_time = millis();
     LOG_INFO(F("NTP: Sync time..."));
     String ntp_server_name;
 
-    int attempts = NTP_ATTEMPTS;
-
-    do
+    for (int attempt = 1; attempt <= NTP_ATTEMPTS; attempt++)
     {
-        const int attempt = NTP_ATTEMPTS - attempts + 1;
         LOG_INFO(F("NTP: Attempt #") << attempt << F(" from ") << NTP_ATTEMPTS);
         ntp_server_name = get_next_ntp_server_name();
         if (sync_ntp_time(ntp_server_name, known_good, attempt))
@@ -291,7 +288,7 @@ bool sync_ntp_time(const time_t known_good, const uint32_t start_time)
             LOG_INFO(F("NTP: Time successfully synced. Total time spent ") << millis() - start_time << F(" msec"));
             return true;
         };
-    } while (--attempts && millis() - start_time < NTP_TIME_LIMIT_MS);
+    }
 
     LOG_ERROR(F("NTP: Time could not synced. Total time spent ") << millis() - start_time << F(" msec"));
     return false;
@@ -306,7 +303,7 @@ bool sync_ntp_time(const time_t known_good, const uint32_t start_time)
  */
 bool sync_ntp_time(const Settings &sett)
 {
-    const uint32_t start_time = millis();
+
     String ntp_server = sett.ntp_server;
     const time_t known_good = clock_before_sync(sett.last_send);
 
@@ -320,7 +317,7 @@ bool sync_ntp_time(const Settings &sett)
     }
     // если не удалось с пользовательского сервера получить время
     // то берем время по серврам из пула
-    return sync_ntp_time(known_good, start_time);
+    return sync_ntp_time(known_good);
 }
 
 /**

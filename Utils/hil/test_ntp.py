@@ -159,7 +159,7 @@ def test_N3_pool_server_is_chosen_at_random(stand: Stand, clock: Any) -> None:
     Резолв при этом может и не удаться: имя прошивка печатает в обоих случаях,
     и проверка от наличия интернета не зависит.
     """
-    # Тесту нужен настоящий пул. Обратно к часам платы устройство вернут общие требования следующего теста (Stand.requirements)
+    # Тесту нужен настоящий пул. Обратно к часам платы вернёт Stand.requirements следующего теста
     stand.setup(ntp_server=DEFAULT_NTP_SERVER)
     chosen = []
     for attempt in range(6):

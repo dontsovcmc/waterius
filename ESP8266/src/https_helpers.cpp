@@ -105,11 +105,6 @@ bool name_resolves(const char *host)
     return WiFi.hostByName(host, ip) == 1;
 }
 
-bool may_retry_send()
-{
-    return millis() < SEND_RETRY_LIMIT_MS;
-}
-
 int16_t connect_code(const char *url, int16_t code)
 {
     char host[HOST_LEN];

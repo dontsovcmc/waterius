@@ -484,9 +484,7 @@ void loop()
     status.config_loaded = config_loaded;
     status.low_voltage = sett.battery_low;
 
-    // Коды ошибок моргаются на обеих моделях (#355). Светодиод сидит на линии
-    // TX: на время вспышек лог замолкает, blynk_led поднимает его обратно.
-    // Успех не моргается: одна вспышка уже занята кодом "села батарейка".
+    // Успех не моргается: одна вспышка уже занята кодом "села батарейка"
     const ErrorBlynks code = blink_code(status);
     if (code != ERROR_OK)
     {

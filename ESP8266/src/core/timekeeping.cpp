@@ -54,11 +54,6 @@ int next_ntp_server_id(const int current)
     return (current + 1) % NTP_POOL_SIZE;
 }
 
-uint32_t ntp_reply_timeout_ms(const int attempt)
-{
-    return NTP_TIMEOUT * attempt;
-}
-
 uint16_t bump_wakeups(const uint16_t wakeups)
 {
     return wakeups == 0xFFFF ? wakeups : (uint16_t)(wakeups + 1);

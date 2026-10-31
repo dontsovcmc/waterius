@@ -33,7 +33,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -45,6 +44,7 @@ from .logwatch import (
     BLYNK_MQTT,
     BLYNK_ROUTER,
     MANUAL_TRANSMIT_MODE,
+    RE_SEND_FAILED,
     SEND_BAD_ANSWER,
     SEND_NO_CONNECTION,
     SEND_OK,
@@ -421,13 +421,13 @@ def test_G7c_silent_dns_does_not_block_sending(stand: Stand, net: Any, live_clou
         stand.dut.press_button()
         session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 
-    text = '\n'.join(session.lines)
+    text = session.text
     assert 'NTP: Attempt #2' in text, f'второй сервер NTP не спрошен:\n{text}'
 
-    spent = re.search(r'WATR: Failed send data\. Time (\d+) ms', text)
+    spent = RE_SEND_FAILED.search(text)
     assert spent is not None, f'нет итога отправки в облако:\n{text}'
-    assert int(spent.group(1)) >= LWIP_DNS_GIVES_UP_MS, (
-        f'отправка упала за {spent.group(1)} мс, не дождавшись DNS:\n{text}')
+    assert int(spent.group(2)) >= LWIP_DNS_GIVES_UP_MS, (
+        f'отправка упала за {spent.group(2)} мс, не дождавшись DNS:\n{text}')
     assert 'WATR: Attempt #2' in text, f'сеанс упёрся в срок раньше повтора:\n{text}'
 
     # Возврат доказывается удачным исходом самого устройства

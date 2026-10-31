@@ -30,7 +30,7 @@ SendStatus send_http(Settings &sett, JsonDocument &jsonData, JsonDocument &json_
         return SEND_SKIPPED;
     };
 
-    if (!may_retry_send())
+    if (millis() >= SEND_RETRY_LIMIT_MS)
     {
         LOG_ERROR(F("HTTP: No time left in session"));
         return SEND_NO_CONNECTION;
@@ -58,7 +58,7 @@ SendStatus send_http(Settings &sett, JsonDocument &jsonData, JsonDocument &json_
             connect_log_push(sett, CONNECT_HTTP, attempts == 1 ? connect_code(url.c_str(), code) : code);
         }
 
-    } while (result != SEND_OK && --attempts && may_retry_send());
+    } while (result != SEND_OK && --attempts && millis() < SEND_RETRY_LIMIT_MS);
 
     if (result == SEND_OK)
     {
