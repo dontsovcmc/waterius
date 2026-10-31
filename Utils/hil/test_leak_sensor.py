@@ -23,10 +23,10 @@ import pytest
 from .constants import (
     ALARM_WAIT_S,
     LEAKAGE,
-    SIGNAL_NC,
     NAMUR,
     PLANNED_PERIOD_MIN,
     PLANNED_WAIT_S,
+    SIGNAL_NC,
     SILENCE_S,
 )
 from .logwatch import ALARM_MODE

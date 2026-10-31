@@ -25,13 +25,13 @@ from .air import check as air_check
 from .clock import BoardClock
 from .config import StandConfig
 from .constants import (
-    CONNECT_LOG_ESP,
     BASE_FACTOR,
     BUTTON_SESSION_WAIT_S,
     CLOUD_URL,
-    SIGNAL_NC,
+    CONNECT_LOG_ESP,
     NAMUR,
     SESSION_TAIL_S,
+    SIGNAL_NC,
     WAKE_FIRST_LINE_S,
     WAKE_SETTLE_S,
     WATER_COLD,
