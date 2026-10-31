@@ -51,8 +51,13 @@ The electronic input has been tested at 20 pulses per second: enough for a 3200 
 - no need to know the pulse weight of a water meter (Waterius detects 1 or 10 l/pulse by itself)
 - no need to know the water meter output type: "dry contact" or "NAMUR"
 - configurable sending period
-- a floor water sensor can be wired to an input instead of a meter: the alarm is raised by water
-  between the probes, not only by a contact closure ([Alarms](Alarms.md), attiny firmware 44 or newer)
+- [send only on consumption](Setup.md#выходить-на-связь-только-при-расходе) (in Russian): no Wi-Fi
+  without consumption, a check-in every 3 days
+- [away mode](Alarms.md#режим-я-уехал) (in Russian): any consumption raises an alarm while you are
+  away (attiny firmware 44 or newer)
+- a [floor water sensor](Alarms.md#датчик-протечки-на-полу) (in Russian) can be wired to an input
+  instead of a meter: the alarm is raised by water between the probes, not only by a contact
+  closure (attiny firmware 44 or newer)
 - manual pulse weight setting
 - Home Assistant discovery (there is also a HAOS integration)
 - your own web server, MQTT broker and NTP server can be set
