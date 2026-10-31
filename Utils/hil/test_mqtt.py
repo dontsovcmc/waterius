@@ -499,6 +499,7 @@ def test_I4c_commands_need_discovery(stand: Stand) -> None:
     assert 'MQTT: Subscribed to' not in session.text
 
 
+@pytest.mark.requires(attiny=44)
 @pytest.mark.needs(ctype0=LEAKAGE, mqtt_auto_discovery=1)
 def test_I2_leak_sensor_publishes_only_its_state(stand: Stand) -> None:
     """
@@ -774,7 +775,7 @@ def test_I17_discovery_is_retained_without_retain_flag(stand: Stand) -> None:
 
 
 
-@pytest.mark.requires(esp='2.0.51')
+@pytest.mark.requires(attiny=44, esp='2.0.51')
 @DISCOVERY
 def test_I18_changed_input_type_removes_stale_entities(stand: Stand) -> None:
     """
