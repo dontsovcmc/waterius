@@ -118,18 +118,18 @@ The repository also has a single-layer board for toner transfer.
 The dev branch is for pull requests.
 The master branch is only for publishing firmware.
 
-**Setup mode simulator** — the setup pages open in a browser just as on the device, while pulses,
-the button and Wi-Fi are simulated from a control panel. Handy for looking at the setup mode without
+**Portal simulator** — the setup pages open in a browser just as on the device, while pulses,
+the button and Wi-Fi are simulated from a control panel. Handy for looking at the portal without
 building the firmware: [simulator/README.md](simulator/README.md).
 
-**How the firmware works** — [docs/README.md](docs/README.md): pulse counting, scheduling, sending, alarms, setup mode, OTA.
+**How the firmware works** — [docs/README.md](docs/README.md): pulse counting, scheduling, sending, alarms, portal, OTA.
 
 **Tests:**
 - ESP business logic on a computer, no hardware needed: `ESP8266/scripts/run_tests.sh`, attiny — `Attiny85/scripts/run_tests.sh`;
 - hardware-in-the-loop bench: a real Waterius, a controlled access point and its own broker — [Utils/hil/README.md](Utils/hil/README.md).
 
 Hard tasks still open:
-- ~~Write the log to a file (LittleFS) so it can be downloaded (/logs.html)~~ — done: the setup mode journal is kept in memory and downloaded from the "Логи" page ([description](docs/setup-portal.md#журнал-и-список-сетей))
+- ~~Write the log to a file (LittleFS) so it can be downloaded (/logs.html)~~ — done: the portal journal is kept in memory and downloaded from the "Логи" page ([description](docs/setup-portal.md#журнал-и-список-сетей))
 - ~~OTA updates: propose firmware code and a sample web server~~ — done in [2.0.43-beta](https://github.com/dontsovcmc/waterius/releases/tag/v.2.0.43-beta): Waterius 2 updates over the air on a command from the server or MQTT, from the personal account on the [update page](https://account.waterius.ru/update/) ([description](ESP8266/doc/ota.md))
 
 ### Modifications
