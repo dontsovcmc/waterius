@@ -7,10 +7,18 @@
 #define LED_OFF_BEFORE_CODE_MS 300
 
 /*
-На классическом Ватериусе светодиод сидит на GPIO1 — это линия TX. Пока пин
-занят под моргание, UART не работает, поэтому после вспышек лог поднимаем
-заново: дальше по коду ещё пишутся строки про сон.
+Светодиод кодов сидит на GPIO1 — это линия TX. Пока пин занят под моргание, UART
+не работает: хвост лога надо дописать до первой вспышки, а после вспышек лог
+поднять заново, дальше по коду ещё пишутся строки про сон.
 */
+static void release_serial(uint8_t pin)
+{
+    if (pin == UART_TX_PIN)
+    {
+        LOG_END();
+    }
+}
+
 static void restore_serial(uint8_t pin)
 {
     if (pin == UART_TX_PIN)
@@ -25,7 +33,6 @@ void setup_leds()
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
     pinMode(CH0_LED_PIN, OUTPUT);
     pinMode(CH1_LED_PIN, OUTPUT);
-    pinMode(GREEN_LED_PIN, OUTPUT);
     pinMode(BUTTON_STATE_PIN, INPUT);
 
     digitalWrite(CH0_LED_PIN, LOW);
@@ -37,7 +44,6 @@ void release_leds()
 {
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
     pinMode(BUTTON_STATE_PIN, INPUT);
-    pinMode(GREEN_LED_PIN, INPUT);
     pinMode(CH0_LED_PIN, INPUT);
     pinMode(CH1_LED_PIN, INPUT);
 #endif
@@ -71,11 +77,12 @@ uint8_t wait_button_release()
 
 void blynk_led(uint8_t pin, uint8_t times, uint16_t delay_ms /* 200 */, uint16_t pause_ms /* 400 */)
 {
+    release_serial(pin);
     pinMode(pin, OUTPUT);
 
     /*
-    Пауза перед первой вспышкой. Светодиод зажигается высоким уровнем, а
-    на классике этот же вывод - линия TX, которая в покое как раз высокая:
+    Пауза перед первой вспышкой. Светодиод классики зажигается высоким
+    уровнем, а этот же вывод - линия TX, которая в покое как раз высокая:
     светодиод там горит постоянно, пока идёт лог. Без паузы первая вспышка
     сливалась бы с этим свечением, и код было бы не сосчитать.
     */
@@ -101,8 +108,8 @@ void blynk_led(uint8_t pin, uint8_t times, uint16_t delay_ms /* 200 */, uint16_t
 
 void blynk_error(enum ErrorBlynks code)
 {
-    // До первой вспышки: на классике светодиод сидит на линии TX, и дальше
-    // UART молчит до restore_serial
+    // До первой вспышки: светодиод сидит на линии TX, и дальше UART молчит
+    // до restore_serial
     LOG_INFO(F("Blynk: code=") << (int)code);
 
     if (code == ErrorBlynks::ERROR_OK)
