@@ -75,6 +75,26 @@ def test_занятый_порт_не_принимаем_за_свой_брок�
         second.start()
 
 
+def test_наблюдатель_возвращается_только_с_подпиской(broker: MqttBroker,
+                                                     monkeypatch: pytest.MonkeyPatch) -> None:
+    """Опубликованное до SUBACK теряется, а удерживаемое приходит с флагом retain."""
+    from ..mqttwatch import MqttWatch
+
+    subscribe = MqttWatch._on_connect
+
+    def slow(self: MqttWatch, client: Any, *rest: Any) -> None:
+        time.sleep(0.3)
+        subscribe(self, client, *rest)
+
+    monkeypatch.setattr(MqttWatch, '_on_connect', slow)
+
+    client = MqttWatch(broker.host, broker.port, TOPIC)
+    try:
+        assert client._connects == 1, 'конструктор вернулся раньше подписки'
+    finally:
+        client.close()
+
+
 def test_команда_уходит_в_топик_автодискавери(watch) -> None:
     """
     Топик команды собирается так же, как `cmd_t` в прошивке
