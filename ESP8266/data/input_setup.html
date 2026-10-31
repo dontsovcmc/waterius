@@ -34,6 +34,18 @@
                         <p class="text">Какой счётчик вы хотите подключить</p>
                         <p class="form-error hd"></p>
                         <div class="f-row">
+                            <label for="counter_type">Тип счётчика</label>
+                            <select class="slct" id="counter_type" name="counter_type" option-value="%counter_type%">
+                              <option selected="" value="0">Механический (Геркон, Намур)</option>
+                              <option value="2">Электронный</option>
+                              <option value="5" %leak_off%>Протечка (нормально-разомкнутый)</option>
+                              <option value="6" %leak_off%>Сигнализация (нормально-замкнутый)</option>
+                              <option value="255">Выключен</option>
+                            </select>
+                            <p class="error hd" id="counter_type-error">Некорректное значение</p>
+                        </div>
+
+                        <div class="f-row">
                             <label for="counter_name">Что считает</label>
                             <select class="slct" id="counter_name" name="counter_name" option-value="%counter_name%">
                               <option selected="" value="0">Холодную воду</option>
@@ -46,18 +58,6 @@
                               <option value="7">Тепло (кВт·ч)</option>
                             </select>
                             <p class="error hd" id="counter_name-error">Некорректное значение</p>
-                        </div>
-
-                        <div class="f-row">
-                            <label for="counter_type">Тип счётчика</label>
-                            <select class="slct" id="counter_type" name="counter_type" option-value="%counter_type%">
-                              <option selected="" value="0">Механический (Геркон, Намур)</option>
-                              <option value="2">Электронный</option>
-                              <option value="5" %leak_off%>Протечка (нормально-разомкнутый)</option>
-                              <option value="6" %leak_off%>Сигнализация (нормально-замкнутый)</option>
-                              <option value="255">Выключен</option>
-                            </select>
-                            <p class="error hd" id="counter_type-error">Некорректное значение</p>
                         </div>
                         <p class="form-error hd"></p>
                     </main>
