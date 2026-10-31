@@ -56,10 +56,16 @@ class MqttWatch:
                                    client_id=f'hil-{int(time.time())}')
         self._client.on_message = self._on_message
         self._client.on_connect = self._on_connect
+        self._client.on_subscribe = self._on_subscribe
         self._client.on_disconnect = self._on_disconnect
         self._connects = 0
+        self._subscribed = threading.Event()
         self._client.connect(host, port, keepalive=30)
         self._client.loop_start()
+        # Опубликованное до SUBACK теряется: подписка ещё не встала
+        if not self._subscribed.wait(5):
+            self.close()
+            raise RuntimeError(f'MQTT: брокер {host}:{port} не подтвердил подписку за 5 с')
 
     def _on_connect(self, client: Any, _userdata: Any, _flags: Any,
                     _reason: Any, _properties: Any = None) -> None:
@@ -73,10 +79,14 @@ class MqttWatch:
         «Published succesfully», а стенд писал «в брокере пусто» и винил прошивку.
         """
         client.subscribe('#')
+
+    def _on_subscribe(self, _client: Any, _userdata: Any, _mid: Any,
+                      _reason_codes: Any, _properties: Any = None) -> None:
         self._connects += 1
         if self._connects > 1:
             logger.warning('MQTT: наблюдатель переподключился и подписался заново - '
                            'сообщения за время обрыва потеряны')
+        self._subscribed.set()
 
     def _on_disconnect(self, _client: Any, _userdata: Any, _flags: Any = None,
                        reason: Any = None, _properties: Any = None) -> None:
