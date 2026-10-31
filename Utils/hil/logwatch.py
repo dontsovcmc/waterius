@@ -46,7 +46,7 @@ SEND_OK = 1
 SEND_BAD_ANSWER = 2
 SEND_NO_CONNECTION = 3
 
-# Коды ошибок = число вспышек красного светодиода (core/blink.h, ErrorBlynks).
+# Коды ошибок = число вспышек светодиода на TX (core/blink.h, ErrorBlynks).
 # Стенд их не считает, а только читает выбранный прошивкой код из лога.
 BLYNK_LOW_VOLTAGE = 1
 BLYNK_ROUTER = 2

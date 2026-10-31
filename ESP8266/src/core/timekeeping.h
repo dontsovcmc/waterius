@@ -28,6 +28,9 @@
 /* Серверы пула 0.ru.pool.ntp.org ... 3.ru.pool.ntp.org */
 #define NTP_POOL_SIZE 4
 
+/* Ожидание ответа в первой попытке, мс: обычно ответ приходит за 30-50 мсек */
+#define NTP_TIMEOUT 1000
+
 /*
 Как часто синхронизировать время. Опрос при каждом пробуждении на
 15-минутном периоде дал бы 35 тысяч запросов в год.
@@ -136,5 +139,11 @@ time_t estimate_time(const time_t last_sync, const uint16_t wakeups_since_sync,
 и этот выбор остаётся снаружи: random() не чистая функция.
 */
 int next_ntp_server_id(const int current);
+
+/*
+Сколько ждать ответа NTP в попытке с номером attempt (считая с единицы).
+На медленном канале короткое ожидание не дождётся ответа ни от одного сервера.
+*/
+uint32_t ntp_reply_timeout_ms(const int attempt);
 
 #endif
