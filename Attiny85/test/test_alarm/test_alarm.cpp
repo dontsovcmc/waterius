@@ -509,9 +509,25 @@ TEST(Stop, RestartedCountClearsAndWaitsFullThreshold)
     EXPECT_TRUE(a.stopped);
 }
 
-TEST(Stop, ThresholdBelowIdleRaisesAtOnce)
+TEST(Stop, EnabledThresholdWaitsFullTime)
+{
+    // Простой на выключенной тревоге не считается: счётчик могли подключить
+    // только сегодня
+    AlarmDetector a;
+    minutes(a, 100);
+
+    a.stop_min = 60;
+    minutes(a, 59);
+    EXPECT_FALSE(a.stopped);
+
+    a.on_minute();
+    EXPECT_TRUE(a.stopped);
+}
+
+TEST(Stop, LoweredThresholdRaisesAtOnce)
 {
     AlarmDetector a;
+    a.stop_min = 1000;
     minutes(a, 100);
 
     a.stop_min = 60;
@@ -565,7 +581,7 @@ TEST(Report, TriesAreBounded)
     r.start();
 
     int tries = 0;
-    while (r.failed(true))
+    while (r.failed())
         tries++;
 
     EXPECT_EQ(tries, ALARM_MAX_TRIES - 1);
@@ -579,27 +595,15 @@ TEST(Report, ConfirmStopsRetries)
     r.confirm();
 
     EXPECT_FALSE(r.pending);
-    EXPECT_FALSE(r.failed(true));
-}
-
-TEST(Report, PlannedSessionSpendsNoTry)
-{
-    // В режиме "только при расходе" плановый сеанс проходит без радио: при
-    // периоде короче паузы такие сеансы съели бы все попытки доставки
-    AlarmReport r;
-    r.start();
-
-    EXPECT_TRUE(r.failed(false));
-    EXPECT_EQ(r.tries, 0);
-    EXPECT_TRUE(r.pending);
+    EXPECT_FALSE(r.failed());
 }
 
 TEST(Report, NewAlarmResetsTries)
 {
     AlarmReport r;
     r.start();
-    r.failed(true);
-    r.failed(true);
+    r.failed();
+    r.failed();
 
     r.start();
 

@@ -755,7 +755,7 @@ void loop()
 	unsigned long wake_up_limit = SETUP_TIME_MSEC;  // 10 мин при настройке
 
 	// Разбудила тревога, а не расписание и не кнопка
-	const bool alarm_wake = alarm_pending();
+	bool alarm_wake = false;
 
 	if (button.press == ButtonPressType::LONG)
 	{ 
@@ -787,8 +787,9 @@ void loop()
 
 			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
 		}
-		else if (alarm_wake)
+		else if (alarm_pending())
 		{
+			alarm_wake = true;
 			wake_up_limit = WAIT_ESP_MSEC;
 			LOG(F("Alarm wake up"));
 			slaveI2C.begin(ALARM_MODE);
@@ -840,16 +841,13 @@ void loop()
 	приняты получателем. Не пришла - пробуем ещё, но не больше ALARM_MAX_TRIES
 	раз: без сети сеансы только жгут батарею, а состояние всё равно уедет со
 	следующим плановым выходом на связь.
-	*/
-	alarm_report.failed(alarm_wake);
 
-	/*
-	Пауза после сеанса по тревоге - интервал до следующей попытки доставки.
-	Плановый сеанс её заново не заводит: при периоде короче паузы она не
-	кончилась бы никогда.
+	Попытку и паузу тратит только сеанс по тревоге: плановый в режиме "только
+	при расходе" идёт без радио и при коротком периоде съел бы все попытки.
 	*/
 	if (alarm_wake)
 	{
+		alarm_report.failed();
 		alarm_hold_min = ALARM_HOLD_MIN;
 	}
 

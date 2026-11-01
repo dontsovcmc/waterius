@@ -325,6 +325,18 @@ function testStopAlarm() {
     state.attiny.stop1 = true;
     if (JSON.stringify(stopped()) !== '[1]') problems.push('нет плашки по биту входа 1: ' + stopped());
 
+    const saveAlarms = (name, value) => SimApi.handle('/api/save_alarms', 'POST', [{ name, value }], state, 0);
+
+    saveAlarms('alarm_stop1', '0');
+    if (stopped().length) problems.push('плашка пережила нулевой порог');
+
+    state.attiny.stop1 = true;
+    saveAlarms('alarm_stop1', '48');
+    if (JSON.stringify(stopped()) !== '[1]') problems.push('плашка погасла при живом пороге: ' + stopped());
+
+    saveAlarms('vacation', '1');
+    if (JSON.stringify(stopped()) !== '[1]') problems.push('режим "Я уехал" погасил плашку: ' + stopped());
+
     check('остановка расхода зависит от attiny', problems);
 }
 

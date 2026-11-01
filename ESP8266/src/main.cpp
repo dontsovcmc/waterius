@@ -96,9 +96,8 @@ void send_alarm_config(const Settings &sett)
 }
 
 /*
-Пороги остановки расхода в attiny (#202). Уходят в каждом сеансе, как и
-остальные пороги, в том числе нулевые: иначе выключенная в портале тревога
-жила бы в ОЗУ attiny до её перезагрузки.
+Пороги остановки расхода в attiny (#202). Нулевой тоже уходит: иначе выключенная
+тревога жила бы в ОЗУ attiny до её перезагрузки.
 */
 void send_stop_config(const Settings &sett)
 {
@@ -117,7 +116,13 @@ void send_stop_config(const Settings &sett)
     if (!masterI2C.setStopConfig(stop0, stop1))
     {
         LOG_ERROR(F("Stop config wasn't set"));
+        return;
     }
+
+    // Снимок от attiny обновится только в следующем сеансе, а плашка в
+    // портале обязана погаснуть сразу после сохранения
+    runtime_data.stop0 = runtime_data.stop0 && stop0;
+    runtime_data.stop1 = runtime_data.stop1 && stop1;
 }
 
 /*
