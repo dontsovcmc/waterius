@@ -118,6 +118,18 @@ WET:  сработал датчик протечки или сигнализац
 #define ATTINY_VER_CLEAR_COUNTERS 47
 
 /*
+Байт service: причина перезагрузки attiny в битах 0-3, остановка расхода по
+биту на вход и флаги импульса в битах 6-7. Зеркало Header в Attiny85/src/Setup.h.
+
+С версии ATTINY_VER_STOP остановку считает attiny и принимает пороги командой
+'H'. Ниже биты всегда нулевые: в MCUSR их нет.
+*/
+#define ATTINY_SERVICE_MASK 0x0F
+#define ATTINY_STOP_SHIFT0 4
+#define ATTINY_STOP_SHIFT1 5
+#define ATTINY_VER_STOP 48
+
+/*
 Маска снятия тревог в кадре 'A': биты 0-2 - канал 0, биты 3-5 - канал 1.
 
 Сдвиг тут свой, не ATTINY_ALARM_SHIFT1: в Header.flags младший бит занят
@@ -257,9 +269,11 @@ struct AttinyData
 {
     // Header
     uint8_t version;    // Версия ПО Attiny
-    uint8_t service;    // Причина загрузки Attiny (биты 0-5), биты 6-7 = on_pulse флаги
+    uint8_t service;    // Причина загрузки Attiny, см. ATTINY_SERVICE_MASK
     bool on_pulse0;
     bool on_pulse1;
+    bool stop0 = false; // Остановка расхода на входе 0
+    bool stop1 = false; //                     на входе 1
     uint8_t reserved5 = 0;
     uint16_t voltage;   // Напряжение питания в мВ
     uint8_t attiny_flags = 0;  // Флаги состояния attiny, см. ATTINY_FLAG_*
@@ -574,19 +588,12 @@ struct Settings
     Порог остановки потребления, часов. Ноль - выключено (#202).
 
     Ловит то, чего не видит ни один порог расхода: замёрзшую или перекрытую
-    трубу, отвалившийся геркон, снятый счётчик. Считается на ЕСП, а не в
-    attiny, поэтому работает и со старой прошивкой attiny - см. core/idle.h.
+    трубу, отвалившийся геркон, снятый счётчик. Считает attiny, см. core/alarm.h.
     */
     uint16_t alarm_stop0 = 0;
     uint16_t alarm_stop1 = 0;
 
-    /*
-    Минут без прироста импульсов, по каналам. Состояние, а не настройка, но
-    живёт здесь: store_config и так зовётся каждый сеанс ради
-    impulses_previous, лишней записи во флеш не добавляется.
-    */
-    uint16_t idle_min0 = 0;
-    uint16_t idle_min1 = 0;
+    uint8_t reserved10[4] = {0};
 
     /*
     Режим "я уехал" (issue #88).

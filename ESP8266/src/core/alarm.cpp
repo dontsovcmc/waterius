@@ -109,6 +109,28 @@ AlarmThresholds alarm_thresholds(const bool vacation, const uint8_t counter_type
     return t;
 }
 
+uint16_t stop_threshold(const uint8_t counter_type, const uint16_t hours,
+                        const uint16_t period_min_full, const uint16_t wakeup_per_min)
+{
+    if (hours == 0 || !counts_impulses(counter_type))
+    {
+        return 0; // тревога выключена
+    }
+
+    uint32_t minutes = (uint32_t)hours * 60;
+
+    if (period_min_full > 0 && wakeup_per_min > 0)
+    {
+        minutes = minutes * period_min_full / wakeup_per_min;
+    }
+
+    if (minutes > UINT16_MAX)
+    {
+        return UINT16_MAX;
+    }
+    return minutes ? (uint16_t)minutes : 1;
+}
+
 AlarmInputState alarm_input_state(const uint8_t counter_type, const uint16_t factor,
                                   const uint8_t attiny_version)
 {
@@ -137,6 +159,18 @@ uint8_t alarm_bits(const uint8_t attiny_flags, const uint8_t input,
 
     const uint8_t shift = (input == INPUT0_RED) ? ATTINY_ALARM_SHIFT0 : ATTINY_ALARM_SHIFT1;
     return (attiny_flags >> shift) & ATTINY_ALARM_MASK;
+}
+
+bool consumption_stopped(const uint8_t service, const uint8_t input,
+                         const uint8_t attiny_version)
+{
+    if (attiny_version < ATTINY_VER_STOP)
+    {
+        return false;
+    }
+
+    const uint8_t shift = (input == INPUT0_RED) ? ATTINY_STOP_SHIFT0 : ATTINY_STOP_SHIFT1;
+    return (service >> shift) & 1;
 }
 
 uint8_t alarm_flags_after_reset(const uint8_t attiny_flags, const uint8_t reset_mask)

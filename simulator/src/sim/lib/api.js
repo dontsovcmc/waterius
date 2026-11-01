@@ -466,12 +466,9 @@
         });
     }
 
-    // Остановку расхода считает сама ЕСП и гасит первым приростом: снимать нечего
+    // Остановку расхода считает attiny и гасит первым импульсом: снимать нечего
     function addStopped(list, state, input) {
-        var idle = input === 0 ? state.sett.idle_min0 : state.sett.idle_min1;
-        var threshold = input === 0 ? state.sett.alarm_stop0 : state.sett.alarm_stop1;
-
-        if (C().consumptionStopped(idle, threshold)) {
+        if (input === 0 ? state.attiny.stop0 : state.attiny.stop1) {
             list.push({ error: '30', input: input });
         }
     }

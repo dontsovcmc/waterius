@@ -6,8 +6,9 @@
 что тест, не проверивший эту строку, зеленеет на выключенных тревогах. За
 проверкой следит stand.setup_alarms().
 
-Главное свойство модели: **ни одна тревога не гаснет сама** - ни по времени, ни
-по прекращению расхода (`Attiny85/src/alarm.h`). Отсюда три следствия для
+Главное свойство модели: **ни одна тревога, кроме остановки расхода, не гаснет
+сама** - ни по времени, ни по прекращению расхода (`Attiny85/src/alarm.h`). Отсюда
+три следствия для
 тестов:
 
 - снимать тревогу за собой обязан сам тест или фикстура `quiet`, иначе она
@@ -28,6 +29,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -35,6 +37,8 @@ import pytest
 from . import portal as portal_mod
 from .constants import (
     ALARM_WAIT_S,
+    ATTINY_HOUR_MAX_S,
+    ATTINY_HOUR_MIN_S,
     BASE_FACTOR,
     LEAKAGE,
     MSG_ALARM_WET,
@@ -306,35 +310,40 @@ def test_E17_reset_mask_clears_only_its_bits(stand: Stand, quiet: None) -> None:
 
 
 @pytest.mark.slow
-def test_E7_consumption_stopped(stand: Stand) -> None:
+@pytest.mark.requires(attiny=48)
+def test_E7_consumption_stopped(stand: Stand, quiet: None) -> None:
     """
-    Остановка расхода: её считает ЕСП, а не attiny, поэтому разрешение равно
-    периоду пробуждения и считать надо пробуждения, а не минуты.
+    Остановка расхода будит устройство сама, как протечка: суточный период и
+    режим «только при расходе» её не задерживают.
 
-    Эта тревога живёт по своим правилам и снимается сама первым же импульсом:
-    её состояние ЕСП пересчитывает в каждом сеансе, а не хранит в attiny.
+    Тревога живёт по своим правилам и снимается сама: первый импульс гасит её в
+    пределах минуты, и о снятии attiny докладывает отдельным сеансом.
     """
-    stand.setup(channel=1, alarm_stop=1, ctype=NAMUR, factor=BASE_FACTOR,
-                period_min=5, send_on_consumption=0)
+    armed = stand.setup(channel=1, alarm_stop=1, ctype=NAMUR, factor=BASE_FACTOR,
+                        period_min=1440, send_on_consumption=1)
+    assert armed.stop_config is not None, f'нет строки Stop config\n{armed.text}'
+    assert armed.stop_config['min1'] > 0, f'порог не уехал в attiny: {armed.stop_config}'
     stand.reset_observers()
 
-    idle_before = None
-    for _ in range(14):
-        session = stand.wait_session(timeout=PLANNED_WAIT_S, mode=TRANSMIT_MODE)
-        idle = session.idle
-        assert idle is not None, f'нет строки Idle min\n{session.text}'
-        idle_before = idle
-        if idle['stop1']:
-            break
-        assert idle['min1'] < 60, 'тревога должна была сработать на 60 минутах простоя'
-    else:
-        pytest.fail(f'остановка расхода не сработала: {idle_before}')
-
-    assert session.payload['alarm_stop1'] is True
-    assert session.payload['alarm_stop0'] is False
-
+    # Простой считается от импульса: отсчёт начинаем с него, а не с настройки
     stand.dut.pulse(channel=1, count=1)
-    stand.dut.press_button()
-    after = stand.wait_session(timeout=120)
-    after.assert_alarm(stop1=0)
-    assert after.idle['min1'] == 0
+    started = time.monotonic()
+
+    session = stand.wait_session(timeout=ATTINY_HOUR_MAX_S, mode=ALARM_MODE)
+    elapsed = time.monotonic() - started
+    assert elapsed >= ATTINY_HOUR_MIN_S, f'тревога раньше порога: {elapsed:.0f} с'
+    session.assert_alarm(stop1=1, stop0=0)
+    session.assert_confirm(confirmed=1)
+
+    stand.reset_observers()
+    stand.dut.pulse(channel=1, count=1)
+    cleared = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
+    cleared.assert_alarm(stop1=0)
+
+
+@pytest.mark.requires(attiny=48)
+def test_E7b_stop_threshold_is_off_on_sensor_input(stand: Stand, quiet: None) -> None:
+    """Порог, оставшийся от счётчика, на датчике поднял бы ложную тревогу."""
+    armed = stand.setup(channel=1, alarm_stop=1, ctype=LEAKAGE)
+    assert armed.stop_config is not None, f'нет строки Stop config\n{armed.text}'
+    assert armed.stop_config['min1'] == 0, f'порог уехал на вход датчика: {armed.stop_config}'

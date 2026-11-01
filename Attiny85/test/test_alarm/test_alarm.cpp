@@ -363,6 +363,151 @@ TEST(Wet, ResetClears)
     EXPECT_FALSE(a.state & ALARM_WET);
 }
 
+/* ---------------- остановка расхода ---------------- */
+
+static void minutes(AlarmDetector &a, const uint32_t count)
+{
+    for (uint32_t m = 0; m < count; m++)
+        a.on_minute();
+}
+
+TEST(Stop, ZeroThresholdNeverRaises)
+{
+    AlarmDetector a;
+
+    minutes(a, 70000UL);
+
+    EXPECT_FALSE(a.stopped);
+    EXPECT_FALSE(a.changed);
+}
+
+TEST(Stop, RaisesAtThreshold)
+{
+    AlarmDetector a;
+    a.stop_min = 60;
+
+    minutes(a, 59);
+    EXPECT_FALSE(a.stopped);
+
+    a.on_minute();
+    EXPECT_TRUE(a.stopped);
+    EXPECT_TRUE(a.changed);
+}
+
+TEST(Stop, RaiseIsNewsOnce)
+{
+    AlarmDetector a;
+    a.stop_min = 60;
+    minutes(a, 60);
+    a.changed = 0;
+
+    minutes(a, 100);
+
+    EXPECT_TRUE(a.stopped);
+    EXPECT_FALSE(a.changed);
+}
+
+TEST(Stop, PulseRestartsTheCount)
+{
+    AlarmDetector a;
+    a.stop_min = 60;
+
+    minutes(a, 59);
+    a.on_pulse();
+    minutes(a, 59);
+
+    EXPECT_FALSE(a.stopped);
+}
+
+TEST(Stop, FirstPulseClearsWithinAMinute)
+{
+    AlarmDetector a;
+    a.stop_min = 60;
+    minutes(a, 60);
+    a.changed = 0;
+
+    a.on_pulse();
+    a.on_minute();
+
+    EXPECT_FALSE(a.stopped);
+    EXPECT_TRUE(a.changed);
+}
+
+TEST(Stop, MaxThresholdSurvivesSaturation)
+{
+    // Свернувшийся счётчик снял бы тревогу на 65536-й минуте
+    AlarmDetector a;
+    a.stop_min = UINT16_MAX;
+
+    minutes(a, UINT16_MAX - 1UL);
+    EXPECT_FALSE(a.stopped);
+
+    minutes(a, 1);
+    EXPECT_TRUE(a.stopped);
+
+    minutes(a, 10);
+    EXPECT_TRUE(a.stopped);
+}
+
+TEST(Stop, ZeroingThresholdClears)
+{
+    AlarmDetector a;
+    a.stop_min = 60;
+    minutes(a, 60);
+
+    a.stop_min = 0;
+    a.on_minute();
+
+    EXPECT_FALSE(a.stopped);
+}
+
+TEST(Stop, RaisingThresholdClears)
+{
+    AlarmDetector a;
+    a.stop_min = 60;
+    minutes(a, 60);
+
+    a.stop_min = 120;
+    a.on_minute();
+
+    EXPECT_FALSE(a.stopped);
+}
+
+TEST(Stop, ThresholdBelowIdleRaisesAtOnce)
+{
+    AlarmDetector a;
+    minutes(a, 100);
+
+    a.stop_min = 60;
+    a.on_minute();
+
+    EXPECT_TRUE(a.stopped);
+    EXPECT_TRUE(a.changed);
+}
+
+TEST(Stop, ButtonDoesNotClear)
+{
+    // Кран никто не открыл: тревога остаётся верной, сколько ни снимай
+    AlarmDetector a;
+    a.stop_min = 60;
+    minutes(a, 60);
+
+    a.reset(ALARM_MASK);
+    a.on_minute();
+
+    EXPECT_TRUE(a.stopped);
+}
+
+TEST(Stop, DoesNotTouchOtherAlarms)
+{
+    AlarmDetector a;
+    a.stop_min = 60;
+
+    minutes(a, 60);
+
+    EXPECT_EQ(a.state, 0);
+}
+
 /* ---------------- новость о тревоге ---------------- */
 
 TEST(Changed, RaiseIsNewsOnce)

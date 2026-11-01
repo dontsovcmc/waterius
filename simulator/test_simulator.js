@@ -293,6 +293,42 @@ function testAlarmStates() {
 }
 
 /*
+Остановку расхода считает attiny, поэтому на старой поле порога ничего бы не
+делало, а плашку зажигает её бит, а не счёт на стороне ЕСП.
+*/
+function testStopAlarm() {
+    const problems = [];
+    const D = globalThis.SIM_GENERATED.defines;
+
+    [
+        { name: 'attiny без остановки', version: D.ATTINY_VER_STOP - 1, hidden: true },
+        { name: 'attiny с остановкой', version: D.ATTINY_VER_STOP, hidden: false },
+    ].forEach((c) => {
+        const state = SimState.newSession(SimState.defaultState());
+        state.attiny.version = c.version;
+
+        const html = SimProcessor.render(read('alarms.html'), state);
+        const blocks = html.match(/<div class="stop f-row[^"]*"/g) || [];
+        if (blocks.length !== 2) problems.push(c.name + ': блоков порога ' + blocks.length);
+        blocks.forEach((block) => {
+            if (/\bhd\b/.test(block) !== c.hidden) problems.push(c.name + ': ' + block);
+        });
+    });
+
+    const state = SimState.newSession(SimState.defaultState());
+    const stopped = () => SimApi.handle('/api/main_status', 'GET', [], state, 0).json
+        .filter((item) => item.error === '30')
+        .map((item) => item.input);
+
+    if (stopped().length) problems.push('плашка без бита attiny');
+
+    state.attiny.stop1 = true;
+    if (JSON.stringify(stopped()) !== '[1]') problems.push('нет плашки по биту входа 1: ' + stopped());
+
+    check('остановка расхода зависит от attiny', problems);
+}
+
+/*
 Датчик протечки на attiny старее ATTINY_VER_ALARM: она не знает типов 5 и 6 и
 молча выключает вход. Поэтому страница их не предлагает, сохранение отвергает,
 а уже записанный тип показывается как NAMUR - иначе в списке не нашлось бы
@@ -490,6 +526,7 @@ testGenerated();
 testParseBool();
 testAlarmStates();
 testAlarmReset();
+testStopAlarm();
 testLeakTypesNeedAttiny();
 testPultAlarmBits();
 testWizard();

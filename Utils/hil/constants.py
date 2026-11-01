@@ -81,7 +81,7 @@ INPUT_SILENT = '24'
 # core/types.h: SERIAL_LEN. Длина - в байтах, кириллица занимает по два
 SERIAL_LEN = 16
 
-# core/idle.h: потолок остановки расхода в часах
+# core/alarm.h: потолок остановки расхода в часах
 ALARM_STOP_MAX_HOURS = 1092
 
 # portal/resources.h: PARAM_ASTERICS - так интерфейс показывает сохранённый пароль
@@ -104,6 +104,11 @@ CONFIRM_MQTT = 4
 # сеанса по тревоге - ALARM_HOLD_MIN, пять минут (Attiny85/src/alarm.h), и
 # раньше неё сеанс невозможен физически. Берём её плюс сеанс и запас
 ALARM_WAIT_S = 420.0
+
+# Сколько настоящих секунд длится час attiny: поправка часов в прошивке лежит в
+# диапазоне [0.7, 1.7) (core/wakeup.cpp, k_estimated)
+ATTINY_HOUR_MIN_S = 0.7 * 3600
+ATTINY_HOUR_MAX_S = 1.7 * 3600
 SILENCE_S = 420.0
 
 # Выдержка перед нажатием кнопки, когда прошлый сеанс только что кончился:

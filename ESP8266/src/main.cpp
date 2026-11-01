@@ -96,6 +96,31 @@ void send_alarm_config(const Settings &sett)
 }
 
 /*
+Пороги остановки расхода в attiny (#202). Уходят в каждом сеансе, как и
+остальные пороги, в том числе нулевые: иначе выключенная в портале тревога
+жила бы в ОЗУ attiny до её перезагрузки.
+*/
+void send_stop_config(const Settings &sett)
+{
+    if (data.version < ATTINY_VER_STOP)
+    {
+        return; // старая attiny остановку не считает
+    }
+
+    const uint16_t stop0 = stop_threshold(runtime_data.counter_type0, sett.alarm_stop0,
+                                          sett.period_min_full, sett.wakeup_per_min);
+    const uint16_t stop1 = stop_threshold(runtime_data.counter_type1, sett.alarm_stop1,
+                                          sett.period_min_full, sett.wakeup_per_min);
+
+    LOG_INFO(F("Stop config: min0=") << stop0 << F(" min1=") << stop1);
+
+    if (!masterI2C.setStopConfig(stop0, stop1))
+    {
+        LOG_ERROR(F("Stop config wasn't set"));
+    }
+}
+
+/*
 Выполняется однократно при включении
 */
 void setup()
@@ -202,28 +227,6 @@ void loop()
 
         // Вычисляем текущие показания
         calculate_values(sett, data, cdata);
-
-        /*
-        Остановка потребления (#202).
-
-        Считается здесь по той же причине, что и расход ниже: impulses_previous
-        перезапишет update_config в конце сеанса, и сравнивать будет уже не с
-        чем. Поканально - "расход хоть где-то" для остановки не годится.
-
-        Минуты набегают только в плановом пробуждении: сеанс по кнопке или по
-        тревоге времени не добавляет, иначе один период засчитался бы дважды.
-        Расход же обнуляет счётчик в любом режиме - он и есть событие.
-        */
-        const uint16_t slept_min = (mode == TRANSMIT_MODE) ? sett.wakeup_per_min : 0;
-
-        sett.idle_min0 = update_idle_minutes(data.impulses0 != sett.impulses0_previous,
-                                             sett.idle_min0, slept_min);
-        sett.idle_min1 = update_idle_minutes(data.impulses1 != sett.impulses1_previous,
-                                             sett.idle_min1, slept_min);
-
-        LOG_INFO(F("Idle min: ") << sett.idle_min0 << F("/") << sett.idle_min1
-                 << F(", stop: ") << consumption_stopped(sett.idle_min0, sett.alarm_stop0)
-                 << F("/") << consumption_stopped(sett.idle_min1, sett.alarm_stop1));
 
         /*
         Режим "выходить на связь только при расходе воды" (#361).
@@ -444,6 +447,7 @@ void loop()
             молчаливом пробуждении период не уходил бы вниз вовсе.
             */
             send_alarm_config(sett);
+            send_stop_config(sett);
 
             /*
             Доводка до точки расписания (period_min_tuned) - разовая: она

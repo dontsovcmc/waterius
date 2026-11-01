@@ -12,7 +12,6 @@
 #include "core/input.h"
 #include "core/diagnostics.h"
 #include "core/alarm.h"
-#include "core/idle.h"
 #include "core/url.h"
 #include "core/wifi.h"
 #include "wifi_helpers.h"
@@ -317,13 +316,12 @@ static void add_alarms(JsonArray &array, const uint8_t input)
 /**
  * @brief Плашка про остановку расхода.
  *
- * Без ссылки: этy тревогу считает сама ЕСП и гасит первым же приростом
- * импульсов, снимать руками нечего.
+ * Без ссылки: эту тревогу гасит сама attiny первым же импульсом, снимать
+ * руками нечего.
  */
-static void add_consumption_stopped(JsonArray &array, const uint8_t input,
-                                    const uint16_t idle_min, const uint16_t threshold)
+static void add_consumption_stopped(JsonArray &array, const uint8_t input, const bool stopped)
 {
-    if (!consumption_stopped(idle_min, threshold))
+    if (!stopped)
     {
         return;
     }
@@ -356,8 +354,8 @@ void get_api_main_status(AsyncWebServerRequest *request)
     */
     add_alarms(array, INPUT0_RED);
     add_alarms(array, INPUT1_BLUE);
-    add_consumption_stopped(array, INPUT0_RED, sett.idle_min0, sett.alarm_stop0);
-    add_consumption_stopped(array, INPUT1_BLUE, sett.idle_min1, sett.alarm_stop1);
+    add_consumption_stopped(array, INPUT0_RED, runtime_data.stop0);
+    add_consumption_stopped(array, INPUT1_BLUE, runtime_data.stop1);
 
     if (esp_restarted_flag)
     {
@@ -584,8 +582,9 @@ void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj, 
 /*
 Порог остановки потребления: часы, не больше ALARM_STOP_MAX_HOURS.
 
-Выше счётчик простоя просто не досчитает - он ведётся в минутах и упирается в
-65535. Молча не работающая тревога хуже отсутствующей, поэтому не принимаем.
+Выше счётчик простоя в attiny просто не досчитает - он ведётся в минутах и
+упирается в 65535. Молча не работающая тревога хуже отсутствующей, поэтому не
+принимаем.
 */
 static void save_stop_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
 {
