@@ -461,16 +461,52 @@ TEST(Stop, ZeroingThresholdClears)
     EXPECT_FALSE(a.stopped);
 }
 
-TEST(Stop, RaisingThresholdClears)
+TEST(Stop, RaisingThresholdKeepsTheAlarm)
+{
+    // Порог сдвигает поправка часов. Снять тревогу без импульса значило бы
+    // сообщить, что вода пошла, а потом поднять её ещё раз
+    AlarmDetector a;
+    a.stop_min = 60;
+    minutes(a, 60);
+    a.changed = 0;
+
+    a.stop_min = 120;
+    minutes(a, 10);
+
+    EXPECT_TRUE(a.stopped);
+    EXPECT_FALSE(a.changed);
+}
+
+TEST(Stop, ClearedByPulseAfterThresholdWasRaised)
 {
     AlarmDetector a;
     a.stop_min = 60;
     minutes(a, 60);
-
     a.stop_min = 120;
+    minutes(a, 10);
+
+    a.on_pulse();
     a.on_minute();
 
     EXPECT_FALSE(a.stopped);
+}
+
+TEST(Stop, RestartedCountClearsAndWaitsFullThreshold)
+{
+    // Смена типа входа: прежний простой о новом входе ничего не говорит
+    AlarmDetector a;
+    a.stop_min = 60;
+    minutes(a, 100);
+
+    a.idle_min = 0;
+    a.on_minute();
+    EXPECT_FALSE(a.stopped);
+
+    minutes(a, 58);
+    EXPECT_FALSE(a.stopped);
+
+    a.on_minute();
+    EXPECT_TRUE(a.stopped);
 }
 
 TEST(Stop, ThresholdBelowIdleRaisesAtOnce)
@@ -529,7 +565,7 @@ TEST(Report, TriesAreBounded)
     r.start();
 
     int tries = 0;
-    while (r.failed())
+    while (r.failed(true))
         tries++;
 
     EXPECT_EQ(tries, ALARM_MAX_TRIES - 1);
@@ -543,15 +579,27 @@ TEST(Report, ConfirmStopsRetries)
     r.confirm();
 
     EXPECT_FALSE(r.pending);
-    EXPECT_FALSE(r.failed());
+    EXPECT_FALSE(r.failed(true));
+}
+
+TEST(Report, PlannedSessionSpendsNoTry)
+{
+    // В режиме "только при расходе" плановый сеанс проходит без радио: при
+    // периоде короче паузы такие сеансы съели бы все попытки доставки
+    AlarmReport r;
+    r.start();
+
+    EXPECT_TRUE(r.failed(false));
+    EXPECT_EQ(r.tries, 0);
+    EXPECT_TRUE(r.pending);
 }
 
 TEST(Report, NewAlarmResetsTries)
 {
     AlarmReport r;
     r.start();
-    r.failed();
-    r.failed();
+    r.failed(true);
+    r.failed(true);
 
     r.start();
 

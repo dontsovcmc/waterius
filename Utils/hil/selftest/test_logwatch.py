@@ -67,7 +67,7 @@ SESSION_ALARM = [
     fw('Alarm config: quantum0=0 quanta0=0 vol0=0'
        ' quantum1=3600 quanta1=4 vol1=5 vacation=0 reset=8'),
     fw('Alarm confirm: mask=4 waterius=1 http=0 mqtt=3 any=1 -> 0'),
-    fw('Idle min: 0/0, stop: 0/0'),
+    fw('Stop config: min0=0 min1=60'),
     fw('Wakeup period, min (attiny):4'),
     fw('Going to sleep'),
 ]
@@ -146,6 +146,7 @@ def test_поля_тревог_разбираются() -> None:
     assert session.alarm_config == {'quantum0': 0, 'quanta0': 0, 'vol0': 0,
                                     'quantum1': 3600, 'quanta1': 4, 'vol1': 5,
                                     'vacation': 0, 'reset': 8}
+    assert session.stop_config == {'min0': 0, 'min1': 60}
     assert session.confirm == {'mask': 4, 'waterius': 1, 'http': 0, 'mqtt': 3,
                                'any': 1, 'confirmed': 0}
     assert session.http_codes == [200]

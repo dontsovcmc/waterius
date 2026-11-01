@@ -24,6 +24,7 @@ extern wl_status_t wifi_connect_status;
 extern bool factory_reset_flag;
 extern bool esp_restarted_flag;
 extern void send_alarm_config(const Settings &sett);   // main.cpp
+extern void send_stop_config(const Settings &sett);    // main.cpp
 extern uint8_t alarm_reset_mask;                       // main.cpp
 
 extern AttinyData data;
@@ -1340,6 +1341,7 @@ void post_api_save_alarms(AsyncWebServerRequest *request)
     {
         store_config(sett);
         send_alarm_config(sett);
+        send_stop_config(sett);
         ret[F("redirect")] = F("/index.html");
     }
 

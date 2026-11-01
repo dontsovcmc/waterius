@@ -319,15 +319,16 @@ def test_E7_consumption_stopped(stand: Stand, quiet: None) -> None:
     Тревога живёт по своим правилам и снимается сама: первый импульс гасит её в
     пределах минуты, и о снятии attiny докладывает отдельным сеансом.
     """
+    # Импульс до настройки: вход мог простоять час, и порог, доехавший раньше
+    # импульса, поднял бы тревогу сразу
+    stand.dut.pulse(channel=1, count=1)
+    started = time.monotonic()
+
     armed = stand.setup(channel=1, alarm_stop=1, ctype=NAMUR, factor=BASE_FACTOR,
                         period_min=1440, send_on_consumption=1)
     assert armed.stop_config is not None, f'нет строки Stop config\n{armed.text}'
     assert armed.stop_config['min1'] > 0, f'порог не уехал в attiny: {armed.stop_config}'
     stand.reset_observers()
-
-    # Простой считается от импульса: отсчёт начинаем с него, а не с настройки
-    stand.dut.pulse(channel=1, count=1)
-    started = time.monotonic()
 
     session = stand.wait_session(timeout=ATTINY_HOUR_MAX_S, mode=ALARM_MODE)
     elapsed = time.monotonic() - started
