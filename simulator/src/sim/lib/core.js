@@ -197,12 +197,6 @@
         return attinyFlags & ~((ch0 << D.ATTINY_ALARM_SHIFT0) | (ch1 << D.ATTINY_ALARM_SHIFT1)) & 0xFF;
     }
 
-    // Порт idle.cpp: пора ли объявлять остановку потребления
-    function consumptionStopped(idleMin, stopHours) {
-        if (!stopHours) return false; // тревога выключена
-        return idleMin >= stopHours * 60;
-    }
-
     /* ---- diagnostics.cpp: плашки настройки счётчиков ---- */
 
     function consumedImpulses(impulses, start) {
@@ -295,7 +289,6 @@
         alarmInputState: alarmInputState,
         alarmBits: alarmBits,
         alarmFlagsAfterReset: alarmFlagsAfterReset,
-        consumptionStopped: consumptionStopped,
         checkSetup: checkSetup,
         parseWifiChannel: parseWifiChannel,
         parseBssid: parseBssid,

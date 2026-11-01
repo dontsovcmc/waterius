@@ -214,6 +214,8 @@
             // Блок снятия виден, только когда есть что снимать
             case P.PARAM_ALARM_RAISED:
                 return alarmRaised(state) ? '' : P.CLASS_HIDDEN;
+            case P.PARAM_STOP_HIDDEN:
+                return attiny.version < G().defines.ATTINY_VER_STOP ? P.CLASS_HIDDEN : '';
             case P.PARAM_ALARM_STATE0: return alarmStateClass(alarmState(state, 0));
             case P.PARAM_ALARM_STATE1: return alarmStateClass(alarmState(state, 1));
             case P.PARAM_THRESHOLDS_OFF0:
@@ -251,7 +253,7 @@
             'PARAM_ALARM_STOP0', 'PARAM_ALARM_STOP1', 'PARAM_VACATION', 'PARAM_SEND_ON_CONSUMPTION',
             'PARAM_CONFIRM_WATERIUS', 'PARAM_CONFIRM_HTTP', 'PARAM_CONFIRM_MQTT',
             'PARAM_ALARM_RAISED', 'PARAM_ALARM_STATE0', 'PARAM_ALARM_STATE1',
-            'PARAM_THRESHOLDS_OFF0', 'PARAM_THRESHOLDS_OFF1', 'PARAM_LEAK_OFF',
+            'PARAM_THRESHOLDS_OFF0', 'PARAM_THRESHOLDS_OFF1', 'PARAM_LEAK_OFF', 'PARAM_STOP_HIDDEN',
             'PARAM_ACK_OFF_WATERIUS', 'PARAM_ACK_OFF_HTTP', 'PARAM_ACK_OFF_MQTT',
         ];
         return names.map(function (key) { return P[key]; }).filter(Boolean);

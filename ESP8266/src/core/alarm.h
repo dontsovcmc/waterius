@@ -91,6 +91,29 @@ AlarmThresholds alarm_thresholds(const bool vacation, const uint8_t counter_type
                                  const uint16_t hours, const uint16_t factor);
 
 /*
+Наибольший порог остановки расхода, часов.
+
+attiny считает простой в минутах и упирается в 65535, то есть 1092 часа - 45
+суток. Порог выше этого никогда бы не сработал, а молча не работающая тревога
+хуже отсутствующей.
+*/
+#define ALARM_STOP_MAX_HOURS 1092
+
+/*
+Порог остановки расхода в минутах attiny.
+
+Часы attiny неточны, поэтому порог переводится той же поправкой, что и период
+сна: period_min_full минут attiny соответствуют wakeup_per_min настоящим.
+Поправку ещё не измеряли (period_min_full == 0) - минуты берутся как есть.
+
+@param counter_type тип входа: на входе без импульсов остановки не бывает
+@param hours порог в часах, 0 - тревога выключена
+@return минуты для команды 'H', 0 - выключено
+*/
+uint16_t stop_threshold(const uint8_t counter_type, const uint16_t hours,
+                        const uint16_t period_min_full, const uint16_t wakeup_per_min);
+
+/*
 Что страница тревог может показать на входе.
 
 Порядок = приоритет: вход без импульсов не спасёт ни новая attiny, ни
@@ -120,6 +143,18 @@ AlarmInputState alarm_input_state(const uint8_t counter_type, const uint16_t fac
 */
 uint8_t alarm_bits(const uint8_t attiny_flags, const uint8_t input,
                    const uint8_t attiny_version);
+
+/*
+Остановка расхода на входе из байта service.
+
+Тревогу считает attiny: только она видит импульсы между сеансами и может
+разбудить ЕСП, как только истёк порог. Гаснет она там же, первым импульсом.
+
+@param input INPUT0_RED или INPUT1_BLUE
+@return false для attiny старее ATTINY_VER_STOP
+*/
+bool consumption_stopped(const uint8_t service, const uint8_t input,
+                         const uint8_t attiny_version);
 
 /*
 Байт флагов после снятия тревог маской (#202).

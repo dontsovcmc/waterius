@@ -45,7 +45,7 @@
         return {
             sett: defaultSettings(),
             attiny: {
-                version: 47, // текущая attiny; пульт умеет понизить
+                version: 48, // текущая attiny; пульт умеет понизить
 
                 model: 1,
                 voltage: 3100,
@@ -57,6 +57,8 @@
                 impulses1: 0,
                 on_pulse0: false,
                 on_pulse1: false,
+                stop0: false,
+                stop1: false,
                 adc0: 512,
                 adc1: 512,
                 /*

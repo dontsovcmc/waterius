@@ -466,12 +466,9 @@
         });
     }
 
-    // Остановку расхода считает сама ЕСП и гасит первым приростом: снимать нечего
+    // Остановку расхода считает attiny и гасит первым импульсом: снимать нечего
     function addStopped(list, state, input) {
-        var idle = input === 0 ? state.sett.idle_min0 : state.sett.idle_min1;
-        var threshold = input === 0 ? state.sett.alarm_stop0 : state.sett.alarm_stop1;
-
-        if (C().consumptionStopped(idle, threshold)) {
+        if (input === 0 ? state.attiny.stop0 : state.attiny.stop1) {
             list.push({ error: '30', input: input });
         }
     }
@@ -556,6 +553,16 @@
         applyReset(state, parsed.value);
     }
 
+    // Как send_stop_config: снимок от attiny обновится только в следующем сеансе,
+    // а плашка обязана погаснуть сразу после сохранения
+    function applyStopConfig(state) {
+        var off = function (counterType, hours) {
+            return !hours || !C().countsImpulses(counterType);
+        };
+        if (off(state.attiny.counter_type0, state.sett.alarm_stop0)) state.attiny.stop0 = false;
+        if (off(state.attiny.counter_type1, state.sett.alarm_stop1)) state.attiny.stop1 = false;
+    }
+
     function saveAlarms(params, state) {
         var errors = {};
         var optional = function (name, field, saver) {
@@ -600,7 +607,10 @@
         });
 
         var json = { errors: errors };
-        if (!Object.keys(errors).length) json.redirect = '/index.html';
+        if (!Object.keys(errors).length) {
+            applyStopConfig(state);
+            json.redirect = '/index.html';
+        }
         return { json: json };
     }
 

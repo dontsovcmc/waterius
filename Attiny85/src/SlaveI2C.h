@@ -25,6 +25,7 @@ protected:
     static void getCounterTypes();
     static void getWakeUpPeriod();
     static void getAlarmConfig();
+    static void getStopConfig();
     static void extendWakeUp();
 
 public:

@@ -13,6 +13,7 @@ extern void extendWakeUpPeriod();
 extern bool is_esp_powered_long();
 extern uint8_t alarm_bits();
 extern void set_alarm_config(const uint8_t *data);
+extern void set_stop_config(const uint8_t *data);
 extern void reset_alarms(const uint8_t mask);
 extern void set_counter_types(const uint8_t *data);
 extern void confirm_alarm();
@@ -96,6 +97,9 @@ void SlaveI2C::receiveEvent(int howMany)
     case 'A': // ESP присылает пороги тревог и маску снятия
         getAlarmConfig();
         break;
+    case 'H': // ESP присылает пороги остановки расхода
+        getStopConfig();
+        break;
     case 'K': // ESP подтверждает, что доложила о тревоге получателю
         confirm_alarm();
         break;
@@ -169,6 +173,31 @@ void SlaveI2C::getAlarmConfig()
     {
         set_alarm_config(data);
         reset_alarms(data[12]);
+    }
+}
+
+/*
+Пороги остановки расхода, минуты.
+
+Отдельной командой: кадр 'A' занял весь приёмный буфер Wire, в нём 15 байт.
+
+    0..1  канал 0, старшим байтом вперёд
+    2..3  канал 1
+    4     CRC8
+*/
+void SlaveI2C::getStopConfig()
+{
+    uint8_t data[4];
+
+    for (uint8_t i = 0; i < sizeof(data); i++)
+    {
+        data[i] = Wire.read();
+    }
+    uint8_t crc = Wire.read();
+
+    if (crc == crc_8(data, sizeof(data)))
+    {
+        set_stop_config(data);
     }
 }
 
