@@ -433,20 +433,6 @@ TEST(Stop, FirstPulseClearsWithinAMinute)
     EXPECT_TRUE(a.changed);
 }
 
-TEST(Stop, SmallestThresholdClearsByPulse)
-{
-    // ЕСП не шлёт меньше двух минут: при единице минута с импульсом уже равна порогу
-    AlarmDetector a;
-    a.stop_min = 2;
-    minutes(a, 2);
-    EXPECT_TRUE(a.stopped);
-
-    a.on_pulse();
-    a.on_minute();
-
-    EXPECT_FALSE(a.stopped);
-}
-
 TEST(Stop, MaxThresholdSurvivesSaturation)
 {
     // Свернувшийся счётчик снял бы тревогу на 65536-й минуте

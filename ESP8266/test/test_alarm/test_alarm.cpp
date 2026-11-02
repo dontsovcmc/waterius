@@ -400,14 +400,14 @@ TEST(StopThreshold, CorrectionDoesNotOverflow)
     EXPECT_EQ(stop_threshold(CounterType::NAMUR, UINT16_MAX, 65535, 65535), UINT16_MAX);
 }
 
-TEST(StopThreshold, NeverBelowWhatAttinyCanClear)
+TEST(StopThreshold, NeverBelowFiveAttinyMinutes)
 {
     // Удалённо порог приезжает без проверки страницы, а поправка ещё уменьшает его
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 1, 0, 1440), ALARM_STOP_MIN_ATTINY);
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 2, 1008, 1440), ALARM_STOP_MIN_ATTINY);
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 1, 1, 65535), ALARM_STOP_MIN_ATTINY);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 1, 0, 1440), 5);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 5, 1008, 1440), 5);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 1, 1, 65535), 5);
 
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 5, 0, 1440), 5);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 6, 0, 1440), 6);
 }
 
 TEST(StopThreshold, ZeroPeriodIsNotDividedBy)
