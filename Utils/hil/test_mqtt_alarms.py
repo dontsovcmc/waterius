@@ -25,6 +25,7 @@ import pytest
 
 from .constants import BASE_FACTOR, COLD, NAMUR, VOL_LITRES
 from .logwatch import MANUAL_TRANSMIT_MODE
+from .test_mqtt import discovery_entities
 
 if TYPE_CHECKING:                 # Stand тянет pyserial и paho-mqtt,
     from .logwatch import Session
@@ -85,6 +86,19 @@ def test_I11_discovery_alarm_entities(stand: Stand, armed: Session) -> None:
     for name in DISCOVERY_BUTTONS:
         assert any('/button/' in t and f'{name}/config' in t for t in topics), \
             f'нет кнопки {name}'
+
+
+@pytest.mark.requires(attiny=44, esp='2.0.56')
+def test_I24_stop_threshold_is_in_minutes(stand: Stand, armed: Session) -> None:
+    """Порог остановки в Home Assistant назван и измеряется в минутах."""
+    stand.reset_observers()
+    stand.dut.press_button()
+    stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+
+    entity = discovery_entities(stand).get(('number', 'as1'))
+    assert entity is not None, 'нет числового поля as1'
+    assert entity['name'].endswith('Alarm stop minutes'), entity
+    assert entity['unit_of_meas'] == 'min', entity
 
 
 def test_I3_remote_vacation_reaches_attiny(stand: Stand, armed: Session) -> None:
