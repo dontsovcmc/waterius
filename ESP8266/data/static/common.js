@@ -126,7 +126,7 @@ function getWifiList(_pages){
             });
 
             if(data.length === 0) {
-                html = `<button type="button" class="btn-serv mt20" onclick="refreshPage()">Обновить список сетей</button>`
+                html = `<p class="text">Сетей пока нет</p><button type="button" class="btn-serv mt20" onclick="refreshPage()">Обновить список сетей</button>`
             }
             document.querySelector('.wifi-list').innerHTML = html;
             if(data.length > 10) {
@@ -435,4 +435,8 @@ function get_next_wizard_by_input(input) {
     } else {
         return '/input/0/setup.html?wizard=true';
     }
+}
+function get_back_wizard_from_send(counter0_name) {
+    const page = counter0_name == CounterName_ELECTRO ? 'input_electro_settings' : 'settings';
+    return `/input/0/${page}.html?wizard=true`;
 }
