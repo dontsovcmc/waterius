@@ -16,6 +16,9 @@ false - имени нет или оно не помещается в dest.
 */
 bool url_host(const char *url, char *dest, const size_t size);
 
+// Для обновлений нужен HTTPS-адрес с именем сервера.
+bool is_https_url(const char *url);
+
 /*
 Адрес MQTT брокера.
 

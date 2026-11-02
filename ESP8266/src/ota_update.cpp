@@ -3,6 +3,7 @@
 #include "config.h"
 #include <ESP8266WiFi.h>
 #include <ESP8266httpUpdate.h>
+#include "tls_client.h"
 
 bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &sett, Voltage &voltage)
 {
@@ -63,6 +64,7 @@ bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &s
 
     // Продлеваем время бодрствования
     masterI2C.extendWakeUp();
+    ESPhttpUpdate.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
 
     // Обновление filesystem (сначала FS, потом firmware)
     if (p.has_filesystem)
@@ -73,8 +75,14 @@ bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &s
         ESPhttpUpdate.rebootOnUpdate(false);
         ESPhttpUpdate.setMD5sum(p.fs_md5);
 
+        BearSSL::X509List trust_anchors;
         WiFiClientSecure fs_client;
-        fs_client.setInsecure();
+        if (!configure_tls_client(fs_client, trust_anchors))
+        {
+            sett.ota_error = OTA_ERR_FS_UPDATE;
+            store_config(sett);
+            return false;
+        }
 
         t_httpUpdate_return ret = ESPhttpUpdate.updateFS(fs_client, p.fs_url);
         if (ret != HTTP_UPDATE_OK)
@@ -96,8 +104,14 @@ bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &s
         ESPhttpUpdate.rebootOnUpdate(false);
         ESPhttpUpdate.setMD5sum(p.fw_md5);
 
+        BearSSL::X509List trust_anchors;
         WiFiClientSecure fw_client;
-        fw_client.setInsecure();
+        if (!configure_tls_client(fw_client, trust_anchors))
+        {
+            sett.ota_error = OTA_ERR_FW_UPDATE;
+            store_config(sett);
+            return false;
+        }
 
         t_httpUpdate_return ret = ESPhttpUpdate.update(fw_client, p.fw_url);
         if (ret != HTTP_UPDATE_OK)

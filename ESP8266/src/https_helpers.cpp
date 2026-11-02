@@ -7,11 +7,15 @@
 #include "setup.h"
 #include "core/connect_log.h"
 #include "core/url.h"
+#include "tls_client.h"
+#include <memory>
 
 SendStatus post_data(const String &url, const char *key, const char *email, const String &payload, JsonDocument &json_settings, int16_t &code)
 {
     code = 0;
-    void *pClient = nullptr;
+    // Сначала закрывается соединение, затем освобождаются сертификаты.
+    BearSSL::X509List trust_anchors;
+    std::unique_ptr<WiFiClient> client;
     HTTPClient httpClient;
     SendStatus result = SEND_NO_CONNECTION;
     LOG_INFO(F("HTTP: Send JSON POST request"));
@@ -25,20 +29,32 @@ SendStatus post_data(const String &url, const char *key, const char *email, cons
     if (proto == PROTO_HTTP)
     {
         LOG_INFO(F("HTTP: Create insecure client"));
-        pClient = new WiFiClient;
+        client.reset(new WiFiClient);
     }
     else if (proto == PROTO_HTTPS)
     {
         LOG_INFO(F("HTTP: Create secure client"));
-        pClient = new WiFiClientSecure;
-        (*(WiFiClientSecure *)pClient).setInsecure(); // доверяем всем сертификатам
+        std::unique_ptr<WiFiClientSecure> secure_client(new WiFiClientSecure);
+        if (!configure_tls_client(*secure_client, trust_anchors))
+        {
+            code = HTTPC_ERROR_CONNECTION_FAILED;
+            return SEND_NO_CONNECTION;
+        }
+        client = std::move(secure_client);
+    }
+    else
+    {
+        LOG_ERROR(F("HTTP: unsupported URL scheme"));
+        code = HTTPC_ERROR_CONNECTION_FAILED;
+        return SEND_NO_CONNECTION;
     }
 
     // HTTP settings
     httpClient.setTimeout(SERVER_TIMEOUT);
     httpClient.setReuse(false); // будет сразу закрывать подключение после отправки
+    httpClient.setFollowRedirects(HTTPC_DISABLE_FOLLOW_REDIRECTS);
 
-    if (httpClient.begin(*(WiFiClient *)pClient, url))
+    if (httpClient.begin(*client, url))
     {
         httpClient.addHeader(F("Content-Type"), F("application/json"));
         if (key)
@@ -84,16 +100,7 @@ SendStatus post_data(const String &url, const char *key, const char *email, cons
         }
 
         httpClient.end();
-        (*(WiFiClient *)pClient).stop();
-    }
-
-    if (proto == PROTO_HTTP)
-    {
-        delete (WiFiClient *)pClient;
-    }
-    else if (proto == PROTO_HTTPS)
-    {
-        delete (WiFiClientSecure *)pClient;
+        client->stop();
     }
 
     return result;
