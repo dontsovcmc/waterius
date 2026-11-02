@@ -9,7 +9,6 @@
 #include "core/connect_log.h"
 #include "wifi_helpers.h"
 #include "core/alarm.h"
-#include "core/idle.h"
 
 extern Voltage voltage;
 
@@ -51,10 +50,8 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("alarm_wet0")] = (alarm0 & ALARM_WET) != 0;
     root[F("alarm_wet1")] = (alarm1 & ALARM_WET) != 0;
 
-    // Остановку потребления считает ЕСП, а не attiny: признак берётся из
-    // прироста импульсов, поэтому она работает и со старой attiny
-    root[F("alarm_stop0")] = consumption_stopped(sett.idle_min0, sett.alarm_stop0);
-    root[F("alarm_stop1")] = consumption_stopped(sett.idle_min1, sett.alarm_stop1);
+    root[F("alarm_stop0")] = data.stop0;
+    root[F("alarm_stop1")] = data.stop1;
 
     // Пороги: сервер должен видеть, с чем сравнивали
     root[F("av0")] = sett.alarm_vol0;

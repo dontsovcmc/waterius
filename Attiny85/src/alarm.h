@@ -16,7 +16,7 @@
                Капающий кран, текущий бачок.
   ALARM_WET  - сработал датчик протечки или сигнализация на входе.
 
-Ни одна тревога не снимается сама - ни по времени, ни по прекращению расхода.
+Ни одна из них не снимается сама - ни по времени, ни по прекращению расхода.
 Снимает её человек: кнопкой на корпусе или командой с сервера (reset).
 Отсюда три следствия, каждое из которых убирает код:
 
@@ -24,6 +24,9 @@
   - бюджета внеплановых сеансов нет: переходов вниз не бывает, а значит нет и
     дребезга, против которого он был заведён;
   - held нет: держать состояние от преждевременного погасания не требуется.
+
+Четвёртая, остановка расхода (stopped) - импульсов нет дольше порога. Гаснет
+сама первым импульсом или нулевым порогом, человеку снимать её нечем.
 
 Файл намеренно без Arduino.h и без обращений к регистрам: правила
 проверяются хостовыми тестами (Attiny85/test/test_alarm).
@@ -85,7 +88,9 @@ struct AlarmDetector
     uint16_t quantum_ticks; // длина кванта тишины, тиков
     uint16_t leak_quanta;   // занятых квантов подряд - протечка
     uint16_t vol_pulses;    // импульсов за 30 минут - много воды сразу
+    uint16_t stop_min;      // минут без импульсов - остановка расхода
 
+    uint16_t idle_min;        // минут с последнего импульса
     uint16_t tick_in_quantum; // тиков с начала кванта
     uint16_t busy_quanta;     // квантов подряд, в которых был импульс
 
@@ -96,13 +101,14 @@ struct AlarmDetector
     uint8_t state : 3;            // маска ALARM_*
     uint8_t changed : 1;          // состояние сменилось - есть о чём доложить
     uint8_t pulse_in_quantum : 1; // в текущем кванте был импульс
-    uint8_t reserved : 3;
+    uint8_t stopped : 1;          // остановка расхода
+    uint8_t reserved : 2;
 
     AlarmDetector()
-        : quantum_ticks(0), leak_quanta(0), vol_pulses(0),
-          tick_in_quantum(0), busy_quanta(0),
+        : quantum_ticks(0), leak_quanta(0), vol_pulses(0), stop_min(0),
+          idle_min(0), tick_in_quantum(0), busy_quanta(0),
           tick_in_slot(0), slot(0),
-          state(0), changed(0), pulse_in_quantum(0), reserved(0)
+          state(0), changed(0), pulse_in_quantum(0), stopped(0), reserved(0)
     {
         for (uint8_t i = 0; i < ALARM_VOL_SLOTS; i++)
             vol[i] = 0;
@@ -133,6 +139,7 @@ struct AlarmDetector
     void on_pulse()
     {
         pulse_in_quantum = 1;
+        idle_min = 0;
 
         if (vol[slot] < 255)
         {
@@ -184,6 +191,31 @@ struct AlarmDetector
             busy_quanta = 0;
         }
         pulse_in_quantum = 0;
+    }
+
+    /*
+    Прошла минута. Поднятую тревогу держит тишина, а не сравнение с порогом:
+    порог сдвигает поправка часов, а вода от этого не пошла.
+    */
+    void on_minute()
+    {
+        const bool quiet = idle_min > 0;
+
+        if (!stop_min)
+        {
+            idle_min = 0; // простой выключенной тревоги не считается
+        }
+        else if (idle_min < UINT16_MAX)
+        {
+            idle_min++;
+        }
+
+        const bool now = stop_min && (idle_min >= stop_min || (stopped && quiet));
+        if (now != stopped)
+        {
+            stopped = now;
+            changed = 1;
+        }
     }
 
     /*
@@ -248,7 +280,8 @@ private:
 
 Потолка на число докладов здесь нет и не нужно: каждая тревога поднимается
 один раз и молчит до снятия, поэтому внеплановых сеансов за всё время не
-больше, чем поднятых тревог.
+больше, чем поднятых тревог. Остановка расхода докладывает и о снятии, но
+между её подъёмами лежит полный порог тишины.
 */
 struct AlarmReport
 {

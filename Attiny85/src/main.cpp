@@ -22,6 +22,18 @@ TinyDebugSerial mySerial;
 /*
 Версии прошивок
 
+48 - 2026.11.01 - dontsov
+	1. Остановку расхода считает attiny, а не ЕСП: тревога поднимается в ту
+	   минуту, когда истёк порог, и будит ЕСП вне расписания, как протечка, в
+	   том числе в режиме "только при расходе". Первый импульс снимает её в
+	   пределах минуты. Команда 'H' - пороги в минутах, живут в ОЗУ. Отдельная
+	   команда, потому что кадр 'A' занял весь приёмный буфер. Состояние - в
+	   битах 4-5 байта service, размер Header прежний.
+	2. Попытку доставки тратит только сеанс по тревоге, и только он заново
+	   заводит паузу. В режиме "только при расходе" при периоде короче паузы
+	   плановые сеансы без радио съедали попытки и не давали паузе кончиться:
+	   из пяти попыток оставалась одна.
+
 47 - 2026.10.25 - dontsov
 	1. Электронный вход без мёртвого времени: в 38 он считал каждый переход из
 	   покоя, а потолок в 4 импульса/с недосчитывал электросчётчик
@@ -288,6 +300,8 @@ static ButtonB2 button(1);  // PB1 кнопка (на линии wakeup)
 struct Header info = {
     .version = FIRMWARE_VER,
     .service = 0,
+    .stop0 = 0,
+    .stop1 = 0,
     .on_pulse0 = 0,
     .on_pulse1 = 0,
     .voltage = 0,
@@ -375,8 +389,6 @@ inline void alarm_tick(CounterEvent ev)
 	alarm0.on_tick();
 	alarm1.on_tick();
 
-	// Минуты нужны только паузе между попытками доставки: детектор считает
-	// в тиках, и собственной меры времени в минутах у него больше нет.
 	if (++alarm_minute_ticks < ALARM_TICKS_PER_MINUTE)
 		return;
 
@@ -384,6 +396,12 @@ inline void alarm_tick(CounterEvent ev)
 
 	if (alarm_hold_min)
 		alarm_hold_min--;
+
+	alarm0.on_minute();
+	alarm1.on_minute();
+
+	info.stop0 = alarm0.stopped;
+	info.stop1 = alarm1.stopped;
 }
 
 // Проверяем входы на замыкание.
@@ -488,24 +506,39 @@ void set_alarm_config(const uint8_t *data)
 }
 
 /*
+Пороги остановки расхода от ЕСП в минутах: по uint16 на канал, старшим байтом
+вперёд.
+*/
+void set_stop_config(const uint8_t *data)
+{
+	alarm0.stop_min = (uint16_t)(data[0] << 8) | data[1];
+	alarm1.stop_min = (uint16_t)(data[2] << 8) | data[3];
+}
+
+/*
 Типы входов от ЕСП. Приезжают из портала, когда пользователь сменил тип.
 
 Смена типа снимает тревоги канала: они описывали прежний вход, а снять их
 после смены нечем. Датчик протечки опрашивается, только пока тип входа -
 датчик (alarm_tick), расход и ритм считаются только по импульсам, которых у
 датчика не бывает. Оставленный бит висел бы до перезагрузки attiny.
+
+Простой тоже считается заново: месяц на выключенном входе - не остановка
+расхода на счётчике, который подключили сегодня.
 */
 void set_counter_types(const uint8_t *data)
 {
 	if (data[0] != info.config.types.type0)
 	{
 		alarm0.reset(ALARM_MASK);
+		alarm0.idle_min = 0;
 		types_changed = true;
 	}
 
 	if (data[1] != info.config.types.type1)
 	{
 		alarm1.reset(ALARM_MASK);
+		alarm1.idle_min = 0;
 		types_changed = true;
 	}
 
@@ -538,8 +571,7 @@ void confirm_alarm()
 Есть ли повод разбудить ЕСП вне расписания.
 
 Пауза после сеанса задаёт темп: это интервал до следующей попытки доставки.
-Потолок ей не нужен - тревога поднимается один раз и молчит до снятия, поэтому
-внеплановых сеансов за всё время не больше, чем поднятых тревог.
+Потолок ей не нужен - см. AlarmReport.
 */
 inline bool alarm_pending()
 {
@@ -723,7 +755,7 @@ void loop()
 	unsigned long wake_up_limit = SETUP_TIME_MSEC;  // 10 мин при настройке
 
 	// Разбудила тревога, а не расписание и не кнопка
-	const bool alarm_wake = alarm_pending();
+	bool alarm_wake = false;
 
 	if (button.press == ButtonPressType::LONG)
 	{ 
@@ -755,8 +787,9 @@ void loop()
 
 			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
 		}
-		else if (alarm_wake)
+		else if (alarm_pending())
 		{
+			alarm_wake = true;
 			wake_up_limit = WAIT_ESP_MSEC;
 			LOG(F("Alarm wake up"));
 			slaveI2C.begin(ALARM_MODE);
@@ -808,18 +841,13 @@ void loop()
 	приняты получателем. Не пришла - пробуем ещё, но не больше ALARM_MAX_TRIES
 	раз: без сети сеансы только жгут батарею, а состояние всё равно уедет со
 	следующим плановым выходом на связь.
+
+	Попытку и паузу тратит только сеанс по тревоге: плановый в режиме "только
+	при расходе" идёт без радио и при коротком периоде съел бы все попытки.
 	*/
-	if (alarm_report.pending)
+	if (alarm_wake)
 	{
 		alarm_report.failed();
-	}
-
-	/*
-	Пауза после внепланового сеанса - интервал до следующей попытки доставки.
-	Держать состояние между попытками не нужно: само оно не снимается.
-	*/
-	if (alarm_report.pending || alarm_wake)
-	{
 		alarm_hold_min = ALARM_HOLD_MIN;
 	}
 

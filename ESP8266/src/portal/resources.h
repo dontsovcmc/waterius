@@ -85,6 +85,7 @@ static const char PARAM_ACK_OFF_MQTT[] PROGMEM = "ack_off_mqtt";
 /* Блок снятия на странице тревог: прячется, пока ни одна не поднята */
 static const char PARAM_ALARM_RAISED[] PROGMEM = "alarm_raised";
 static const char CLASS_HIDDEN[] PROGMEM = "hd";
+static const char PARAM_STOP_HIDDEN[] PROGMEM = "stop_hidden";
 static const char PARAM_ALARM_STATE0[] PROGMEM = "alarm_state0";
 static const char PARAM_ALARM_STATE1[] PROGMEM = "alarm_state1";
 static const char PARAM_THRESHOLDS_OFF0[] PROGMEM = "thresholds_off0";

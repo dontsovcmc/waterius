@@ -30,7 +30,7 @@ import pytest
 from . import portal as portal_mod
 from .atboard import AtBoard
 from .constants import (
-    ALARM_STOP_MAX_HOURS,
+    ALARM_STOP_MAX_MIN,
     ERR_LENGTH,
     ERR_NO_COMMA,
     ERR_PORT_IN_HOST,
@@ -87,15 +87,15 @@ def test_C4_stop_threshold_has_a_ceiling(board: AtBoard) -> None:
     """
     Остановка расхода больше потолка отвергается.
 
-    Через интерфейс это ловится только так: четыре цифры проходят проверку
-    разметки, а отвергает значение прошивка (`save_stop_param`).
+    Через интерфейс это ловится только так: пять цифр проходят проверку
+    разметки, а отвергает значение прошивка (`parse_uint16`).
     """
     key = 'alarm_stop1'
     try:
         assert save(board, '/api/save_alarms',
-                    **{key: ALARM_STOP_MAX_HOURS + 1}) == {key: ERR_VALUE}
+                    **{key: ALARM_STOP_MAX_MIN + 1}) == {key: ERR_VALUE}
         # Граница снизу: потолок принимается, то есть отвергнуто именно лишнее
-        assert save(board, '/api/save_alarms', **{key: ALARM_STOP_MAX_HOURS}) == {}
+        assert save(board, '/api/save_alarms', **{key: ALARM_STOP_MAX_MIN}) == {}
     finally:
         assert save(board, '/api/save_alarms', **{key: 0}) == {}
 

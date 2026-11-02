@@ -89,7 +89,7 @@ RE_ALARM_CONFIG = re.compile(
     r' vacation=([01]) reset=(\d+)')
 RE_ALARM_CONFIRM = re.compile(
     r'Alarm confirm: mask=(\d+) waterius=(\d) http=(\d) mqtt=(\d) any=([01]) -> ([01])')
-RE_IDLE_MIN = re.compile(r'Idle min: (\d+)/(\d+), stop: ([01])/([01])')
+RE_STOP_CONFIG = re.compile(r'Stop config: min0=(\d+) min1=(\d+)')
 RE_IDLE_SEND = re.compile(r'Idle: consumed=([01]), silence_min=(\d+), transmit=([01])')
 RE_HTTP_CODE = re.compile(r'HTTP: Response code: (-?\d+)')
 
@@ -434,12 +434,12 @@ class Session:
                 'any': int(m.group(5)), 'confirmed': int(m.group(6))}
 
     @property
-    def idle(self) -> dict[str, int] | None:
-        m = RE_IDLE_MIN.search(self.text)
+    def stop_config(self) -> dict[str, int] | None:
+        """Пороги остановки расхода, уехавшие в ОЗУ attiny, в её минутах."""
+        m = RE_STOP_CONFIG.search(self.text)
         if not m:
             return None
-        return {'min0': int(m.group(1)), 'min1': int(m.group(2)),
-                'stop0': int(m.group(3)), 'stop1': int(m.group(4))}
+        return {'min0': int(m.group(1)), 'min1': int(m.group(2))}
 
     @property
     def idle_send(self) -> dict[str, int] | None:

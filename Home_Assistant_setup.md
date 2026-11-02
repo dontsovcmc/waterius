@@ -46,7 +46,7 @@
 | `Alarm: consumption stopped` | `binary_sensor`, класс `problem` | расхода не было слишком долго |
 | `Alarm: water sensor` | `binary_sensor`, класс **`moisture`** | сработал датчик протечки на полу |
 | `Alarm: signal` | `binary_sensor`, класс `problem` | сработала сигнализация: разомкнут шлейф |
-| `Alarm volume per 30 min` (`av`), `Alarm zero flow rate` (`ar`), `Alarm leak hours` (`ah`), `Alarm stop hours` (`as`) | `number` | пороги, ноль выключает тревогу |
+| `Alarm volume per 30 min` (`av`), `Alarm zero flow rate` (`ar`), `Alarm leak hours` (`ah`), `Alarm stop minutes` (`as`) | `number` | пороги, ноль выключает тревогу |
 | `Clear alarms` | `button` | снять все тревоги (шлёт `63` в топик `arst/set`) |
 | `Away mode` | `switch` | режим «Я уехал» |
 | `Alarm ack: waterius.ru / own server / MQTT` | `switch` | кто обязан подтвердить доставку тревоги |
@@ -56,9 +56,8 @@
 и `Alarm: water sensor` или `Alarm: signal`. Уровень АЦП такого входа (`adc0`/`adc1`) отдельной сущностью не
 публикуется — его видно в самой посылке.
 
-Тревоги по расходу приезжают с прошивкой attiny 44 и новее. На более старой сущности всё
-равно создадутся, но всегда будут «в норме»; остановка расхода считается в ЕСП и работает на
-любой версии.
+Тревоги по расходу приезжают с прошивкой attiny 44 и новее, остановка расхода с 48. На более
+старой сущности всё равно создадутся, но всегда будут «в норме».
 
 #### Когда сущности обновляются
 
@@ -133,7 +132,7 @@ homeassistant:
     "number.waterius_*_ah*":
       friendly_name: "Порог: часов протечки"
     "number.waterius_*_as*":
-      friendly_name: "Порог: часов без расхода"
+      friendly_name: "Порог: минут без расхода"
 ```
 
 После перезагрузки Home Assistant свойства устройства будут выглядеть следующим образом

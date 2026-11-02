@@ -293,6 +293,71 @@ function testAlarmStates() {
 }
 
 /*
+Остановку расхода считает attiny, поэтому на старой поле порога ничего бы не
+делало, а плашку зажигает её бит, а не счёт на стороне ЕСП.
+*/
+function testStopAlarm() {
+    const problems = [];
+    const D = globalThis.SIM_GENERATED.defines;
+
+    [
+        { name: 'attiny без остановки', version: D.ATTINY_VER_STOP - 1, hidden: true },
+        { name: 'attiny с остановкой', version: D.ATTINY_VER_STOP, hidden: false },
+    ].forEach((c) => {
+        const state = SimState.newSession(SimState.defaultState());
+        state.attiny.version = c.version;
+
+        const html = SimProcessor.render(read('alarms.html'), state);
+        const blocks = html.match(/<div class="stop f-row[^"]*"/g) || [];
+        if (blocks.length !== 2) problems.push(c.name + ': блоков порога ' + blocks.length);
+        blocks.forEach((block) => {
+            if (/\bhd\b/.test(block) !== c.hidden) problems.push(c.name + ': ' + block);
+        });
+    });
+
+    const state = SimState.newSession(SimState.defaultState());
+    const stopped = () => SimApi.handle('/api/main_status', 'GET', [], state, 0).json
+        .filter((item) => item.error === '30')
+        .map((item) => item.input);
+
+    if (stopped().length) problems.push('плашка без бита attiny');
+
+    state.attiny.stop1 = true;
+    if (JSON.stringify(stopped()) !== '[1]') problems.push('нет плашки по биту входа 1: ' + stopped());
+
+    const saveAlarms = (name, value) => SimApi.handle('/api/save_alarms', 'POST', [{ name, value }], state, 0);
+
+    saveAlarms('alarm_stop1', '0');
+    if (stopped().length) problems.push('плашка пережила нулевой порог');
+
+    state.attiny.stop1 = true;
+    saveAlarms('alarm_stop1', '48');
+    if (JSON.stringify(stopped()) !== '[1]') problems.push('плашка погасла при живом пороге: ' + stopped());
+
+    saveAlarms('vacation', '1');
+    if (JSON.stringify(stopped()) !== '[1]') problems.push('режим "Я уехал" погасил плашку: ' + stopped());
+
+    const rejected = (value) => 'alarm_stop1' in (saveAlarms('alarm_stop1', value).json.errors || {});
+    if (rejected('65535')) problems.push('отвергнут потолок порога');
+    if (!rejected('65536')) problems.push('принят порог больше uint16');
+
+    // Ноль выключает тревогу, поэтому границу держит pattern, а не атрибут min
+    const patterns = [...read('alarms.html').matchAll(/<input pattern="([^"]+)" id="alarm_stop[01]"/g)];
+    if (patterns.length !== 2) problems.push('полей порога с pattern: ' + patterns.length);
+    patterns.forEach(([, pattern]) => {
+        const allowed = new RegExp(pattern);
+        ['0', '5', '9', '10', '4320', '65535'].forEach((value) => {
+            if (!allowed.test(value)) problems.push(`pattern ${pattern} не пускает ${value}`);
+        });
+        ['1', '4', '05', '00', '100000'].forEach((value) => {
+            if (allowed.test(value)) problems.push(`pattern ${pattern} пускает ${value}`);
+        });
+    });
+
+    check('остановка расхода зависит от attiny', problems);
+}
+
+/*
 Датчик протечки на attiny старее ATTINY_VER_ALARM: она не знает типов 5 и 6 и
 молча выключает вход. Поэтому страница их не предлагает, сохранение отвергает,
 а уже записанный тип показывается как NAMUR - иначе в списке не нашлось бы
@@ -490,6 +555,7 @@ testGenerated();
 testParseBool();
 testAlarmStates();
 testAlarmReset();
+testStopAlarm();
 testLeakTypesNeedAttiny();
 testPultAlarmBits();
 testWizard();

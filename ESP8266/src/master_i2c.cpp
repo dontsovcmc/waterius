@@ -171,6 +171,9 @@ bool MasterI2C::getAttinyData(AttinyData &data)
     good &= getByte(data.service, crc);
     data.on_pulse0 = (data.service >> 6) & 1;
     data.on_pulse1 = (data.service >> 7) & 1;
+    data.stop0 = consumption_stopped(data.service, INPUT0_RED, data.version);
+    data.stop1 = consumption_stopped(data.service, INPUT1_BLUE, data.version);
+    data.service &= ATTINY_SERVICE_MASK;
 
     good &= getUint16(data.voltage, crc);
     good &= getByte(data.attiny_flags, crc);
@@ -192,13 +195,15 @@ bool MasterI2C::getAttinyData(AttinyData &data)
     if (good)
     {
         LOG_INFO(F("v") << data.version
-        << F(" service:") << (data.service & 0x3F)
+        << F(" service:") << data.service
         << F(" on_pulse0:") << data.on_pulse0
         << F(" on_pulse1:") << data.on_pulse1
         << F(" voltage:") << data.voltage
         << F(" flags:") << data.attiny_flags
         << F(" alarm0:") << alarm_bits(data.attiny_flags, INPUT0_RED, data.version)
         << F(" alarm1:") << alarm_bits(data.attiny_flags, INPUT1_BLUE, data.version)
+        << F(" stop0:") << data.stop0
+        << F(" stop1:") << data.stop1
         << F(" setups:") << data.setup_started_counter
         << F(" resets:") << data.resets
         << F(" model:") << data.model
@@ -321,6 +326,31 @@ bool MasterI2C::setAlarmConfig(const AlarmThresholds &ch0, const AlarmThresholds
 
     txBuf[13] = reset_mask;
     txBuf[14] = crc_8(&txBuf[1], 13, INIT_ATTINY_CRC);
+
+    return sendData(txBuf, sizeof(txBuf));
+}
+
+/*
+Пороги остановки расхода для attiny, минуты.
+
+Отдельной командой: кадр 'A' занял весь приёмный буфер attiny, в нём 15 байт,
+а следующий байт она отвергает.
+
+    0..1  канал 0, старшим байтом вперёд
+    2..3  канал 1
+    4     CRC8
+*/
+bool MasterI2C::setStopConfig(const uint16_t stop0, const uint16_t stop1)
+{
+    BusyGuard guard(i2c_busy);
+    uint8_t txBuf[6];
+
+    txBuf[0] = 'H';
+    txBuf[1] = (uint8_t)(stop0 >> 8);
+    txBuf[2] = (uint8_t)(stop0);
+    txBuf[3] = (uint8_t)(stop1 >> 8);
+    txBuf[4] = (uint8_t)(stop1);
+    txBuf[5] = crc_8(&txBuf[1], 4, INIT_ATTINY_CRC);
 
     return sendData(txBuf, sizeof(txBuf));
 }

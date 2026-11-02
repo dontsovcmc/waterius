@@ -43,20 +43,6 @@
         else reportParamError(p.name, errors, result.err);
     }
 
-    /*
-     * Порог остановки потребления: часы, не больше ALARM_STOP_MAX_HOURS.
-     * Выше счётчик простоя просто не досчитает - он ведётся в минутах.
-     */
-    function saveStopParam(p, state, field, errors) {
-        var result = C().parseUint16(p.value, true); // ноль - выключено
-        var err = result.err;
-        if (err === E().PARAM_OK && result.value > G().defines.ALARM_STOP_MAX_HOURS) {
-            err = E().PARAM_ERR_VALUE;
-        }
-        if (err === E().PARAM_OK) state.sett[field] = result.value;
-        else reportParamError(p.name, errors, err);
-    }
-
     function saveUint8(p, state, field, errors, zeroOk) {
         var result = C().parseUint8(p.value, !!zeroOk);
         if (result.err === E().PARAM_OK) state.sett[field] = result.value;
@@ -212,8 +198,8 @@
             if (input === 0) saveUint16(p, state, 'alarm_hours0', errors, true);
             else if (input === 1) saveUint16(p, state, 'alarm_hours1', errors, true);
         } else if (name === P().PARAM_ALARM_STOP || name === P().s_as) {
-            if (input === 0) saveStopParam(p, state, 'alarm_stop0', errors);
-            else if (input === 1) saveStopParam(p, state, 'alarm_stop1', errors);
+            if (input === 0) saveUint16(p, state, 'alarm_stop0', errors, true);
+            else if (input === 1) saveUint16(p, state, 'alarm_stop1', errors, true);
         } else if (name === P().PARAM_FACTOR || name === P().s_f) {
             var value = parseInt(p.value, 10) || 0;
             if (value === D.AUTO_IMPULSE_FACTOR || value === D.AS_COLD_CHANNEL) {
@@ -466,12 +452,9 @@
         });
     }
 
-    // Остановку расхода считает сама ЕСП и гасит первым приростом: снимать нечего
+    // Остановку расхода считает attiny и гасит первым импульсом: снимать нечего
     function addStopped(list, state, input) {
-        var idle = input === 0 ? state.sett.idle_min0 : state.sett.idle_min1;
-        var threshold = input === 0 ? state.sett.alarm_stop0 : state.sett.alarm_stop1;
-
-        if (C().consumptionStopped(idle, threshold)) {
+        if (input === 0 ? state.attiny.stop0 : state.attiny.stop1) {
             list.push({ error: '30', input: input });
         }
     }
@@ -556,6 +539,16 @@
         applyReset(state, parsed.value);
     }
 
+    // Как send_stop_config: снимок от attiny обновится только в следующем сеансе,
+    // а плашка обязана погаснуть сразу после сохранения
+    function applyStopConfig(state) {
+        var off = function (counterType, hours) {
+            return !hours || !C().countsImpulses(counterType);
+        };
+        if (off(state.attiny.counter_type0, state.sett.alarm_stop0)) state.attiny.stop0 = false;
+        if (off(state.attiny.counter_type1, state.sett.alarm_stop1)) state.attiny.stop1 = false;
+    }
+
     function saveAlarms(params, state) {
         var errors = {};
         var optional = function (name, field, saver) {
@@ -569,8 +562,8 @@
         optional(P().PARAM_ALARM_RATE1, 'alarm_rate1', saveUint16);
         optional(P().PARAM_ALARM_HOURS0, 'alarm_hours0', saveUint16);
         optional(P().PARAM_ALARM_HOURS1, 'alarm_hours1', saveUint16);
-        optional(P().PARAM_ALARM_STOP0, 'alarm_stop0', saveStopParam);
-        optional(P().PARAM_ALARM_STOP1, 'alarm_stop1', saveStopParam);
+        optional(P().PARAM_ALARM_STOP0, 'alarm_stop0', saveUint16);
+        optional(P().PARAM_ALARM_STOP1, 'alarm_stop1', saveUint16);
 
         // Не настройка, а действие: маска гасит биты и тут же забывается
         var reset = findParam(params, P().PARAM_ALARM_RESET);
@@ -600,7 +593,10 @@
         });
 
         var json = { errors: errors };
-        if (!Object.keys(errors).length) json.redirect = '/index.html';
+        if (!Object.keys(errors).length) {
+            applyStopConfig(state);
+            json.redirect = '/index.html';
+        }
         return { json: json };
     }
 

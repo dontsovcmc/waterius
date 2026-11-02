@@ -81,6 +81,7 @@ public:
     bool clearCounters();
     bool setAlarmConfig(const AlarmThresholds &ch0, const AlarmThresholds &ch1,
                         const uint8_t reset_mask);
+    bool setStopConfig(const uint16_t stop0, const uint16_t stop1);
     bool confirmAlarm();
     bool setTransmitMode();
     bool setSetupMode();

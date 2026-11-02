@@ -18,7 +18,6 @@
 #include "core/input.h"
 #include "core/portal_watchdog.h"
 #include "core/alarm.h"
-#include "core/idle.h"
 #include "resources.h"
 #include "ha/resources.h"
 #include "active_point_api.h"
@@ -380,6 +379,10 @@ String processor_main(const String &var, const uint8_t input)
     else if (var == FPSTR(PARAM_THRESHOLDS_OFF1))
         return template_disabled(alarm_input_state(runtime_data.counter_type1, sett.factor1,
                                                    runtime_data.version) != ALARM_INPUT_NO_FACTOR);
+
+    // Остановку считает attiny: на старой поле ничего бы не делало
+    else if (var == FPSTR(PARAM_STOP_HIDDEN))
+        return runtime_data.version < ATTINY_VER_STOP ? String(FPSTR(CLASS_HIDDEN)) : String();
 
     // Тип, которого attiny не знает, страница не предлагает: strings.js убирает такие пункты
     else if (var == FPSTR(PARAM_LEAK_OFF))
