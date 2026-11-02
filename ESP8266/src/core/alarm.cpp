@@ -109,26 +109,26 @@ AlarmThresholds alarm_thresholds(const bool vacation, const uint8_t counter_type
     return t;
 }
 
-uint16_t stop_threshold(const uint8_t counter_type, const uint16_t hours,
+uint16_t stop_threshold(const uint8_t counter_type, const uint16_t minutes,
                         const uint16_t period_min_full, const uint16_t wakeup_per_min)
 {
-    if (hours == 0 || !counts_impulses(counter_type))
+    if (minutes == 0 || !counts_impulses(counter_type))
     {
         return 0; // тревога выключена
     }
 
-    uint32_t minutes = (uint32_t)hours * 60;
+    uint32_t attiny_min = minutes;
 
     if (period_min_full > 0 && wakeup_per_min > 0)
     {
-        minutes = minutes * period_min_full / wakeup_per_min;
+        attiny_min = attiny_min * period_min_full / wakeup_per_min;
     }
 
-    if (minutes > UINT16_MAX)
+    if (attiny_min > UINT16_MAX)
     {
         return UINT16_MAX;
     }
-    return minutes ? (uint16_t)minutes : 1;
+    return attiny_min > ALARM_STOP_MIN_ATTINY ? (uint16_t)attiny_min : ALARM_STOP_MIN_ATTINY;
 }
 
 AlarmInputState alarm_input_state(const uint8_t counter_type, const uint16_t factor,

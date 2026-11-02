@@ -364,61 +364,65 @@ TEST(AlarmInput, OldAttinyWinsOverUnknownFactor)
               ALARM_INPUT_NO_ATTINY);
 }
 /*
-Остановка расхода (#202). Считает attiny в своих минутах, поэтому часы
+Остановка расхода (#202). Считает attiny в своих минутах, поэтому минуты
 пользователя надо перевести в них той же поправкой, что и период сна: иначе
 спешащие часы attiny объявят остановку раньше заданного.
 */
-TEST(StopThreshold, ZeroHoursIsOff)
+TEST(StopThreshold, ZeroMinutesIsOff)
 {
     EXPECT_EQ(stop_threshold(CounterType::NAMUR, 0, 1309, 1440), 0);
 }
 
 TEST(StopThreshold, UnmeasuredClockGivesPlainMinutes)
 {
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 48, 0, 1440), 2880);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 2880, 0, 1440), 2880);
 }
 
 TEST(StopThreshold, MeasuredClockCorrectsMinutes)
 {
     // 1440 настоящих минут - это 1309 минут attiny
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 48, 1309, 1440), 2618);
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 48, 1560, 1440), 3120);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 2880, 1309, 1440), 2618);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 2880, 1560, 1440), 3120);
 }
 
-TEST(StopThreshold, MaxHoursFitsWithoutCorrection)
+TEST(StopThreshold, MaxFitsWithoutCorrection)
 {
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, ALARM_STOP_MAX_HOURS, 0, 1440), 65520);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, UINT16_MAX, 0, 1440), UINT16_MAX);
 }
 
 TEST(StopThreshold, SaturatesInsteadOfWrapping)
 {
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, ALARM_STOP_MAX_HOURS, 1560, 1440), UINT16_MAX);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, UINT16_MAX, 1560, 1440), UINT16_MAX);
 }
 
 TEST(StopThreshold, CorrectionDoesNotOverflow)
 {
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, ALARM_STOP_MAX_HOURS, 65535, 65535), 65520);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, UINT16_MAX, 65535, 65535), UINT16_MAX);
 }
 
-TEST(StopThreshold, NeverRoundsDownToOff)
+TEST(StopThreshold, NeverBelowWhatAttinyCanClear)
 {
-    // Ноль значит "выключено", а пользователь просил обратное
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 1, 1, 65535), 1);
+    // Удалённо порог приезжает без проверки страницы, а поправка ещё уменьшает его
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 1, 0, 1440), ALARM_STOP_MIN_ATTINY);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 2, 1008, 1440), ALARM_STOP_MIN_ATTINY);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 1, 1, 65535), ALARM_STOP_MIN_ATTINY);
+
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 5, 0, 1440), 5);
 }
 
 TEST(StopThreshold, ZeroPeriodIsNotDividedBy)
 {
-    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 1, 100, 0), 60);
+    EXPECT_EQ(stop_threshold(CounterType::NAMUR, 60, 100, 0), 60);
 }
 
 TEST(StopThreshold, OnlyForInputsThatCount)
 {
     // Порог, оставшийся от счётчика, на датчике поднял бы ложную тревогу
-    EXPECT_EQ(stop_threshold(CounterType::LEAKAGE, 48, 0, 1440), 0);
-    EXPECT_EQ(stop_threshold(CounterType::SIGNAL_NC, 48, 0, 1440), 0);
-    EXPECT_EQ(stop_threshold(CounterType::NONE, 48, 0, 1440), 0);
+    EXPECT_EQ(stop_threshold(CounterType::LEAKAGE, 2880, 0, 1440), 0);
+    EXPECT_EQ(stop_threshold(CounterType::SIGNAL_NC, 2880, 0, 1440), 0);
+    EXPECT_EQ(stop_threshold(CounterType::NONE, 2880, 0, 1440), 0);
 
-    EXPECT_GT(stop_threshold(CounterType::ELECTRONIC, 48, 0, 1440), 0);
+    EXPECT_GT(stop_threshold(CounterType::ELECTRONIC, 2880, 0, 1440), 0);
 }
 
 TEST(ConsumptionStopped, ReadsOwnBitOfEachInput)

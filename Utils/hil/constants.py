@@ -81,8 +81,8 @@ INPUT_SILENT = '24'
 # core/types.h: SERIAL_LEN. Длина - в байтах, кириллица занимает по два
 SERIAL_LEN = 16
 
-# core/alarm.h: потолок остановки расхода в часах
-ALARM_STOP_MAX_HOURS = 1092
+# Потолок порога остановки расхода, минут: поле uint16, core/types.h: alarm_stop0
+ALARM_STOP_MAX_MIN = 65535
 
 # portal/resources.h: PARAM_ASTERICS - так интерфейс показывает сохранённый пароль
 MASKED = '********'
@@ -105,10 +105,12 @@ CONFIRM_MQTT = 4
 # раньше неё сеанс невозможен физически. Берём её плюс сеанс и запас
 ALARM_WAIT_S = 420.0
 
-# Сколько настоящих секунд длится час attiny: поправка часов в прошивке лежит в
-# диапазоне [0.7, 1.7) (core/wakeup.cpp, k_estimated)
-ATTINY_HOUR_MIN_S = 0.7 * 3600
-ATTINY_HOUR_MAX_S = 1.7 * 3600
+# Порог остановки расхода в E7, минут. Настоящая длина порога зависит от
+# поправки часов, она лежит в диапазоне [0.7, 1.7) (core/wakeup.cpp, k_estimated).
+# Сверху ещё пауза перед сеансом по тревоге и сам сеанс
+STOP_THRESHOLD_MIN = 10
+STOP_MIN_S = 0.7 * STOP_THRESHOLD_MIN * 60
+STOP_MAX_S = 1.7 * STOP_THRESHOLD_MIN * 60 + ALARM_WAIT_S
 SILENCE_S = 420.0
 
 # Выдержка перед нажатием кнопки, когда прошлый сеанс только что кончился:

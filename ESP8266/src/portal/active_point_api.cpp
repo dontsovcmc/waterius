@@ -581,34 +581,6 @@ void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj, 
 }
 
 /*
-Порог остановки потребления: часы, не больше ALARM_STOP_MAX_HOURS.
-
-Выше счётчик простоя в attiny просто не досчитает - он ведётся в минутах и
-упирается в 65535. Молча не работающая тревога хуже отсутствующей, поэтому не
-принимаем.
-*/
-static void save_stop_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
-{
-    uint16_t value = 0;
-    ParamError err = parse_uint16(p->value().c_str(), value, true); // ноль - выключено
-
-    if (err == PARAM_OK && value > ALARM_STOP_MAX_HOURS)
-    {
-        err = PARAM_ERR_VALUE;
-    }
-
-    if (err == PARAM_OK)
-    {
-        v = value;
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
-    }
-    else
-    {
-        report_param_error(p, errorsObj, err);
-    }
-}
-
-/*
 Протечка: два поля, одно условие (#202).
 
 "Расход не падал ниже Q л/ч в течение T часов" - это одно предложение, и
@@ -992,14 +964,14 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
     }
     else if (name == FPSTR(PARAM_ALARM_STOP) || name == FPSTR(s_as)) // portal || ha
     {
-        // Часов без расхода. 0 - выключено
+        // Минут без расхода. 0 - выключено
         switch (input)
         {
             case INPUT0_RED:
-                save_stop_param(p, sett.alarm_stop0, errorsObj);
+                save_param(p, sett.alarm_stop0, errorsObj, true);
                 break;
             case INPUT1_BLUE:
-                save_stop_param(p, sett.alarm_stop1, errorsObj);
+                save_param(p, sett.alarm_stop1, errorsObj, true);
                 break;
         }
     }
@@ -1319,10 +1291,8 @@ void post_api_save_alarms(AsyncWebServerRequest *request)
     if (request->hasParam(FPSTR(PARAM_ALARM_RESET), true))
         save_alarm_reset(request->getParam(FPSTR(PARAM_ALARM_RESET), true), errorsObj);
 
-    if (request->hasParam(FPSTR(PARAM_ALARM_STOP0), true))
-        save_stop_param(request->getParam(FPSTR(PARAM_ALARM_STOP0), true), sett.alarm_stop0, errorsObj);
-    if (request->hasParam(FPSTR(PARAM_ALARM_STOP1), true))
-        save_stop_param(request->getParam(FPSTR(PARAM_ALARM_STOP1), true), sett.alarm_stop1, errorsObj);
+    save_uint16_param(request, FPSTR(PARAM_ALARM_STOP0), sett.alarm_stop0, errorsObj);
+    save_uint16_param(request, FPSTR(PARAM_ALARM_STOP1), sett.alarm_stop1, errorsObj);
 
     // Галочка приходит всегда: common.js шлёт 0 или 1, а не отсутствие поля
     if (request->hasParam(FPSTR(PARAM_VACATION), true))

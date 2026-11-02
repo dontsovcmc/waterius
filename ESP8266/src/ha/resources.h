@@ -125,7 +125,7 @@ static const char s_alarm_wet[] PROGMEM = "alarm_wet";
 static const char s_alarm_wet_name[] PROGMEM = "Alarm: water sensor";
 static const char s_alarm_signal_name[] PROGMEM = "Alarm: signal";
 static const char s_as[] PROGMEM = "as";
-static const char s_as_name[] PROGMEM = "Alarm stop hours";
+static const char s_as_name[] PROGMEM = "Alarm stop minutes";
 static const char s_alarm_stop[] PROGMEM = "alarm_stop";
 static const char s_alarm_stop_name[] PROGMEM = "Alarm: consumption stopped";
 static const char s_button[] PROGMEM = "button";
@@ -347,7 +347,7 @@ static const char *const ENTITY_CHANNEL_ALARM_WET[MQTT_PARAM_COUNT] PROGMEM =
 static const char *const ENTITY_CHANNEL_ALARM_SIGNAL[MQTT_PARAM_COUNT] PROGMEM =
     {s_binary_sensor, s_alarm_signal_name, s_alarm_wet, "", s_problem, "", "", "", ""};
 static const char *const ENTITY_CHANNEL_ALARM_STOP_CFG[MQTT_PARAM_COUNT] PROGMEM =
-    {s_number, s_as_name, s_as, "", "", s_hour, s_config, s_icon_water_off, s_format50z};      // asN Часов без расхода
+    {s_number, s_as_name, s_as, "", "", s_min, s_config, s_icon_water_off, s_format50z};       // asN Минут без расхода
 /*
 Пороги тревог первых сборок dev 2.0.47, их заменили av/ar/ah. Нужны только
 тип и имя: по ним прошивка удаляет сущности, оставшиеся у брокеров.

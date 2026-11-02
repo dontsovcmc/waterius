@@ -43,20 +43,6 @@
         else reportParamError(p.name, errors, result.err);
     }
 
-    /*
-     * Порог остановки потребления: часы, не больше ALARM_STOP_MAX_HOURS.
-     * Выше счётчик простоя просто не досчитает - он ведётся в минутах.
-     */
-    function saveStopParam(p, state, field, errors) {
-        var result = C().parseUint16(p.value, true); // ноль - выключено
-        var err = result.err;
-        if (err === E().PARAM_OK && result.value > G().defines.ALARM_STOP_MAX_HOURS) {
-            err = E().PARAM_ERR_VALUE;
-        }
-        if (err === E().PARAM_OK) state.sett[field] = result.value;
-        else reportParamError(p.name, errors, err);
-    }
-
     function saveUint8(p, state, field, errors, zeroOk) {
         var result = C().parseUint8(p.value, !!zeroOk);
         if (result.err === E().PARAM_OK) state.sett[field] = result.value;
@@ -212,8 +198,8 @@
             if (input === 0) saveUint16(p, state, 'alarm_hours0', errors, true);
             else if (input === 1) saveUint16(p, state, 'alarm_hours1', errors, true);
         } else if (name === P().PARAM_ALARM_STOP || name === P().s_as) {
-            if (input === 0) saveStopParam(p, state, 'alarm_stop0', errors);
-            else if (input === 1) saveStopParam(p, state, 'alarm_stop1', errors);
+            if (input === 0) saveUint16(p, state, 'alarm_stop0', errors, true);
+            else if (input === 1) saveUint16(p, state, 'alarm_stop1', errors, true);
         } else if (name === P().PARAM_FACTOR || name === P().s_f) {
             var value = parseInt(p.value, 10) || 0;
             if (value === D.AUTO_IMPULSE_FACTOR || value === D.AS_COLD_CHANNEL) {
@@ -576,8 +562,8 @@
         optional(P().PARAM_ALARM_RATE1, 'alarm_rate1', saveUint16);
         optional(P().PARAM_ALARM_HOURS0, 'alarm_hours0', saveUint16);
         optional(P().PARAM_ALARM_HOURS1, 'alarm_hours1', saveUint16);
-        optional(P().PARAM_ALARM_STOP0, 'alarm_stop0', saveStopParam);
-        optional(P().PARAM_ALARM_STOP1, 'alarm_stop1', saveStopParam);
+        optional(P().PARAM_ALARM_STOP0, 'alarm_stop0', saveUint16);
+        optional(P().PARAM_ALARM_STOP1, 'alarm_stop1', saveUint16);
 
         // Не настройка, а действие: маска гасит биты и тут же забывается
         var reset = findParam(params, P().PARAM_ALARM_RESET);

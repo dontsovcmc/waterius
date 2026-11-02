@@ -337,6 +337,23 @@ function testStopAlarm() {
     saveAlarms('vacation', '1');
     if (JSON.stringify(stopped()) !== '[1]') problems.push('режим "Я уехал" погасил плашку: ' + stopped());
 
+    const rejected = (value) => 'alarm_stop1' in (saveAlarms('alarm_stop1', value).json.errors || {});
+    if (rejected('65535')) problems.push('отвергнут потолок порога');
+    if (!rejected('65536')) problems.push('принят порог больше uint16');
+
+    // Ноль выключает тревогу, поэтому границу держит pattern, а не атрибут min
+    const patterns = [...read('alarms.html').matchAll(/<input pattern="([^"]+)" id="alarm_stop[01]"/g)];
+    if (patterns.length !== 2) problems.push('полей порога с pattern: ' + patterns.length);
+    patterns.forEach(([, pattern]) => {
+        const allowed = new RegExp(pattern);
+        ['0', '5', '9', '10', '4320', '65535'].forEach((value) => {
+            if (!allowed.test(value)) problems.push(`pattern ${pattern} не пускает ${value}`);
+        });
+        ['1', '4', '05', '00', '100000'].forEach((value) => {
+            if (allowed.test(value)) problems.push(`pattern ${pattern} пускает ${value}`);
+        });
+    });
+
     check('остановка расхода зависит от attiny', problems);
 }
 

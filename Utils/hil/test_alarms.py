@@ -37,8 +37,6 @@ import pytest
 from . import portal as portal_mod
 from .constants import (
     ALARM_WAIT_S,
-    ATTINY_HOUR_MAX_S,
-    ATTINY_HOUR_MIN_S,
     BASE_FACTOR,
     LEAKAGE,
     MSG_ALARM_WET,
@@ -47,6 +45,9 @@ from .constants import (
     PLANNED_WAIT_S,
     RESET_WET0,
     RESET_WET1,
+    STOP_MAX_S,
+    STOP_MIN_S,
+    STOP_THRESHOLD_MIN,
     VOL_LITRES,
     VOL_PULSES,
 )
@@ -319,20 +320,20 @@ def test_E7_consumption_stopped(stand: Stand, quiet: None) -> None:
     Тревога живёт по своим правилам и снимается сама: первый импульс гасит её в
     пределах минуты, и о снятии attiny докладывает отдельным сеансом.
     """
-    # Импульс до настройки: вход мог простоять час, и порог, доехавший раньше
-    # импульса, поднял бы тревогу сразу
+    # Импульс до настройки: вход мог простоять дольше порога, и порог, доехавший
+    # раньше импульса, поднял бы тревогу сразу
     stand.dut.pulse(channel=1, count=1)
     started = time.monotonic()
 
-    armed = stand.setup(channel=1, alarm_stop=1, ctype=NAMUR, factor=BASE_FACTOR,
-                        period_min=1440, send_on_consumption=1)
+    armed = stand.setup(channel=1, alarm_stop=STOP_THRESHOLD_MIN, ctype=NAMUR,
+                        factor=BASE_FACTOR, period_min=1440, send_on_consumption=1)
     assert armed.stop_config is not None, f'нет строки Stop config\n{armed.text}'
     assert armed.stop_config['min1'] > 0, f'порог не уехал в attiny: {armed.stop_config}'
     stand.reset_observers()
 
-    session = stand.wait_session(timeout=ATTINY_HOUR_MAX_S, mode=ALARM_MODE)
+    session = stand.wait_session(timeout=STOP_MAX_S, mode=ALARM_MODE)
     elapsed = time.monotonic() - started
-    assert elapsed >= ATTINY_HOUR_MIN_S, f'тревога раньше порога: {elapsed:.0f} с'
+    assert elapsed >= STOP_MIN_S, f'тревога раньше порога: {elapsed:.0f} с'
     session.assert_alarm(stop1=1, stop0=0)
     session.assert_confirm(confirmed=1)
 

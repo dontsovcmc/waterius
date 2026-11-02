@@ -91,13 +91,11 @@ AlarmThresholds alarm_thresholds(const bool vacation, const uint8_t counter_type
                                  const uint16_t hours, const uint16_t factor);
 
 /*
-Наибольший порог остановки расхода, часов.
-
-attiny считает простой в минутах и упирается в 65535, то есть 1092 часа - 45
-суток. Порог выше этого никогда бы не сработал, а молча не работающая тревога
-хуже отсутствующей.
+Наименьший порог остановки в минутах attiny. Простой обнуляет импульс, а
+минута прибавляется после него, поэтому порог 1 достигается и при непрерывном
+расходе: тревога не гасла бы.
 */
-#define ALARM_STOP_MAX_HOURS 1092
+#define ALARM_STOP_MIN_ATTINY 2
 
 /*
 Порог остановки расхода в минутах attiny.
@@ -107,10 +105,10 @@ attiny считает простой в минутах и упирается в 
 Поправку ещё не измеряли (period_min_full == 0) - минуты берутся как есть.
 
 @param counter_type тип входа: на входе без импульсов остановки не бывает
-@param hours порог в часах, 0 - тревога выключена
-@return минуты для команды 'H', 0 - выключено
+@param minutes порог в настоящих минутах, 0 - тревога выключена
+@return минуты attiny для команды 'H', 0 - выключено
 */
-uint16_t stop_threshold(const uint8_t counter_type, const uint16_t hours,
+uint16_t stop_threshold(const uint8_t counter_type, const uint16_t minutes,
                         const uint16_t period_min_full, const uint16_t wakeup_per_min);
 
 /*
