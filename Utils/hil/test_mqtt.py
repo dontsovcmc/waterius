@@ -33,6 +33,7 @@ from .constants import (
     LEAKAGE,
     PLANNED_PERIOD_MIN,
     PLANNED_WAIT_S,
+    SIGNAL_NC,
 )
 from .logwatch import (
     MANUAL_TRANSMIT_MODE,
@@ -805,6 +806,21 @@ def test_I18_changed_input_type_removes_stale_entities(stand: Stand) -> None:
     assert not stale, f'сущности счётчика остались у брокера: {stale}'
     assert config_topic(after, 'sensor', 'ch1') is not None, (
         f'соседний вход потерял показания: {after}')
+
+
+@pytest.mark.requires(attiny=44, esp='2.0.55')
+@DISCOVERY
+def test_I25_signal_input_is_not_a_water_sensor(stand: Stand) -> None:
+    """Разрыв шлейфа - не вода: у сигнализации своя сущность и свой вариант типа входа."""
+    stand.dut.wet(channel=0, closed=True)        # спокойное состояние - замкнуто
+    stand.setup(channel=0, ctype=SIGNAL_NC)
+
+    entities = discovery_entities(stand)
+    entity = entities.get(('binary_sensor', 'alarm_wet0'))
+    assert entity is not None, sorted(entities)
+    assert entity['name'].endswith('Alarm: signal'), entity
+    assert entity['dev_cla'] == 'problem', entity
+    assert 'SIGNAL_NC' in entities[('select', 'ctype0')]['options']
 
 
 # Пороги тревог первых сборок dev 2.0.47 - их заменили av/ar/ah

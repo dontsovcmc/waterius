@@ -139,6 +139,7 @@ def test_F3_disabled_receiver_drops_out(stand: Stand, quiet: None) -> None:
 
 
 @pytest.mark.slow
+@pytest.mark.requires(attiny=48)
 def test_F4_delivery_attempts(stand: Stand, quiet: None, net: Any) -> None:
     """
     Потолок попыток доставки: не больше ALARM_MAX_TRIES, то есть пяти.
@@ -148,13 +149,13 @@ def test_F4_delivery_attempts(stand: Stand, quiet: None, net: Any) -> None:
     сети сеансы только жгут батарею, а состояние всё равно уедет ближайшим
     плановым выходом на связь.
 
-    Период на время теста должен быть длинным: короткий даст плановые сеансы
-    внутри окна наблюдения, и счёт собьётся.
+    Период короче паузы, режим «только при расходе»: плановые сеансы без радио
+    идут внутри окна и не имеют права тратить попытки и заново заводить паузу.
 
     Окно наблюдения 50 минут, а не полчаса: пауза в пять минут отсчитывается от
     конца сеанса, а сеанс без сети длится до двух минут.
     """
-    arm_sensor(stand, period_min=120)
+    arm_sensor(stand, period_min=2, send_on_consumption=1)
     stand.reset_observers()
 
     sessions = []

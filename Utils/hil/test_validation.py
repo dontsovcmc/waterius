@@ -83,6 +83,7 @@ def test_C3_port_belongs_to_its_own_field(board: AtBoard) -> None:
                 mqtt_host='broker:1883') == {'mqtt_host': ERR_PORT_IN_HOST}
 
 
+@pytest.mark.requires(esp='2.0.56')
 def test_C4_stop_threshold_has_a_ceiling(board: AtBoard) -> None:
     """
     Остановка расхода больше потолка отвергается.

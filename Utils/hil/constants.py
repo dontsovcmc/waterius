@@ -113,6 +113,10 @@ STOP_MIN_S = 0.7 * STOP_THRESHOLD_MIN * 60
 STOP_MAX_S = 1.7 * STOP_THRESHOLD_MIN * 60 + ALARM_WAIT_S
 SILENCE_S = 420.0
 
+# Наименьший порог остановки в минутах attiny: core/alarm.h, ALARM_STOP_MIN_ATTINY
+ALARM_STOP_MIN_ATTINY = 5
+STOP_FLOOR_MAX_S = 1.7 * ALARM_STOP_MIN_ATTINY * 60 + ALARM_WAIT_S
+
 # Выдержка перед нажатием кнопки, когда прошлый сеанс только что кончился:
 # нажатие вплотную к концу сеанса до устройства не доходит, стенд жмёт впустую
 # и ждёт своего сеанса до таймаута.

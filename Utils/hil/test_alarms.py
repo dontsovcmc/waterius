@@ -36,6 +36,7 @@ import pytest
 
 from . import portal as portal_mod
 from .constants import (
+    ALARM_STOP_MIN_ATTINY,
     ALARM_WAIT_S,
     BASE_FACTOR,
     LEAKAGE,
@@ -45,6 +46,7 @@ from .constants import (
     PLANNED_WAIT_S,
     RESET_WET0,
     RESET_WET1,
+    STOP_FLOOR_MAX_S,
     STOP_MAX_S,
     STOP_MIN_S,
     STOP_THRESHOLD_MIN,
@@ -311,14 +313,15 @@ def test_E17_reset_mask_clears_only_its_bits(stand: Stand, quiet: None) -> None:
 
 
 @pytest.mark.slow
-@pytest.mark.requires(attiny=48)
+@pytest.mark.requires(attiny=48, esp='2.0.56')
 def test_E7_consumption_stopped(stand: Stand, quiet: None) -> None:
     """
     Остановка расхода будит устройство сама, как протечка: суточный период и
     режим «только при расходе» её не задерживают.
 
-    Тревога живёт по своим правилам и снимается сама: первый импульс гасит её в
-    пределах минуты, и о снятии attiny докладывает отдельным сеансом.
+    Тревога живёт по своим правилам и снимается сама: кнопка её не гасит, ведь
+    вода от нажатия не пошла, а первый импульс гасит в пределах минуты, и о
+    снятии attiny докладывает отдельным сеансом.
     """
     # Импульс до настройки: вход мог простоять дольше порога, и порог, доехавший
     # раньше импульса, поднял бы тревогу сразу
@@ -338,14 +341,47 @@ def test_E7_consumption_stopped(stand: Stand, quiet: None) -> None:
     session.assert_confirm(confirmed=1)
 
     stand.reset_observers()
+    stand.dut.press_button()
+    pressed = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
+    pressed.assert_alarm(stop1=1)
+
+    stand.reset_observers()
     stand.dut.pulse(channel=1, count=1)
     cleared = stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE)
     cleared.assert_alarm(stop1=0)
 
 
-@pytest.mark.requires(attiny=48)
+@pytest.mark.requires(attiny=48, esp='2.0.56')
 def test_E7b_stop_threshold_is_off_on_sensor_input(stand: Stand, quiet: None) -> None:
     """Порог, оставшийся от счётчика, на датчике поднял бы ложную тревогу."""
     armed = stand.setup(channel=1, alarm_stop=1, ctype=LEAKAGE)
     assert armed.stop_config is not None, f'нет строки Stop config\n{armed.text}'
     assert armed.stop_config['min1'] == 0, f'порог уехал на вход датчика: {armed.stop_config}'
+
+
+@pytest.mark.slow
+@pytest.mark.requires(attiny=48, esp='2.0.56')
+def test_E7c_zero_threshold_clears_stop(stand: Stand, quiet: None) -> None:
+    """Нулевой порог гасит поднятую остановку: импульса не было, держит её только порог."""
+    stand.dut.pulse(channel=1, count=1)    # вход мог простоять дольше порога, см. E7
+    stand.setup(channel=1, alarm_stop=ALARM_STOP_MIN_ATTINY, ctype=NAMUR,
+                factor=BASE_FACTOR, period_min=1440)
+    stand.reset_observers()
+    stand.wait_session(timeout=STOP_FLOOR_MAX_S, mode=ALARM_MODE).assert_alarm(stop1=1)
+
+    off = stand.setup(channel=1, alarm_stop=0)
+    assert off.stop_config is not None, f'нет строки Stop config\n{off.text}'
+    assert off.stop_config['min1'] == 0, f'ноль не уехал в attiny: {off.stop_config}'
+
+    stand.reset_observers()
+    stand.wait_session(timeout=ALARM_WAIT_S, mode=ALARM_MODE).assert_alarm(stop1=0)
+
+
+@pytest.mark.requires(attiny=48, esp='2.0.56')
+def test_E7d_stop_threshold_has_a_floor(stand: Stand, quiet: None) -> None:
+    """С сервера порог приезжает без проверки страницы: меньше пяти минут attiny не получит."""
+    stand.dut.pulse(channel=1, count=1)    # до настройки следующего теста тревоги не будет
+    armed = stand.setup(channel=1, alarm_stop=1, ctype=NAMUR, factor=BASE_FACTOR)
+    assert armed.stop_config is not None, f'нет строки Stop config\n{armed.text}'
+    assert armed.stop_config['min1'] == ALARM_STOP_MIN_ATTINY, (
+        f'порог ниже наименьшего: {armed.stop_config}')
