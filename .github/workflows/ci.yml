@@ -19,6 +19,19 @@ env:
   PLATFORMIO_VERSION: '6.2.0'
 
 jobs:
+  test-tls:
+    name: Проверка сертификатов BearSSL
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Зависимости проверки X.509
+        run: sudo apt-get update && sudo apt-get install -y g++ libbearssl-dev openssl
+      - name: Доверие, имя сервера, даты и подмена ключа
+        run: python ESP8266/scripts/test_tls.py
+
   test:
     name: Тесты бизнес-логики ${{ matrix.environment }}
     runs-on: ubuntu-latest

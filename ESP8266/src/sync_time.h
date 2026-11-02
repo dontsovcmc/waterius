@@ -31,6 +31,10 @@ extern bool sync_ntp_time(const String &ntp_server_name, const time_t known_good
 
 extern String get_current_time();
 
+// 0 until the clock has an NTP or persisted NTP reference. The initial
+// START_VALID_TIME placeholder ticking forward does not make it trustworthy.
+extern time_t get_tls_time();
+
 // is_valid_time() объявлена в core/timekeeping.h
 
 #endif

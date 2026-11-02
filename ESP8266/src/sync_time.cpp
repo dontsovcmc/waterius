@@ -25,6 +25,7 @@
 #define NTP_ERR_NO_REPLY -3
 #define NTP_ERR_BAD_REPLY -4
 static int16_t ntp_last_error = 0;
+static bool clock_has_reference = false;
 
 // NTP_PACKET_SIZE — в core/timekeeping.h
 uint8_t packet_buffer[NTP_PACKET_SIZE]; // Buffer to hold incoming & outgoing packets
@@ -240,6 +241,7 @@ bool sync_ntp_time(const String &ntp_server_name, const time_t known_good, const
     // получится now < last_send — "проснулись раньше, чем засыпали".
     tv.tv_sec = known_good;
     tv.tv_usec = 0;
+    clock_has_reference = clock_has_reference && is_valid_time(known_good);
     settimeofday(&tv, NULL);
 
     uint32_t start_time = millis();
@@ -252,6 +254,7 @@ bool sync_ntp_time(const String &ntp_server_name, const time_t known_good, const
     if (is_valid_time(tv.tv_sec))
     {
         settimeofday(&tv, NULL);
+        clock_has_reference = true;
         LOG_INFO(F("NTP: Time synced ") << millis() - start_time << F(" msec"));
         LOG_INFO(F("NTP: Current time ") << get_current_time());
         return true;
@@ -313,6 +316,8 @@ bool sync_ntp_time(const Settings &sett)
 
     String ntp_server = sett.ntp_server;
     const time_t known_good = clock_before_sync(sett.last_send);
+    // last_send alone is not proof: it can be written after a failed first NTP.
+    clock_has_reference = is_valid_time(sett.last_time_sync);
 
     if (sett.ntp_server[0] && !ntp_server.equalsIgnoreCase(String(DEFAULT_NTP_SERVER))) // проверяем что сервер указан и не равняется по умолчанию
     {
@@ -377,6 +382,7 @@ bool maybe_sync_time(Settings &sett)
         tv.tv_sec = estimated;
         tv.tv_usec = 0;
         settimeofday(&tv, NULL);
+        clock_has_reference = true;
         LOG_INFO(F("NTP: sync not due, wakeups since sync: ") << sett.wakeups_since_sync);
         LOG_INFO(F("NTP: estimated time ") << get_current_time());
     }
@@ -398,6 +404,11 @@ String get_current_time()
     // ISO8601 date time string format (2019-11-29T23:29:55+0800).
     strftime(buf, sizeof(buf), TIME_FORMAT, &timeinfo);
     return String(buf);
+}
+
+time_t get_tls_time()
+{
+    return clock_has_reference ? time(nullptr) : 0;
 }
 
 /**
