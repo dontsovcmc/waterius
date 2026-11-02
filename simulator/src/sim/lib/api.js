@@ -400,6 +400,12 @@
     }
 
     function getNetworks(state) {
+        // Как get_api_networks: результат отдаётся один раз, следующий запрос заводит новый скан
+        if (state.wifi.scan_polls > 0) {
+            state.wifi.scan_polls -= 1;
+            return { json: [] };
+        }
+        state.wifi.scan_polls = 1;
         return { json: state.wifi.networks.map(function (net) {
             return { ssid: net.ssid, level: net.level, wifi_channel: net.wifi_channel, bssid: net.bssid };
         }) };

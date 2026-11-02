@@ -85,6 +85,7 @@
                 connect_started: 0,
                 outcome: 'connected', // что случится при попытке подключения
                 bssid: [0, 0, 0, 0, 0, 0], // кэш быстрого коннекта, пара к wifi_channel
+                scan_polls: 0, // сколько запросов /api/networks ещё получат пустой список: скан не закончен
                 networks: [
                     { ssid: 'MyHome', level: 4, wifi_channel: 6, bssid: '5c:cf:7f:aa:bb:01' },
                     { ssid: 'Keenetic-1234', level: 2, wifi_channel: 11, bssid: '5c:cf:7f:aa:bb:02' },

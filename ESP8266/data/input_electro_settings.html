@@ -14,7 +14,7 @@
         back: '/input/%input%/setup.html',
         back_wizard: '/input/%input%/setup.html?wizard=true',
         next: '/index.html',
-        next_wizard: '/input/0/setup.html?wizard=true'
+        next_wizard: get_next_wizard_by_input(%input%)
     }); getImpulses(%input%, %counter_name%);">
         <form onsubmit="formSubmit(event, this, '/api/save');">
             <div class="wrap">

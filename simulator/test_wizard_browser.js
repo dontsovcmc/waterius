@@ -159,6 +159,8 @@ async function run() {
         await pagesOutsideWizard(page, origin);
         await wrongPassword(page, origin);
         await sensorHidesResource(page, origin);
+        await electroOnRedInput(page, origin);
+        await networksList(page, origin);
     } finally {
         await browser.close();
         server.close();
@@ -409,6 +411,72 @@ async function wrongPassword(page, origin) {
     await reason('/captive_portal_error.html');
 
     check('неверный пароль назван на странице Wi-Fi и на странице ошибки', problems);
+}
+
+// Красный вход в мастере последний: за ним отправка показаний
+async function electroOnRedInput(page, origin) {
+    const problems = [];
+    await sim(page, { type: 'reset' });
+
+    await page.goto(origin + '/input/0/setup.html?wizard=true', { waitUntil: 'networkidle' });
+    await page.selectOption('#counter_name', '2');
+    await page.click('button[type=submit]');
+    await page.waitForURL(/input\/0\/input_electro_detect\.html/, { timeout: 10000 });
+
+    await impulses(page, 0, 4);
+    await page.waitForURL(/input\/0\/input_electro_settings\.html/, { timeout: 25000 });
+    await page.fill('#channel_start', '123.456');
+    await page.fill('#factor', '3200');
+    await page.click('button[type=submit]');
+    await page.waitForURL((url) => !url.pathname.endsWith('input_electro_settings.html'),
+        { timeout: 15000 });
+
+    const at = new URL(page.url()).pathname;
+    if (at !== '/setup_send.html') problems.push('мастер ушёл на ' + at);
+
+    const back = async (want) => {
+        await page.click('header a');
+        await page.waitForURL((url) => url.pathname !== '/setup_send.html', { timeout: 10000 });
+        const landed = new URL(page.url()).pathname;
+        if (landed !== want) problems.push('«Назад» с отправки ведёт на ' + landed + ', а не на ' + want);
+    };
+    await back('/input/0/input_electro_settings.html');
+
+    await sim(page, { type: 'reset' });
+    await page.goto(origin + '/setup_send.html?wizard=true', { waitUntil: 'networkidle' });
+    await back('/input/0/settings.html');
+
+    check('электросчётчик на красном входе ведёт к отправке показаний и обратно', problems);
+}
+
+// Скан асинхронный: его результат забирает следующая перезагрузка
+async function networksList(page, origin) {
+    const problems = [];
+    const row = page.locator('.wifi-list a.link-row').first();
+    const note = page.getByText('Сетей пока нет');
+    const refresh = page.getByText('Обновить список сетей');
+    const open = () => page.goto(origin + '/wifi_list.html', { waitUntil: 'load' });
+    const press = () => Promise.all([page.waitForEvent('load'), refresh.click({ timeout: 10000 })])
+        .catch(() => problems.push('нет кнопки обновления'));
+    const seen = (what, problem) => what.waitFor({ timeout: 10000 }).catch(() => problems.push(problem));
+
+    await sim(page, { type: 'reset' });
+    await open();
+    await seen(row, 'первый вход: списка нет');
+
+    await open();
+    await seen(note, 'возврат на список: надписи нет');
+    await press();
+    await seen(row, 'кнопка не обновила список');
+
+    await sim(page, { type: 'patch', state: { wifi: { networks: [] } } });
+    await open();
+    await seen(note, 'сетей нет, а страница об этом не пишет');
+    if (await page.locator('.wifi-list .lds-ellipsis').count()) problems.push('сетей нет, а спиннер крутится');
+    await press();
+    await seen(note, 'после обновления надпись пропала');
+
+    check('список сетей: вход, возврат, пустой список, обновление', problems);
 }
 
 run().then(() => {

@@ -96,12 +96,15 @@ void get_api_networks(AsyncWebServerRequest *request)
     LOG_REQUEST(F("GET ") << request->url());
 
     int n = WiFi.scanComplete();
-    if (n == WIFI_SCAN_FAILED)
+    if (n < 0)
     {
-        WiFi.scanNetworks(true);
+        if (n == WIFI_SCAN_FAILED)
+        {
+            WiFi.scanNetworks(true);
+        }
         request->send(200, "", F("[]"));
     }
-    else if (n)
+    else
     {
         g_json_doc.clear();
         JsonArray array = g_json_doc.to<JsonArray>();
