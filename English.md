@@ -90,7 +90,7 @@ The electronic input has been tested at 20 pulses per second: enough for a 3200 
 
 [Update Waterius 2 over the air](https://account.waterius.ru/update/) from your personal account: upload the firmware and the file system, and the update starts when the device next connects
 
-Alpha version (built from the `dev` branch, for those ready to try new things): [2.0.56-48-alpha](https://github.com/dontsovcmc/waterius/releases/tag/2.0.56-48-alpha)
+Beta version (built from the `dev` branch, for those ready to try new things): [2.0.56-48-beta](https://github.com/dontsovcmc/waterius/releases/tag/2.0.56-48-beta)
 
 Community guide in the Telegram chat info: [waterius_forum](https://t.me/waterius_forum)
 - [Parts list and making the board](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
