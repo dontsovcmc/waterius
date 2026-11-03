@@ -22,7 +22,6 @@
 
 from __future__ import annotations
 
-import time
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -152,8 +151,8 @@ def test_F4_delivery_attempts(stand: Stand, quiet: None, net: Any) -> None:
     Период короче паузы, режим «только при расходе»: плановые сеансы без радио
     идут внутри окна и не имеют права тратить попытки и заново заводить паузу.
 
-    Окно наблюдения 50 минут, а не полчаса: пауза в пять минут отсчитывается от
-    конца сеанса, а сеанс без сети длится до двух минут.
+    Шестой попытки ждём 600 с, и это же проверка тишины: пауза идёт в минутах
+    attiny, а такая минута длится до 1,7 настоящей (core/wakeup.cpp, k_estimated).
     """
     arm_sensor(stand, period_min=2, send_on_consumption=1)
     stand.reset_observers()
@@ -165,8 +164,7 @@ def test_F4_delivery_attempts(stand: Stand, quiet: None, net: Any) -> None:
             # попытки её доставить, а не число новостей.
             stand.dut.wet(channel=SENSOR, closed=True)
 
-            deadline = time.monotonic() + 50 * 60
-            while time.monotonic() < deadline:
+            while len(sessions) <= 5:
                 session = stand.log.wait_session(timeout=600, mode=ALARM_MODE)
                 if session is None:
                     break
@@ -183,5 +181,3 @@ def test_F4_delivery_attempts(stand: Stand, quiet: None, net: Any) -> None:
         assert session.confirm is not None, f'нет строки Alarm confirm\n{session.text}'
         assert session.confirm['confirmed'] == 0, (
             f'квитанция не могла состояться: {session.confirm}')
-
-    stand.expect_no_session(timeout=SILENCE_S, mode=ALARM_MODE)
