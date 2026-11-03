@@ -76,7 +76,8 @@ def teach(stand: Stand, ssid: str, password: str) -> Session:
     session = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
     # Имя с пробелом `Saved:` регулярным выражением не разобрать - ищем строкой
     assert f'Saved: ssid={ssid}' in session.text, f'имя сети не сохранено\n{session.text}'
-    assert f'Saved: password={password}' in session.text, (
+    # Пароль прошивка в лог не пишет: верен ли он, покажет подключение к сети
+    assert 'Saved: password=' in session.text, (
         f'пароль сети не сохранён\n{session.text}')
     return session
 
@@ -110,10 +111,10 @@ def test_W3_unusual_network_names(stand: Stand, ssid: str, password: str, router
     from .router import RouterError
 
     home_ssid, home_password = stand.ap_ssid, stand.cfg.ap_password
-    teach(stand, ssid, password)
 
     back = False
     try:
+        teach(stand, ssid, password)
         with router.ssid_verbatim(ssid, password):
             stand.reset_observers()
             stand.dut.press_button()
