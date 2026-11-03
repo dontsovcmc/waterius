@@ -193,6 +193,10 @@ async function wizard(page, origin) {
     // Подключение идёт с задержкой, страница сама уходит на настройку входа
     await page.waitForURL(/input\/1\/setup\.html/, { timeout: 30000 });
     console.log('     подключились, мастер на ' + at());
+    // Сеть на канале 6, в настройках канал 1: save_connect отвечает адресом с ?error=0
+    if (new URL(page.url()).searchParams.get('wizard') !== 'true') {
+        problems.push('после подключения на другом канале мастер потерял wizard=true: ' + page.url());
+    }
 
     await page.click('button[type=submit], .btn[type=submit]');
     await page.waitForURL(/input\/1\/(detect|settings)\.html/, { timeout: 10000 });
