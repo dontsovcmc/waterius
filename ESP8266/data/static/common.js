@@ -195,7 +195,8 @@ function formSubmit(event, form, action) {
             });
             if(queryParams.wizard) queryString.push('wizard=true');
             
-            if(queryString.length) uri += '?' + queryString.join('&');
+            // Адрес от прошивки может уже нести параметры: /api/start_connect?error=0
+            if(queryString.length) uri += (uri.indexOf('?') >= 0 ? '&' : '?') + queryString.join('&');
             return window.location = uri;
         }
 
