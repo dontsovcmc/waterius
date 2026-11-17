@@ -127,7 +127,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [esp01_1m, waterius_2]
+        environment: [esp01_1m, waterius_2, waterius_2_factory]
     steps:
       - uses: actions/checkout@v7
 
@@ -145,6 +145,12 @@ jobs:
 
       - name: Установка PlatformIO
         run: pip install "platformio==${{ env.PLATFORMIO_VERSION }}"
+
+      # Настоящие сеть и email завода есть только у владельца. #pragma message
+      # печатает их в лог сборки, поэтому здесь — выдуманные
+      - name: Выдуманные секреты для заводской сборки
+        if: matrix.environment == 'waterius_2_factory'
+        run: printf '[secrets]\nwifi_ssid = ci-ssid\nwifi_password = ci-pass\nwaterius_email = ci@example.com\n' > ESP8266/secrets.ini
 
       - name: pio run -e ${{ matrix.environment }}
         run: pio run -d ESP8266 -e ${{ matrix.environment }}

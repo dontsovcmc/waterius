@@ -80,6 +80,9 @@ Plan and suite list: `ESP8266/plan/tests_plan.md`.
 **OTA build/deploy:** `ESP8266/scripts/build_and_deploy.sh [version]` builds the `waterius_2` env and stages firmware/filesystem images in `ESP8266/ota/` for upload to the OTA server (URL hardcoded in the script — debug vs. release).
 
 **Local secrets:** Copy `ESP8266/secrets.ini.template` to `ESP8266/secrets.ini` and fill in credentials.
+The `waterius_2_factory` env builds the factory image with the plant's Wi-Fi and email from
+`secrets.ini` — the board passes the production test with it. Without `secrets.ini` that env fails
+(`ESP8266/check_secrets.py`); CI builds it with made-up values.
 
 ### Publishing a release
 
@@ -182,8 +185,8 @@ Disable modules via build_flags in `platformio.ini`:
 - Logging in ESP8266: Set `LOG_LEVEL_INFO` or `LOG_LEVEL_DEBUG` in build_flags
 - Pull requests go to `dev` branch; `master` is for releases only
 - CI (`.github/workflows/ci.yml`) runs on every PR and push to `dev`/`master`:
-  builds both ESP8266 envs and both Attiny85 envs, runs the host tests under
-  both models
+  builds the ESP8266 envs (`esp01_1m`, `waterius_2`, `waterius_2_factory`) and both
+  Attiny85 envs, runs the host tests under both models
 
 ## Running HIL tests (`Utils/hil`)
 
