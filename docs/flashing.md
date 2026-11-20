@@ -109,6 +109,9 @@ system_profiler SPUSBDataType | grep -B2 -A6 "FT232\|CP210"
    `ESP8266/post_compile.py` из окружения и `firmware_version`
    (`ESP8266/platformio.ini`), у образа ФС суффикс `-fs`; если в
    `ESP8266/secrets.ini` задан `WIFI_SSID`, добавляется ещё `-test`
+4. **Заводской образ:** `-e waterius_2_factory` — то же, что `waterius_2`, плюс сеть и
+   email завода из `ESP8266/secrets.ini`; файл `ESP8266/waterius_2_factory-2.0.50-test.bin`.
+   Без `secrets.ini` сборка падает (`ESP8266/check_secrets.py`)
 
 ```shell
 ~/.platformio/penv/bin/pio run -d ESP8266 -e waterius_2
