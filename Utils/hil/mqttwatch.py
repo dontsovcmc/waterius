@@ -1,0 +1,291 @@
+"""
+Подписка на топики Ватериуса и удалённые команды.
+
+Два разных дела в одном месте: слушать, что публикует устройство (данные и
+автодискавери), и присылать ему команды через `<топик>/<параметр>/set`. Команда
+применяется в том же сеансе, где получена: подписка выполняется до отправки
+данных, поэтому удерживаемое сообщение подхватывается сразу, а после применения
+данные уходят повторно.
+
+Флаг retain в живой доставке всегда нулевой - брокер выставляет его только
+тому, кто подписался уже после публикации (MQTT 3.1.1, 3.3.1.3). Поэтому
+настройка mqtt_retain проверяется отдельным подписчиком: `fetch_retained`.
+"""
+
+from __future__ import annotations
+
+import json
+import queue
+import threading
+import time
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
+
+import paho.mqtt.client as mqtt
+from loguru import logger
+
+
+@dataclass
+class Message:
+    topic: str
+    payload: str
+    retain: bool
+
+    def json(self) -> Any:
+        return json.loads(self.payload)
+
+
+class MqttWatch:
+    """Подписчик на всё дерево брокера плюс публикация команд."""
+
+    def __init__(self, host: str, port: int = 1883, topic: str = 'waterius',
+                 broker: Any = None) -> None:
+        self.host = host
+        self.port = port
+        self.topic = topic.rstrip('/')
+        # Свой брокер, когда он в этом же процессе: уборку удерживаемых он
+        # делает у себя, не рассылая пустые сообщения подписчикам
+        self.broker = broker
+        self.messages: queue.Queue[Message] = queue.Queue()
+        self.history: list[Message] = []
+        self._lock = threading.Lock()
+
+        # В paho 2.x конструктор требует версию API обратных вызовов явно.
+        self._client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
+                                   client_id=f'hil-{int(time.time())}')
+        self._client.on_message = self._on_message
+        self._client.on_connect = self._on_connect
+        self._client.on_subscribe = self._on_subscribe
+        self._client.on_disconnect = self._on_disconnect
+        self._connects = 0
+        self._subscribed = threading.Event()
+        self._client.connect(host, port, keepalive=30)
+        self._client.loop_start()
+        # Опубликованное до SUBACK теряется: подписка ещё не встала
+        if not self._subscribed.wait(5):
+            self.close()
+            raise RuntimeError(f'MQTT: брокер {host}:{port} не подтвердил подписку за 5 с')
+
+    def _on_connect(self, client: Any, _userdata: Any, _flags: Any,
+                    _reason: Any, _properties: Any = None) -> None:
+        """
+        Подписаться заново - в том числе после переподключения.
+
+        Подписка живёт внутри соединения: клиент с чистой сессией теряет её при
+        обрыве, а paho переподключается сам и молча. Прежде подписка стояла
+        один раз в конструкторе, и после первого же обрыва наблюдатель глох до
+        конца прогона: устройство публиковало, в его логе стояло
+        «Published succesfully», а стенд писал «в брокере пусто» и винил прошивку.
+        """
+        client.subscribe('#')
+
+    def _on_subscribe(self, _client: Any, _userdata: Any, _mid: Any,
+                      _reason_codes: Any, _properties: Any = None) -> None:
+        self._connects += 1
+        if self._connects > 1:
+            logger.warning('MQTT: наблюдатель переподключился и подписался заново - '
+                           'сообщения за время обрыва потеряны')
+        self._subscribed.set()
+
+    def _on_disconnect(self, _client: Any, _userdata: Any, _flags: Any = None,
+                       reason: Any = None, _properties: Any = None) -> None:
+        # paho 2.x приносит сюда ReasonCode, а он правдив всегда - в том числе
+        # нулевой «Normal disconnection». Стенд поэтому предупреждал о потере
+        # брокера на каждом своём же отключении, и в логе прогона это выглядело
+        # бедой связи. Судим по числу: ноль - наш собственный disconnect()
+        code = getattr(reason, 'value', reason)
+        if code:
+            logger.warning(f'MQTT: наблюдатель потерял брокер ({reason})')
+
+    def _on_message(self, _client: Any, _userdata: Any, msg: mqtt.MQTTMessage) -> None:
+        message = Message(msg.topic, msg.payload.decode(errors='replace'), bool(msg.retain))
+        with self._lock:
+            self.history.append(message)
+        self.messages.put(message)
+
+    # --- ожидание ---
+
+    def wait_prefix(self, prefix: str, timeout: float = 60.0) -> Message | None:
+        """
+        Дождаться сообщения из дерева устройства.
+
+        Именно по началу топика, а не по концу: суффикс совпадает и у чужого
+        сообщения, и у автодискавери, который уходит в `homeassistant/`, -
+        проверка «хоть что-то приехало» так зеленела бы всегда.
+        """
+        deadline = time.monotonic() + timeout
+        while True:
+            with self._lock:
+                root = prefix.rstrip('/')
+                for message in reversed(self.history):
+                    if message.topic == root or message.topic.startswith(root + '/'):
+                        return message
+            if time.monotonic() >= deadline:
+                return None
+            time.sleep(0.5)
+
+    def note(self) -> str:
+        """
+        Чем отчитывается сам наблюдатель, когда в дереве пусто.
+
+        Пустое дерево не говорит ничего: подписка живёт внутри соединения, и
+        наблюдатель, переживший обрыв, молчит ровно так же, как молчащее
+        устройство. Различает их число соединений и список увиденных топиков.
+        """
+        with self._lock:
+            топики = sorted({m.topic for m in self.history})
+        лишние = f' и ещё {len(топики) - 10}' if len(топики) > 10 else ''
+        брокер = self.broker.note() if self.broker is not None else ''
+        return (f'наблюдатель: соединений с брокером {self._connects} '
+                f'(больше одного - была переподписка), топиков в истории '
+                f'{len(топики)}: {топики[:10]}{лишние}{брокер}')
+
+    def fetch_retained(self, prefix: str, timeout: float = 5.0) -> list[Message]:
+        """
+        Что лежит в брокере удерживаемым - глазами нового подписчика.
+
+        Иначе флаг retain не проверить: тому, кто уже подписан, брокер
+        доставляет сообщение с нулевым флагом, и утверждение `message.retain`
+        падало бы независимо от настройки в прошивке.
+        """
+        root = prefix.rstrip('/')
+        found: list[Message] = []
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
+                             client_id=f'hil-retained-{int(time.time())}')
+        client.on_message = lambda _c, _u, msg: found.append(
+            Message(msg.topic, msg.payload.decode(errors='replace'), bool(msg.retain)))
+        client.connect(self.host, self.port, keepalive=30)
+        # Одного фильтра достаточно: `#` покрывает и сам корень, куда
+        # прошивка кладёт показания одним объектом (MQTT 3.1.1, 4.7.1.2).
+        # qos=0: удерживаемое читается разово, а на qos=1 брокер ждёт PUBACK и
+        # ругается в лог, когда подписчик уже отключился (amqtt: «Timeout
+        # waiting for PUBACK»)
+        client.subscribe(f'{root}/#', qos=0)
+        client.loop_start()
+        time.sleep(timeout)
+        # Сначала disconnect, потом loop_stop: DISCONNECT пишет и сокет закрывает
+        # сам цикл, и остановленный раньше времени оставляет соединение висеть.
+        # Брокер тогда не гаснет - его shutdown() ждёт отцепления последнего
+        # клиента, - а на выходе сыплются «Task was destroyed but it is pending»
+        client.disconnect()
+        client.loop_stop()
+        return found
+
+    def wait_topic(self, topic: str, timeout: float = 15.0,
+                   until: Callable[[Message], bool] | None = None) -> Message | None:
+        """
+        Дождаться сообщения в точности этого топика.
+
+        Снимок сразу после сеанса - гонка: устройство публикует десятки топиков
+        подряд, а брокер и подписчик работают своим чередом, и последние из них
+        доходят уже после строки ухода в сон. Хвост, не дошедший вовсе, - другая
+        беда, её ожиданием не вылечить (07_mqtt-tail-loss.md).
+
+        `until` ждёт не первого сообщения, а нужного: в одном сеансе прошивка
+        публикует показания дважды, и снимок ловил первую посылку вместо
+        второй (G1b 28 сентября).
+        """
+        deadline = time.monotonic() + timeout
+        while True:
+            message = self.last(topic)
+            if message is not None and (until is None or until(message)):
+                return message
+            if time.monotonic() >= deadline:
+                return None
+            time.sleep(0.2)
+
+    def last(self, topic: str) -> Message | None:
+        """Последнее сообщение в точности этого топика."""
+        with self._lock:
+            for message in reversed(self.history):
+                if message.topic == topic:
+                    return message
+        return None
+
+    def topics(self, prefix: str = '') -> list[str]:
+        """
+        Топики, которые сейчас существуют: удалённые не в счёт.
+
+        Пустая нагрузка - это удаление, а не значение: так спецификация HA MQTT
+        Discovery убирает сущность, и так же брокер снимает удерживаемое
+        сообщение. Раньше стенд считал такой топик живым, и прошивка, честно
+        удалившая сущности счётчика у датчика протечки, получала от теста
+        «объявлено лишнее», а пустой конфиг - «не JSON».
+        """
+        with self._lock:
+            last: dict[str, str] = {}
+            for m in self.history:
+                if m.topic.startswith(prefix):
+                    last[m.topic] = m.payload
+        return sorted(topic for topic, payload in last.items() if payload)
+
+    def drain(self) -> None:
+        with self._lock:
+            self.history.clear()
+        while not self.messages.empty():
+            self.messages.get_nowait()
+
+    # --- команды устройству ---
+
+    def command_topic(self, name: str) -> str:
+        """
+        Топик команды - тот же, что прошивка объявляет в автодискавери:
+        `cmd_t` собирается как `<топик>/<сущность>/set`
+        (`ha/discovery_entity.cpp`). Лишний сегмент в середине прошивка бы
+        проглотила - она подписана на `<топик>/#`, а имя параметра берёт из
+        предпоследнего сегмента, - и тест прошёл бы мимо настоящего пути HA.
+        """
+        return f'{self.topic}/{name}/set'
+
+    def publish_set(self, name: str, value: Any, retain: bool = True) -> None:
+        """
+        Прислать настройку так, как это делает Home Assistant.
+
+        retain=True по умолчанию: ЕСП живёт секунды и подписывается только на
+        время сеанса, обычное сообщение она просто не застанет.
+        """
+        topic = self.command_topic(name)
+        logger.info(f'MQTT -> {topic} = {value}')
+        self._client.publish(topic, str(value), retain=retain)
+
+    def publish_retained(self, topic: str, payload: str) -> None:
+        """Положить в брокер удерживаемое сообщение - как это делает устройство."""
+        logger.info(f'MQTT -> {topic} = {payload!r} (retain)')
+        self._client.publish(topic, payload, retain=True)
+
+    def clear_retained(self, topic: str) -> None:
+        self._client.publish(topic, '', retain=True)
+
+    def clear_retained_tree(self, prefix: str, timeout: float = 1.0) -> list[str]:
+        """
+        Вычистить удерживаемые сообщения дерева устройства.
+
+        Свои же показания Ватериус публикует с флагом retain, и в следующем
+        сеансе брокер отдаёт их ему обратно - вместе с командой теста. Чем
+        больше накопилось, тем менее предсказуемо, что устройство успеет
+        разобрать, поэтому каждый тест начинается с пустого дерева.
+        """
+        if self.broker is not None:
+            topics = self.broker.drop_retained(prefix)
+            if topics:
+                logger.info(f'снято удерживаемых сообщений: {len(topics)}')
+            return topics
+
+        topics = [m.topic for m in self.fetch_retained(prefix, timeout)]
+        for topic in topics:
+            self.clear_retained(topic)
+        if topics:
+            # Пустые сообщения вернутся нам же по подписке на `#`, и вернутся
+            # не мгновенно: без паузы они попадают в историю уже после того,
+            # как её вычистили, и тест принимает нашу уборку за публикацию
+            # устройства
+            time.sleep(0.3)
+            logger.info(f'снято удерживаемых сообщений: {len(topics)}')
+        return topics
+
+    def close(self) -> None:
+        # Порядок важен: DISCONNECT отправляет и сокет закрывает сам цикл paho,
+        # см. `retained_now`
+        self._client.disconnect()
+        self._client.loop_stop()

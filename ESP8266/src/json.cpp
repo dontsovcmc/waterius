@@ -6,7 +6,9 @@
 #include "porting.h"
 #include "voltage.h"
 #include "sync_time.h"
+#include "core/connect_log.h"
 #include "wifi_helpers.h"
+#include "core/alarm.h"
 
 extern Voltage voltage;
 
@@ -35,11 +37,53 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("data_type0")] = (uint8_t)data_type_by_name(sett.counter0_name);
     root[F("data_type1")] = (uint8_t)data_type_by_name(sett.counter1_name);
 
+    // Тревоги (#202). Тремя полями на канал, а не битовой маской: их читают и
+    // сервер, и шаблоны Home Assistant, где маску пришлось бы разбирать
+    // отдельным выражением под каждый бит
+    const uint8_t alarm0 = alarm_bits(data.attiny_flags, INPUT0_RED, data.version);
+    const uint8_t alarm1 = alarm_bits(data.attiny_flags, INPUT1_BLUE, data.version);
+
+    root[F("alarm_flow0")] = (alarm0 & ALARM_FLOW) != 0;
+    root[F("alarm_flow1")] = (alarm1 & ALARM_FLOW) != 0;
+    root[F("alarm_leak0")] = (alarm0 & ALARM_LEAK) != 0;
+    root[F("alarm_leak1")] = (alarm1 & ALARM_LEAK) != 0;
+    root[F("alarm_wet0")] = (alarm0 & ALARM_WET) != 0;
+    root[F("alarm_wet1")] = (alarm1 & ALARM_WET) != 0;
+
+    root[F("alarm_stop0")] = data.stop0;
+    root[F("alarm_stop1")] = data.stop1;
+
+    // Пороги: сервер должен видеть, с чем сравнивали
+    root[F("av0")] = sett.alarm_vol0;
+    root[F("av1")] = sett.alarm_vol1;
+    root[F("ar0")] = sett.alarm_rate0;
+    root[F("ar1")] = sett.alarm_rate1;
+    root[F("ah0")] = sett.alarm_hours0;
+    root[F("ah1")] = sett.alarm_hours1;
+    root[F("as0")] = sett.alarm_stop0;
+    root[F("as1")] = sett.alarm_stop1;
+
+    // Режим "я уехал" (#88): по нему сервер отличает "прорыв трубы" от
+    // "был расход, пока вас нет" - порог в обоих случаях один и тот же
+    root[F("vac")] = sett.vacation != 0;
+
+    /*
+    Кому доклад о тревоге обязан доехать (#202). Три поля, а не одно число:
+    в Home Assistant это три отдельных переключателя, каждому нужно своё
+    состояние.
+    */
+    root[F("ackw")] = (sett.alarm_confirm & CONFIRM_WATERIUS) != 0;
+    root[F("ackh")] = (sett.alarm_confirm & CONFIRM_HTTP) != 0;
+    root[F("ackm")] = (sett.alarm_confirm & CONFIRM_MQTT) != 0;
+
+    // Сеанс внеплановый, по тревоге, а не по расписанию
+    root[F("alarm")] = sett.mode == ALARM_MODE;
+
     // Battery & Voltage
     root[F("voltage")] = voltage.average() / 1000.0;
-    root[F("voltage_low")] = voltage.low_voltage();
+    root[F("voltage_low")] = sett.battery_low != 0;
     root[F("voltage_diff")] = (float)voltage.diff() / 1000.0;
-    root[F("battery")] = voltage.get_battery_level();
+    root[F("battery")] = voltage.get_battery_level(sett.battery_low);
 
     // Wifi и сеть
     root[F("channel")] = WiFi.channel();
@@ -47,6 +91,10 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("wifi_phy_mode_s")] = wifi_phy_mode_title((WiFiPhyMode_t)sett.wifi_phy_mode);
     root[F("wifi_connect_errors")] = sett.wifi_connect_errors;
     root[F("wifi_connect_attempt")] = sett.wifi_connect_attempt;
+
+    char connect_log[CONNECT_LOG_TEXT_LEN];
+    connect_log_text(sett, connect_log, sizeof(connect_log));
+    root[F("connect_log")] = String(connect_log);
 
     uint8_t *bssid = WiFi.BSSID();
     char router_mac[18] = {0};
@@ -72,6 +120,9 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("waketime")] = sett.wake_time;
     root[F("period_min_tuned")] = sett.period_min_tuned;
     root[F("period_min")] = sett.wakeup_per_min;
+
+    // Состояние переключателя в Home Assistant (#361)
+    root[F("sc")] = sett.send_on_consumption != 0;
     root[F("setuptime")] = sett.setup_time;
     root[F("boot")] = data.service;
     root[F("resets")] = data.resets;
@@ -101,12 +152,4 @@ void get_json_data(const Settings &sett, const AttinyData &data, const Calculate
     root[F("ota_error")] = (int)sett.ota_error;
 
     LOG_INFO(F("JSON: Size: ") << measureJson(json_data));
-
-    // JSON size 1.1.16 929 //no mqtt
-    // JSON size 1.1.6 972 //mqtt, max strings
-    // JSON size 1.0.1 727 JSON: Mem usage: 1168  //no mqtt
-    // JSON size 0.11.4: 722 JSON: Mem usage: 1168
-    // JSON size 0.11: 643
-    // JSON size 0.10.6: 439
-    // JSON size 0.10.3: 355
 }

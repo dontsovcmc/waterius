@@ -2,6 +2,7 @@
 #define _WATERIUS_LOGGING_h
 
 #include "setup.h"
+#include "log_capture.h"
 
 #include <Arduino.h>
 
@@ -26,7 +27,7 @@ inline Print &operator<<(Print &obj, T arg)
 		char logFormattedTime[17];                                                                    \
 		snprintf_P(logFormattedTime, sizeof(logFormattedTime),                                        \
 				   PSTR("%02u:%02u:%03u"), minutes, seconds, ms);                                     \
-		Serial.print(logFormattedTime);                                                                \
+		log_output.print(logFormattedTime);                                                                \
 	} while (0)
 
 #ifdef LOG_FREE_HEAP
@@ -37,7 +38,7 @@ inline Print &operator<<(Print &obj, T arg)
 	{                                                                                       \
 		char logHeap[18];                                                                   \
 		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d/%02d%%"), int(ESP.getFreeHeap() / 1024), ESP.getHeapFragmentation()); \
-		Serial.print(logHeap);                                                              \
+		log_output.print(logHeap);                                                              \
 	} while (0)
 #else
 #define LOG_FREE_HEAP                                                  \
@@ -46,7 +47,7 @@ inline Print &operator<<(Print &obj, T arg)
 		char logHeap[15];                                              \
 		snprintf_P(logHeap, sizeof(logHeap), PSTR("-%03d/%02d"),       \
 				   ESP_getFreeHeap1024(), ESP_getHeapFragmentation()); \
-		Serial.print(logHeap);                                         \
+		log_output.print(logHeap);                                         \
 	} while (0)
 #endif
 #else
@@ -81,34 +82,46 @@ inline Print &operator<<(Print &obj, T arg)
 	{                      \
 	} while (0)
 
+#define LOG_REQUEST(content) \
+	do                       \
+	{                        \
+	} while (0)
+
 #if defined(LOG_LEVEL_INFO) || defined(LOG_LEVEL_DEBUG)
 // Depending on log level, add code for logging
 #undef LOG_ERROR
-#define LOG_ERROR(content)                           \
-	do                                               \
-	{                                                \
-		LOG_FORMAT_TIME;                             \
-		LOG_FREE_HEAP;                               \
-		Serial << "  ERROR : " << content << "\r\n"; \
+#define LOG_ERROR(content)        \
+	do                            \
+	{                             \
+		log_head(LogTag::error);  \
+		log_output << content;    \
+		log_tail();               \
 	} while (0)
 
 #undef LOG_INFO
-#define LOG_INFO(content)                            \
-	do                                               \
-	{                                                \
-		LOG_FORMAT_TIME;                             \
-		LOG_FREE_HEAP;                               \
-		Serial << "  INFO  : " << content << "\r\n"; \
+#define LOG_INFO(content)         \
+	do                            \
+	{                             \
+		log_head(LogTag::info);   \
+		log_output << content;    \
+		log_tail();               \
 	} while (0)
+
+// Строка на весь запрос портала: LOG_* обработчика дописываются в неё до его выхода
+#undef LOG_REQUEST
+#define LOG_REQUEST(content) \
+	log_head(LogTag::info);  \
+	log_output << content;   \
+	LogLine log_request_line
 
 #ifdef LOG_LEVEL_DEBUG
 #undef LOG_DEBUG
-#define LOG_DEBUG(content)                           \
-	do                                               \
-	{                                                \
-		LOG_FORMAT_TIME;                             \
-		LOG_FREE_HEAP;                               \
-		Serial << "  DEBUG : " << content << "\r\n"; \
+#define LOG_DEBUG(content)        \
+	do                            \
+	{                             \
+		log_head(LogTag::debug);  \
+		log_output << content;    \
+		log_tail();               \
 	} while (0)
 #endif
 #endif

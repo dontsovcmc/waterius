@@ -5,6 +5,8 @@
 #include <avr/wdt.h>
 #include <avr/power.h>
 #include "Power.h"
+#include "electronic.h"
+#include "wet.h"
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_1 
     // Значения компаратора с pull-up резистором ~30кОм.
@@ -42,6 +44,9 @@
 #endif
 
 #define DELAY_PIN_READY_US 30
+// Датчик протечки: источник в сотни килоом заряжает ёмкость кабеля медленнее
+// геркона, поэтому перед измерением ждём дольше.
+#define DELAY_WET_READY_US 500
 #define IMPULSE_CONFIRM_MS 50  // подтверждение импульса: пауза перед повторным чтением входа
 
 enum CounterState
@@ -52,12 +57,20 @@ enum CounterState
     OPEN
 };
 
+/*
+Тип входа. Число присылает ЕСП командой 'C' и оно же лежит в EEPROM, поэтому
+переиспользовать значения нельзя: 1 (дискретный), 3 (датчик Холла) и 4
+(электронный с положительным импульсом) заняты снятыми типами и попадают в
+ветку "вход выключен".
+*/
 enum CounterType 
 {
-    NAMUR,
-    DISCRETE,
-    ELECTRONIC,
-    HALL,
+    NAMUR = 0,          // механический: геркон, сухой контакт, namur
+    ELECTRONIC = 2,     // электронный выход, импульс — замыкание на минус
+    LEAKAGE = 5,        // датчик протечки: проводимость - тревога, а не импульс,
+                        // вода это десятки и сотни килоом, см. wet.h (issue #202)
+    SIGNAL_NC = 6,      // сигнализация: норма - замкнутый шлейф
+                        // (0 Ом или 5к6), тревога - сопротивление выше (issue #202)
     NONE = 0xFF
 };
 
@@ -72,56 +85,62 @@ enum class CounterEvent
 struct CounterB
 {
     uint8_t         _pin;       // дискретный вход
-    uint8_t         _power;     // питание датчика
     uint8_t         _apin;      // номер аналогового входа
 
     uint8_t         on_time;    // для того чтобы светодиод во время настройки загорался дольше чем на 2 сек (чтобы не бомбить i2c)
     uint8_t         off_time;   // время в разомкнутом состоянии
     uint8_t         levels;     // уровни входа
     bool            on_pulse;   // 
-    bool            active;     // идет потребление через счетчик
 
-    uint16_t        adc;        // уровень замкнутого входа
+    uint16_t        adc;        // уровень входа: у датчика протечки пишется всегда,
+                                //  у остальных типов - при замыкании
     CounterState    state;      // состояние входа
     CounterType     type;       // тип выхода счетчика
+    ElectronicInput input;      // счёт импульсов электронного выхода
 
-    explicit CounterB(uint8_t pin, uint8_t apin = 0, uint8_t power = (uint8_t)-1)
-        : _pin(pin), _power(power), _apin(apin), on_time(0), off_time(0), adc(0), state(CounterState::CLOSE), type(CounterType::NAMUR)
+    explicit CounterB(uint8_t pin, uint8_t apin = 0)
+        : _pin(pin), _apin(apin), on_time(0), off_time(0), adc(0), state(CounterState::CLOSE), type(CounterType::NAMUR)
     {
         set_type(type);
     }
 
     void set_type(CounterType new_type)
     {
-        if ((type == CounterType::HALL) && (_power != (uint8_t)-1)) {
-            DDRB &= ~_BV(_power);       // Пин питания датчика возвращаем на вход
-        }
         type = new_type;
-        if ((type == CounterType::HALL) && (_power == (uint8_t)-1))
-        {
-            type = CounterType::NONE;
-        }
         switch (type)
         {
             case CounterType::ELECTRONIC:
-                PORTB |= _BV(_pin);                 // Включить pull-up
-		        PCMSK |= _BV(_pin);                 // Включем прерывание по фронту
-            case CounterType::DISCRETE:
+                DDRB &= ~_BV(_pin);                 // Вход
+                PORTB |= _BV(_pin);                 // Включить pull-up: выход с открытым стоком сам высокий уровень не держит
+                PCMSK |= _BV(_pin);                 // Включем прерывание по фронту
+                input.enable();
+                break;
             case CounterType::NAMUR:
+            case CounterType::LEAKAGE:
+            case CounterType::SIGNAL_NC:
                 DDRB &= ~_BV(_pin);                 // Вход
+                PCMSK &= ~_BV(_pin);                // Прерывание по фронту не нужно: опрос раз в 250мс
+                input.disable();
                 break;
-            case CounterType::HALL:
-                DDRB &= ~_BV(_pin);                 // Вход
-                DDRB |= _BV(_power);                // Пин питания датчика ставим на выход
-                PORTB &= ~_BV(_pin);                // Отключить pull-up
-                PORTB |= _BV(_power);               // Включить питание
-                delayMicroseconds(DELAY_PIN_READY_US); // Задержка на включение датчика
-                state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
-                active = false;
-                break;
-            case CounterType::NONE:
+            default:
+                PCMSK &= ~_BV(_pin);                // Выключенный вход attiny не будит
+                input.disable();
                 break;
         }
+    }
+
+    /*
+    Вызывается из ISR по фронту, pins — снимок PINB на этот момент.
+
+    Уровень снимается здесь, а не в главном цикле: импульс электронного
+    счётчика бывает короче миллисекунды и до пробуждения цикла не доживает.
+    */
+    inline void on_front(const uint8_t pins)
+    {
+        if (type != CounterType::ELECTRONIC)
+            return;
+
+        input.on_front((pins & _BV(_pin)) != 0);
     }
 
     inline uint16_t aRead()
@@ -131,103 +150,36 @@ struct CounterB
         return analogRead(_apin);
     }
 
-    bool electronic(CounterEvent event)
+    bool electronic()
     {
         if (on_time)
             on_time -= 1;
 
-        state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
-        if (state == CounterState::CLOSE)
-        {
-            // Замкнут
-            if (!on_pulse)
-            {
-                // Начало импульса
-                on_time = 10;
-                off_time = 0;
-                adc = aRead();
-                on_pulse = true;
-                return true;
-            }
-        }
-        else
-        {
-            // Разомкнут
-            on_pulse = false;
-        }
-        return false;
+        // Импульс уже защёлкнут прерыванием (on_front), здесь только забираем.
+        // Прерывания на время чтения гасим: ISR пишет в тот же флаг, и фронт,
+        // пришедший между чтением и сбросом, потерялся бы.
+        noInterrupts();
+        const bool pulse = input.take();
+        interrupts();
+
+        if (!pulse)
+            return false;
+
+        // АЦП не трогаем: у цифрового входа уровень замыкания ничего не значит,
+        // а измерение стоит ~100мкс и включения АЦП на каждый импульс
+        on_time = 10;
+        off_time = 0;
+        return true;
     }
 
-    bool hall(CounterEvent event)
-    {
-        PORTB |= _BV(_power);               // Включить питание
-        delayMicroseconds(DELAY_PIN_READY_US); // Задержка на включение датчика
-        CounterState new_state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
-        if (new_state != state) 
-        {
-            state = new_state;
-            if (!active) 
-            {
-                active = true;
-                PCMSK |= _BV(_pin);         // Включем прерывание по фронту
-            }
-        }
-        else if (!active)
-        {
-            PCMSK &= ~_BV(_pin);            // Отключем прерывание по фронту
-            PORTB &= ~_BV(_power);          // Отключить питание
-        }
-        if (state == CounterState::CLOSE)
-        {
-            // Замкнут
-            off_time = 0;
-            if (on_time == 0)
-            {
-                // Начало импульса
-                on_time = 1;
-                adc = aRead();
-                return true;
-            }
-            else
-            {
-                // Продолжение
-                if (on_time < 200)
-                {
-                    // Увеличиваем счетчик времени в замкнутом состоянии
-                    on_time += event == CounterEvent::TIME ? 10 : 1;
-                } 
-                else
-                {
-                    // Через 5 секунд отсутствия импульсов считаем что потребление закончилось
-                    active = false;
-                }
-            }
-        }
-        else
-        {
-            // Разомкнут
-            on_time = 0;
-            // Увеличиваем счетчик времени в разомкнутом состоянии
-            if (off_time < 200)
-            {
-                off_time += event == CounterEvent::TIME ? 10 : 1;
-            }
-            else
-            {
-                // Через 5 секунд отсутствия импульсов считаем что потребление закончилось
-                active = false;
-            }
-        }
-        return false;
-    }
-
-    // Одно чтение входа: включить pull-up, измерить (ADC для NAMUR), вернуть "замкнуто?"
+    // Одно чтение входа: включить pull-up, измерить (ADC у NAMUR и датчика
+    // протечки), вернуть "замкнуто?"
     inline bool is_closed()
     {
         PORTB |= _BV(_pin);                 // Включить pull-up
-        delayMicroseconds(DELAY_PIN_READY_US);
         if (type == CounterType::NAMUR)
         {
+            delayMicroseconds(DELAY_PIN_READY_US);
             uint16_t a = aRead();
             state = value2state(a);
             if (state == CounterState::CLOSE || state == CounterState::NAMUR_CLOSE)
@@ -235,8 +187,23 @@ struct CounterB
                 adc = a;
             }
         }
+        else if (type == CounterType::LEAKAGE || type == CounterType::SIGNAL_NC)
+        {
+            /*
+            Вода - это сопротивление в десятки и сотни килоом, а не замыкание
+            контактов: уровень пина такого не видит, решение берём с АЦП.
+            Порог свой у каждого типа, разбор в wet.h. Уровень пишем всегда:
+            по нему на стенде видно состояние датчика, а не только факт
+            срабатывания.
+            */
+            delayMicroseconds(DELAY_WET_READY_US);
+            adc = aRead();
+            const uint16_t limit = (type == CounterType::LEAKAGE) ? LIMIT_WET : LIMIT_SIGNAL_NC;
+            state = adc_below(adc, limit) ? CounterState::CLOSE : CounterState::OPEN;
+        }
         else
         {
+            delayMicroseconds(DELAY_PIN_READY_US);
             state = bit_is_set(PINB, _pin) ? CounterState::OPEN : CounterState::CLOSE;
             if ((state == CounterState::CLOSE) && !on_pulse)
             {
@@ -256,7 +223,7 @@ struct CounterB
         чувствительность без учащения опроса: при первом замыкании после паузы
         ждём ~50мс и проверяем ещё раз. Если вход всё ещё замкнут - это импульс
         (засчитываем сразу), иначе это глитч < 50мс - игнорируем.
-        Конец импульса детектируем как и раньше: 3 разомкнутых состояния подряд.
+        Конец импульса - 3 разомкнутых состояния подряд.
         */
         if (event == CounterEvent::FRONT)
             return false;
@@ -303,13 +270,17 @@ struct CounterB
         switch (type) 
         {
             case CounterType::ELECTRONIC:
-                return electronic(event);
-            case CounterType::HALL:
-                return hall(event);
+                return electronic();
             case CounterType::NAMUR:
-            case CounterType::DISCRETE:
                 return discrete(event);
-            case CounterType::NONE:
+            case CounterType::LEAKAGE:
+            case CounterType::SIGNAL_NC:
+                // Срабатывание датчика - это тревога, а не показания: считаем его
+                // тем же кодом (там уже есть подтверждение через 50мс, #371),
+                // но импульс не возвращаем. Состояние берётся из on_pulse, а
+                // какой уровень считать тревогой, решает alarm_tick по типу.
+                discrete(event);
+                return false;
             default:
                 return false;
         }

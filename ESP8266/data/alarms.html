@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>Тревоги</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/common.js"></script>
+        <script src="/static/strings.js"></script>
+    </head>
+    <body onload="fill_counter0_title(%counter0_name%); fill_counter1_title(%counter1_name%); fill_units();
+    _init({back: '/index.html', next: '/index.html'});">
+        <form onsubmit="formSubmit(event, this, '/api/save_alarms');">
+            <div class="wrap">
+                <div class="container f1">
+                    <header>
+                        <a onclick="_goto()">
+                            <div class="icon bf">
+                                <img src="/images/icons.png">
+                            </div>
+                            Назад</a>
+                        <div class="icon logo">
+                            <img src="/images/icons.png">
+                        </div>
+                    </header>
+                    <main>
+                        <h2>Тревоги</h2>
+                        <p class="text">Ватериус сообщит об аварии, не дожидаясь очередного сеанса связи.</p>
+                        <p class="note">(функции экспериментальные)</p>
+                        <p class="form-error hd"></p>
+
+                        <div id="alarm_reset_box" class="%alarm_raised%">
+                            <p class="form-error mt24">Есть непогашенная тревога. Сама она не снимется, а пока висит — новая на том же входе не придёт.</p>
+                            <button class="btn btn-red mt16" type="button" onclick="resetAllAlarms(event)">Снять тревоги</button>
+                        </div>
+
+                        <div class="toggle mt24">
+                            <input type="checkbox" name="vacation" id="vacation" onclick="checkboxToggle(this)" %vacation%>
+                            <label for="vacation">Режим «Я уехал»</label>
+                        </div>
+                        <p class="note">Тревогой становится любой расход воды. Держится до выключения режима.</p>
+
+                        <div id="alarm1" class="%alarm_state1%">
+                            <div class="mt24"><h2><span id="counter1_title"></span></h2></div>
+                            <p class="note no-input-note">Вход не считает импульсы: тревоги настраивать нечем. <a class="link" href="/input/1/setup.html">Настроить</a></p>
+                            <p class="note no-attiny-note">Тревоги по расходу недоступны в этой версии attiny</p>
+                            <p class="note no-factor-note">Счётчик не настроен: задайте вес импульса. <a class="link" href="/input/1/setup.html">Настроить</a></p>
+                            <div class="thresholds">
+                            <div class="f-row">
+                                <label for="alarm_vol1">Сообщить, если за 30 минут вылилось больше, л</label>
+                                <input pattern="^\d{1,5}$" id="alarm_vol1" name="alarm_vol1" placeholder="0" value="%alarm_vol1%" %thresholds_off1%>
+                                <p class="note">Забытый кран, срыв шланга, прорыв. Для ориентира: душ около 100 л, ванна около 200 л.</p>
+                                <p class="error hd" id="alarm_vol1-error">Целое число от 0 до 65535</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="alarm_rate1">Сообщить, если расход не падал ниже, л/ч</label>
+                                <input pattern="^\d{1,5}$" id="alarm_rate1" name="alarm_rate1" placeholder="0" value="%alarm_rate1%" %thresholds_off1%>
+                                <p class="note">Что считать остановкой воды. Меньше 15 л/ч бытовой счётчик не двигается.</p>
+                                <p class="error hd" id="alarm_rate1-error">Слишком малый порог для этого счётчика</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="alarm_hours1">…в течение, ч</label>
+                                <input pattern="^\d{1,5}$" id="alarm_hours1" name="alarm_hours1" placeholder="0" value="%alarm_hours1%" %thresholds_off1%>
+                                <p class="note">Протечка: бачок, капающий кран, свищ.</p>
+                                <p class="error hd" id="alarm_hours1-error">Слишком мало при таком пороге расхода</p>
+                            </div>
+                            </div>
+                            <div class="stop f-row %stop_hidden%">
+                                <label for="alarm_stop1">Сообщить, если расхода не было, мин</label>
+                                <input pattern="^(0|[5-9]|[1-9]\d{1,4})$" id="alarm_stop1" name="alarm_stop1" placeholder="0" value="%alarm_stop1%">
+                                <p class="note">Замёрзшая труба, оборванный провод: расхода нет дольше этого времени. От 5 минут, 0 выключает.</p>
+                                <p class="error hd" id="alarm_stop1-error">Целое число от 0 до 65535</p>
+                            </div>
+                        </div>
+
+                        <div id="alarm0" class="%alarm_state0%">
+                            <div class="mt24"><h2><span id="counter0_title"></span></h2></div>
+                            <p class="note no-input-note">Вход не считает импульсы: тревоги настраивать нечем. <a class="link" href="/input/0/setup.html">Настроить</a></p>
+                            <p class="note no-attiny-note">Тревоги по расходу недоступны в этой версии attiny</p>
+                            <p class="note no-factor-note">Счётчик не настроен: задайте вес импульса. <a class="link" href="/input/0/setup.html">Настроить</a></p>
+                            <div class="thresholds">
+                            <div class="f-row">
+                                <label for="alarm_vol0">Сообщить, если за 30 минут вылилось больше, л</label>
+                                <input pattern="^\d{1,5}$" id="alarm_vol0" name="alarm_vol0" placeholder="0" value="%alarm_vol0%" %thresholds_off0%>
+                                <p class="note">Забытый кран, срыв шланга, прорыв. Для ориентира: душ около 100 л, ванна около 200 л.</p>
+                                <p class="error hd" id="alarm_vol0-error">Целое число от 0 до 65535</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="alarm_rate0">Сообщить, если расход не падал ниже, л/ч</label>
+                                <input pattern="^\d{1,5}$" id="alarm_rate0" name="alarm_rate0" placeholder="0" value="%alarm_rate0%" %thresholds_off0%>
+                                <p class="note">Что считать остановкой воды. Меньше 15 л/ч бытовой счётчик не двигается.</p>
+                                <p class="error hd" id="alarm_rate0-error">Слишком малый порог для этого счётчика</p>
+                            </div>
+                            <div class="f-row">
+                                <label for="alarm_hours0">…в течение, ч</label>
+                                <input pattern="^\d{1,5}$" id="alarm_hours0" name="alarm_hours0" placeholder="0" value="%alarm_hours0%" %thresholds_off0%>
+                                <p class="note">Протечка: бачок, капающий кран, свищ.</p>
+                                <p class="error hd" id="alarm_hours0-error">Слишком мало при таком пороге расхода</p>
+                            </div>
+                            </div>
+                            <div class="stop f-row %stop_hidden%">
+                                <label for="alarm_stop0">Сообщить, если расхода не было, мин</label>
+                                <input pattern="^(0|[5-9]|[1-9]\d{1,4})$" id="alarm_stop0" name="alarm_stop0" placeholder="0" value="%alarm_stop0%">
+                                <p class="note">Замёрзшая труба, оборванный провод: расхода нет дольше этого времени. От 5 минут, 0 выключает.</p>
+                                <p class="error hd" id="alarm_stop0-error">Целое число от 0 до 65535</p>
+                            </div>
+                        </div>
+
+                        <div id="alarm_ack">
+                            <div class="mt24"><h2>Кто получает оповещение</h2></div>
+                            <p class="text">Сделаем 5 попыток доставки тревоги в выбранные системы. Отключённые системы выбрать нельзя.</p>
+                            <div class="toggle mt16">
+                                <input type="checkbox" name="confirm_waterius" id="confirm_waterius" onclick="checkboxToggle(this)" %confirm_waterius% %ack_off_waterius%>
+                                <label for="confirm_waterius">waterius.ru</label>
+                            </div>
+                            <div class="toggle mt16">
+                                <input type="checkbox" name="confirm_http" id="confirm_http" onclick="checkboxToggle(this)" %confirm_http% %ack_off_http%>
+                                <label for="confirm_http">Свой сервер</label>
+                            </div>
+                            <div class="toggle mt16">
+                                <input type="checkbox" name="confirm_mqtt" id="confirm_mqtt" onclick="checkboxToggle(this)" %confirm_mqtt% %ack_off_mqtt%>
+                                <label for="confirm_mqtt">MQTT-брокер</label>
+                            </div>
+                        </div>
+
+                    </main>
+                    <footer class="btns">
+                        <button class="btn" type="submit">Сохранить</button>
+                    </footer>
+                </div>
+            </div>
+        </form>
+    </body>
+</html>

@@ -1,7 +1,7 @@
-# Ватериус 2.0.44
+# Ватериус 2.0.56
 ## Wi-Fi приставка для импульсных счётчиков воды, газа, тепла
 
-<a href="https://travis-ci.org/dontsovcmc/waterius" target="_blank"><img src="https://travis-ci.org/dontsovcmc/waterius.svg?branch=master"></a>
+<a href="https://github.com/dontsovcmc/waterius/actions/workflows/ci.yml" target="_blank"><img src="https://github.com/dontsovcmc/waterius/actions/workflows/ci.yml/badge.svg?branch=master"></a>
 
 ![waterius2-phone_](https://user-images.githubusercontent.com/3930496/149906477-6aa47cdd-f714-4546-85ff-5541c60260a2.jpeg)
 
@@ -21,6 +21,8 @@
 
 ✅ Работает от 3-х батареек АА несколько лет
 
+✅ [Тревоги](Alarms.md) (функции экспериментальные): много воды сразу, протечка, остановка расхода, датчик воды на полу
+
 ### Подходит к счётчикам
 ✅ Все счётчики воды с [импульсным выходом](https://github.com/dontsovcmc/waterius/issues/65) (провод торчит из корпуса)
 
@@ -30,7 +32,8 @@
 
 ✅ Электронные счётчики тепла: Sanext Monu CU, Берил ITELMA СТЭ 31 [подробнее](https://github.com/dontsovcmc/waterius/issues/233)
 
-✅ Счётчики электричества: Энергомера CE101, Энергомера ЦЭ6803В 10-100А М7 Р31 и возможно другие импульсные
+✅ Счётчики электричества: Энергомера CE101, Энергомера ЦЭ6803В 10-100А М7 Р31 и возможно другие импульсные.
+Электронный вход проверен на 20 импульсах в секунду: этого хватает счётчику на 3200 имп/кВт·ч до 22 кВт (прошивка attiny 47 и новее)
 
 
 ### Где купить
@@ -44,9 +47,15 @@
 - не нужно знать, вес импульса у счётчика воды (Ватериус сам определит 1 или 10л/имп)
 - не нужно знать, какого типа выход счётчика воды: "сухой контакт" или "НАМУР"
 - настраиваемый период отправки
+- [выход на связь только при расходе](Setup.md#выходить-на-связь-только-при-расходе): без расхода
+  выходит на связь раз в 3 суток, по кнопке и тревоге — сразу
+- [режим «Я уехал»](Alarms.md#режим-я-уехал): тревогой становится любой расход, пока вас нет дома
+  (прошивка attiny 44 и новее)
+- вместо счётчика к входу можно подключить [датчик протечки на полу](Alarms.md#датчик-протечки-на-полу):
+  тревогой становится вода между электродами, а не только замыкание контактов (прошивка attiny 44 и новее)
 - ручная настройка веса импульса
 - дискавери для Home Assistant (есть и интеграция в HAOS)
-- возможно указать свои: веб сервер, MQTT брокер, сервер Blynk, NTP сервер
+- возможно указать свои: веб сервер, MQTT брокер, NTP сервер
 - поддержка SprutHub
 - поддержка WirenBoard
 
@@ -57,7 +66,7 @@
 * в Domoticz [инструкция](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
 * в SprutHub [инструкция](https://wiki.spruthub.ru/%D0%A1%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5_%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D0%BB%D0%B5%D1%80%D0%B0_MQTT)
 * на вашем [HTTP/HTTPS сервере](https://github.com/dontsovcmc/waterius/blob/master/Export.md#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B8-%D0%BF%D0%BE-http-%D1%81%D0%B2%D0%BE%D0%B9-%D1%81%D0%B5%D1%80%D0%B2%D0%B5%D1%80)
-* в MQTT клиенте [описание полей и настройка](https://github.com/dontsovcmc/waterius/blob/master/Export.md#настройка-отправки-по-mqtt)
+* в MQTT клиенте [описание полей и настройка](https://github.com/dontsovcmc/waterius/blob/master/Export.md#настройка-отправки-в-home-assistant-по-mqtt)
 * там, куда сами запрограммируете
   * [httpwaterius](https://github.com/grffio/httpwaterius) - web сервер с простым UI от [grffio](https://github.com/grffio)
 * передать сразу в управляющую компанию через сайт [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github).
@@ -71,6 +80,10 @@
 
 ## DIY Сделать самому
 [Скачать прошивки](https://github.com/dontsovcmc/waterius/releases)
+
+[Прошить ESP из браузера](https://waterius.github.io/update/): страница заливает скачанный `.bin` в ESP8266 по USB-TTL, без установки программ (Chrome или Edge)
+
+[Обновить Ватериус 2 по воздуху](https://account.waterius.ru/update/) из личного кабинета: загрузите прошивку и файловую систему, обновление начнётся, когда устройство выйдет на связь
 
 Народная инструкция в инфо Телеграм чата: [waterius_forum](https://t.me/waterius_forum)
 - [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
@@ -98,9 +111,19 @@
 Ветка dev для pull-request
 Ветка master только для публикации прошивок
 
+**Симулятор портала** — страницы настройки открываются в браузере такими же, как на
+устройстве, а импульсы, кнопка и Wi-Fi имитируются с пульта. Полезен, чтобы посмотреть
+портал, не собирая прошивку: [simulator/README.md](simulator/README.md).
+
+**Как устроена прошивка** — [docs/README.md](docs/README.md): счёт импульсов, расписание, отправка, тревоги, портал, OTA.
+
+**Тесты:**
+- бизнес-логика ЕСП на компьютере, без железа: `ESP8266/scripts/run_tests.sh`, attiny — `Attiny85/scripts/run_tests.sh`;
+- стенд на живом железе: настоящий Ватериус, управляемая точка доступа и свой брокер — [Utils/hil/README.md](Utils/hil/README.md).
+
 Из актуальных задач остались сложные:
-- Реализовать запись лога в файл (LittleFS), чтобы можно было скачать (/logs.html)
-- OTA обновления: предложить код прошивки и пример веб-сервера (можно на базе NodeMCU)
+- ~~Реализовать запись лога в файл (LittleFS), чтобы можно было скачать (/logs.html)~~ — решено: журнал портала в памяти скачивается со страницы «Логи» ([описание](docs/setup-portal.md#журнал-и-список-сетей))
+- ~~OTA обновления: предложить код прошивки и пример веб-сервера~~ — решено в [2.0.43-beta](https://github.com/dontsovcmc/waterius/releases/tag/v.2.0.43-beta): Ватериус 2 обновляется по воздуху командой сервера или MQTT, из личного кабинета — на [странице обновления](https://account.waterius.ru/update/) ([описание](ESP8266/doc/ota.md))
 
 ### Модификации
 [ветка attiny84](https://github.com/dontsovcmc/waterius/tree/attiny84) поддерживает плату [Waterius-Attiny84-ESP12F](https://github.com/badenbaden/Waterius-Attiny84-ESP12F) с 4мя счетчиками и 2мя датчиками протечек.
@@ -113,7 +136,7 @@
 
 # Ответственность
 Прошивка Ватериуса сделана на основе открытых библиотек, работоспособность которых никто не гарантирует. Я также не могу обещать, что устройство будет работать с вашем оборудованием и вы не получите ущерба как во время изготовления, так и во время эксплуатации устройства =). Пожалуйста, сообщите о любом опыте изготовления и использования [тут](https://github.com/dontsovcmc/waterius/issues). Вы поможете развитию проекта! 
-[Лицензия GNU GPLv3](https://github.com/dontsovcmc/waterius/blob/master/LICENSE)
+[Лицензия GNU LGPLv3](https://github.com/dontsovcmc/waterius/blob/master/LICENSE)
 
 # Благодарности
 - [marvel-m9y](https://github.com/marvel-m9y) за поддержку HTTPS

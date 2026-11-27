@@ -4,6 +4,11 @@
 #include "json.h"
 #include "Logging.h"
 #include "config.h"
+#include "core/readings.h"
+#include "core/idle.h"
+#include "core/wakeup.h"
+#include "core/restart.h"
+#include "core/alarm.h"
 #include "master_i2c.h"
 #include "senders/send_data.h"
 #include "ha/apply_settings.h"
@@ -12,6 +17,7 @@
 #include "utils.h"
 #include "porting.h"
 #include "sync_time.h"
+#include "core/connect_log.h"
 #include "wifi_helpers.h"
 #include "config.h"
 #include "wleds.h"
@@ -20,12 +26,104 @@
 
 MasterI2C masterI2C;     // Для общения с Attiny85 по i2c
 AttinyData data;         // Данные от Attiny85 при включении
+/*
+Снятие тревог: маска на ближайший кадр 'A' (#202).
+
+Живёт вне Settings и вне runtime_data сознательно. В Settings ей не место -
+это не настройка, а разовое действие, и запись во флеш ради него лишняя.
+В runtime_data нельзя - её перетирает копия данных от attiny в начале сеанса.
+
+Ставят маску портал, команда с сервера и команда MQTT; гасит её
+send_alarm_config, как только кадр уехал.
+*/
+uint8_t alarm_reset_mask = 0;
+
 AttinyData runtime_data; // Копия данных от Attiny85. Обновляются в webportal на странице детектирования и ввода значений счётчиков.
 Settings sett;           // Настройки соединения и предыдущие показания из EEPROM
 CalculatedData cdata;    // вычисляемые данные
 ADC_MODE(ADC_VCC);
 Voltage voltage;
 
+/*
+ЕСП перезагрузилась при живом питании (#354). Считается один раз на старте:
+позже флаг attiny взведён всегда, и вывод по нему был бы неверным. Читает
+портал - показывает плашку на главной странице.
+*/
+bool esp_restarted_flag = false;
+
+
+/*
+Пороги тревог в attiny (#202).
+
+Уходят в каждом сеансе: у attiny они живут в ОЗУ и после снятия питания
+теряются, как и период пробуждения. Пересчёт в тики - здесь, потому что вес
+импульса и тип счётчика знает только ЕСП.
+*/
+void send_alarm_config(const Settings &sett)
+{
+    if (data.version < ATTINY_VER_ALARM)
+    {
+        return; // старая attiny тревог не умеет
+    }
+
+    const bool vacation = sett.vacation != 0;
+
+    const AlarmThresholds ch0 = alarm_thresholds(vacation, runtime_data.counter_type0,
+                                                 sett.alarm_vol0, sett.alarm_rate0,
+                                                 sett.alarm_hours0, sett.factor0);
+    const AlarmThresholds ch1 = alarm_thresholds(vacation, runtime_data.counter_type1,
+                                                 sett.alarm_vol1, sett.alarm_rate1,
+                                                 sett.alarm_hours1, sett.factor1);
+
+    LOG_INFO(F("Alarm config: quantum0=") << ch0.quantum_ticks
+             << F(" quanta0=") << ch0.leak_quanta << F(" vol0=") << ch0.vol_pulses
+             << F(" quantum1=") << ch1.quantum_ticks
+             << F(" quanta1=") << ch1.leak_quanta << F(" vol1=") << ch1.vol_pulses
+             << F(" vacation=") << vacation
+             << F(" reset=") << alarm_reset_mask);
+
+    if (!masterI2C.setAlarmConfig(ch0, ch1, alarm_reset_mask))
+    {
+        LOG_ERROR(F("Alarm config wasn't set"));
+        return;
+    }
+
+    // Снимок от attiny обновится только в следующем сеансе, а плашка в
+    // портале обязана погаснуть сразу после нажатия
+    runtime_data.attiny_flags = alarm_flags_after_reset(runtime_data.attiny_flags,
+                                                        alarm_reset_mask);
+    alarm_reset_mask = 0;
+}
+
+/*
+Пороги остановки расхода в attiny (#202). Нулевой тоже уходит: иначе выключенная
+тревога жила бы в ОЗУ attiny до её перезагрузки.
+*/
+void send_stop_config(const Settings &sett)
+{
+    if (data.version < ATTINY_VER_STOP)
+    {
+        return; // старая attiny остановку не считает
+    }
+
+    const uint16_t stop0 = stop_threshold(runtime_data.counter_type0, sett.alarm_stop0,
+                                          sett.period_min_full, sett.wakeup_per_min);
+    const uint16_t stop1 = stop_threshold(runtime_data.counter_type1, sett.alarm_stop1,
+                                          sett.period_min_full, sett.wakeup_per_min);
+
+    LOG_INFO(F("Stop config: min0=") << stop0 << F(" min1=") << stop1);
+
+    if (!masterI2C.setStopConfig(stop0, stop1))
+    {
+        LOG_ERROR(F("Stop config wasn't set"));
+        return;
+    }
+
+    // Снимок от attiny обновится только в следующем сеансе, а плашка в
+    // портале обязана погаснуть сразу после сохранения
+    runtime_data.stop0 = runtime_data.stop0 && stop0;
+    runtime_data.stop1 = runtime_data.stop1 && stop1;
+}
 
 /*
 Выполняется однократно при включении
@@ -34,11 +132,11 @@ void setup()
 {
     setup_leds();
 
-    LOG_BEGIN(115200); // Включаем логгирование на пине TX, 115200 8N1
+    LOG_BEGIN(LOG_BAUD); // Включаем логгирование на пине TX, 115200 8N1
     LOG_INFO(F("Waterius\n========\n"));
     LOG_INFO(F("Build: ") << __DATE__ << F(" ") << __TIME__);
 
-    static_assert((sizeof(Settings) == 960), "sizeof Settings != 960");
+    // static_assert на размер Settings — в core/types.h, рядом с самой структурой
 
     masterI2C.begin(); // Включаем i2c master
 
@@ -57,17 +155,48 @@ void loop()
 {
     uint8_t mode = TRANSMIT_MODE; // TRANSMIT_MODE;
     bool config_loaded = false;
+    SessionStatus status; // чем закончился сеанс — этим моргнём перед сном
 
     // спрашиваем у Attiny85 повод пробуждения и данные true)
     if (masterI2C.getMode(mode) && masterI2C.getAttinyData(data))
     {
         runtime_data = data;
 
+        esp_restarted_flag = esp_restarted((uint8_t)ESP.getResetInfoPtr()->reason,
+                                           data.version, data.attiny_flags);
+        LOG_INFO(F("Reset reason: ") << ESP.getResetInfoPtr()->reason
+                 << F(", esp restarted: ") << esp_restarted_flag);
+
         voltage.update();
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
         if (mode == MANUAL_TRANSMIT_MODE)
         {
             mode = wait_button_release();
+
+            /*
+            Снятие тревог кнопкой (#202). У Ватериуса-2 их снимает ЕСП, а не
+            attiny: длительность нажатия видно только здесь. Короткое - это
+            подтверждение, долгое открывает портал, и тревога обязана дожить
+            до плашки на главной.
+            */
+            const uint8_t by_button = alarm_reset_by_button(mode);
+            if (by_button)
+            {
+                alarm_reset_mask |= by_button;
+
+                /*
+                Снимок гасим сразу, не дожидаясь кадра 'A': из него собирается
+                посылка этого сеанса (json.cpp), а кадр уедет только в конце.
+                Иначе нажатие кнопки привозило бы снятую тревогу ещё раз - на
+                Классике, где снимает сама attiny, такого не бывает.
+
+                Кадр не уехал - маска остаётся до следующего сеанса, и он
+                привезёт настоящее состояние attiny: расхождение само себя
+                чинит.
+                */
+                data.attiny_flags = alarm_flags_after_reset(data.attiny_flags, by_button);
+                runtime_data.attiny_flags = data.attiny_flags;
+            }
         }
         if (mode == SETUP_MODE) // Если режим "Настройка"
         {
@@ -79,8 +208,61 @@ void loop()
         sett.mode = mode;
         LOG_INFO(F("Startup mode: ") << mode);
 
+        // Настройка и кнопка - просьба пересобрать устройство в Home Assistant
+        if (mode == SETUP_MODE || mode == MANUAL_TRANSMIT_MODE)
+        {
+            sett.discovery_signature = 0;
+        }
+
+        // Пробуждение по таймеру — ещё один проспанный период. Считаем их,
+        // потому что время между синхронизациями неизвестно, а число
+        // заказанных периодов известно точно (#357).
+        if (mode == TRANSMIT_MODE)
+        {
+            sett.wakeups_since_sync = bump_wakeups(sett.wakeups_since_sync);
+            sett.minutes_since_send = add_minutes(sett.minutes_since_send, sett.wakeup_per_min);
+        }
+
+        // Сеанс по тревоге - это тоже выход на связь: в режиме "только при
+        // расходе" отметка "я жив" состоялась, срок начинается заново (#361)
+        if (mode == ALARM_MODE)
+        {
+            sett.minutes_since_send = 0;
+        }
+
         // Вычисляем текущие показания
         calculate_values(sett, data, cdata);
+
+        /*
+        Режим "выходить на связь только при расходе воды" (#361).
+
+        Просыпаемся как обычно, но сеанс Wi-Fi затеваем, только если импульсы
+        пошли или пора отметиться, что устройство живо. Сеанс и есть главная
+        статья расхода батареи: секунды работы радио против долей секунды на
+        чтение attiny по i2c.
+
+        Сравнивать импульсы надо здесь: impulses_previous перезапишет
+        update_config в конце сеанса.
+        */
+        bool must_send = true;
+
+        if (mode == TRANSMIT_MODE && sett.send_on_consumption)
+        {
+            const bool consumed = consumption_detected(data.impulses0, sett.impulses0_previous,
+                                                       data.impulses1, sett.impulses1_previous);
+            must_send = need_transmit(true, consumed, sett.minutes_since_send);
+
+            LOG_INFO(F("Idle: consumed=") << consumed
+                     << F(", silence_min=") << sett.minutes_since_send
+                     << F(", transmit=") << must_send);
+
+            // Сбрасываем на попытке, а не на успехе: устройство без интернета
+            // иначе долбилось бы в сеть каждое пробуждение до конца батареи
+            if (must_send)
+            {
+                sett.minutes_since_send = 0;
+            }
+        }
 
         if (mode == SETUP_MODE)
         {
@@ -107,9 +289,19 @@ void loop()
 
         if (config_loaded)
         {
-            if (wifi_connect(sett))
+            // Молчаливое пробуждение (режим "только при расходе") роутер не
+            // трогает и ошибкой связи не считается
+            const bool connected = must_send && wifi_connect(sett);
+            status.wifi_connected = !must_send || connected;
+
+            // Нужно и после сеанса: доводку до точки расписания заказываем
+            // только в том сеансе, где её посчитали
+            bool time_synced = false;
+
+            if (connected)
             {
                 voltage.update();
+                sett.battery_low = voltage.low_voltage(sett.battery_low);
                 log_system_info();
 
                 JsonDocument json_data;
@@ -119,21 +311,22 @@ void loop()
 #ifndef MQTT_DISABLED
                 if (is_mqtt(sett))
                 {
-                    connect_and_subscribe_mqtt(sett, json_settings_received);
+                    if (!connect_and_subscribe_mqtt(sett, json_settings_received))
+                    {
+                        status.mqtt = SEND_NO_CONNECTION;
+                    }
                 }
 #endif
 
                 // устанавливать время только при использовани хттпс или мктт
                 if (is_mqtt(sett) || is_https(sett.waterius_host) || is_https(sett.http_url))
                 {
-                    if (!sync_ntp_time(sett)) {
-                        sett.ntp_error_counter++;
-                    }
+                    time_synced = maybe_sync_time(sett);
                 }
 
                 LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 
-                send_data(sett, data, cdata, json_data, json_settings_received);
+                send_data(sett, data, cdata, json_data, json_settings_received, status);
 
                 if (sett.ota_error != OTA_ERR_NONE)
                 {
@@ -141,11 +334,67 @@ void loop()
                     store_config(sett);
                 }
 
-                if (settings_received(json_settings_received))
+                /*
+                Кругов несколько: команда, приехавшая после применения, иначе
+                пролежала бы в документе до конца сеанса без всякого действия.
+                Повторное применение безопасно - в документе один ключ на
+                параметр, и побеждает последнее значение.
+                */
+                for (uint8_t pass = 0; pass < MQTT_APPLY_PASSES; pass++)
                 {
-                    apply_settings(json_settings_received, sett, data, cdata);
-                    send_data(sett, data, cdata, json_data, json_settings_received);
+                    if (settings_received(json_settings_received))
+                    {
+                        // Всё, что приедет после этой точки, попросит ещё круг
+                        note_settings_applied();
+                        apply_settings(json_settings_received, sett, data, cdata);
+
+                        // Типы входов команда меняет в attiny и в runtime_data, а
+                        // payload собирается из снимка data. Без переноса наверх
+                        // уходили бы прежние значения, и селектор в Home Assistant
+                        // отщёлкивал бы обратно (#360).
+                        apply_counter_types(data, runtime_data);
+
+                        send_data(sett, data, cdata, json_data, json_settings_received, status);
+                    }
+
+#ifndef MQTT_DISABLED
+                    // Ждём опоздавшую команду. Ждать незачем, если брокера нет
+                    // или мы на него не подписаны: команд не будет
+                    if (!is_mqtt(sett) || !sett.mqtt_auto_discovery
+                        || !mqtt_late_commands(MQTT_LATE_WAIT_MS))
+                    {
+                        break;
+                    }
+#else
+                    break;
+#endif
                 }
+
+#ifndef MQTT_DISABLED
+                /*
+                Команды применены - теперь их можно забыть у брокера. Снимать
+                retain раньше нельзя: удерживаемая команда - это гарантия
+                доставки, и стёртая до применения она пропадала бы совсем.
+                */
+                if (is_mqtt(sett))
+                {
+                    forget_applied_commands();
+                }
+#endif
+
+                /*
+                Сеанс с брокером закрываем здесь, а не внутри отправки: данные
+                уходят дважды, если пришли настройки, и закрытое соединение
+                делало вторую посылку невозможной (#406). Симметрично
+                connect_and_subscribe_mqtt выше. До OTA - там качается прошивка,
+                и держать сокет незачем.
+                */
+#ifndef MQTT_DISABLED
+                if (is_mqtt(sett))
+                {
+                    disconnect_mqtt(sett);
+                }
+#endif
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_2
                 if (has_ota(json_settings_received))
@@ -154,23 +403,101 @@ void loop()
                 }
 #endif
 
+                /*
+                Данные дошли - говорим об этом attiny, иначе она будет будить
+                нас снова, пока не исчерпает попытки (#202).
+
+                Что считать "дошли", решает пользователь: alarm_confirm
+                отмечает обязательных получателей. Умолчание - любой.
+
+                В любом режиме, а не только в ALARM_MODE: состояние тревог едет
+                в каждом сеансе, и плановый увозит его не хуже внепланового.
+                Проверять режим здесь значило бы гонять лишний сеанс за уже
+                доставленной новостью. Attiny игнорирует команду, если доклада
+                не ждёт.
+
+                Обязательно до wifi_shutdown: attiny должна узнать об этом в
+                том же сеансе.
+                */
+                const bool confirmed = alarm_delivered(sett.alarm_confirm, status);
+
+                // Без этой строки "почему attiny будит по кругу" не разобрать
+                LOG_INFO(F("Alarm confirm: mask=") << (int)sett.alarm_confirm
+                         << F(" waterius=") << (int)status.waterius
+                         << F(" http=") << (int)status.http
+                         << F(" mqtt=") << (int)status.mqtt
+                         << F(" any=") << (int)status.delivered_any
+                         << F(" -> ") << (int)confirmed);
+
+                if (confirmed)
+                {
+                    masterI2C.confirmAlarm();
+                }
+
                 // Все уже отправили,  wifi не нужен - выключаем
                 wifi_shutdown();
 
-                update_config(sett, data, cdata);
-
-                if (!masterI2C.setWakeUpPeriod(sett.period_min_tuned))
-                {
-                    LOG_ERROR(F("Wakeup period wasn't set"));
-                }
+                update_config(sett, data, cdata, time_synced, data_reported(status));
             }
+            if (!must_send)
+            {
+                LOG_INFO(F("Idle: no consumption, WiFi stays off"));
+            }
+
+            /*
+            Период заказываем в каждом сеансе, а не только после удачного
+            подключения (#350). Attiny держит его в ОЗУ и после перезагрузки
+            возвращается к умолчанию в 15 минут: устройство без интернета иначе
+            будило бы ЕСП каждые 15 минут вместо заданного периода, а в
+            молчаливом пробуждении период не уходил бы вниз вовсе.
+            */
+            send_alarm_config(sett);
+            send_stop_config(sett);
+
+            /*
+            Доводка до точки расписания (period_min_tuned) - разовая: она
+            зависит от того, куда целились в момент синхронизации. Заказываем
+            её один раз, в том же сеансе, где посчитали, а дальше идёт целый
+            период с поправкой. Иначе доводка повторяется каждым сном до
+            следующей синхронизации: при периоде 15 минут устройство
+            просыпалось 288 раз в сутки вместо 96.
+
+            Нажатие кнопки задаёт расписание заново, поэтому там доводка тоже
+            свежая - update_config пересчитал её в этом же сеансе. Но только
+            если сеанс состоялся: без связи update_config не вызывался, и в
+            period_min_tuned лежит цель прошлого цикла (#380).
+            */
+            const bool catchup = connected && (time_synced || mode == MANUAL_TRANSMIT_MODE);
+
+            const uint16_t period = period_to_attiny(sett.period_min_tuned, sett.period_min_full,
+                                                     catchup, sett.wakeup_per_min);
+            LOG_INFO(F("Wakeup period, min (attiny):") << period);
+            if (!masterI2C.setWakeUpPeriod(period))
+            {
+                LOG_ERROR(F("Wakeup period wasn't set"));
+            }
+
+            // Сохраняем всегда: даже в молчаливом пробуждении изменились
+            // счётчики, а без них не наступит ни срок отметки, ни срок NTP
             store_config(sett);  // т.к. сохраняем число ошибок подключения
+
+            // Посылка уже ушла: ошибки этого сеанса видны только здесь
+            char connect_log[CONNECT_LOG_TEXT_LEN];
+            connect_log_text(sett, connect_log, sizeof(connect_log));
+            LOG_INFO(F("Connect log: ") << connect_log << F(", errors: ") << sett.wifi_connect_errors);
         }
     }
 
-    if (!config_loaded)
+    // config_loaded остаётся false и когда attiny не ответил по i2c: код
+    // ошибки тот же, что и при испорченной конфигурации
+    status.config_loaded = config_loaded;
+    status.low_voltage = sett.battery_low;
+
+    // Успех не моргается: одна вспышка уже занята кодом "села батарейка"
+    const ErrorBlynks code = blink_code(status);
+    if (code != ERROR_OK)
     {
-        blynk_error(ErrorBlynks::ERROR_CONFIG);
+        blynk_error(code);
     }
 
     LOG_INFO(F("Going to sleep"));

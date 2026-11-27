@@ -1,0 +1,12 @@
+{
+  "name": "waterius-simulator",
+  "private": true,
+  "description": "Симулятор портала настройки: проверки страниц и мастера",
+  "scripts": {
+    "test": "node test_simulator.js && node test_worker.js",
+    "test:browser": "node test_wizard_browser.js"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0"
+  }
+}

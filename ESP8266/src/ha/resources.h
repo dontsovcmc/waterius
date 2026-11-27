@@ -13,6 +13,7 @@
 
 #include <Arduino.h>
 #include "setup.h"
+#include "core/ha_units.h"
 
 #define MQTT_PARAM_COUNT 9
 #define HA_NONE -1
@@ -28,6 +29,7 @@
 static const char s_sensor[] PROGMEM = "sensor";
 static const char s_number[] PROGMEM = "number";
 static const char s_select[] PROGMEM = "select";
+static const char s_switch[] PROGMEM = "switch";
 static const char s_measurement[] PROGMEM = "measurement";
 static const char s_voltage[] PROGMEM = "voltage";
 static const char s_diagnostic[] PROGMEM = "diagnostic";
@@ -78,17 +80,23 @@ static const char s_duration[] PROGMEM = "duration";
 static const char s_min[] PROGMEM = "min";
 static const char s_config[] PROGMEM = "config";
 static const char s_icon_bed_clock[] PROGMEM = "mdi:bed-clock";
+static const char s_icon_water_sync[] PROGMEM = "mdi:water-sync";
 static const char s_total_name[] PROGMEM = "Total";
 static const char s_ch[] PROGMEM = "ch";
 static const char s_total[] PROGMEM = "total";
-static const char s_water[] PROGMEM = "water";
-static const char s_gas[] PROGMEM = "gas";
-static const char s_energy[] PROGMEM = "energy";
+/*
+Классы устройств и единицы измерения берутся из core/ha_units.h: там же
+живёт проверка допустимых сочетаний, которую гоняют хостовые тесты. HA
+молча выбрасывает сущность с недопустимой парой, поэтому писать строки
+здесь руками нельзя (#356).
+*/
+static const char s_water[] PROGMEM = HA_CLASS_WATER;
+static const char s_gas[] PROGMEM = HA_CLASS_GAS;
+static const char s_energy[] PROGMEM = HA_CLASS_ENERGY;
 static const char s_heat[] PROGMEM = "heat";
-static const char s_m3[] PROGMEM = "m³";
-static const char s_kWh[] PROGMEM = "kWh";
-static const char s_gCal[] PROGMEM = "Gcal";
-static const char s_kWt[] PROGMEM = "kWt";
+static const char s_m3[] PROGMEM = HA_UNIT_M3;
+static const char s_kWh[] PROGMEM = HA_UNIT_KWH;
+static const char s_gCal[] PROGMEM = HA_UNIT_GCAL;
 static const char s_imp_name[] PROGMEM = "Impulses";
 static const char s_imp[] PROGMEM = "imp";
 static const char s_icon_pulse[] PROGMEM = "mdi:pulse";
@@ -103,6 +111,39 @@ static const char s_serial[] PROGMEM = "serial";
 static const char s_icon_identifier[] PROGMEM = "mdi:identifier";
 static const char s_f_name[] PROGMEM = "Factor";
 static const char s_f[] PROGMEM = "f";
+static const char s_av[] PROGMEM = "av";
+static const char s_av_name[] PROGMEM = "Alarm volume per 30 min";
+static const char s_ar[] PROGMEM = "ar";
+static const char s_ar_name[] PROGMEM = "Alarm zero flow rate";
+static const char s_ah[] PROGMEM = "ah";
+static const char s_ah_name[] PROGMEM = "Alarm leak hours";
+static const char s_alarm_flow[] PROGMEM = "alarm_flow";
+static const char s_alarm_flow_name[] PROGMEM = "Alarm: high flow";
+static const char s_alarm_leak[] PROGMEM = "alarm_leak";
+static const char s_alarm_leak_name[] PROGMEM = "Alarm: continuous flow";
+static const char s_alarm_wet[] PROGMEM = "alarm_wet";
+static const char s_alarm_wet_name[] PROGMEM = "Alarm: water sensor";
+static const char s_alarm_signal_name[] PROGMEM = "Alarm: signal";
+static const char s_as[] PROGMEM = "as";
+static const char s_as_name[] PROGMEM = "Alarm stop minutes";
+static const char s_alarm_stop[] PROGMEM = "alarm_stop";
+static const char s_alarm_stop_name[] PROGMEM = "Alarm: consumption stopped";
+static const char s_button[] PROGMEM = "button";
+static const char s_arst[] PROGMEM = "arst";
+static const char s_arst_name[] PROGMEM = "Clear alarms";
+static const char s_icon_bell_off[] PROGMEM = "mdi:bell-off";
+static const char s_vac[] PROGMEM = "vac";
+static const char s_vac_name[] PROGMEM = "Away mode";
+/*
+Квитанция о тревоге: кому доклад обязан доехать (#202). Имена не
+оканчиваются цифрой - иначе apply_settings.cpp принял бы их за поканальные.
+*/
+static const char s_ackw[] PROGMEM = "ackw";
+static const char s_ackw_name[] PROGMEM = "Alarm ack: waterius.ru";
+static const char s_ackh[] PROGMEM = "ackh";
+static const char s_ackh_name[] PROGMEM = "Alarm ack: own server";
+static const char s_ackm[] PROGMEM = "ackm";
+static const char s_ackm_name[] PROGMEM = "Alarm ack: MQTT";
 static const char s_icon_numeric[] PROGMEM = "mdi:numeric";
 static const char s_cname_name[] PROGMEM = "Resource Type";
 static const char s_cname[] PROGMEM = "cname";
@@ -110,27 +151,77 @@ static const char s_ctype_name[] PROGMEM = "Input Type";
 static const char s_ctype[] PROGMEM = "ctype";
 static const char s_format50[] PROGMEM = "50";   // float format 5.0f
 static const char s_format63[] PROGMEM = "63";   // float format 6.3f
+/*
+Формат числа для порогов тревог (#202). Отдельный от "50" потому, что там
+min = 1, а нулём пороги выключаются - без этого тревогу нельзя было бы снять
+из Home Assistant.
+*/
+static const char s_format50z[] PROGMEM = "50z";
+static const char s_lph[] PROGMEM = "L/h";
+static const char s_litre[] PROGMEM = "L";
+static const char s_watt[] PROGMEM = "W";
+static const char s_hour[] PROGMEM = "h";
+static const char s_icon_home_export[] PROGMEM = "mdi:home-export-outline";
+static const char s_icon_cloud_check[] PROGMEM = "mdi:cloud-check-outline";
+static const char s_icon_water_off[] PROGMEM = "mdi:water-off";
+static const char s_binary_sensor[] PROGMEM = "binary_sensor";
+static const char s_problem[] PROGMEM = "problem";
+static const char s_moisture[] PROGMEM = "moisture";
 
 /**
  * @brief массив с общими сущностями с указанием их атрибутов в MQTT
  *
  */
 
-/* Некорректно это считать, т.к. напряжение измеряется после регулятора. И просадка может скакать.
-static const char *const ENTITY_VOLTAGE_LOW[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_sensor, s_bat_low_name, s_voltage_low, "", "", "", s_diagnostic, s_icon_ba, ""};               // voltage_low Батарейка разряжена >
-static const char *const ENTITY_BATTERY[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_sensor, s_bat_name, s_battery, s_measurement, s_battery, s_perc, s_diagnostic, "", ""};        // процент зарядки батареи
-*/
+// Пороги и шкала - core/power.h. У binary_sensor класса battery «включён» значит «разряжена»
+static const char *const ENTITY_VOLTAGE_LOW[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_bat_low_name, s_voltage_low, "", s_battery, "", s_diagnostic, "", ""};
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+static const char *const ENTITY_BATTERY[MQTT_PARAM_COUNT] PROGMEM =
+    {s_sensor, s_bat_name, s_battery, s_measurement, s_battery, s_perc, s_diagnostic, "", ""};
+#endif
 static const char *const ENTITY_RESETS[MQTT_PARAM_COUNT] PROGMEM =    
     {s_sensor, s_resets_name, s_resets, s_measurement, "", "", s_diagnostic, s_icon_cog_refresh, ""}; // resets
 static const char *const ENTITY_TIMESTAMP[MQTT_PARAM_COUNT] PROGMEM =    
     {s_sensor, s_time_name, s_timestamp, "", s_timestamp, "", s_diagnostic, s_clock, ""};            // Время
     /*{s_sensor, s_period_min_name, s_period_min, "", s_duration, s_min, s_config, s_icon_bed_clock},*/ // Настройка для автоматического добавления времени пробуждения в Home Assistant
+static const char s_sc[] PROGMEM = "sc";
+static const char s_sc_name[] PROGMEM = "Send on consumption";
+
+/*
+Режим "выходить на связь только при расходе" (#361). Переключатель, а не
+сенсор: из Home Assistant его можно включить и выключить, команда приезжает
+в топик <корень>/sc/set и разбирается тем же обработчиком, что и чекбокс
+в веб-портале.
+*/
+static const char *const ENTITY_SEND_ON_CONSUMPTION[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_sc_name, s_sc, "", "", "", s_config, s_icon_water_sync, ""};
+/*
+Снятие тревог (#202). Кнопка, а не переключатель: у неё нет состояния, это
+одноразовое действие. Нажатие шлёт маску всех шести тревог обоих каналов.
+*/
+static const char *const ENTITY_ALARM_RESET[MQTT_PARAM_COUNT] PROGMEM =
+    {s_button, s_arst_name, s_arst, "", "", "", s_config, s_icon_bell_off, ""};
+
+static const char *const ENTITY_VACATION[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_vac_name, s_vac, "", "", "", s_config, s_icon_home_export, ""};               // vac Режим "я уехал" (#88)
+
+/*
+Кому доклад о тревоге обязан доехать (#202). Переключатели, а не один
+select: обязательных получателей может быть несколько сразу.
+*/
+static const char *const ENTITY_ACK_WATERIUS[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_ackw_name, s_ackw, "", "", "", s_config, s_icon_cloud_check, ""};
+static const char *const ENTITY_ACK_HTTP[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_ackh_name, s_ackh, "", "", "", s_config, s_icon_cloud_check, ""};
+static const char *const ENTITY_ACK_MQTT[MQTT_PARAM_COUNT] PROGMEM =
+    {s_switch, s_ackm_name, s_ackm, "", "", "", s_config, s_icon_cloud_check, ""};
+
 static const char *const ENTITY_PERIOD_MIN[MQTT_PARAM_COUNT] PROGMEM =  
     {s_number, s_period_min_name, s_period_min, "", "", "", s_config, s_icon_bed_clock, s_format50};
-//static const char *const ENTITY_PERIOD_MIN_TUNED[MQTT_PARAM_COUNT] PROGMEM =  
-//    {s_sensor, s_period_min_tuned_name, s_period_min_tuned, "", "", "", s_config, s_icon_bed_clock, s_format50}; // скорректированное значение пробуждения
+// Минуты по часам attiny, а не настоящие, поэтому без device_class duration
+static const char *const ENTITY_PERIOD_MIN_TUNED[MQTT_PARAM_COUNT] PROGMEM =
+    {s_sensor, s_period_min_tuned_name, s_period_min_tuned, s_measurement, "", s_min, s_diagnostic, s_icon_bed_clock, ""};
     /* Сенсор с атрибутами  Группа №1 */
 static const char *const ENTITY_VOLTAGE[MQTT_PARAM_COUNT] PROGMEM =  
     {s_sensor, s_bvolt_name, s_voltage, s_measurement, s_voltage, s_v, s_diagnostic, "", ""};      // voltage
@@ -187,12 +278,29 @@ static const char *const ENTITY_HEAT_GCAL_TOTAL[MQTT_PARAM_COUNT] PROGMEM =
 static const char *const ENTITY_HEAT_GCAL_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
     {s_number, s_total_name, s_ch, s_total, s_energy, s_gCal, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
 
-// пока нет типа данных https://github.com/home-assistant/core/blob/dev/homeassistant/components/sensor/const.py#L587
+// Тепло, посчитанное в киловатт-часах: единица та же, что у электричества.
+// Именно "kWh": единицы "kWt" в HA нет, с ней сенсор не появляется, хотя
+// number приезжает (#356). В интерфейсе тип называется "Тепло (кВт)",
+// в data/static/strings.js константа тоже названа CounterName_HEAT_KWH.
 static const char *const ENTITY_HEAT_KWT_TOTAL[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWt, "", "", ""};                 // chN Показания
+    {s_sensor, s_total_name, s_ch, s_total, s_energy, s_kWh, "", "", ""};                 // chN Показания
 static const char *const ENTITY_HEAT_KWT_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM = 
-    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWt, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
+    {s_number, s_total_name, s_ch, s_total, s_energy, s_kWh, s_config, "", s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
             
+
+/*
+Тип «Другой»: ни класса устройства, ни единицы измерения. Что именно
+считает такой вход, знает только владелец счётчика, иначе канал уехал бы
+в Home Assistant водой в m³ независимо от содержимого (#358).
+
+state_class остаётся: без него HA не ведёт долгосрочную статистику, а
+пустая пара класс+единица для него допустима — см. core/ha_units.cpp.
+*/
+static const char *const ENTITY_OTHER_TOTAL[MQTT_PARAM_COUNT] PROGMEM =
+    {s_sensor, s_total_name, s_ch, s_total, "", "", "", s_icon_counter, ""};                 // chN Показания
+static const char *const ENTITY_OTHER_TOTAL_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_total_name, s_ch, s_total, "", "", s_config, s_icon_counter, s_format63};   // chN Для изменения из интерфейса HASSIO / MQTT
+
 
 // Channel attributes
 static const char *const ENTITY_CHANNEL_IMP[MQTT_PARAM_COUNT] PROGMEM = 
@@ -215,6 +323,44 @@ static const char *const ENTITY_CHANNEL_CNAME[MQTT_PARAM_COUNT] PROGMEM =
 
 static const char *const ENTITY_CHANNEL_CTYPE[MQTT_PARAM_COUNT] PROGMEM = 
     {s_select, s_ctype_name, s_ctype, "", "", "", s_config, "", s_ctype};                     // ctypeN Тип входа attiny
+
+/*
+Тревоги (#202). Пороги - number, состояния - binary_sensor.
+
+Три числа на канал: литров за полчаса, какой расход считать остановкой воды
+и сколько часов он не падал ниже. Два последних читаются одним предложением
+и порознь смысла не имеют.
+*/
+static const char *const ENTITY_CHANNEL_ALARM_VOL_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_av_name, s_av, "", "", s_litre, s_config, s_icon_pulse, s_format50z};        // avN Литров за 30 минут
+static const char *const ENTITY_CHANNEL_ALARM_RATE_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_ar_name, s_ar, "", "", s_lph, s_config, s_icon_water_sync, s_format50z};     // arN Порог остановки воды, л/ч
+static const char *const ENTITY_CHANNEL_ALARM_HOURS_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_ah_name, s_ah, "", "", s_hour, s_config, s_icon_water_sync, s_format50z};    // ahN Часов без остановки
+
+static const char *const ENTITY_CHANNEL_ALARM_FLOW[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_alarm_flow_name, s_alarm_flow, "", s_problem, "", "", s_icon_pulse, ""};
+static const char *const ENTITY_CHANNEL_ALARM_LEAK[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_alarm_leak_name, s_alarm_leak, "", s_problem, "", "", s_icon_water_sync, ""};
+static const char *const ENTITY_CHANNEL_ALARM_WET[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_alarm_wet_name, s_alarm_wet, "", s_moisture, "", "", "", ""};
+static const char *const ENTITY_CHANNEL_ALARM_SIGNAL[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_alarm_signal_name, s_alarm_wet, "", s_problem, "", "", "", ""};
+static const char *const ENTITY_CHANNEL_ALARM_STOP_CFG[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, s_as_name, s_as, "", "", s_min, s_config, s_icon_water_off, s_format50z};       // asN Минут без расхода
+/*
+Пороги тревог первых сборок dev 2.0.47, их заменили av/ar/ah. Нужны только
+тип и имя: по ним прошивка удаляет сущности, оставшиеся у брокеров.
+*/
+static const char s_af[] PROGMEM = "af";
+static const char s_al[] PROGMEM = "al";
+static const char *const ENTITY_CHANNEL_RETIRED_AF[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, "", s_af, "", "", "", "", "", ""};
+static const char *const ENTITY_CHANNEL_RETIRED_AL[MQTT_PARAM_COUNT] PROGMEM =
+    {s_number, "", s_al, "", "", "", "", "", ""};
+
+static const char *const ENTITY_CHANNEL_ALARM_STOP[MQTT_PARAM_COUNT] PROGMEM =
+    {s_binary_sensor, s_alarm_stop_name, s_alarm_stop, "", s_problem, "", "", s_icon_water_off, ""};
 
 
 /**

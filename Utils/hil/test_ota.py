@@ -1,0 +1,244 @@
+"""
+Обновление по воздуху - блок J ручного плана.
+
+Команду обновления прошивка получает полем `ota` в ответе сервера, поэтому
+запускает её стенд сам, без облака: приёмник кладёт в ответ адреса образов и
+тут же их раздаёт. Раздаёт по https - образы качает `WiFiClientSecure`
+(`ota_update.cpp`), обычный порт для этого не годится.
+
+Образы берутся из дерева, из каталога сборки. Полное обновление идёт, только
+когда версия в устройстве совпадает с версией в дереве: тогда после
+обновления в устройстве оказывается ровно то, что там было, и стенд остаётся
+на известной прошивке. Иначе тест пропускается - подсунуть железу чужую
+сборку и не иметь чем вернуть хуже, чем не проверить.
+
+Отказы проверяются без риска для флеша: битый адрес прошивка отвергает до
+записи, а просевшее питание - до загрузки.
+
+Обновление есть только у Ватериуса-2 (`main.cpp`, WATERIUS_MODEL_2).
+"""
+
+from __future__ import annotations
+
+import hashlib
+from typing import Any
+
+import pytest
+from loguru import logger
+
+from . import portal as portal_mod
+from .constants import (
+    OTA_ERR_FW_UPDATE,
+    OTA_ERR_LOW_BATTERY,
+    OTA_ERR_NONE,
+    OTA_MIN_VOLTAGE_MV,
+    REPO_ROOT,
+    WATERIUS_MODEL_2,
+)
+
+pytestmark = [pytest.mark.stand]
+
+BUILD = REPO_ROOT / 'ESP8266' / '.pio' / 'build' / 'waterius_2'
+
+
+def image(name: str) -> bytes:
+    path = BUILD / name
+    if not path.exists():
+        pytest.skip(f'нет образа {path}: соберите `pio run -d ESP8266 -e waterius_2`')
+    return path.read_bytes()
+
+
+def part(path: str, data: bytes, cfg: Any) -> dict[str, Any]:
+    """Часть команды обновления: адрес, контрольная сумма и размер образа."""
+    return {'url': cfg.https_file(path),
+            'md5': hashlib.md5(data).hexdigest(),
+            'size': len(data)}
+
+
+@pytest.fixture(autouse=True)
+def model_2(stand: Any) -> None:
+    payload = stand.last_payload
+    if payload is not None and int(payload.get('model', WATERIUS_MODEL_2)) != WATERIUS_MODEL_2:
+        pytest.skip('обновление по воздуху есть только у Ватериуса-2')
+
+
+@pytest.fixture
+def images(stand: Any, cfg: Any) -> dict[str, dict[str, Any]]:
+    """Образы из дерева, разложенные приёмником по https."""
+    stand.receiver.start_tls(cfg.receiver_tls_port)
+    firmware = image('firmware.bin')
+    filesystem = image('littlefs.bin')
+    stand.receiver.serve('/ota/firmware.bin', firmware)
+    stand.receiver.serve('/ota/littlefs.bin', filesystem)
+    return {'firmware': part('/ota/firmware.bin', firmware, cfg),
+            'filesystem': part('/ota/littlefs.bin', filesystem, cfg)}
+
+
+def request_ota(stand: Any, ota: dict[str, Any]) -> None:
+    """Положить команду обновления в ответ на следующую посылку и разбудить."""
+    stand.reset_observers()
+    stand.receiver.reply_settings({'ota': ota})
+    stand.dut.press_button()
+
+
+@pytest.mark.slow
+def test_J1_ota_updates_both_images(stand: Any, cfg: Any,
+                                    images: dict[str, Any]) -> None:
+    """
+    Полное обновление: сначала файловая система, потом прошивка, потом
+    перезагрузка. После неё устройство выходит на связь само.
+
+    Версия в устройстве и в дереве обязаны совпадать - иначе стенд остался бы
+    на сборке, которой нет в репозитории.
+    """
+    want = portal_mod.tree_version(REPO_ROOT)
+    if want is None or stand.esp_version != want:
+        pytest.skip(f'на устройстве {stand.version_str}, в дереве '
+                    f'{".".join(map(str, want)) if want else "?"} - '
+                    'обновлять нечем, вернуть было бы нечем тоже')
+
+    # В посылке напряжение в вольтах (json.cpp: voltage.average() / 1000)
+    payload = stand.last_payload or {}
+    millivolts = float(payload.get('voltage', 0)) * 1000
+    if 0 < millivolts < OTA_MIN_VOLTAGE_MV:
+        pytest.skip(f'питание {millivolts:.0f} мВ ниже {OTA_MIN_VOLTAGE_MV}: '
+                    'прошивка откажется обновляться, и правильно сделает')
+
+    request_ota(stand, images)
+
+    assert stand.log.wait_line('OTA: start', timeout=180) is not None, (
+        'прошивка не увидела команду обновления')
+    assert stand.log.wait_line('OTA: filesystem updated OK', timeout=600) is not None
+    assert stand.log.wait_line('OTA: firmware updated OK', timeout=900) is not None
+    assert stand.log.wait_line('OTA: complete, restarting ESP', timeout=60) is not None
+
+    # После перезагрузки устройство доигрывает обычный сеанс
+    session = stand.wait_session(timeout=300)
+    assert session.esp_version == want, (
+        f'после обновления версия {session.esp_version}, ждали {want}')
+    ota_error = session.expect_payload()['ota_error']
+    assert ota_error == OTA_ERR_NONE, ota_error
+
+    logger.info('образы вернули устройству ту же версию, что была')
+
+
+def test_J4_bad_url_is_reported(stand: Any, cfg: Any) -> None:
+    """
+    Битый адрес образа: обновление не состоялось, ошибка уезжает в посылке и
+    сбрасывается после публикации.
+
+    Флеш при этом не трогается - загрузка не начинается вовсе, поэтому тест
+    безопасен на любой прошивке.
+    """
+    stand.receiver.start_tls(cfg.receiver_tls_port)
+    ota = {'firmware': {'url': cfg.https_file('/ota/no-such-image.bin'),
+                        'md5': '0' * 32, 'size': 1024}}
+
+    request_ota(stand, ota)
+
+    assert stand.log.wait_line('OTA: firmware update failed', timeout=300) is not None, (
+        'прошивка не сообщила о неудаче обновления')
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    reported = stand.wait_session(timeout=180)
+    payload = reported.expect_payload()
+    assert payload['ota_error'] == OTA_ERR_FW_UPDATE, payload
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    cleared = stand.wait_session(timeout=180)
+    assert cleared.expect_payload()['ota_error'] == OTA_ERR_NONE, (
+        'ошибка обновления обязана сбрасываться после публикации')
+
+
+@pytest.mark.slow
+def test_J3_low_battery_refuses(stand: Any, cfg: Any) -> None:
+    """
+    На просевших батарейках обновление не начинается: прерванная запись флеша
+    оставила бы устройство без прошивки.
+
+    Своё напряжение прошивка меряет сама, тремя отсчётами перед загрузкой
+    (`ota_update.cpp`), и печатает результат. Поэтому решение «воспроизводится
+    ли отказ» принимается по её строке, а не по полю посылки: это разные
+    измерения, и на питании от USB они расходятся заметно.
+
+    Адрес образа заведомо битый: до записи флеша дело не дойдёт ни при каком
+    исходе проверки питания.
+    """
+    stand.receiver.start_tls(cfg.receiver_tls_port)
+    ota = {'firmware': {'url': cfg.https_file('/ota/no-such-image.bin'),
+                        'md5': '0' * 32, 'size': 1024}}
+    request_ota(stand, ota)
+
+    assert stand.log.wait_line('OTA: start', timeout=180) is not None, (
+        'прошивка не увидела команду обновления')
+
+    if stand.log.wait_line('OTA: voltage too low', timeout=30) is None:
+        stand.log.poll()
+        measured = next((line.split('OTA:')[-1].strip() for line in stand.log.lines
+                         if 'OTA: voltage' in line or 'OTA: USB power' in line), '?')
+        pytest.skip(f'прошивка намерила {measured} - отказ по батарейкам так не '
+                    'воспроизвести, см. 04_not-tested.md')
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    reported = stand.wait_session(timeout=180)
+    payload = reported.expect_payload()
+    assert payload['ota_error'] == OTA_ERR_LOW_BATTERY, payload
+
+
+@pytest.mark.slow
+def test_J6_md5_mismatch_is_refused(stand: Any, cfg: Any,
+                                    images: dict[str, Any]) -> None:
+    """
+    Образ с чужой контрольной суммой не записывается (#363).
+
+    Образ настоящий, из дерева, а md5 в команде неверная: загрузка идёт до
+    конца, и сверка суммы (`ota_update.cpp`, setMD5sum) обязана отвергнуть
+    образ до перезагрузки. Идёт, только когда версия в дереве та же, что в
+    устройстве: не сработай сверка - во флеш уйдёт та же прошивка.
+    """
+    want = portal_mod.tree_version(REPO_ROOT)
+    if want is None or stand.esp_version != want:
+        pytest.skip(f'на устройстве {stand.version_str}, в дереве '
+                    f'{".".join(map(str, want)) if want else "?"} - '
+                    'без совпадения версий запись испытывать нельзя')
+
+    request_ota(stand, {'firmware': dict(images['firmware'], md5='0' * 32)})
+
+    assert stand.log.wait_line('OTA: firmware update failed', timeout=900) is not None, (
+        'образ с чужой суммой не отвергнут')
+    assert not any('OTA: firmware updated OK' in line for line in stand.log.lines)
+
+    stand.reset_observers()
+    stand.dut.press_button()
+    reported = stand.wait_session(timeout=180)
+    payload = reported.expect_payload()
+    assert payload['ota_error'] == OTA_ERR_FW_UPDATE, payload
+    assert reported.esp_version == want, 'версия сменилась: образ всё-таки записан'
+
+
+@pytest.mark.mqtt
+@pytest.mark.needs(mqtt_auto_discovery=1)
+def test_J7_ota_command_with_broken_json(stand: Any) -> None:
+    """
+    Команда обновления по MQTT с битым JSON: загрузка не начинается, retain снят.
+
+    Команду `ota` прошивка разбирает сама (`ha/subscribe.cpp`,
+    ha_fill_json_settings_data), остальные идут строкой. Битая команда не
+    должна ни запустить обновление, ни остаться в брокере до следующего сеанса.
+    """
+    assert stand.mqtt is not None
+    stand.reset_observers()
+    stand.mqtt.publish_set('ota', '{"firmware": {', retain=True)
+    try:
+        stand.dut.press_button()
+        session = stand.wait_session(timeout=180)
+        assert 'MQTT: Failed to parse OTA JSON' in session.text, session.text
+        assert 'OTA: start' not in session.text, session.text
+
+        left = [m.topic for m in stand.mqtt.fetch_retained(stand.mqtt_root)]
+        assert stand.mqtt.command_topic('ota') not in left, f'команда осталась: {left}'
+    finally:
+        stand.mqtt.clear_retained(stand.mqtt.command_topic('ota'))

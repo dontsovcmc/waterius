@@ -67,11 +67,24 @@ String build_entity_discovery(const char *mqtt_topic,
     String default_entity_id = String(entity_type) + "." + unique_id;
     entity[F("def_ent_id")] = default_entity_id.c_str(); // default_entity_id
 
-    entity[F("stat_t")] = mqtt_topic; // state_topic
+    // У кнопки состояния нет вовсе, и лишние ключи Home Assistant не принимает:
+    // схема button.mqtt их отвергает, а сущность просто не появляется
+    const bool stateless = strcmp(entity_type, "button") == 0;
 
-    String value_template;
-    value_template = String("{{ value_json.") + entity_id + String(" | is_defined }}");
-    entity[F("val_tpl")] = value_template.c_str();
+    if (!stateless)
+    {
+        entity[F("stat_t")] = mqtt_topic; // state_topic
+
+        // Флаги приезжают в JSON булевыми, а Jinja отрендерила бы их как "True":
+        // у переключателей и бинарных сенсоров значение приводится к 1/0
+        const bool flag_entity = strcmp(entity_type, "binary_sensor") == 0 ||
+                                 strcmp(entity_type, "switch") == 0;
+
+        String value_template;
+        value_template = String("{{ value_json.") + entity_id +
+                         String(flag_entity ? " | is_defined | int }}" : " | is_defined }}");
+        entity[F("val_tpl")] = value_template.c_str();
+    }
 
 
     if (state_class && state_class[0])
@@ -117,8 +130,6 @@ String build_entity_discovery(const char *mqtt_topic,
     if (hw_version)
         device[F("hw_version")] = hw_version; // hw_version //hw
 
-    //"connections": [["mac", "02:5b:26:a8:dc:12"]]
-    // device["via_device"] = BSSID;
 
     entity[F("device")] = device; // device //dv
 
@@ -126,6 +137,47 @@ String build_entity_discovery(const char *mqtt_topic,
     {
         entity[F("json_attributes_topic")] = json_attributes_topic;
         entity[F("json_attributes_template")] = json_attributes_template;
+    }
+
+    // Состояния тревог (#202). Значения те же, что у переключателя ниже:
+    // шаблон выше уже привёл булево из посылки к 1/0
+    if (strcmp(entity_type, "binary_sensor") == 0)
+    {
+        // https://www.home-assistant.io/integrations/binary_sensor.mqtt
+        entity[F("pl_on")] = F("1");  // payload_on
+        entity[F("pl_off")] = F("0"); // payload_off
+    }
+
+    /*
+    Снятие тревог (#202). Нажатие шлёт маску всех шести тревог: разбираться,
+    какая из них поднята, в Home Assistant негде - состояния у кнопки нет.
+    Точечное снятие делается плашками на главной странице портала.
+    */
+    if (strcmp(entity_type, "button") == 0)
+    {
+        // https://www.home-assistant.io/integrations/button.mqtt
+        String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
+        entity[F("cmd_t")] = command_topic; // command_topic
+        entity[F("pl_prs")] = String(ALARM_RESET_ALL); // payload_press
+
+        entity[F("retain")] = false; // действие, а не состояние: retain тут вреден
+        entity[F("qos")] = 1;
+    }
+
+    if (strcmp(entity_type, "switch") == 0)
+    {
+        // https://www.home-assistant.io/integrations/switch.mqtt
+        String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
+        entity[F("cmd_t")] = command_topic; // command_topic
+
+        entity[F("pl_on")] = F("1");    // payload_on
+        entity[F("pl_off")] = F("0");   // payload_off
+        entity[F("stat_on")] = F("1");  // state_on
+        entity[F("stat_off")] = F("0"); // state_off
+
+        entity[F("optimistic")] = true; // optimistic
+        entity[F("retain")] = true; //retain
+        entity[F("qos")] = 1; //qos
     }
 
     if (strcmp(entity_type, "number") == 0 && strcmp(advanced_conf, "50") == 0)  // format 5.0. TODO: добавить max min step... для коректной установки значений
@@ -140,6 +192,28 @@ String build_entity_discovery(const char *mqtt_topic,
 
         entity[F("min")] = 1;     // min
         entity[F("max")] = 99999; // max
+        entity[F("step")] = 1;    // step
+
+        entity[F("optimistic")] = true; // optimistic
+        entity[F("retain")] = true; //retain
+        entity[F("qos")] = 1; //qos
+    }
+
+    /*
+    Пороги тревог (#202): тот же number, что и "50", но min = 0 - нулём порог
+    выключается. С min = 1 тревогу нельзя было бы снять из Home Assistant.
+    */
+    if (strcmp(entity_type, "number") == 0 && strcmp(advanced_conf, "50z") == 0)
+    {
+        String command_topic = String(mqtt_topic) + F("/") + entity_id + F("/set");
+        entity[F("cmd_t")] = command_topic; // command_topic
+
+        entity[F("cmd_tpl")] = F("{{value | round(0) | int}}"); // command_template
+
+        entity[F("mode")] = F("box"); // mode "box"
+
+        entity[F("min")] = 0;     // min: 0 - тревога выключена
+        entity[F("max")] = 65535; // max
         entity[F("step")] = 1;    // step
 
         entity[F("optimistic")] = true; // optimistic
@@ -184,8 +258,6 @@ String build_entity_discovery(const char *mqtt_topic,
         options.add("OTHER");
         options.add("HEAT_KWT");
 
-        //"value_template": "{% set values = { \"0\":\"WATER_COLD\", \"1\":\"WATER_HOT\", \"2\":\"ELECTRO\", \"3\":\"GAS\", \"4\":\"HEAT\", \"5\":\"PORTABLE_WATER\", \"6\": \"OTHER\" } %} {{ values[ value_json.cname0 ] if value_json.cname0 in values.keys() else \"6\" }}",
-        //String value_template = String(F("{% set values = { '0':\"WATER_COLD\", '1':\"WATER_HOT\", '2':\"ELECTRO\", '3':\"GAS\", '4':\"HEAT\", '5':\"PORTABLE_WATER\", '6': \"OTHER\" } %} {{ values[ value_json.")) + entity_id + F(" ] if value_json.") + entity_id + F(" in values.keys() else '6' }}");
         String value_template = String("") + 
             F("{% if value_json.")   + entity_id + F("==0 %} WATER_COLD ") +
             F("{% elif value_json.") + entity_id + F("==1 %} WATER_HOT ") +
@@ -218,22 +290,22 @@ String build_entity_discovery(const char *mqtt_topic,
 
         options.add("MECHANIC");
         options.add("ELECTRONIC");
-        options.add("HALL");
+        options.add("LEAKAGE");
+        options.add("SIGNAL_NC");
         options.add("NOT_USED");
 
-        //"value_template": "{% set values = { \"0\":\"WATER_COLD\", \"1\":\"WATER_HOT\", \"2\":\"ELECTRO\", \"3\":\"GAS\", \"4\":\"HEAT\", \"5\":\"PORTABLE_WATER\", \"6\": \"OTHER\" } %} {{ values[ value_json.cname0 ] if value_json.cname0 in values.keys() else \"6\" }}",
-        //String value_template = String(F("{% set values = { '0':\"WATER_COLD\", '1':\"WATER_HOT\", '2':\"ELECTRO\", '3':\"GAS\", '4':\"HEAT\", '5':\"PORTABLE_WATER\", '6': \"OTHER\" } %} {{ values[ value_json.")) + entity_id + F(" ] if value_json.") + entity_id + F(" in values.keys() else '6' }}");
         String value_template = String("") + 
             F("{% if value_json.")   + entity_id + F("==0 %} MECHANIC ") +
             F("{% elif value_json.") + entity_id + F("==2 %} ELECTRONIC ") +
-            F("{% elif value_json.") + entity_id + F("==3 %} HALL ") +
+            F("{% elif value_json.") + entity_id + F("==5 %} LEAKAGE ") +
+            F("{% elif value_json.") + entity_id + F("==6 %} SIGNAL_NC ") +
             F("{% elif value_json.") + entity_id + F("==255 %} NOT_USED ") + 
             F("{% endif %}");
 
         entity[F("val_tpl")] = value_template;
 
         //"command_template": "{% set values = { \"WATER_COLD\":0, \"WATER_HOT\":1,  \"ELECTRO\":2, \"GAS\":3, \"HEAT\":4, \"PORTABLE_WATER\":5, \"OTHER\":6} %}  {{ values[value] if value in values.keys() else 6 }}",
-        String cmd_tpl = F("{% set values = { \"MECHANIC\":0, \"ELECTRONIC\":2, \"HALL\":3, \"NOT_USED\":255} %} {{ values[value] if value in values.keys() else 255 }}");
+        String cmd_tpl = F("{% set values = { \"MECHANIC\":0, \"ELECTRONIC\":2, \"LEAKAGE\":5, \"SIGNAL_NC\":6, \"NOT_USED\":255} %} {{ values[value] if value in values.keys() else 255 }}");
         entity[F("cmd_tpl")] = cmd_tpl;
 
         entity[F("optimistic")] = true; // optimistic

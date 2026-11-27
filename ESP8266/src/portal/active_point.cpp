@@ -9,16 +9,19 @@
 #include "AsyncJson.h"
 #include "setup.h"
 #include "Logging.h"
+#include "log_capture.h"
 #include "master_i2c.h"
 #include "utils.h"
 #include "config.h"
 #include "wifi_helpers.h"
+#include "core/wifi.h"
+#include "core/input.h"
+#include "core/portal_watchdog.h"
+#include "core/alarm.h"
 #include "resources.h"
 #include "ha/resources.h"
 #include "active_point_api.h"
 #include "active_point.h"
-
-#define SETUP_TIME_SEC 600UL // На какое время Attiny включает ESP (файл Attiny85\src\Setup.h)
 
 bool exit_portal_flag = false;
 bool start_connect_flag = false;
@@ -35,6 +38,89 @@ extern MasterI2C masterI2C;
 extern Settings sett;
 extern CalculatedData cdata;
 
+/*
+Момент последнего кормления сторожевого таймера, то есть последнего действия
+пользователя. Пишется из обработчиков сервера, читается в цикле портала -
+поэтому volatile.
+*/
+static volatile uint32_t portal_watchdog_feed_ms = 0;
+
+/*
+Пользователь что-то сделал: открыл страницу или сохранил форму.
+
+Питание снимает attiny, поэтому окно продлевается с двух сторон: командой
+'E' у attiny и своим таймером у ЕСП. Опрос /api/status сюда намеренно не
+входит - страница опрашивает вход сама, и открытая вкладка держала бы
+устройство включённым без всякого участия человека (#305).
+*/
+void feed_portal_watchdog()
+{
+    portal_watchdog_feed_ms = millis();
+    masterI2C.extendWakeUp();
+}
+
+/*
+Сколько секунд порталу осталось жить. Сторожевой таймер намеренно не кормит:
+наблюдение за окном не должно его продлевать, как и опрос состояния (#305).
+*/
+static void get_api_portal_time(AsyncWebServerRequest *request)
+{
+    const uint32_t now = millis();
+
+    char body[32];
+    snprintf(body, sizeof(body), "{\"idle_left\":%lu}",
+             (unsigned long)portal_idle_seconds_left(now, portal_watchdog_feed_ms));
+
+    request->send(200, F("application/json"), body);
+}
+
+/*
+Журнал портала (core/log_ring.h) потоком: копия в String заняла бы ещё
+столько же памяти. Отдаётся текстом, не файлом: окно портала в телефоне
+может не сохранять файлы, а текст покажет. Имя файла задаёт кнопка в logs.html.
+С ?networks за журналом идёт /ssid.txt: поддержке нужны оба, а кнопка на экране одна.
+*/
+static void get_api_log(AsyncWebServerRequest *request)
+{
+    LOG_INFO(F("GET ") << request->url());
+
+    if (!log_capture().buf)
+    {
+        request->send(200, F("text/plain; charset=utf-8"), F("Журнал не ведётся: не хватило памяти\r\n"));
+        return;
+    }
+
+    uint32_t pos = log_ring_oldest(log_capture());
+    const uint32_t end = log_capture().written;
+
+    File networks;
+    if (request->hasParam(F("networks")))
+    {
+        networks = LittleFS.open("/ssid.txt", "r");
+    }
+
+    AsyncWebServerResponse *response = request->beginChunkedResponse(
+        F("text/plain; charset=utf-8"),
+        [pos, end, networks](uint8_t *buffer, size_t max_len, size_t) mutable -> size_t
+        {
+            const size_t len = log_ring_read(log_capture(), pos, end, buffer, max_len);
+            return len ? len : networks.read(buffer, max_len);
+        });
+
+    request->send(response);
+}
+
+/*
+Страница портала. Переход по страницам и есть та активность, ради которой
+задумано продление, поэтому все html идут через одну функцию: обработчик,
+отдающий страницу мимо неё, молча перестал бы продлевать таймер.
+*/
+static void send_page(AsyncWebServerRequest *request, const char *path, AwsTemplateProcessor processor)
+{
+    feed_portal_watchdog();
+    request->send(LittleFS, path, F("text/html"), false, processor);
+}
+
 String template_bool(const uint8_t value)
 {
     if (value > 0)
@@ -42,6 +128,34 @@ String template_bool(const uint8_t value)
         return String(F("'value=\"1\" checked"));
     }
     return String();
+}
+
+/*
+Атрибут disabled для поля, которое настроить нельзя. Ноль значит "выключено
+и потому недоступно", отсюда обратная логика по сравнению с template_bool.
+*/
+String template_disabled(const uint8_t enabled)
+{
+    if (enabled > 0)
+    {
+        return String();
+    }
+    return String(FPSTR(ATTR_DISABLED));
+}
+
+/*
+Класс состояния входа для блока канала. Единственное место, где ядро
+встречается с вёрсткой: имена классов разбирает style.css.
+*/
+String alarm_state_class(const AlarmInputState state)
+{
+    switch (state)
+    {
+        case ALARM_INPUT_NO_FACTOR: return String(FPSTR(CLASS_NO_FACTOR));
+        case ALARM_INPUT_NO_ATTINY: return String(FPSTR(CLASS_NO_ATTINY));
+        case ALARM_INPUT_NO_INPUT: return String(FPSTR(CLASS_NO_INPUT));
+        default: return String();
+    }
 }
 
 /*
@@ -82,7 +196,7 @@ String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ct
             case 1: return F("meter-gas-1.png");
         }
     }
-    //if (name == CounterName::WATER_COLD)
+    // Остальное - холодная вода
     switch (input)
     {
         case 0: 
@@ -95,15 +209,9 @@ String get_counter_img(const uint8_t input, const uint8_t name, const uint8_t ct
 
 String valid_counter_type(const uint8_t ctype)
 {
-    switch (ctype)
-    {
-        case NAMUR: 
-        case DISCRETE: 
-        case ELECTRONIC: 
-        case HALL:
-        case NONE:
-            return String(ctype);
-    }
+    if (counter_type_supported(ctype, runtime_data.version))
+        return String(ctype);
+
     return String(CounterType::NAMUR);
 }
 
@@ -196,6 +304,90 @@ String processor_main(const String &var, const uint8_t input)
         return String(sett.counter1_name);
     }
 
+    /*
+    Пороги тревог (#202). Страница одна на оба входа, поэтому параметры
+    именные, а не по номеру входа.
+    */
+    else if (var == FPSTR(PARAM_ALARM_VOL0))
+        return String(sett.alarm_vol0);
+    else if (var == FPSTR(PARAM_ALARM_VOL1))
+        return String(sett.alarm_vol1);
+    else if (var == FPSTR(PARAM_ALARM_RATE0))
+        return String(sett.alarm_rate0);
+    else if (var == FPSTR(PARAM_ALARM_RATE1))
+        return String(sett.alarm_rate1);
+    else if (var == FPSTR(PARAM_ALARM_HOURS0))
+        return String(sett.alarm_hours0);
+    else if (var == FPSTR(PARAM_ALARM_HOURS1))
+        return String(sett.alarm_hours1);
+    else if (var == FPSTR(PARAM_ALARM_STOP0))
+        return String(sett.alarm_stop0);
+    else if (var == FPSTR(PARAM_ALARM_STOP1))
+        return String(sett.alarm_stop1);
+    else if (var == FPSTR(PARAM_VACATION))
+        return template_bool(sett.vacation);
+
+    else if (var == FPSTR(PARAM_CONFIRM_WATERIUS))
+        return template_bool(sett.alarm_confirm & CONFIRM_WATERIUS);
+    else if (var == FPSTR(PARAM_CONFIRM_HTTP))
+        return template_bool(sett.alarm_confirm & CONFIRM_HTTP);
+    else if (var == FPSTR(PARAM_CONFIRM_MQTT))
+        return template_bool(sett.alarm_confirm & CONFIRM_MQTT);
+
+    /*
+    Выключенного отправителя показываем неактивным: требование к нему всё
+    равно снимается (core/alarm.h:alarm_delivered), и живая галочка обещала бы
+    то, чего не будет. Подпись гасит CSS по input:disabled.
+    */
+    else if (var == FPSTR(PARAM_ACK_OFF_WATERIUS))
+        return template_disabled(sett.waterius_on);
+    else if (var == FPSTR(PARAM_ACK_OFF_HTTP))
+        return template_disabled(sett.http_on);
+    else if (var == FPSTR(PARAM_ACK_OFF_MQTT))
+        return template_disabled(sett.mqtt_on);
+
+    /*
+    Состояние входа одним классом. Решает прошивка, а не страница: только она
+    знает версию attiny и вес импульса, а страница, разбиравшая это сама,
+    успевала показать поля и гасила их уже на onload.
+    */
+    /*
+    Блок снятия виден только когда есть что снимать: кнопка без тревоги
+    выглядит как настройка, которую надо понять.
+    */
+    else if (var == FPSTR(PARAM_ALARM_RAISED))
+    {
+        const uint8_t raised = alarm_bits(runtime_data.attiny_flags, INPUT0_RED, runtime_data.version) |
+                               alarm_bits(runtime_data.attiny_flags, INPUT1_BLUE, runtime_data.version);
+        return raised ? String() : String(FPSTR(CLASS_HIDDEN));
+    }
+
+    else if (var == FPSTR(PARAM_ALARM_STATE0))
+        return alarm_state_class(alarm_input_state(runtime_data.counter_type0, sett.factor0,
+                                                   runtime_data.version));
+    else if (var == FPSTR(PARAM_ALARM_STATE1))
+        return alarm_state_class(alarm_input_state(runtime_data.counter_type1, sett.factor1,
+                                                   runtime_data.version));
+
+    /*
+    Поля порогов без веса импульса: видно, но тронуть нельзя - настройка,
+    которая ничего не делает, хуже её отсутствия.
+    */
+    else if (var == FPSTR(PARAM_THRESHOLDS_OFF0))
+        return template_disabled(alarm_input_state(runtime_data.counter_type0, sett.factor0,
+                                                   runtime_data.version) != ALARM_INPUT_NO_FACTOR);
+    else if (var == FPSTR(PARAM_THRESHOLDS_OFF1))
+        return template_disabled(alarm_input_state(runtime_data.counter_type1, sett.factor1,
+                                                   runtime_data.version) != ALARM_INPUT_NO_FACTOR);
+
+    // Остановку считает attiny: на старой поле ничего бы не делало
+    else if (var == FPSTR(PARAM_STOP_HIDDEN))
+        return runtime_data.version < ATTINY_VER_STOP ? String(FPSTR(CLASS_HIDDEN)) : String();
+
+    // Тип, которого attiny не знает, страница не предлагает: strings.js убирает такие пункты
+    else if (var == FPSTR(PARAM_LEAK_OFF))
+        return template_disabled(counter_type_supported(CounterType::LEAKAGE, runtime_data.version));
+
     else if (var == FPSTR(PARAM_COUNTER_IMG))
     {
         switch (input)
@@ -259,6 +451,9 @@ String processor_main(const String &var, const uint8_t input)
     else if (var == FPSTR(PARAM_MQTT_DISCOVERY_TOPIC))
         return replace_value(sett.mqtt_discovery_topic);
 
+    else if (var == FPSTR(PARAM_SEND_ON_CONSUMPTION))
+        return template_bool(sett.send_on_consumption);
+
     else if (var == FPSTR(PARAM_NTP_SERVER))
         return String(sett.ntp_server);
 
@@ -293,7 +488,7 @@ String processor_main(const String &var, const uint8_t input)
             case WL_NO_SSID_AVAIL:
             case WL_CONNECT_FAILED:
             case WL_CONNECTION_LOST:
-                return String(F("8")); //S_WIFI_CONNECTION_LOST "Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.";
+                return String(F("8")); //S_WL_CONNECTION_LOST: что может помочь и ссылка на журнал, текст в strings.js
             case WL_WRONG_PASSWORD:
                 return String(F("9")); //S_WL_WRONG_PASSWORD "Ошибка подключения: Некорректный пароль";
             case WL_IDLE_STATUS:
@@ -326,7 +521,7 @@ void onRedirectIP(AsyncWebServerRequest *request)
 
 void on_root(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("on_root GET ") << request->url());
+    LOG_REQUEST(F("on_root GET ") << request->url());
 
     LOG_INFO(F("WIFI: wifi_connect_status=") << wifi_connect_status);
 
@@ -335,29 +530,34 @@ void on_root(AsyncWebServerRequest *request)
         if (wifi_connect_status == WL_CONNECT_FAILED || wifi_connect_status == WL_CONNECTION_LOST || wifi_connect_status == WL_WRONG_PASSWORD)
         {
             LOG_INFO(F("> captive_portal_error.html"));
-            request->send(LittleFS, "/captive_portal_error.html", F("text/html"), false);
+            send_page(request, "/captive_portal_error.html", processor);
         }
         else if (wifi_connect_status == WL_CONNECTED)
         {
             LOG_INFO(F("> captive_portal_connected.html"));
-            request->send(LittleFS, "/captive_portal_connected.html", F("text/html"), false);
+            send_page(request, "/captive_portal_connected.html", nullptr);
         }   
         else 
         {
             // Первая настройка
             LOG_INFO(F("> captive_portal_start.html"));
-            request->send(LittleFS, "/captive_portal_start.html", F("text/html"), false);
+            send_page(request, "/captive_portal_start.html", nullptr);
         }
     }
     else
     {
         LOG_INFO(F("> captive_portal.html"));
-        request->send(LittleFS, "/captive_portal.html", F("text/html"), false);
+        send_page(request, "/captive_portal.html", nullptr);
     }
 }
 
 void start_active_point(Settings &sett, CalculatedData &cdata)
 {
+    if (!log_capture_begin(LOG_CAPTURE_SIZE))
+    {
+        LOG_ERROR(F("LOG: no memory for portal journal"));
+    }
+
     if (!LittleFS.begin())
     {
         LOG_INFO(F("FS: Mounting LittleFS error"));
@@ -396,13 +596,18 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
 
     wifi_set_mode(WIFI_AP_STA);
 
-    // WiFi.softAPConfig(IPAddress(192, 168, 4, 1), IPAddress(192, 168, 4, 1), IPAddress(255, 255, 255, 0));
 
-    // TODO выбирать channel исходя из настроек.
-    // Канал WiFi роутера к кому подсоединимся должен совпадать с каналом точки доступа ESP
+    // Канал роутера, к которому подключимся, должен совпадать с каналом точки
+    // доступа ЕСП: одно радио на оба режима. Поэтому берём канал из настроек —
+    // его сохраняет портал при выборе сети и wifi_connect после подключения.
     // https://bbs.espressif.com/viewtopic.php?t=324
+    //
+    // ap_channel страхует от нуля: он лежит в настройках после неудачного
+    // коннекта и после смены сети, а SDK принимает только 1..13.
     // TODO добавить пароль для интерфейса
-    if (!WiFi.softAP(get_ap_name(), "", sett.wifi_channel, 0, 4))
+    const uint8_t channel = ap_channel(sett.wifi_channel);
+
+    if (!WiFi.softAP(get_ap_name(), "", channel, 0, 4))
     {
         LOG_ERROR(F("AP started failed"));
         return;
@@ -410,12 +615,11 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
 
     delay(500);
 
-    LOG_INFO(F("AP started on channel=") << sett.wifi_channel << F(" , ssid=") << get_ap_name());
+    LOG_INFO(F("AP started on channel=") << channel << F(" , ssid=") << get_ap_name());
     LOG_INFO(F("IP: ") << WiFi.softAPIP());
 
     LOG_INFO(F("Start DNS server"));
     DNSServer *dns = new DNSServer();
-    // dns->setTTL(3600);   //https://github.com/CDFER/Captive-Portal-ESP32/blob/main/src/main.cpp#L50C11-L50C25
     dns->start(53, "*", WiFi.softAPIP());
 
     LOG_INFO(F("DNS server started"));
@@ -461,7 +665,7 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
 
     // Об устройстве
     server->on("/about.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/about.html", F("text/html"), false, processor); });
+               { send_page(request, "/about.html", processor); });
 
     server->on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request)
                { request->send(LittleFS, "/favicon.ico", F("image/x-icon")); });
@@ -469,89 +673,90 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     // Captive portal
     // Он отобразится через / on_root, но кажется кнопки "назад" поведут в эти хэндлеры
     server->on("/captive_portal.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/captive_portal.html", F("text/html"), false); });
+               { send_page(request, "/captive_portal.html", nullptr); });
 
     server->on("/captive_portal_start.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/captive_portal_start.html", F("text/html"), false); });
+               { send_page(request, "/captive_portal_start.html", nullptr); });
 
     server->on("/captive_portal_error.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/captive_portal_error.html", F("text/html"), false); });
+               { send_page(request, "/captive_portal_error.html", processor); });
 
     server->on("/captive_portal_connected.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/captive_portal_connected.html", F("text/html"), false); });
+               { send_page(request, "/captive_portal_connected.html", nullptr); });
 
     // Завершение настройки (wizard)
     server->on("/finish.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/finish.html", F("text/html"), false, processor); });
+               { send_page(request, "/finish.html", processor); });
 
     // Нужно, т.к. при первой на стройке будет start.html и надо дать возможность открыть Главное меню
     server->on("/index.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/index.html", F("text/html"), false, processor); });
+               { send_page(request, "/index.html", processor); });
 
     server->on("/logs.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/logs.html", F("text/html"), false, processor); });
+               { send_page(request, "/logs.html", processor); });
 
     // Сброс к заводским настройкам
     server->on("/reset.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/reset.html", F("text/html"), false, processor); });
+               { send_page(request, "/reset.html", processor); });
 
     // Настройка счётчика
 
     // красный
     server->on("/input/0/setup.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_setup.html", F("text/html"), false, processor0); });
+               { send_page(request, "/input_setup.html", processor0); });
     // синий
     server->on("/input/1/setup.html", HTTP_GET, [](AsyncWebServerRequest *request)  
-               { request->send(LittleFS, "/input_setup.html", F("text/html"), false, processor1); });
+               { send_page(request, "/input_setup.html", processor1); });
 
     // Детектирование счётчика (только Холодная и Горячая вода)
     server->on("/input/0/detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_detect.html", F("text/html"), false, processor0); });
+               { send_page(request, "/input_detect.html", processor0); });
     server->on("/input/1/detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_detect.html", F("text/html"), false, processor1); });
+               { send_page(request, "/input_detect.html", processor1); });
 
     server->on("/input/0/input_electro_detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_electro_detect.html", F("text/html"), false, processor0); });
+               { send_page(request, "/input_electro_detect.html", processor0); });
     server->on("/input/1/input_electro_detect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_electro_detect.html", F("text/html"), false, processor1); });
+               { send_page(request, "/input_electro_detect.html", processor1); });
 
     // Параметры счётчика
     server->on("/input/0/settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_settings.html", F("text/html"), false, processor0); });
+               { send_page(request, "/input_settings.html", processor0); });
     server->on("/input/1/settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_settings.html", F("text/html"), false, processor1); });
+               { send_page(request, "/input_settings.html", processor1); });
                
     server->on("/input/0/input_electro_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_electro_settings.html", F("text/html"), false, processor0); });
+               { send_page(request, "/input_electro_settings.html", processor0); });
     server->on("/input/1/input_electro_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/input_electro_settings.html", F("text/html"), false, processor1); });
+               { send_page(request, "/input_electro_settings.html", processor1); });
 
     // Отправка показаний
     server->on("/setup_send.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/setup_send.html", F("text/html"), false, processor); });
+               { send_page(request, "/setup_send.html", processor); });
+
+    // Тревоги: одна страница на оба входа (#202)
+    server->on("/alarms.html", HTTP_GET, [](AsyncWebServerRequest *request)
+               { send_page(request, "/alarms.html", processor); });
 
     // Первая настройка
     server->on("/start.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/start.html", F("text/html"), false, processor); });
-
-    server->on("/waterius_logs.txt", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/waterius_logs.txt", F("text/plain")); });
+               { send_page(request, "/start.html", processor); });
 
     // Процесс подключения к Wi-fi
     server->on("/wifi_connect.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/wifi_connect.html", F("text/html"), false, processor); });
+               { send_page(request, "/wifi_connect.html", processor); });
 
     // Список Wi-Fi сетей
     server->on("/wifi_list.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/wifi_list.html", F("text/html"), false, processor); });
+               { send_page(request, "/wifi_list.html", processor); });
 
     // Ввод пароля от Wi-Fi сети
     server->on("/wifi_password.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/wifi_password.html", F("text/html"), false, processor); });
+               { send_page(request, "/wifi_password.html", processor); });
 
     // Настройки Wi-Fi, NTP
     server->on("/wifi_settings.html", HTTP_GET, [](AsyncWebServerRequest *request)
-               { request->send(LittleFS, "/wifi_settings.html", F("text/html"), false, processor); });
+               { send_page(request, "/wifi_settings.html", processor); });
 
     // Файл характеристик всех найденных Wi-Fi сетей
     server->on("/ssid.txt", HTTP_GET, [](AsyncWebServerRequest *request) 
@@ -563,10 +768,13 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     server->on("/api/start_connect", HTTP_GET, get_api_start_connect);             // Поднимаем флаг старта подключения и redirect в wifi_connect.html
     server->on("/api/connect_status", HTTP_GET, get_api_connect_status);           // Статус подключения (из wifi_connect.html)
     server->on("/api/save", HTTP_POST, post_api_save);                             // Сохраняем настройки
+    server->on("/api/save_alarms", HTTP_POST, post_api_save_alarms);               // Сохраняем пороги тревог (#202)
     server->on("/api/save_input_type", HTTP_POST, post_api_save_input_type);       // Сохраняем тип счётчика и переносим на страницу настройки
     server->on("/api/main_status", HTTP_GET, get_api_main_status);                 // Информационные сообщения на главной странице
     server->on("/api/status/0", HTTP_GET, get_api_status_0);                       // Статус 0-го входа (ХВС)  (из setup_cold_welcome.html)
     server->on("/api/status/1", HTTP_GET, get_api_status_1);                       // Статус 1-го входа (ГВС)  (из setup_cold_welcome.html)
+    server->on("/api/portal_time", HTTP_GET, get_api_portal_time);                 // Сколько осталось до закрытия портала (#305)
+    server->on("/api/log", HTTP_GET, get_api_log);                                 // Журнал портала (logs.html)
     server->on("/api/turnoff", HTTP_GET, get_api_turnoff);                         // Выйти из режима настройки
     server->on("/api/reset", HTTP_POST, post_api_reset);                           // Сброс к заводским настройкам
 
@@ -578,8 +786,14 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     LOG_INFO(F("Start scan Wi-Fi networks"));
     WiFi.scanNetworks(true);
 
-    uint16_t start = millis();
-    while (!exit_portal_flag && ((millis() - start) / 1000) < SETUP_TIME_SEC)
+    /*
+    Оба момента 32-битные: millis() в uint16_t обрезался до 65 секунд, и
+    условие выхода считало ерунду - спасало только то, что портал успевает
+    стартовать в первую минуту после включения.
+    */
+    portal_watchdog_feed_ms = millis();
+
+    while (!exit_portal_flag && !portal_watchdog_fired(millis(), portal_watchdog_feed_ms))
     {
         dns->processNextRequest();
         yield();
@@ -597,9 +811,9 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
         }
     }
 
-    if (((millis() - start) / 1000) > SETUP_TIME_SEC)
+    if (!exit_portal_flag)
     {
-        LOG_ERROR(F("Portal setup time is over"));
+        LOG_ERROR(F("Portal is idle, no user activity"));
     }
 
     LOG_INFO(F("Shutdown HTTP and DNS servers"));

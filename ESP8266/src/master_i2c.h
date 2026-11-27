@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "setup.h"
+#include "core/alarm.h"   // AlarmThresholds: пороги едут кадром 'A'
 
 /*
 Номера пинов линии i2c.
@@ -18,6 +19,13 @@
 
 
 #define INIT_ATTINY_CRC 0xFF
+
+// Пока attiny пишет конфиг в EEPROM, она на I2C не отвечает
+#define COUNTER_TYPES_ATTEMPTS 3
+#define COUNTER_TYPES_RETRY_MS 50
+
+// attiny стирает кольцо показаний в главном цикле: 180 байт EEPROM, ~0,6 с
+#define CLEAR_COUNTERS_WAIT_MS 1000
 
 // Класс для синхронизации запросов к i2c, которые могут быть из разных потоков в AsyncWebServer
 // В ESP отсутствуют мьютексы, поэтому будем считать, что это проще сдела
@@ -43,35 +51,7 @@ public:
     BusyGuard& operator=(const BusyGuard&) = delete;
 };
 
-/*
-Данные принимаемые от Attiny
-*/
-struct AttinyData
-{
-    // Header
-    uint8_t version;    // Версия ПО Attiny
-    uint8_t service;    // Причина загрузки Attiny (биты 0-5), биты 6-7 = on_pulse флаги
-    bool on_pulse0;
-    bool on_pulse1;
-    uint8_t reserved5 = 0;
-    uint16_t voltage;   // Напряжение питания в мВ
-    uint8_t reserved;   // Для совместимости
-    uint8_t setup_started_counter;
-    uint8_t resets;
-    uint8_t model;         // WATERIUS_MODEL_1 или  WATERIUS_MODEL_2
-    uint8_t counter_type0; // Тип входа, вход 0
-    uint8_t counter_type1; //           вход 1
-    uint32_t impulses0;    // Импульсов, канал 0
-    uint32_t impulses1;    //           канал 1
-    uint16_t adc0;         // Уровень,   канал 0
-    uint16_t adc1;         //           канал 1
-
-    // HEADER_DATA_SIZE
-
-    uint8_t crc = 0; // Всегда в конце структуры данных
-    uint8_t reserved2 = 0;
-    // Кратно 16bit https://github.com/esp8266/Arduino/issues/1825
-};
+// struct AttinyData — в core/types.h (подключается через setup.h)
 
 uint8_t crc_8(const unsigned char *input_str, size_t num_bytes, uint8_t crc = 0);
 
@@ -98,6 +78,11 @@ public:
     bool getAttinyData(AttinyData &data);
     bool setWakeUpPeriod(uint16_t per);
     bool setCountersType(const uint8_t type0, const uint8_t type1);
+    bool clearCounters();
+    bool setAlarmConfig(const AlarmThresholds &ch0, const AlarmThresholds &ch1,
+                        const uint8_t reset_mask);
+    bool setStopConfig(const uint16_t stop0, const uint16_t stop1);
+    bool confirmAlarm();
     bool setTransmitMode();
     bool setSetupMode();
     bool setSleep();

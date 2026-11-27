@@ -1,154 +1,70 @@
 #include "publish.h"
 #include "Logging.h"
-#include "setup.h"
 #include <PubSubClient.h>
-#include <ArduinoJson.h>
-
-extern Settings sett;
 
 /**
- * @brief Публикация топика в MQTT в различных режимах
+ * @brief Публикация топика в MQTT
+ *
+ * Без промежуточного буфера: сообщение может быть больше буфера клиента.
+ * QoS 0, поэтому «опубликовано» значит «записано в сокет целиком» -
+ * подтверждения от брокера нет. endPublish у PubSubClient 2.8 всегда
+ * возвращает 1, судить о результате по нему нельзя.
  *
  * @param mqtt_client клиент MQTT
  * @param topic строка с топиком
  * @param payload содержимое топика
- * @param mode режим публикации, режим по умолчанию PUBLISH_MODE_BIG
+ * @param retain флаг retain
+ * @return true сообщение ушло в сокет целиком
  */
-void publish(PubSubClient &mqtt_client, const String &topic, const String &payload, const int mode)
+bool publish(PubSubClient &mqtt_client, const String &topic, const String &payload, bool retain)
 {
-    switch (mode)
+    LOG_DEBUG(F("MQTT: Payload: ") << payload);
+
+    const unsigned int len = payload.length();
+    if (!mqtt_client.beginPublish(topic.c_str(), len, retain))
     {
-    case PUBLISH_MODE_SIMPLE:
-        publish_simple(mqtt_client, topic, payload);
-        break;
-    case PUBLISH_MODE_CHUNKED:
-        publish_chunked(mqtt_client, topic, payload);
-        break;
-    case PUBLISH_MODE_BIG:
-    default:
-        publish_big(mqtt_client, topic, payload);
+        LOG_ERROR(F("MQTT: Publish failed: ") << topic << F(" (no connection)"));
+        return false;
     }
+
+    const bool sent = mqtt_client.print(payload.c_str()) == len;
+    mqtt_client.endPublish();
+
+    if (!sent)
+    {
+        LOG_ERROR(F("MQTT: Publish failed: ") << topic << F(" (socket)"));
+        return false;
+    }
+
+    // Одна строка на публикацию вместо пяти, и после отправки: она же и есть
+    // подтверждение. Без автообнаружения каждое поле уходит своим топиком, и
+    // сеанс на 83 поля (а с настройками - дважды) не помещался в кольцо лога
+    // стенда: 830 строк при 511
+    LOG_INFO(F("MQTT: pub ") << topic << F(" size=") << len
+                             << F(" retain=") << retain
+                             << F(" heap=") << ESP.getFreeHeap());
+    return true;
 }
 
 /**
- * @brief Публикация топика в MQTT по частям,
- * используется в случае если очень много информации
+ * @brief Снять удерживаемое сообщение с топика
+ *
+ * Пустая посылка с флагом retain - команда брокеру забыть удерживаемое, поэтому
+ * флаг взведён всегда, независимо от настройки mqtt_retain (#409): она говорит,
+ * как публиковать показания, а это служебная операция протокола.
  *
  * @param mqtt_client клиент MQTT
  * @param topic строка с топиком
- * @param payload содержимое топика
+ * @return true пустое сообщение ушло
  */
-void publish_chunked(PubSubClient &mqtt_client, 
-                     const String &topic, 
-                     const String &payload, 
-                     const unsigned int chunk_size)
+bool clear_retained(PubSubClient &mqtt_client, const String &topic)
 {
-    LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-    LOG_INFO(F("MQTT: Publish Topic: ") << topic);
-    LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
-    LOG_DEBUG(F("MQTT: Payload: ") << payload);
+    LOG_INFO(F("MQTT: Remove retain message: ") << topic);
 
-    unsigned int len = payload.length();
-    const uint8_t *buf = (const uint8_t *)payload.c_str();
-
-    if (mqtt_client.beginPublish(topic.c_str(), len, (bool)sett.mqtt_retain))
+    if (!mqtt_client.publish(topic.c_str(), "", true))
     {
-        while (len > 0)
-        {
-            if (len >= chunk_size)
-            {
-                mqtt_client.write(buf, chunk_size);
-                buf += chunk_size;
-                len -= chunk_size;
-                LOG_INFO(F("MQTT: Sended chunk size: ") << chunk_size);
-            }
-            else
-            {
-                mqtt_client.write(buf, len);
-                LOG_INFO(F("MQTT: Sended chunk size: ") << len);
-                break;
-            }
-        }
-        if (mqtt_client.endPublish())
-        {
-            LOG_INFO(F("MQTT: Published succesfully"));
-        }
-        else
-        {
-            LOG_ERROR(F("MQTT: Publish failed"));
-        }
+        LOG_ERROR(F("MQTT: Publish failed: ") << topic << F(" (clear retained)"));
+        return false;
     }
-    else
-    {
-        LOG_ERROR(F("MQTT: Client not connected."));
-    }
-}
-
-/**
- * @brief Публикация топика в MQTT (основной метод)
- * не использует промежуточных буферов,
- * сообщение может иметь размер больше 250 байт
- *
- * @param mqtt_client клиент MQTT
- * @param topic строка с топиком
- * @param payload содержимое топика
- */
-void publish_big(PubSubClient &mqtt_client, 
-                 const String &topic, 
-                 const String &payload)
-{
-    LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-    LOG_INFO(F("MQTT: Publish Topic: ") << topic);
-    LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
-    LOG_DEBUG(F("MQTT: Payload: ") << payload);
-
-    unsigned int len = payload.length();
-    LOG_INFO(F("MQTT: Retain: ") << sett.mqtt_retain);
-    if (mqtt_client.beginPublish(topic.c_str(), len, (bool)sett.mqtt_retain))
-    {
-        if (mqtt_client.print(payload.c_str()) == len)
-        {
-            LOG_INFO(F("MQTT: Published succesfully"));
-        }
-        else
-        {
-            LOG_ERROR(F("MQTT: Publish failed"));
-        }
-
-        mqtt_client.endPublish();
-    }
-    else
-    {
-        LOG_ERROR(F("MQTT: Client not connected."));
-    }
-}
-/**
- * @brief Публикация топика в MQTT если сообщение меньше 250 символов
- *
- * @param mqtt_client клиент MQTT
- * @param topic строка с топиком
- * @param payload содержимое топика
- */
-void publish_simple(PubSubClient &mqtt_client, const String &topic, const String &payload)
-{
-    LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
-    LOG_INFO(F("MQTT: Publish Topic: ") << topic);
-    LOG_INFO(F("MQTT: Payload Size: ") << payload.length());
-    LOG_DEBUG(F("MQTT: Payload: ") << payload);
-
-    if (mqtt_client.connected())
-    {
-        if (mqtt_client.publish(topic.c_str(), payload.c_str(), (bool)sett.mqtt_retain))
-        {
-            LOG_INFO(F("MQTT: Published succesfully"));
-        }
-        else
-        {
-            LOG_ERROR(F("MQTT: Publish failed"));
-        }
-    }
-    else
-    {
-        LOG_ERROR(F("MQTT: Client not connected."));
-    }
+    return true;
 }

@@ -21,14 +21,13 @@
                         <img src="/images/icons.png">
                     </div>
                 </header>
-                <main>
+                <main class="fill">
                     <h2>Логи</h2>
-                    <p class="text">Здесь отображаются события, которые происходят под капотом Ватериуса, эти данные могут пригодиться при обращении в поддержку</p>
+                    <p class="text">Логи с момента включения режима настройки.</p>
                     <textarea id="logs" class="mt20" disabled></textarea>
-                    <button type="button" class="btn-serv mt16" onclick="copyInput('logs')">Скопировать</button>
                 </main>
                 <footer class="btns">
-                    <a class="btn" download href="/waterius_logs.txt">Скачать</a>
+                    <a class="btn" download="waterius_log.txt" href="/api/log?networks=1">Скачать журнал</a>
                 </footer>
             </div>
         </div>

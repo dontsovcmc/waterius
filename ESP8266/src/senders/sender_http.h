@@ -16,16 +16,25 @@
 #include "Logging.h"
 #include "json.h"
 #include "https_helpers.h"
+#include "core/connect_log.h"
+#include "utils.h"
 
 #define HTTP_SEND_ATTEMPTS 3
 
-bool send_http(const Settings &sett, JsonDocument &jsonData, JsonDocument &json_settings)
+SendStatus send_http(Settings &sett, JsonDocument &jsonData, JsonDocument &json_settings)
 {
-    if (!(sett.http_on && sett.http_url[0]))
+    // то же правило, что и в is_http(): было продублировано вручную
+    if (!is_http(sett))
     {
         LOG_INFO(F("HTTP: SKIP"));
-        return false;
+        return SEND_SKIPPED;
     };
+
+    if (millis() >= SEND_RETRY_LIMIT_MS)
+    {
+        LOG_ERROR(F("HTTP: No time left in session"));
+        return SEND_NO_CONNECTION;
+    }
 
     uint32_t start_time = millis();
 
@@ -37,15 +46,21 @@ bool send_http(const Settings &sett, JsonDocument &jsonData, JsonDocument &json_
     String url = sett.http_url;
 
     int attempts = HTTP_SEND_ATTEMPTS;
-    bool result = false;
+    SendStatus result = SEND_NO_CONNECTION;
+    int16_t code = 0;
     do
     {
         LOG_INFO(F("HTTP: Attempt #") << HTTP_SEND_ATTEMPTS - attempts + 1 << F(" from ") << HTTP_SEND_ATTEMPTS);
-        result = post_data(url, sett.waterius_key, sett.waterius_email, payload, json_settings);
+        result = post_data(url, sett.waterius_key, sett.waterius_email, payload, json_settings, code);
+        if (result != SEND_OK)
+        {
+            // Имя проверяем один раз: попытки и так потратили время на сбой
+            connect_log_push(sett, CONNECT_HTTP, attempts == 1 ? connect_code(url.c_str(), code) : code);
+        }
 
-    } while (!result && --attempts);
+    } while (result != SEND_OK && --attempts && millis() < SEND_RETRY_LIMIT_MS);
 
-    if (result)
+    if (result == SEND_OK)
     {
         LOG_INFO(F("HTTP: Data sent. Time ") << millis() - start_time << F(" ms"));
     }

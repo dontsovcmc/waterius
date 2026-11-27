@@ -5,7 +5,7 @@
 #include "senders/sender_mqtt.h"
 
 
-void send_data(const Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data, JsonDocument &json_settings)
+void send_data(Settings &sett, const AttinyData &data, const CalculatedData &cdata, JsonDocument &json_data, JsonDocument &json_settings, SessionStatus &status)
 {
     // Формироуем JSON
     get_json_data(sett, data, cdata, json_data);
@@ -14,26 +14,35 @@ void send_data(const Settings &sett, const AttinyData &data, const CalculatedDat
     LOG_INFO(F("Free memory: ") << ESP.getFreeHeap());
 
 #ifndef WATERIUS_RU_DISABLED
-    if (send_waterius(sett, json_data, json_settings))
+    SendStatus waterius_status = send_waterius(sett, json_data, json_settings);
+    if (waterius_status == SEND_OK)
     {
         LOG_INFO(F("HTTP: Send OK"));
+        status.delivered_any = true;
     }
+    status.waterius = merge_status(status.waterius, waterius_status);
 #endif
 
 #ifndef HTTPS_DISABLED
-    if (send_http(sett, json_data, json_settings))
+    SendStatus http_status = send_http(sett, json_data, json_settings);
+    if (http_status == SEND_OK)
     {
         LOG_INFO(F("HTTP: Send OK"));
+        status.delivered_any = true;
     }
+    status.http = merge_status(status.http, http_status);
 #endif
 
 #ifndef MQTT_DISABLED
     if (is_mqtt(sett))
     {
-        if (send_mqtt(sett, json_data))
+        SendStatus mqtt_status = send_mqtt(sett, data, json_data);
+        if (mqtt_status == SEND_OK)
         {
             LOG_INFO(F("MQTT: Send OK"));
+            status.delivered_any = true;
         }
+        status.mqtt = merge_status(status.mqtt, mqtt_status);
     }
     else
     {

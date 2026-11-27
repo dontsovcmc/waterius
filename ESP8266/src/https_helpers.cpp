@@ -3,12 +3,17 @@
 #include <ArduinoJson.h>
 #include "Logging.h"
 #include "utils.h"
+#include "https_helpers.h"
+#include "setup.h"
+#include "core/connect_log.h"
+#include "core/url.h"
 
-bool post_data(const String &url, const char *key, const char *email, const String &payload, JsonDocument &json_settings)
+SendStatus post_data(const String &url, const char *key, const char *email, const String &payload, JsonDocument &json_settings, int16_t &code)
 {
+    code = 0;
     void *pClient = nullptr;
     HTTPClient httpClient;
-    bool result = false;
+    SendStatus result = SEND_NO_CONNECTION;
     LOG_INFO(F("HTTP: Send JSON POST request"));
     LOG_INFO(F("HTTP: URL:") << url);
     LOG_INFO(F("HTTP: Body:") << payload);
@@ -48,11 +53,23 @@ bool post_data(const String &url, const char *key, const char *email, const Stri
 
         int response_code = httpClient.POST(payload);
         LOG_INFO(F("HTTP: Response code: ") << response_code);
-        result = response_code == 200;
+        code = response_code;
+
+        // Отрицательный код — ошибка самого клиента: не разрешилось имя, не
+        // открылось соединение, не дождались ответа
+        if (response_code == 200)
+        {
+            result = SEND_OK;
+        }
+        else if (response_code > 0)
+        {
+            result = SEND_BAD_ANSWER;
+        }
+
         String response_body = httpClient.getString();
         LOG_INFO(F("HTTP: Response body: ") << response_body);
 
-        if (result && response_body.length() > 2)
+        if (result == SEND_OK && response_body.length() > 2)
         {
             JsonDocument temp;
             DeserializationError error = deserializeJson(temp, response_body);
@@ -80,4 +97,20 @@ bool post_data(const String &url, const char *key, const char *email, const Stri
     }
 
     return result;
+}
+
+bool name_resolves(const char *host)
+{
+    IPAddress ip;
+    return WiFi.hostByName(host, ip) == 1;
+}
+
+int16_t connect_code(const char *url, int16_t code)
+{
+    char host[HOST_LEN];
+    if (code == HTTPC_ERROR_CONNECTION_FAILED && url_host(url, host, sizeof(host)) && !name_resolves(host))
+    {
+        return CONNECT_CODE_DNS;
+    }
+    return code;
 }

@@ -18,4 +18,10 @@ void start_active_point(Settings &sett, CalculatedData &cdata);
 
 String processor_main(const String &var, const uint8_t input = 0xFF);
 
+/*
+Отметить действие пользователя: продлевает режим настройки и у ЕСП, и у
+attiny. Зовётся из обработчиков сохранения (#305).
+*/
+void feed_portal_watchdog();
+
 #endif

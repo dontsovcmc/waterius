@@ -3,6 +3,7 @@
 #include <Wire.h>
 #include <Arduino.h>
 #include "setup.h"
+#include "core/alarm.h"
 
 // https://github.com/lammertb/libcrc/blob/600316a01924fd5bb9d47d535db5b8f3987db178/src/crc8.c
 
@@ -110,8 +111,8 @@ bool MasterI2C::getUint(uint32_t &value, uint8_t &crc)
         value |= i2;
         value = value << 8;
         value |= i1;
-        // вот так не работает из-за преобразования типов:
-        //  value = i1 | (i2 << 8) | (i3 << 16) | (i4 << 24);
+        // Собирать одним выражением нельзя: uint8_t повышается до int,
+        // и сдвиг на 24 теряет старший байт
         return true;
     }
     return false;
@@ -170,9 +171,12 @@ bool MasterI2C::getAttinyData(AttinyData &data)
     good &= getByte(data.service, crc);
     data.on_pulse0 = (data.service >> 6) & 1;
     data.on_pulse1 = (data.service >> 7) & 1;
+    data.stop0 = consumption_stopped(data.service, INPUT0_RED, data.version);
+    data.stop1 = consumption_stopped(data.service, INPUT1_BLUE, data.version);
+    data.service &= ATTINY_SERVICE_MASK;
 
     good &= getUint16(data.voltage, crc);
-    good &= getByte(data.reserved, crc);
+    good &= getByte(data.attiny_flags, crc);
     good &= getByte(data.setup_started_counter, crc);
 
     good &= getByte(data.resets, crc);
@@ -191,10 +195,15 @@ bool MasterI2C::getAttinyData(AttinyData &data)
     if (good)
     {
         LOG_INFO(F("v") << data.version
-        << F(" service:") << (data.service & 0x3F)
+        << F(" service:") << data.service
         << F(" on_pulse0:") << data.on_pulse0
         << F(" on_pulse1:") << data.on_pulse1
         << F(" voltage:") << data.voltage
+        << F(" flags:") << data.attiny_flags
+        << F(" alarm0:") << alarm_bits(data.attiny_flags, INPUT0_RED, data.version)
+        << F(" alarm1:") << alarm_bits(data.attiny_flags, INPUT1_BLUE, data.version)
+        << F(" stop0:") << data.stop0
+        << F(" stop1:") << data.stop1
         << F(" setups:") << data.setup_started_counter
         << F(" resets:") << data.resets
         << F(" model:") << data.model
@@ -251,11 +260,108 @@ bool MasterI2C::setCountersType(const uint8_t type0, const uint8_t type1)
     txBuf[2] = type1;
     txBuf[3] = crc_8(&txBuf[1], 2, INIT_ATTINY_CRC);
 
-    if (!sendData(txBuf, 4))
+    // attiny пишет типы в EEPROM прямо в обработчике I2C и на это время
+    // перестаёт отвечать: вторая команда подряд получает NACK
+    for (uint8_t attempt = 0; attempt < COUNTER_TYPES_ATTEMPTS; attempt++)
     {
-        return false;
+        if (sendData(txBuf, 4))
+        {
+            return true;
+        }
+        delay(COUNTER_TYPES_RETRY_MS);
     }
-    return true;
+    return false;
+}
+
+bool MasterI2C::clearCounters()
+{
+    BusyGuard guard(i2c_busy);
+
+    // Сразу после 'C' attiny ещё пишет типы в EEPROM и отвечает NACK
+    for (uint8_t attempt = 0; attempt < COUNTER_TYPES_ATTEMPTS; attempt++)
+    {
+        if (sendCmd('R'))
+        {
+            return true;
+        }
+        delay(COUNTER_TYPES_RETRY_MS);
+    }
+    return false;
+}
+
+/*
+Пороги тревог и снятие для attiny (issue #202).
+
+Уходят в каждом сеансе, как и период пробуждения: у attiny они живут в ОЗУ,
+а EEPROM там занята показаниями и конфигурацией входов.
+
+Маска снятия едет тем же кадром - это одна тема, а не две, и отдельная
+команда стоила бы attiny больше флеша, чем весь этот байт. Маска обязана
+быть одноразовой: выставили в одном сеансе, дальше шлём ноль, иначе тревога
+снималась бы каждый раз заново и новая не поднялась бы никогда.
+
+    0..11  на канал: quantum_ticks, leak_quanta, vol_pulses
+    12     маска снятия: биты 0-2 канал 0, биты 3-5 канал 1
+    13     CRC8
+*/
+bool MasterI2C::setAlarmConfig(const AlarmThresholds &ch0, const AlarmThresholds &ch1,
+                               const uint8_t reset_mask)
+{
+    BusyGuard guard(i2c_busy);
+    uint8_t txBuf[15];
+
+    txBuf[0] = 'A';
+
+    const AlarmThresholds *ch[2] = {&ch0, &ch1};
+    uint8_t i = 1;
+    for (uint8_t c = 0; c < 2; c++)
+    {
+        txBuf[i++] = (uint8_t)(ch[c]->quantum_ticks >> 8);
+        txBuf[i++] = (uint8_t)(ch[c]->quantum_ticks);
+        txBuf[i++] = (uint8_t)(ch[c]->leak_quanta >> 8);
+        txBuf[i++] = (uint8_t)(ch[c]->leak_quanta);
+        txBuf[i++] = (uint8_t)(ch[c]->vol_pulses >> 8);
+        txBuf[i++] = (uint8_t)(ch[c]->vol_pulses);
+    }
+
+    txBuf[13] = reset_mask;
+    txBuf[14] = crc_8(&txBuf[1], 13, INIT_ATTINY_CRC);
+
+    return sendData(txBuf, sizeof(txBuf));
+}
+
+/*
+Пороги остановки расхода для attiny, минуты.
+
+Отдельной командой: кадр 'A' занял весь приёмный буфер attiny, в нём 15 байт,
+а следующий байт она отвергает.
+
+    0..1  канал 0, старшим байтом вперёд
+    2..3  канал 1
+    4     CRC8
+*/
+bool MasterI2C::setStopConfig(const uint16_t stop0, const uint16_t stop1)
+{
+    BusyGuard guard(i2c_busy);
+    uint8_t txBuf[6];
+
+    txBuf[0] = 'H';
+    txBuf[1] = (uint8_t)(stop0 >> 8);
+    txBuf[2] = (uint8_t)(stop0);
+    txBuf[3] = (uint8_t)(stop1 >> 8);
+    txBuf[4] = (uint8_t)(stop1);
+    txBuf[5] = crc_8(&txBuf[1], 4, INIT_ATTINY_CRC);
+
+    return sendData(txBuf, sizeof(txBuf));
+}
+
+/*
+Тревога доставлена получателю: attiny может перестать будить нас (issue #202).
+*/
+bool MasterI2C::confirmAlarm()
+{
+    BusyGuard guard(i2c_busy);
+    return sendCmd('K');
 }
 
 bool MasterI2C::extendWakeUp()

@@ -164,7 +164,7 @@ send_mqtt():
 - RAM: ESPAsyncTCP уже в проекте (для WebServer в SETUP_MODE). MQTT работает в TRANSMIT_MODE — не пересекаются.
 
 ### ESPAsyncTCP fork
-- Проект использует `ESP32Async/ESPAsyncTCP@2.0.0`. AsyncMqttClient (marvinroger) ожидает оригинальный `ESPAsyncTCP`. Нужна проверка совместимости заголовков.
+- Проект использует оригинальный `me-no-dev/ESPAsyncTCP@1.2.2`: его тянет форк веб-сервера `waterius/ESPAsyncWebServer#20230926`. При переходе веб-сервера на ESP32Async придётся сверить заголовки с AsyncMqttClient (marvinroger).
 
 ### Streaming API нет
 - AsyncMqttClient не имеет `beginPublish/write/endPublish`. Только `publish(topic, qos, retain, payload, len)`. Текущие `publish_big` / `publish_chunked` не нужны — AsyncMqttClient сам буферизует.

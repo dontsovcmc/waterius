@@ -1,6 +1,8 @@
 
 #include "config.h"
 #include "Logging.h"
+#include "core/readings.h"
+#include "core/wakeup.h"
 
 #include <ESP8266WiFi.h>
 #include <IPAddress.h>
@@ -10,9 +12,13 @@
 #include "sync_time.h"
 #include "wifi_helpers.h"
 #include "flash_hal.h"
+#include "master_i2c.h"
+
+extern MasterI2C masterI2C;
+extern AttinyData data;
 
 
-// Конвертируем значение переменных компиляции в строк
+// Конвертируем значение переменных компиляции в строку
 #define VALUE_TO_STRING(x) #x
 #define VALUE(x) VALUE_TO_STRING(x)
 #define VAR_NAME_VALUE(var) #var "=" VALUE(var)
@@ -59,9 +65,7 @@ bool init_config(Settings &sett)
     sett.dhcp_off = (uint8_t)false;
     sett.mqtt_retain = (uint8_t)true;
 
-    //можно оптимизировать и загружать из PROGMEM, но ради 2х полей смысла не вижу
-    //static const char WATERIUS_DEFAULT_DOMAIN[] PROGMEM =  "https://cloud.waterius.ru"
-    //strncpy_P(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, HOST_LEN);
+    // Не через PROGMEM: ради двух полей смысла нет
 
     strncpy0(sett.waterius_host, WATERIUS_DEFAULT_DOMAIN, sizeof(WATERIUS_DEFAULT_DOMAIN));
 
@@ -108,7 +112,7 @@ bool init_config(Settings &sett)
 #pragma message(VAR_NAME_VALUE(MQTT_PASSWORD))
     String mqtt_password = VALUE(MQTT_PASSWORD);
     strncpy0(sett.mqtt_password, mqtt_password.c_str(), MQTT_PASSWORD_LEN);
-    LOG_INFO("default mqtt_password=" << mqtt_password);
+    LOG_INFO(F("default mqtt_password set"));
 #endif
 
 #ifdef WATERIUS_EMAIL
@@ -119,7 +123,6 @@ bool init_config(Settings &sett)
 
     LOG_INFO(F("Generate waterius key"));
     generateSha256Token(sett.waterius_key, WATERIUS_KEY_LEN, sett.waterius_email);
-    LOG_INFO(F("waterius key=") << sett.waterius_key);
 
 #ifdef WIFI_SSID
 #pragma message(VAR_NAME_VALUE(WIFI_SSID))
@@ -154,7 +157,28 @@ bool load_config(Settings &sett)
             bool ret = init_config(sett);
             
             strncpy0(sett.waterius_key, tmp_sett.waterius_key, WATERIUS_KEY_LEN);
-            LOG_INFO(F("Restore waterius_key=") << sett.waterius_key);
+            LOG_INFO(F("Restore waterius_key"));
+
+            /*
+            Период пробуждения переживает смену версии конфига (#350). Иначе
+            после обновления прошивки устройство замолкает на сутки: в attiny
+            уезжает умолчание 1440 минут вместо настроенных пользователем, и
+            выглядит это как зависшее устройство.
+
+            Значение проверяется на разумность: поле лежит глубоко в
+            структуре, и в конфиге прошлой версии по этому смещению мог
+            оказаться совсем другой байт.
+            */
+            const uint16_t restored = restore_wakeup_period(tmp_sett.wakeup_per_min,
+                                                            sett.wakeup_per_min);
+            if (restored != sett.wakeup_per_min)
+            {
+                sett.wakeup_per_min = restored;
+                // Накопленная поправка относилась к прежнему периоду
+                reset_period_min_tuned(sett);
+            }
+            LOG_INFO(F("Restore wakeup min=") << sett.wakeup_per_min);
+
             store_config(sett);
 
             return ret;
@@ -259,51 +283,20 @@ void calculate_values(Settings &sett, const AttinyData &data, CalculatedData &cd
 {
     LOG_INFO(F("Calculating values..."));
 
-    if (sett.factor0 > 0) 
-    {
-        if (data.impulses0 < sett.impulses0_start) {
-            sett.impulses0_start = data.impulses0;
-            // Лучше потеряем в точности, чем будет показания миллионы
-            LOG_ERROR(F("Impulses0 less than start. Reset impulses0_start"));
-        }
+    ReadingsStatus status = calc_readings(sett, data, cdata);
 
-        if (sett.counter0_name == CounterName::ELECTRO)
-        { 
-            // factor0 кол-во импульсов на 1 кВт * ч
-            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / (sett.factor0 * 1.0);
-            cdata.delta0 = (data.impulses0 - sett.impulses0_previous) / (sett.factor0 * 1.0);
-        }
-        else 
-        {
-            // factor0 кол-во литров на 1 импульс, переводим в кубометры
-            cdata.channel0 = sett.channel0_start + (data.impulses0 - sett.impulses0_start) / 1000.0 * sett.factor0;
-            cdata.delta0 = (data.impulses0 - sett.impulses0_previous) * sett.factor0;
-        }
+    if (status.impulses0_start_reset)
+    {
+        LOG_ERROR(F("Impulses0 less than start. Reset impulses0_start"));
     }
 
     LOG_INFO(F("channel0  name=") << sett.counter0_name);
     LOG_INFO(F("impulses0 start=") << sett.impulses0_start << F(" current=") << data.impulses0 << F(" factor=") << sett.factor0);
     LOG_INFO(F("value0    start=") << sett.channel0_start << F(" current=") << cdata.channel0 << F(" delta=") << cdata.delta0);
 
-    if (sett.factor1 > 0) 
+    if (status.impulses1_start_reset)
     {
-        if (data.impulses1 < sett.impulses1_start) {
-            sett.impulses1_start = data.impulses1;
-            LOG_ERROR(F("Impulses1 less than start. Reset impulses1_start"));
-        }
-
-        if (sett.counter1_name == CounterName::ELECTRO)
-        {
-            // factor1 кол-во импульсов на 1 кВт * ч
-            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / (sett.factor1 * 1.0);
-            cdata.delta1 = (data.impulses1 - sett.impulses1_previous) / (sett.factor1 * 1.0);
-        }
-        else
-        {
-            // factor1 кол-во литров на 1 импульс, переводим в кубометры
-            cdata.channel1 = sett.channel1_start + (data.impulses1 - sett.impulses1_start) / 1000.0 * sett.factor1;
-            cdata.delta1 = (data.impulses1 - sett.impulses1_previous) * sett.factor1;
-        }
+        LOG_ERROR(F("Impulses1 less than start. Reset impulses1_start"));
     }
 
     LOG_INFO(F("channel1  name=") << sett.counter1_name);
@@ -311,79 +304,43 @@ void calculate_values(Settings &sett, const AttinyData &data, CalculatedData &cd
     LOG_INFO(F("value1    start=") << sett.channel1_start << F(" current=") << cdata.channel1 << F(" delta=") << cdata.delta1);
 }
 
-/*
- * @brief Корректируем период пробуждения только для автоматического режима.
- *
- * @param const time_t &now - Полученное по NTP время. Должно быть валидным.
- * @param const time_t &base_time - Время настройки пользователем
- * @param const time_t &last_send - Предыдущее время пробуждения
- * @param const uint16_t &wakeup_per_min - Установленный пользователем период пробуждения
- * @param const uint16_t &period_min_tuned - Скорректированный период пробуждения
- *
- * @returns uint16_t - Кол-во минут ("кривых attiny"), через которое должно проснуться устройство.
- */
-uint16_t tune_wakeup(const time_t &now, const time_t &base_time, const time_t &last_send, 
-    const uint16_t &wakeup_per_min, const uint16_t &period_min_tuned)
-{
-    // 1. Оценка коэффициента 'k' на основе результатов последнего сна
-    // time_t обычно хранит секунды, поэтому difftime вернет разницу в секундах.
-    double actual_slept_min = difftime(now, last_send) / 60.0;
-
-    double k_estimated = 1.0;
-    if (period_min_tuned > 0) {
-        k_estimated = actual_slept_min / period_min_tuned;
-    }
-
-    // Если было отключение интернета, то k_estimated будет больше 2.0
-    k_estimated = k_estimated - (uint16_t)k_estimated;
-    if (k_estimated < 0.7) {  // корректируем не больше чем на 30% пробуждение
-        k_estimated += 1;
-    }
-
-    // 2. Определение следующей целевой временной отметки
-    double time_since_base_min = difftime(now, base_time) / 60.0;
-    
-    // Целочисленное деление для определения количества прошедших периодов
-    long long target_num = static_cast<long long>(floor(time_since_base_min / wakeup_per_min)) + 1;
-    
-    time_t next_expected = base_time + target_num * wakeup_per_min * 60;
-    double minutes_to_next = difftime(next_expected, now) / 60.0;
-
-    // 3. Защита от "ловушки": если до цели меньше минуты или до пробуждения меньше 30% периода, целимся в следующую точку
-    if (minutes_to_next < 1.0 || minutes_to_next < (wakeup_per_min * 0.3)) {
-        target_num++;
-        next_expected = base_time + target_num * wakeup_per_min * 60;
-        minutes_to_next = difftime(next_expected, now) / 60.0;
-    }
-
-    // 4. Расчет и округление нового периода сна
-    double ideal_period_tuned_float = minutes_to_next;
-    if (k_estimated > 0.1) { // Проверка, что k_estimated не слишком близок к нулю
-        ideal_period_tuned_float = minutes_to_next / k_estimated;
-    }
-
-    uint16_t new_period_min_tuned = static_cast<uint16_t>(round(ideal_period_tuned_float));
-    LOG_INFO(F("Tune: elapsed_min=") << actual_slept_min << ", new_period_min_tuned=" << new_period_min_tuned);
-
-    // Округляем до ближайшего целого и приводим к целевому типу uint16_t
-    return new_period_min_tuned;
-}
-
 /* Сбрасываем скорректированный период после изменения периода пользователем */
 void reset_period_min_tuned(Settings &sett)
 {
-    sett.period_min_tuned = sett.wakeup_per_min * 0.9;   
+    sett.period_min_tuned = period_after_user_change(sett.wakeup_per_min);
     LOG_INFO(F("RESET: period_min_tuned=") << sett.period_min_tuned);
 
+    // Накопленное измерение относилось к прежнему периоду: и число проспанных
+    // периодов, и точка отсчёта времени теперь врут. Начинаем заново, с
+    // прогрева, иначе первая поправка приедет только через сутки.
+    sett.last_time_sync = 0;
+    sett.wakeups_since_sync = 0;
+    sett.ntp_sync_count = 0;
+
+    // Поправка измерялась в кривых минутах прежнего периода
+    sett.period_min_full = 0;
 }
 
 /* Обновляем значения в конфиге */
-void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata)
+void update_config(Settings &sett, const AttinyData &data, const CalculatedData &cdata,
+                   const bool time_synced, const bool reported)
 {
     LOG_INFO(F("Updating config..."));
-    // Сохраним текущие значения в памяти.
-    sett.impulses0_previous = data.impulses0;
-    sett.impulses1_previous = data.impulses1;
+
+    /*
+    Точку отсчёта прироста двигаем только если данные доехали (#407): Wi-Fi мог
+    подняться, а посылка не уйти - сервер недоступен, ответил не 200, ключ не
+    тот. Показания это не задевает, они считаются от impulses_start.
+    */
+    if (reported)
+    {
+        sett.impulses0_previous = data.impulses0;
+        sett.impulses1_previous = data.impulses1;
+    }
+    else
+    {
+        LOG_INFO(F("Delta kept: nobody accepted the data"));
+    }
 
     // Значение по умолчанию. Уменьшим с учётом опроса входов.
     if (!sett.period_min_tuned) {
@@ -393,16 +350,45 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
     // Перешлем время пробуждения на сервер при след. включении
     sett.wake_time = millis();
 
+    // Ручное пробуждение кнопкой задаёт расписание заново, поэтому заказываем
+    // целый период с поправкой, а не остаток до прежней цели (#380): иначе в
+    // attiny ушло бы значение из прошлого цикла, и нажатие промахнулось бы на
+    // часы, если то пробуждение было не по расписанию.
+    //
+    // Делается до проверки времени: даже без интернета следующий выход на
+    // связь должен случиться через период после нажатия.
+    if (sett.mode == MANUAL_TRANSMIT_MODE)
+    {
+        sett.period_min_tuned = period_after_manual_wakeup(sett.period_min_full, sett.wakeup_per_min);
+        LOG_INFO(F("Manual wakeup: period_min_tuned=") << sett.period_min_tuned);
+    }
+
+    /*
+    Сеанс по тревоге (#202) разрезал период сна пополам: attiny после него
+    засыпает на целый период заново, и время до следующего планового выхода
+    на связь оказывается больше заказанного. Подстройка приняла бы это за
+    отставание часов attiny и переложила бы руль. Поэтому сбрасываем точку
+    отсчёта: один пропущенный цикл подстройки безобиден, промах расписания
+    на часы - нет.
+
+    base_time не трогаем: пользователь по-прежнему ждёт показания в то же
+    время суток.
+    */
+    if (sett.mode == ALARM_MODE)
+    {
+        sett.last_time_sync = 0;
+        sett.wakeups_since_sync = 0;
+        LOG_INFO(F("Alarm wakeup: tuning base reset"));
+    }
+
     time_t now = time(nullptr);
 
-    // Проверяем валидность текущего времени
     if (!is_valid_time(now)) 
     {
         LOG_ERROR(F("Invalid current time!"));
         return;
     }
 
-    // Обновляем базовое время при ручном пробуждении или первом запуске
     if (!is_valid_time(sett.base_time) || sett.mode == MANUAL_TRANSMIT_MODE || sett.mode == SETUP_MODE) 
     {
         sett.base_time = now;
@@ -411,20 +397,79 @@ void update_config(Settings &sett, const AttinyData &data, const CalculatedData 
 
     LOG_INFO(F("Wakeup period, min:") << sett.wakeup_per_min);
 
-    // Корректируем период пробуждения только для автоматического режима
-    if (sett.mode == TRANSMIT_MODE)
+    // Корректируем период пробуждения только для автоматического режима и
+    // только по времени от NTP: между синхронизациями часы идут по оценке,
+    // и сравнивать с ней заказанный период бессмысленно.
+    if (sett.mode == TRANSMIT_MODE && time_synced && is_valid_time(sett.last_time_sync)
+        && sett.wakeups_since_sync > 0)
     {    
-        sett.period_min_tuned = tune_wakeup(now, sett.base_time, sett.last_send, sett.wakeup_per_min, sett.period_min_tuned);
+        WakeupTune tune = tune_wakeup(now, sett.base_time, sett.last_time_sync, sett.wakeup_per_min,
+                                      sett.period_min_tuned, sett.wakeups_since_sync,
+                                      sett.period_min_full);
+        LOG_INFO(F("Tune: elapsed_min=") << tune.slept_min 
+                 << ", wakeups=" << sett.wakeups_since_sync
+                 << ", new_period_min_tuned=" << tune.period_min_tuned);
+        sett.period_min_tuned = tune.period_min_tuned;
+        sett.period_min_full = tune.period_min_full;
     }
 
-    // Обновляем метку последней активности
+    // Отсчёт до следующей синхронизации начинается заново
+    if (time_synced)
+    {
+        sett.last_time_sync = now;
+        sett.wakeups_since_sync = 0;
+    }
+
     sett.last_send = now;
 }
 
+/*
+Показания attiny живут в её EEPROM, и обнулить их можно только командой 'R' (#326).
+*/
+static void clear_attiny_counters()
+{
+    if (data.version < ATTINY_VER_CLEAR_COUNTERS)
+    {
+        LOG_INFO(F("Factory reset: attiny ") << (int)data.version << F(" keeps impulses"));
+        return;
+    }
+
+    if (!masterI2C.clearCounters())
+    {
+        LOG_ERROR(F("Factory reset: attiny impulses not cleared"));
+        return;
+    }
+
+    // Итог проверяем чтением: ответа у команды нет, а стирание может оборвать пропавшее питание
+    delay(CLEAR_COUNTERS_WAIT_MS);
+    AttinyData now;
+    if (!masterI2C.getAttinyData(now) || now.impulses0 || now.impulses1)
+    {
+        LOG_ERROR(F("Factory reset: attiny impulses not cleared"));
+        return;
+    }
+    LOG_INFO(F("Factory reset: attiny impulses cleared"));
+}
+
+/*
+Сброс к заводским настройкам.
+
+Настройки возвращаются к объявленным умолчаниям присваиванием всей структуры,
+а не по полю. init_config задаёт только то, что нельзя объявить в структуре -
+вычисляемый топик, ключ, константы сборки, - и по нему одному сброс оставлял
+бы в силе всё остальное: пороги тревог, показания, серийные номера, адрес и
+пароль брокера.
+
+Переживает сброс единственное - уникальный токен: им устройство опознаётся в
+облаке, и потерять его значит потерять привязку к аккаунту.
+
+Типы входов и показания живут в EEPROM attiny, и стереть их отсюда нельзя -
+только командами. Смена типа с attiny 42 заодно снимает тревоги канала,
+обнуление показаний есть с attiny 47.
+*/
 void factory_reset(Settings &sett)
 {
-    //Запоминаем уникальный токен, чтобы потом восстановить
-    LOG_INFO(F("Save waterius_key=") << sett.waterius_key);
+    LOG_INFO(F("Save waterius_key"));
     String waterius_key = sett.waterius_key;
 
     ESP.eraseConfig();
@@ -437,12 +482,19 @@ void factory_reset(Settings &sett)
 
     delay(500);
 
+    if (!masterI2C.setCountersType(CounterType::NAMUR, CounterType::NAMUR))
+    {
+        LOG_ERROR(F("Factory reset: attiny input types not reset"));
+    }
+    clear_attiny_counters();
+
+    sett = Settings();
     init_config(sett);
     strncpy0(sett.waterius_key, waterius_key.c_str(), WATERIUS_KEY_LEN);
-    LOG_INFO(F("Restore waterius_key=") << sett.waterius_key);
+    LOG_INFO(F("Restore waterius_key"));
     store_config(sett);
 
     delay(500);
 
-    ESP.reset();
+    ESP.restart();   // не reset(): по RST_SOFT_RESTART загрузка узнаёт штатную перезагрузку
 }

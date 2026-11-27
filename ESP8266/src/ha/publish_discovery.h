@@ -18,7 +18,7 @@
 
 class Settings;
 
-extern void publish_discovery(PubSubClient &mqtt_client, 
+extern bool publish_discovery(PubSubClient &mqtt_client, 
                               const String &topic, 
                               const String &discovery_topic, 
                               const AttinyData &data,

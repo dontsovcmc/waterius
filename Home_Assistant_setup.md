@@ -31,6 +31,43 @@
 
 ![Атрибуты](files/ha_sensor_attrs.jpg)
 
+Среди атрибутов сенсора показаний едут импульсы, дельта, уровень АЦП входа (`ADC`), серийный
+номер, вес импульса, тип ресурса и тип входа — отдельных сущностей для них не создаётся.
+
+#### Что появится помимо показаний
+
+Вместе с показаниями автообнаружение создаёт сущности [тревог](Alarms.md)
+(функции экспериментальные):
+
+| Сущность | Тип | Что это |
+|---|---|---|
+| `Alarm: high flow` | `binary_sensor`, класс `problem` | много воды сразу |
+| `Alarm: continuous flow` | `binary_sensor`, класс `problem` | протечка: расход не падал до нуля |
+| `Alarm: consumption stopped` | `binary_sensor`, класс `problem` | расхода не было слишком долго |
+| `Alarm: water sensor` | `binary_sensor`, класс **`moisture`** | сработал датчик протечки на полу |
+| `Alarm: signal` | `binary_sensor`, класс `problem` | сработала сигнализация: разомкнут шлейф |
+| `Alarm volume per 30 min` (`av`), `Alarm zero flow rate` (`ar`), `Alarm leak hours` (`ah`), `Alarm stop minutes` (`as`) | `number` | пороги, ноль выключает тревогу |
+| `Clear alarms` | `button` | снять все тревоги (шлёт `63` в топик `arst/set`) |
+| `Away mode` | `switch` | режим «Я уехал» |
+| `Alarm ack: waterius.ru / own server / MQTT` | `switch` | кто обязан подтвердить доставку тревоги |
+| `Input Type` | `select` | тип входа, включая датчик протечки и сигнализацию |
+
+У входа с датчиком протечки или сигнализацией показаний нет: для него создаются только `Input Type`
+и `Alarm: water sensor` или `Alarm: signal`. Уровень АЦП такого входа (`adc0`/`adc1`) отдельной сущностью не
+публикуется — его видно в самой посылке.
+
+Тревоги по расходу приезжают с прошивкой attiny 44 и новее, остановка расхода с 48. На более
+старой сущности всё равно создадутся, но всегда будут «в норме».
+
+#### Когда сущности обновляются
+
+Ватериус спит и не слышит перезапуска Home Assistant, поэтому описания сущностей он
+публикует с флагом retain всегда, даже при выключенном «Retain Flag»: HA забирает их у
+брокера при старте. Заново описания уходят после настройки в портале, по короткому
+нажатию кнопки и сами — в первом же сеансе после обновления прошивки или смены типа или
+ресурса входа, в том числе из Home Assistant. Сущности, которые входу больше не нужны
+(например, показания у входа, ставшего датчиком протечки), Ватериус удаляет из HA сам.
+
 После появления устройства и его показателей можно настроить панель "Энергия" для автоматического посчета расходов.
 
 Добавьте в свойствах панели "Энергия" показания расхода воды
@@ -68,6 +105,34 @@ homeassistant:
       friendly_name: "Качество связи"
     "number.waterius_*_period_min":
       friendly_name: "Период отправки"
+    "switch.waterius_*_sc":
+      friendly_name: "Только при расходе"
+    "switch.waterius_*_vac":
+      friendly_name: "Я уехал"
+    "switch.waterius_*_ackw":
+      friendly_name: "Тревога: подтверждение waterius.ru"
+    "switch.waterius_*_ackh":
+      friendly_name: "Тревога: подтверждение своего сервера"
+    "switch.waterius_*_ackm":
+      friendly_name: "Тревога: подтверждение MQTT"
+    "button.waterius_*_arst":
+      friendly_name: "Снять тревоги"
+    "binary_sensor.waterius_*_alarm_flow*":
+      friendly_name: "Тревога: много воды сразу"
+    "binary_sensor.waterius_*_alarm_leak*":
+      friendly_name: "Тревога: протечка"
+    "binary_sensor.waterius_*_alarm_wet*":
+      friendly_name: "Тревога: датчик или сигнализация"
+    "binary_sensor.waterius_*_alarm_stop*":
+      friendly_name: "Тревога: расход остановился"
+    "number.waterius_*_av*":
+      friendly_name: "Порог: литров за 30 минут"
+    "number.waterius_*_ar*":
+      friendly_name: "Порог: нулевой расход, л/ч"
+    "number.waterius_*_ah*":
+      friendly_name: "Порог: часов протечки"
+    "number.waterius_*_as*":
+      friendly_name: "Порог: минут без расхода"
 ```
 
 После перезагрузки Home Assistant свойства устройства будут выглядеть следующим образом

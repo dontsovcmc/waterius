@@ -3,10 +3,8 @@
 
 #include "setup.h"
 #include "Logging.h"
+#include "core/power.h"
 
-#define LOW_BATTERY_DIFF_MV 50 // надо еще учесть качество замеров (компаратора у ESP)
-#define ALERT_POWER_DIFF_MV 100
-#define BATTERY_LOW_THRESHOLD_MV 2900
 #define MAX_PROBES 20
 
 class Voltage
@@ -25,8 +23,8 @@ public:
     uint16_t value();
     uint16_t average();
     uint16_t diff();
-    bool low_voltage();
-    uint8_t get_battery_level();
+    bool low_voltage(const bool was_low);
+    uint8_t get_battery_level(const bool low);
 };
 
 #endif

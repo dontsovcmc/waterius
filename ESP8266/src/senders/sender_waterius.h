@@ -14,17 +14,18 @@
 #include "json.h"
 #include "Logging.h"
 #include "https_helpers.h"
+#include "core/connect_log.h"
 #include "utils.h"
 
 
 #define HTTP_SEND_ATTEMPTS 3
 
-bool send_waterius(const Settings &sett, JsonDocument &jsonData, JsonDocument &json_settings)
+SendStatus send_waterius(Settings &sett, JsonDocument &jsonData, JsonDocument &json_settings)
 {
     if (!is_waterius_site(sett))
     {
         LOG_INFO(F("WATR: SKIP"));
-        return false;
+        return SEND_SKIPPED;
     };
 
     uint32_t start_time = millis();
@@ -37,15 +38,21 @@ bool send_waterius(const Settings &sett, JsonDocument &jsonData, JsonDocument &j
     String url = sett.waterius_host;
 
     int attempts = HTTP_SEND_ATTEMPTS;
-    bool result = false;
+    SendStatus result = SEND_NO_CONNECTION;
+    int16_t code = 0;
     do
     {
         LOG_INFO(F("WATR: Attempt #") << HTTP_SEND_ATTEMPTS - attempts + 1 << F(" from ") << HTTP_SEND_ATTEMPTS);
-        result = post_data(url, sett.waterius_key, sett.waterius_email, payload, json_settings);
+        result = post_data(url, sett.waterius_key, sett.waterius_email, payload, json_settings, code);
+        if (result != SEND_OK)
+        {
+            // Имя проверяем один раз: попытки и так потратили время на сбой
+            connect_log_push(sett, CONNECT_WATERIUS, attempts == 1 ? connect_code(url.c_str(), code) : code);
+        }
 
-    } while (!result && --attempts);
+    } while (result != SEND_OK && --attempts && millis() < SEND_RETRY_LIMIT_MS);
 
-    if (result)
+    if (result == SEND_OK)
     {
         LOG_INFO(F("WATR: Data sent. Time ") << millis() - start_time << F(" ms"));
     }

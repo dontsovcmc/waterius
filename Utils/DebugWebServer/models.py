@@ -58,6 +58,7 @@ class SettingsModel:
     wifi_phy_mode: int | None = Form(None)
     wifi_connect_errors: int | None = Form(None)
     wifi_connect_attempt: int | None = Form(None)
+    connect_log: str | None = Form(None)
 
     # for save
     input: int | None = Form(None)  # input_setup.html

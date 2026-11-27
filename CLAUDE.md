@@ -31,35 +31,78 @@ A third env `nodemcuv2` exists for bench debugging on a bare NodeMCU (verbose Wi
 ~/.platformio/penv/bin/pio run -d Attiny85 -t upload          # flash via USBasp
 ```
 
-**Tests** — host-side unit tests (googletest) for OTA URL parsing:
+**Tests** — host-side unit tests (googletest) for the ESP business logic:
 ```bash
-~/.platformio/penv/bin/pio test -d ESP8266 -e native          # runs test/test_ota/*
+ESP8266/scripts/run_tests.sh                       # both models
+ESP8266/scripts/run_tests.sh native_2 -f test_ota  # one env, one suite
 ```
+
+The Attiny85 project has its own host env for the pure modules under
+`Attiny85/src/` that avoid `Arduino.h` and the registers (currently
+`electronic.h` — the pulse-counting rules):
+```bash
+Attiny85/scripts/run_tests.sh                          # all suites
+Attiny85/scripts/run_tests.sh native -f test_electronic
+```
+It is a thin wrapper: the actual runner (and the "zero tests is a failure"
+check) is shared with the ESP script via `PROJECT_DIR`/`DEFAULT_ENVS`.
+
+The web portal has its own tests — the units of measurement and the
+impulse arithmetic live in `ESP8266/data/static/strings.js`, which no C++
+test can reach:
+```bash
+node ESP8266/scripts/test_strings.js
+```
+It loads `strings.js` into a `node:vm` sandbox and also checks the contract
+between the markup and the script (unknown `data-unit` markers, pages that
+declare markers without calling `fill_units`, and so on). CI runs it too.
+
+Always use the script, not `pio test` directly: `pio test` exits 0 even when it
+collected no tests at all (a `test_filter` that matches nothing, an env where
+tests are ignored), so an empty run looks like a successful one. The script
+takes the count from the JUnit report and fails when it is zero. CI runs the
+same script.
+
+There are two host envs because the two firmwares differ at compile time
+(`#if WATERIUS_MODEL`): `native_classic` (`WATERIUS_MODEL=0`) and `native_2`
+(`WATERIUS_MODEL=2`). Both must be listed explicitly — a bare `pio test` uses
+`default_envs` (`esp01_1m`), where tests are disabled via `test_ignore`. The
+`test_model` suite fails the build if `-DWATERIUS_MODEL` is missing, so a
+forgotten flag cannot make the two runs silently identical.
+
+The host envs compile **only `src/core/`** (`build_src_filter = -<*> +<core/*>`)
+— pure C++ without `Arduino.h`, `String` or hardware access. Anything that needs
+Arduino stays in `src/` as an adapter and is not unit-tested. If a test needs
+`Arduino.h`, the logic must be moved into `src/core/` first.
+
+Plan and suite list: `ESP8266/plan/tests_plan.md`.
 
 **OTA build/deploy:** `ESP8266/scripts/build_and_deploy.sh [version]` builds the `waterius_2` env and stages firmware/filesystem images in `ESP8266/ota/` for upload to the OTA server (URL hardcoded in the script — debug vs. release).
 
 **Local secrets:** Copy `ESP8266/secrets.ini.template` to `ESP8266/secrets.ini` and fill in credentials.
+The `waterius_2_factory` env builds the factory image with the plant's Wi-Fi and email from
+`secrets.ini` — the board passes the production test with it. Without `secrets.ini` that env fails
+(`ESP8266/check_secrets.py`); CI builds it with made-up values.
 
-### Manual Flashing (Waterius-2)
+### Publishing a release
 
-When flashing compiled binaries directly (without PlatformIO upload):
+«Выложи релиз» — the whole procedure is in **[docs/release.md](docs/release.md)**.
+Read it in full before starting.
 
-**Attiny85** (via USBasp programmer):
-```bash
-avrdude -p t85 -c usbasp -B 4 -P usb -U flash:w:"Attiny85/waterius_2-<version>.hex":i
-```
+### Flashing over wires
 
-**ESP8266** (via USB-serial adapter, e.g. `/dev/cu.usbserial-*` on macOS):
-```bash
-~/.platformio/penv/bin/python -m esptool --port /dev/cu.usbserial-XXXX --baud 460800 write_flash --flash_freq 40m --flash_size 4MB --flash_mode qio 0x0 ESP8266/waterius_2-<version>.bin 0x300000 ESP8266/waterius_2-<version>-fs.bin
-```
+Ready-to-run procedure — ports, model detection, build artifact names, avrdude
+and esptool paths, fuses, and how success is proven: **[docs/flashing.md](docs/flashing.md)**.
 
-Flash order: ATtiny85 first, then ESP8266.
+Read it when asked to flash; do not re-derive the commands.
 
-### Attiny85 fuses
-```
-E:FF, H:DF, L:62
-```
+It has one section per board — Waterius-2 and Classic — and inside each, one
+block per firmware (attiny, then ESP) giving the folder, the environment and the
+resulting file name. Take one section whole and never mix commands across them.
+
+**Always pass `-e`.** The environment *is* the board choice: both firmwares
+differ at compile time, and `default_envs` in both projects is the Classic one,
+so a build without `-e` silently produces the Classic image.
 
 ## Architecture
 
@@ -82,6 +125,9 @@ E:FF, H:DF, L:62
 - `WATERIUS_MODEL=2` (MODEL_2): Waterius-2 with ESP-12F and LED indicators
 
 ### ESP8266 Source Structure
+- `core/` — pure business logic, no Arduino: compiled into both the firmware and
+  the host tests. `core/types.h` holds the data model (`Settings`, `AttinyData`,
+  `CalculatedData`, the counter/data enums and the constants describing them)
 - `main.cpp` — Entry point: setup() → loop() with wake/read/send/sleep cycle
 - `master_i2c.cpp`: I2C master communication with Attiny85
 - `portal/` — Web configuration portal (ESPAsyncWebServer)
@@ -96,9 +142,28 @@ E:FF, H:DF, L:62
 - `ota_update.cpp` / `ota_parse.h` — OTA update flow; URL parsing is unit-tested in `test/test_ota`
 - `data/` — Web interface HTML files (served via LittleFS, flashed via `uploadfs`)
 
+### Portal Simulator (`simulator/`)
+Browser-based simulator of the setup portal: serves the real pages from `ESP8266/data/`
+with a JS port of the placeholder rendering, `/api/*` handlers and field validation.
+See `simulator/README.md`.
+
+**When you change the portal, change the simulator in the same PR** — it is a second
+implementation of the same logic, and nothing in the build catches drift by itself.
+Field names, lengths and defaults are generated from the firmware sources
+(`simulator/gen_from_firmware.js`), so those do not drift; branches and numbers do.
+
+```bash
+node simulator/test_simulator.js   # placeholders, routes, form fields, wizard scenario
+node simulator/test_worker.js      # the service worker itself, in a Node sandbox
+simulator/build.sh                 # static bundle in simulator/dist/
+```
+
+Nothing may be added to `ESP8266/data/` for the simulator: that directory goes into
+the LittleFS image, which is nearly full.
+
 ### Attiny85 Source Structure
 - `main.cpp`: Counter logic, sleep management, I2C slave
-- `counter.h`: Pulse detection algorithms (supports dry contact, NAMUR, Hall sensor)
+- `counter.h`: Pulse detection algorithms (mechanical/NAMUR, electronic, leak sensors)
 - `Storage.cpp`: Ring buffer EEPROM storage for counter values
 - `SlaveI2C.cpp`: I2C slave implementation
 
@@ -109,13 +174,51 @@ Disable modules via build_flags in `platformio.ini`:
 - `-DWATERIUS_RU_DISABLED` — Exclude waterius.ru sender
 
 ### Library Versions (ESP8266)
-- ArduinoJson 7.3.1 (v7 API: `JsonDocument` without size template, `.to<JsonObject>()`)
+- ArduinoJson 7.4.3 (v7 API: `JsonDocument` without size template, `.to<JsonObject>()`)
 - PubSubClient 2.8.0
-- ESPAsyncWebServer 3.6.0 (ESP32Async fork)
-- ESPAsyncTCP 2.0.0
+- ESPAsyncWebServer 1.2.3 — fork `waterius/ESPAsyncWebServer#20230926` of me-no-dev, pinned by commit `f71e3d4` (PlatformIO 6.2 breaks on an all-digit tag)
+- ESPAsyncTCP 1.2.2 (me-no-dev), pulled in by the web server's `library.json` as `^1.2.2`
 
 ## Development Notes
 
 - Logging in Attiny85: Uncomment `LOG_ON` in `Setup.h` (uses PB3/TX pin, disables counter1)
 - Logging in ESP8266: Set `LOG_LEVEL_INFO` or `LOG_LEVEL_DEBUG` in build_flags
 - Pull requests go to `dev` branch; `master` is for releases only
+- CI (`.github/workflows/ci.yml`) runs on every PR and push to `dev`/`master`:
+  builds the ESP8266 envs (`esp01_1m`, `waterius_2`, `waterius_2_factory`) and both
+  Attiny85 envs, runs the host tests under both models
+
+## Running HIL tests (`Utils/hil`)
+
+**Never redirect pytest output to `/tmp` or any file outside the repo.** The run
+writes `logs/ГГГГ-мм-ДД-ЧЧ-ММ.log` itself (pytest output + stand loguru + METF
+logging), prints its path in the session header, and flushes line by line, so an
+aborted run keeps everything it printed. A redirect to `/tmp` makes a second,
+worse copy that nobody can find afterwards and that dies with the sandbox.
+
+```bash
+python3 -m pytest Utils/hil --stand                    # лог сам, в logs/
+python3 -m pytest Utils/hil --stand -m "not slow"      # ~140 тестов, около часа
+python3 -m pytest Utils/hil --stand --norouter         # без платы WT32-ETH01
+python3 -m pytest Utils/hil --stand --nocloud          # без cloud.waterius.ru: его тумблер выключен
+python3 -m pytest Utils/hil --stand --reverse          # задом наперёд: ловит зависимость по порядку
+python3 -m hil.rescue                                  # вылечить стенд после упавшего прогона
+tail -f logs/$(ls -t logs | head -1)                   # следить за идущим прогоном
+```
+
+For a long unattended run, launch it in the background **without** a redirect
+(`run_in_background`) and watch `logs/`. Do not pipe pytest into `head`/`tail`:
+the closed pipe raises `BrokenPipeError` inside the stand's log tee and kills the
+run with `INTERNALERROR`. Details — `Utils/hil/README.md`, «Запуск».
+
+Addresses in `stand.ini` are not settings to maintain: the run asks the kernel for
+its own IP and finds the boards itself (written address → mDNS → sweep of its own
+/24), then pins what it found back into the file. A `stand.ini` from another
+directory is passed as a single argument, `--stand-config=<path>`, not separated by
+a space.
+
+**The rules the stand is built on — `Utils/hil/rules.md`.** They are written without
+reference to this hardware, so they hold for any hardware-in-the-loop bench: read
+them before writing a new test or explaining a failed run. The order of elimination
+when a run goes red is at the end of that file: host clock → bench reachability →
+the air → log transport → broker → and only then the firmware.

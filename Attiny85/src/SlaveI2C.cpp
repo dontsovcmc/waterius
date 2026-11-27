@@ -10,6 +10,14 @@ extern struct Header info;
 extern void saveConfig();
 extern uint32_t wakeup_period;
 extern void extendWakeUpPeriod();
+extern bool is_esp_powered_long();
+extern uint8_t alarm_bits();
+extern void set_alarm_config(const uint8_t *data);
+extern void set_stop_config(const uint8_t *data);
+extern void reset_alarms(const uint8_t mask);
+extern void set_counter_types(const uint8_t *data);
+extern void confirm_alarm();
+extern volatile bool clear_requested;
 
 /* Static declaration */
 uint8_t SlaveI2C::txBufferPos = 0;
@@ -58,6 +66,8 @@ void SlaveI2C::receiveEvent(int howMany)
     switch (command)
     {
     case 'B': // данные
+        // Флаги собираем в момент запроса: главному циклу их вести незачем
+        info.flags = (is_esp_powered_long() ? HEADER_FLAG_ESP_POWERED_LONG : 0) | alarm_bits();
         info.crc = crc_8((unsigned char *)&info, HEADER_DATA_SIZE);
         memcpy(txBuffer, &info, TX_BUFFER_SIZE);
         break;
@@ -75,18 +85,51 @@ void SlaveI2C::receiveEvent(int howMany)
               // Передаем в attiny для случая нештатной перезагрузки ESP
         setup_mode = SETUP_MODE;
         break;
-    case 'S': // ESP присылает новое значение периода пробуждения
-        getWakeUpPeriod();
-        break;
     case 'E': // ESP продлевает время бодрствования
         extendWakeUp();
         break;
-    case 'C': // ESP присылает новую конфигурацию
+    case 'C': // ESP присылает новую конфигурацию входов
         getCounterTypes();
+        break;
+    case 'S': // ESP присылает новое значение периода пробуждения
+        getWakeUpPeriod();
+        break;
+    case 'A': // ESP присылает пороги тревог и маску снятия
+        getAlarmConfig();
+        break;
+    case 'H': // ESP присылает пороги остановки расхода
+        getStopConfig();
+        break;
+    case 'K': // ESP подтверждает, что доложила о тревоге получателю
+        confirm_alarm();
+        break;
+    case 'R': // Заводской сброс: обнулить показания. Стирает главный цикл
+              // (apply_clear_counters) - ~0,6 с записи EEPROM обработчику не по силам
+        clear_requested = true;
+        wakeup_period = WAKEUP_PERIOD_RESET;
         break;
     case 'V': // обновить напряжение
         info.voltage = readVcc();
         break;
+    }
+}
+
+
+
+void SlaveI2C::getCounterTypes()
+{
+    uint8_t data[sizeof(CounterTypes)];
+
+    for (uint8_t i=0; i < sizeof(CounterTypes); i++)
+    {
+        data[i] = Wire.read();
+    }
+    uint8_t crc = Wire.read();
+
+    if (crc == crc_8(data, sizeof(CounterTypes))) 
+    {
+        set_counter_types(data);
+        saveConfig();
     }
 }
 
@@ -106,20 +149,55 @@ void SlaveI2C::getWakeUpPeriod()
     }
 }
 
-void SlaveI2C::getCounterTypes()
-{
-    uint8_t data[sizeof(CounterTypes)];
+/*
+Пороги тревог и снятие (issue #202).
 
-    for (uint8_t i=0; i < sizeof(CounterTypes); i++)
+Живут в ОЗУ и приезжают в каждом сеансе, как период пробуждения: EEPROM не
+трогаем, иначе конфигурация у прошитых устройств не прошла бы проверку CRC.
+
+    0..11  на канал: quantum_ticks, leak_quanta, vol_pulses
+    12     маска снятия: биты 0-2 канал 0, биты 3-5 канал 1
+    13     CRC8
+*/
+void SlaveI2C::getAlarmConfig()
+{
+    uint8_t data[13];
+
+    for (uint8_t i = 0; i < sizeof(data); i++)
     {
         data[i] = Wire.read();
     }
     uint8_t crc = Wire.read();
 
-    if (crc == crc_8(data, sizeof(CounterTypes))) 
+    if (crc == crc_8(data, sizeof(data)))
     {
-        memcpy((void*)&(info.config.types), data, sizeof(CounterTypes));
-        saveConfig();
+        set_alarm_config(data);
+        reset_alarms(data[12]);
+    }
+}
+
+/*
+Пороги остановки расхода, минуты.
+
+Отдельной командой: кадр 'A' занял весь приёмный буфер Wire, в нём 15 байт.
+
+    0..1  канал 0, старшим байтом вперёд
+    2..3  канал 1
+    4     CRC8
+*/
+void SlaveI2C::getStopConfig()
+{
+    uint8_t data[4];
+
+    for (uint8_t i = 0; i < sizeof(data); i++)
+    {
+        data[i] = Wire.read();
+    }
+    uint8_t crc = Wire.read();
+
+    if (crc == crc_8(data, sizeof(data)))
+    {
+        set_stop_config(data);
     }
 }
 

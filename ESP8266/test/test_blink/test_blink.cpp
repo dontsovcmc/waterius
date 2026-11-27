@@ -1,0 +1,226 @@
+#include <gtest/gtest.h>
+#include "core/blink.h"
+#include "core/types.h"
+
+/*
+Светодиод — единственный канал, по которому Ватериус2 объясняет пользователю,
+чем закончился сеанс: интернета может не быть, и сервер про сеанс не узнает.
+Поэтому важно, какой именно код выбирается, когда упало сразу несколько вещей.
+*/
+
+TEST(BlinkCode, SuccessfulSessionBlinksGreen)
+{
+    SessionStatus status;
+    status.waterius = SEND_OK;
+
+    EXPECT_EQ(blink_code(status), ERROR_OK);
+}
+
+TEST(BlinkCode, SilentWakeupIsNotAnError)
+{
+    // Режим "только при расходе": Wi-Fi не поднимали, никто не отправлял.
+    // Значения по умолчанию не должны выглядеть как отказ (#361)
+    SessionStatus status;
+
+    EXPECT_EQ(blink_code(status), ERROR_OK);
+}
+
+TEST(BlinkCode, ConfigWinsOverEverything)
+{
+    // Конфигурация не загрузилась — этим же кодом моргает несостоявшийся
+    // обмен с attiny. Всё, что дальше, недостоверно
+    SessionStatus status;
+    status.config_loaded = false;
+    status.wifi_connected = false;
+    status.waterius = SEND_NO_CONNECTION;
+    status.low_voltage = true;
+
+    EXPECT_EQ(blink_code(status), ERROR_CONFIG);
+}
+
+TEST(BlinkCode, RouterWinsOverCloud)
+{
+    // Без роутера облако не могло ответить в принципе: показываем причину,
+    // а не следствие
+    SessionStatus status;
+    status.wifi_connected = false;
+    status.waterius = SEND_NO_CONNECTION;
+    status.mqtt = SEND_NO_CONNECTION;
+
+    EXPECT_EQ(blink_code(status), ERROR_CONNECT_ROUTER);
+}
+
+TEST(BlinkCode, CloudAnswerIsDistinctFromNoConnection)
+{
+    SessionStatus no_connection;
+    no_connection.waterius = SEND_NO_CONNECTION;
+
+    SessionStatus bad_answer;
+    bad_answer.waterius = SEND_BAD_ANSWER;
+
+    EXPECT_EQ(blink_code(no_connection), ERROR_CONNECT_CLOUD);
+    EXPECT_EQ(blink_code(bad_answer), ERROR_CLOUD_ANSWER);
+}
+
+TEST(BlinkCode, MqttFailureIsReportedWhenCloudIsFine)
+{
+    SessionStatus status;
+    status.waterius = SEND_OK;
+    status.mqtt = SEND_NO_CONNECTION;
+
+    EXPECT_EQ(blink_code(status), ERROR_CONNECT_MQTT);
+}
+
+TEST(BlinkCode, LowVoltageShowsUpOnlyWhenSessionWentThrough)
+{
+    // Просевшее питание — не причина отказа, а повод заняться источником.
+    // Если сеанс всё же упал, полезнее увидеть, на чём именно
+    SessionStatus ok_session;
+    ok_session.waterius = SEND_OK;
+    ok_session.low_voltage = true;
+
+    SessionStatus failed_session;
+    failed_session.waterius = SEND_NO_CONNECTION;
+    failed_session.low_voltage = true;
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_2
+    EXPECT_EQ(blink_code(ok_session), ERROR_LOW_VOLTAGE);
+#else
+    EXPECT_EQ(blink_code(ok_session), ERROR_OK);
+#endif
+    EXPECT_EQ(blink_code(failed_session), ERROR_CONNECT_CLOUD);
+}
+
+TEST(BlinkCode, ClassicDoesNotBlinkLowVoltage)
+{
+    /*
+    На классике ESP меряет собственное питание после регулятора
+    (voltage.cpp:update зовёт ESP.getVcc), а регулятор держит 3,0 В. До
+    порога 2,9 В остаётся 100 мВ, то есть о состоянии источника значение
+    молчит, пока регулятор не сдастся. Успевает сработать только правило
+    просадки, а просадка при включении радио бывает и на здоровом
+    устройстве: вышла бы одна вспышка почти каждый сеанс.
+    */
+    SessionStatus status;
+    status.waterius = SEND_OK;
+    status.low_voltage = true;
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
+    EXPECT_EQ(blink_code(status), ERROR_OK);
+#else
+    EXPECT_EQ(blink_code(status), ERROR_LOW_VOLTAGE);
+#endif
+}
+
+TEST(BlinkCode, SkippedSenderIsNotAFailure)
+{
+    // waterius.ru выключен, данные ушли по MQTT — моргать ошибкой не за что
+    SessionStatus status;
+    status.waterius = SEND_SKIPPED;
+    status.mqtt = SEND_OK;
+
+    EXPECT_EQ(blink_code(status), ERROR_OK);
+}
+
+TEST(BlinkCode, CloudCodeStillTakesTheWorstOfTwo)
+{
+    /*
+    Облачные получатели лежат в разных полях с тех пор, как настройка
+    "что считать успешной передачей аварии" стала отмечать их поимённо.
+    Вспышка при этом осталась общей: waterius.ru принял, свой сервер
+    ответил не то - показываем отказ, а не успех.
+    */
+    SessionStatus status;
+    status.waterius = SEND_OK;
+    status.http = SEND_BAD_ANSWER;
+
+    EXPECT_EQ(cloud_status(status), SEND_BAD_ANSWER);
+    EXPECT_EQ(blink_code(status), ERROR_CLOUD_ANSWER);
+}
+
+TEST(MergeStatus, WorstResultWins)
+{
+    // Два облачных получателя, одна вспышка: показываем худший исход
+    EXPECT_EQ(merge_status(SEND_OK, SEND_NO_CONNECTION), SEND_NO_CONNECTION);
+    EXPECT_EQ(merge_status(SEND_NO_CONNECTION, SEND_OK), SEND_NO_CONNECTION);
+    EXPECT_EQ(merge_status(SEND_BAD_ANSWER, SEND_NO_CONNECTION), SEND_NO_CONNECTION);
+    EXPECT_EQ(merge_status(SEND_OK, SEND_BAD_ANSWER), SEND_BAD_ANSWER);
+}
+
+TEST(MergeStatus, SkippedIsNeutral)
+{
+    // Ненастроенный получатель не портит итог и не улучшает его
+    EXPECT_EQ(merge_status(SEND_SKIPPED, SEND_OK), SEND_OK);
+    EXPECT_EQ(merge_status(SEND_OK, SEND_SKIPPED), SEND_OK);
+    EXPECT_EQ(merge_status(SEND_SKIPPED, SEND_NO_CONNECTION), SEND_NO_CONNECTION);
+    EXPECT_EQ(merge_status(SEND_SKIPPED, SEND_SKIPPED), SEND_SKIPPED);
+}
+
+TEST(BlinkCode, CodesMatchDocumentedBlinkCounts)
+{
+    // Число вспышек напечатано в FAQ.md — менять значения нельзя
+    EXPECT_EQ(ERROR_OK, 0);
+    EXPECT_EQ(ERROR_LOW_VOLTAGE, 1);
+    EXPECT_EQ(ERROR_CONNECT_ROUTER, 2);
+    EXPECT_EQ(ERROR_CONNECT_CLOUD, 3);
+    EXPECT_EQ(ERROR_CONNECT_MQTT, 4);
+    EXPECT_EQ(ERROR_CONFIG, 5);
+    EXPECT_EQ(ERROR_CLOUD_ANSWER, 6);
+}
+
+/*
+Точка отсчёта прироста двигается только если данные доехали (#407).
+
+Раньше она двигалась после подключения к Wi-Fi, и сеанс, в котором сеть
+поднялась, а посылка не ушла, стоил пользователю дельты за период.
+*/
+
+TEST(DataReported, DeliveredMovesTheReference)
+{
+    SessionStatus status;
+    status.waterius = SEND_OK;
+    status.delivered_any = true;
+
+    EXPECT_TRUE(data_reported(status));
+}
+
+TEST(DataReported, OneReceiverIsEnough)
+{
+    // Облако приняло, брокер нет: показания у сервера, повторять их незачем
+    SessionStatus status;
+    status.waterius = SEND_OK;
+    status.mqtt = SEND_NO_CONNECTION;
+    status.delivered_any = true;
+
+    EXPECT_TRUE(data_reported(status));
+}
+
+TEST(DataReported, NobodyAcceptedKeepsTheDelta)
+{
+    // Wi-Fi поднялся, но сервер недоступен - прирост обязан дожить до следующего раза
+    SessionStatus status;
+    status.waterius = SEND_NO_CONNECTION;
+    status.http = SEND_NO_CONNECTION;
+
+    EXPECT_FALSE(data_reported(status));
+}
+
+TEST(DataReported, BadAnswerKeepsTheDelta)
+{
+    // Сервер ответил, но отказался принять: данных у него нет
+    SessionStatus status;
+    status.waterius = SEND_BAD_ANSWER;
+
+    EXPECT_FALSE(data_reported(status));
+}
+
+TEST(DataReported, NoReceiversConfiguredMovesTheReference)
+{
+    /*
+    Все получатели выключены. Копить прирост не для кого, а без сдвига он рос
+    бы до переполнения счётчика.
+    */
+    SessionStatus status;
+
+    EXPECT_TRUE(data_reported(status));
+}

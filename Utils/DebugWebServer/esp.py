@@ -20,10 +20,11 @@ class CounterName(Enum):
 
 
 class CounterType(Enum):
+    # 1 (дискретный), 3 (датчик Холла) и 4 (электронный +) сняты, числа остаются занятыми
     NAMUR = 0
-    DISCRETE = 1   # deprecated
     ELECTRONIC = 2
-    HALL = 3
+    LEAKAGE = 5
+    SIGNAL_NC = 6
     NONE = 0xFF
 
 
@@ -47,12 +48,7 @@ def check_ip_address(name, value):
 
 
 def get_counter_img(i, name, ctype):
-    if ctype == CounterType.HALL.value:
-        if i == 0:
-            return "meter-hall-0.png"
-        if i == 1:
-            return "meter-hall-1.png"
-    elif ctype == CounterType.ELECTRONIC.value:
+    if ctype == CounterType.ELECTRONIC.value:
         if i == 0:
             return "meter-electro-0.png"
         if i == 1:
@@ -214,7 +210,7 @@ class Settings:
     @property
     def wifi_connect_status(self):
         if system_info.wifi_connect_status in [WL_NO_SSID_AVAIL, WL_CONNECT_FAILED, WL_CONNECTION_LOST]:
-            return '8'  # S_WIFI_CONNECTION_LOST "Ошибка подключения. Попробуйте ещё раз.<br>Если не помогло, то пропишите статический ip. Еще можно зарезервировать MAC адрес Ватериуса в роутере. Если ничего не помогло, пришлите нам <a class='link' href='http://192.168.4.1/ssid.txt'>файл</a> параметров wi-fi сетей.";
+            return '8'  # S_WL_CONNECTION_LOST: что может помочь и ссылка на журнал, текст в strings.js
         elif system_info.wifi_connect_status == WL_WRONG_PASSWORD:
             return '9'  # S_WL_WRONG_PASSWORD "Ошибка подключения: Некорректный пароль";
         elif system_info.wifi_connect_status == WL_IDLE_STATUS:

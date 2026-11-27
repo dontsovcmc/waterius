@@ -1,4 +1,5 @@
 #include "active_point_api.h"
+#include "active_point.h"
 #include <IPAddress.h>
 #include <LittleFS.h>
 
@@ -7,6 +8,12 @@
 #include "master_i2c.h"
 #include "utils.h"
 #include "config.h"
+#include "core/readings.h"
+#include "core/input.h"
+#include "core/diagnostics.h"
+#include "core/alarm.h"
+#include "core/url.h"
+#include "core/wifi.h"
 #include "wifi_helpers.h"
 #include "resources.h"
 #include "ha/resources.h"
@@ -15,6 +22,10 @@ extern bool exit_portal_flag;
 extern bool start_connect_flag;
 extern wl_status_t wifi_connect_status;
 extern bool factory_reset_flag;
+extern bool esp_restarted_flag;
+extern void send_alarm_config(const Settings &sett);   // main.cpp
+extern void send_stop_config(const Settings &sett);    // main.cpp
+extern uint8_t alarm_reset_mask;                       // main.cpp
 
 extern AttinyData data;
 extern AttinyData runtime_data;
@@ -38,23 +49,7 @@ inline void send_json_response(AsyncWebServerRequest *request, JsonDocument &jso
     }
 }
 
-#define IMPULS_LIMIT_1 3 // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
-
-uint16_t get_auto_factor(const uint32_t runtime_impulses,
-                         const uint32_t impulses,
-                         const uint16_t factor,
-                         const uint16_t factor_cold)
-{
-    switch (factor)
-    {
-        case AUTO_IMPULSE_FACTOR:
-            return (runtime_impulses - impulses <= IMPULS_LIMIT_1) ? 10 : 1;
-        case AS_COLD_CHANNEL:
-            return factor_cold;
-    }
-    return factor;
-}
-
+// get_auto_factor() — в core/readings.h
 
 /**
  * @brief Запрос состояния подключения к роутеру.
@@ -64,7 +59,7 @@ uint16_t get_auto_factor(const uint32_t runtime_impulses,
  */
 void get_api_connect_status(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
@@ -98,15 +93,18 @@ void get_api_connect_status(AsyncWebServerRequest *request)
  */
 void get_api_networks(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     int n = WiFi.scanComplete();
-    if (n == WIFI_SCAN_FAILED)
+    if (n < 0)
     {
-        WiFi.scanNetworks(true);
+        if (n == WIFI_SCAN_FAILED)
+        {
+            WiFi.scanNetworks(true);
+        }
         request->send(200, "", F("[]"));
     }
-    else if (n)
+    else
     {
         g_json_doc.clear();
         JsonArray array = g_json_doc.to<JsonArray>();
@@ -116,8 +114,13 @@ void get_api_networks(AsyncWebServerRequest *request)
             LOG_INFO(WiFi.SSID(i) << " " << WiFi.RSSI(i));
             JsonObject obj = array.add<JsonObject>();
             obj["ssid"] = WiFi.SSID(i);
-            obj["level"] = int(round(map(WiFi.RSSI(i), -100, -50, 1, 4)));
-            obj["wifi_channel"] = WiFi.channel();
+            // Портал рисует уровни 1-4, а map у роутера рядом даёт 5 и 6
+            obj["level"] = constrain(map(WiFi.RSSI(i), -100, -50, 1, 4), 1, 4);
+
+            // Канал и BSSID именно этой сети, а не текущего подключения:
+            // портал вернёт их в форме, и первый коннект пойдёт без скана
+            obj["wifi_channel"] = WiFi.channel(i);
+            obj["bssid"] = WiFi.BSSIDstr(i);
         }
 
         write_ssid_to_file();
@@ -129,13 +132,54 @@ void get_api_networks(AsyncWebServerRequest *request)
 };
 
 /**
+ * @brief Канал и BSSID выбранной сети из скрытых полей формы.
+ *
+ * Их отдаёт скан вместе со списком сетей (get_api_networks). Зная пару, ЕСП
+ * подключается без полного скана эфира — это секунды работы радио, главная
+ * статья расхода батареи в сеансе.
+ *
+ * Вызывается после applySettings, а не из его цепочки: смена SSID или
+ * пароля сбрасывает кэш коннекта, и при разборе в общем порядке результат
+ * зависел бы от порядка полей в форме.
+ *
+ * Пара пишется целиком: канал без BSSID означал бы подключение к точке
+ * 00:00:00:00:00:00 (см. core/wifi.h:has_bssid). Ничего не пришло или не
+ * разобралось — остаётся что было: у прежней сети её пара, у новой нули
+ * (сброс при смене сети), то есть полный скан.
+ *
+ * @return true если пара сохранена — вызывающему нужно дописать конфигурацию:
+ *         applySettings свой store_config сделал раньше.
+ */
+bool save_fast_connect(AsyncWebServerRequest *request)
+{
+    const AsyncWebParameter *channel_param = request->getParam(FPSTR(PARAM_WIFI_CHANNEL), true);
+    const AsyncWebParameter *bssid_param = request->getParam(FPSTR(PARAM_BSSID), true);
+
+    if (!channel_param || !bssid_param)
+        return false;
+
+    const uint8_t channel = parse_wifi_channel(channel_param->value().c_str());
+
+    uint8_t bssid[6] = {0};
+    if (!channel || !parse_bssid(bssid_param->value().c_str(), bssid) || !has_bssid(bssid))
+        return false;
+
+    sett.wifi_channel = channel;
+    memcpy(sett.wifi_bssid, bssid, sizeof(sett.wifi_bssid));
+
+    LOG_INFO(F("Fast connect: channel=") << sett.wifi_channel << F(" bssid=") << bssid_param->value());
+    return true;
+}
+
+/**
  * @brief Подключение к точки доступа
  *
  * @param request запрос
  */
 void post_api_save_connect(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("POST ") << request->url());
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
+    LOG_REQUEST(F("POST ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
@@ -151,6 +195,11 @@ void post_api_save_connect(AsyncWebServerRequest *request)
     if (!errorsObj.size())
     {
         ret.remove(F("errors"));
+
+        if (save_fast_connect(request))
+        {
+            store_config(sett);
+        }
 
         bool channel_changed = (channel != sett.wifi_channel);
 
@@ -182,6 +231,7 @@ void post_api_save_connect(AsyncWebServerRequest *request)
  */
 void get_api_start_connect(AsyncWebServerRequest *request)
 {
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
     start_connect_flag = true;
     wifi_connect_status = WL_DISCONNECTED;
     LOG_INFO(F("Start connect"));
@@ -198,16 +248,150 @@ void get_api_start_connect(AsyncWebServerRequest *request)
 }
 
 /**
+ * @brief Плашка про конкретный вход.
+ *
+ * Номер входа уезжает отдельным полем: текст один на оба входа, название
+ * входа подставит портал (tr() в data/static/strings.js). Иначе на каждое
+ * сообщение пришлось бы заводить по две строки-близнеца.
+ *
+ * @param error код строки сообщения
+ * @param input номер входа, INPUT0_RED или INPUT1_BLUE
+ * @param page страница настройки, на которую ведёт ссылка
+ */
+static void add_input_problem(JsonArray &array, const __FlashStringHelper *error,
+                              const uint8_t input, const char *page)
+{
+    JsonObject obj = array.add<JsonObject>();
+    obj["error"] = error;
+    obj["input"] = input;
+    obj["link_text"] = F("5"); // S_SETUP Настроить
+
+    char link_buf[32];
+    snprintf(link_buf, sizeof(link_buf), "/input/%u/%s.html", input, page);
+    obj["link"] = link_buf;
+}
+
+/**
+ * @brief Плашка про поднятую тревогу со ссылкой снятия.
+ *
+ * Ссылка не ведёт на страницу, а выполняет действие: тревога сама не гаснет,
+ * и снять её надо там, где человек её увидел. Маска уезжает в attiny
+ * ближайшим кадром 'A'.
+ *
+ * @param error код строки сообщения
+ * @param input номер входа, INPUT0_RED или INPUT1_BLUE
+ * @param bits снимаемая тревога, ALARM_FLOW/LEAK/WET
+ */
+static void add_alarm_raised(JsonArray &array, const __FlashStringHelper *error,
+                             const uint8_t input, const uint8_t bits)
+{
+    JsonObject obj = array.add<JsonObject>();
+    obj["error"] = error;
+    obj["input"] = input;
+    obj["link_text"] = F("31"); // S_ALARM_CLEAR "Снять тревогу"
+    obj["reset"] = ALARM_RESET_CH(bits, input);
+}
+
+/**
+ * @brief Плашки по всем поднятым тревогам входа.
+ *
+ * Своя плашка на каждую тревогу, а не одна общая: снимаются они порознь, и
+ * ссылка обязана знать, что именно снимает.
+ */
+static void add_alarms(JsonArray &array, const uint8_t input)
+{
+    const uint8_t bits = alarm_bits(runtime_data.attiny_flags, input, runtime_data.version);
+
+    if (bits & ALARM_FLOW)
+    {   // S_ALARM_FLOW "Много воды сразу %s..."
+        add_alarm_raised(array, F("27"), input, ALARM_FLOW);
+    }
+    if (bits & ALARM_LEAK)
+    {   // S_ALARM_LEAK "Протечка %s..."
+        add_alarm_raised(array, F("28"), input, ALARM_LEAK);
+    }
+    if (bits & ALARM_WET)
+    {   // S_ALARM_SIGNAL "Сработала сигнализация %s...", S_ALARM_WET "Обнаружена протечка %s..."
+        const uint8_t type = input == INPUT0_RED ? runtime_data.counter_type0 : runtime_data.counter_type1;
+        add_alarm_raised(array, type == CounterType::SIGNAL_NC ? F("32") : F("29"), input, ALARM_WET);
+    }
+}
+
+/**
+ * @brief Плашка про остановку расхода.
+ *
+ * Без ссылки: эту тревогу гасит сама attiny первым же импульсом, снимать
+ * руками нечего.
+ */
+static void add_consumption_stopped(JsonArray &array, const uint8_t input, const bool stopped)
+{
+    if (!stopped)
+    {
+        return;
+    }
+
+    JsonObject obj = array.add<JsonObject>();
+    obj["error"] = F("30"); // S_ALARM_STOP "Расхода нет %s..."
+    obj["input"] = input;
+}
+
+/**
  * @brief Список диагностических сообщений на Главной странице вебсервера
  *
  * @param request запрос
  */
 void get_api_main_status(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     g_json_doc.clear();
     JsonArray array = g_json_doc.to<JsonArray>();
+
+    /*
+    Перезагрузка ЕСП во время настройки (#354). Пользователь видит, что
+    портал начался заново, и не понимает, сохранились ли настройки. Признак
+    посчитан на старте: сейчас флаг attiny взведён в любом случае.
+    */
+    /*
+    Поднятые тревоги (#202) - первыми: авария важнее ошибок настройки и Wi-Fi.
+    Тревога attiny сама не гаснет, поэтому у каждой плашки своя ссылка снятия.
+    */
+    add_alarms(array, INPUT0_RED);
+    add_alarms(array, INPUT1_BLUE);
+    add_consumption_stopped(array, INPUT0_RED, runtime_data.stop0);
+    add_consumption_stopped(array, INPUT1_BLUE, runtime_data.stop1);
+
+    if (esp_restarted_flag)
+    {
+        JsonObject obj = array.add<JsonObject>();
+        obj["error"] = F("22"); // S_ESP_RESTARTED "Ватериус внештатно перезагрузился..."
+    }
+
+    /*
+    Ошибки настройки счётчиков (#283). Считаем на каждый запрос, а не один
+    раз на старте: когда пользователь заново вводит показания, стартовые
+    импульсы уезжают на текущие, накопленный расход обнуляется и плашка
+    гаснет сама.
+    */
+    apply_counter_types(data, runtime_data);   // тип входа мог смениться в этом сеансе (#360)
+    const SetupProblems problems = check_setup(sett, data);
+
+    if (problems.factor_too_big0)
+    {   // S_FACTOR_TOO_BIG "Счётчик %s насчитал в разы больше второго..."
+        add_input_problem(array, F("23"), INPUT0_RED, "settings");
+    }
+    if (problems.factor_too_big1)
+    {
+        add_input_problem(array, F("23"), INPUT1_BLUE, "settings");
+    }
+    if (problems.silent_input0)
+    {   // S_INPUT_SILENT "Счётчик %s не насчитал ни одного импульса..."
+        add_input_problem(array, F("24"), INPUT0_RED, "setup");
+    }
+    if (problems.silent_input1)
+    {
+        add_input_problem(array, F("24"), INPUT1_BLUE, "setup");
+    }
 
     wl_status_t status = WiFi.status();
     LOG_INFO(F("WIFI: status=") << status);
@@ -264,7 +448,7 @@ void get_api_status_1(AsyncWebServerRequest *request)
  */
 void get_api_status(AsyncWebServerRequest *request, const int index)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
@@ -285,7 +469,6 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
             ret[F("factor")] = factor_cold;
             ret[F("impulses")] = runtime_data.impulses1 - data.impulses1;
         }
-        // root[F("elapsed")] = (uint32_t)(SETUP_TIME_SEC - millis() / 1000.0);
     }
     else
     {
@@ -300,42 +483,7 @@ void get_api_status(AsyncWebServerRequest *request, const int index)
     send_json_response(request, g_json_doc);
 };
 
-inline bool is_all_asterisks(const String& s) {
-    if (s.length() == 0)
-        return false;
-    for (unsigned int i = 0; i < s.length(); ++i) {
-        char c = s[i];
-        if (c != '*' && c != ' ' && c != '\t')
-            return false;  // только *, пробел, таб
-    }
-    return true;
-}
-
-
-/**
- * @brief Копирует src в dest с обрезкой начальных и конечных пробелов, без аллокаций на heap.
- */
-static void strncpy_trimmed(char *dest, const char *src, size_t size)
-{
-    if (size == 0) return;
-
-    // Пропускаем начальные пробелы
-    while (*src && isspace((unsigned char)*src))
-        src++;
-
-    // Находим конец строки
-    size_t len = strlen(src);
-
-    // Обрезаем конечные пробелы
-    while (len > 0 && isspace((unsigned char)src[len - 1]))
-        len--;
-
-    if (len >= size)
-        len = size - 1;
-
-    memcpy(dest, src, len);
-    dest[len] = 0;
-}
+// is_all_asterisks(), strncpy_trimmed() и правила проверки значений — в core/input.h
 
 /**
  * @brief Запрос сохранения настроек
@@ -356,94 +504,296 @@ static void strncpy_trimmed(char *dest, const char *src, size_t size)
  *      }
  */
 
-void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required /*true*/)
+/**
+ * @brief Записывает код ошибки от ядра в JSON ответа и в лог
+ */
+static void report_param_error(const AsyncWebParameter *p, JsonObject &errorsObj, ParamError err)
 {
-    if (p->value().length() >= size)
+    switch (err)
     {
+    case PARAM_ERR_LENGTH:
         LOG_ERROR(FPSTR(ERROR_LENGTH_ERROR) << ": " << p->name());
         errorsObj[p->name()] = String(F("14"));  // Превышена длина поля
-    }
-    else if (required && p->value().length() == 0)
-    {
+        break;
+    case PARAM_ERR_EMPTY:
         LOG_ERROR(FPSTR(ERROR_EMPTY) << ": " << p->name());
         errorsObj[p->name()] = String(F("17"));  // Значение не может быть пустым
+        break;
+    case PARAM_ERR_VALUE:
+        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
+        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        break;
+    case PARAM_ERR_NO_COMMA:
+        LOG_ERROR(FPSTR(ERROR_NO_COMMA) << ": " << p->name());
+        errorsObj[p->name()] = String(F("19"));  // Похоже, забыта запятая
+        break;
+    case PARAM_ERR_TLS:
+        LOG_ERROR(FPSTR(ERROR_TLS) << ": " << p->name());
+        errorsObj[p->name()] = String(F("20"));  // Шифрование не поддерживается
+        break;
+    case PARAM_ERR_PORT_IN_HOST:
+        LOG_ERROR(FPSTR(ERROR_PORT_IN_HOST) << ": " << p->name());
+        errorsObj[p->name()] = String(F("21"));  // Порт указывайте в отдельном поле
+        break;
+    case PARAM_OK:
+    case PARAM_MASKED:
+        break;   // не ошибки
     }
-    else if (is_all_asterisks(p->value()))
+    // без default: новый код ошибки не должен молча исчезнуть — компилятор
+    // напомнит про незакрытую ветку
+}
+
+// Пароли в лог не пишем: журнал портала скачивают и отправляют в поддержку
+String log_param_value(const String &name, const String &value)
+{
+    if (name == FPSTR(PARAM_PASSWORD) || name == FPSTR(PARAM_MQTT_PASSWORD))
+        return F("****");
+    return value;
+}
+
+void save_param(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj, bool required /*true*/)
+{
+    ParamError err = parse_text(dest, size, p->value().c_str(), required);
+
+    if (err == PARAM_MASKED)
     {
         LOG_INFO(F("NOT ") << FPSTR(PARAM_SAVED) << p->name() << F(" **** value"));
     }
+    else if (err == PARAM_OK)
+    {
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << log_param_value(p->name(), dest));
+    }
     else
     {
-        strncpy_trimmed(dest, p->value().c_str(), size);
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << dest);
+        report_param_error(p, errorsObj, err);
     }
 }
 
-void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj)
+void save_param(const AsyncWebParameter *p, uint16_t &v, JsonObject &errorsObj, const bool zero_ok)
 {
-    if (p->value().toInt() == 0)
+    ParamError err = parse_uint16(p->value().c_str(), v, zero_ok);
+
+    if (err == PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
     }
     else
     {
-        v = p->value().toInt();
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+        report_param_error(p, errorsObj, err);
+    }
+}
+
+/*
+Протечка: два поля, одно условие (#202).
+
+"Расход не падал ниже Q л/ч в течение T часов" - это одно предложение, и
+проверять его надо целиком. Порознь числа бессмысленны, а неверная пара
+ломает тревогу молча, в обе стороны:
+
+  - слишком малый Q: длина кванта тишины не влезает в uint16 у attiny;
+  - слишком малое T: одного кванта хватит на тревогу, а один квант означает
+    всего лишь "был хоть один импульс", а не "расход не прекращался".
+
+Ноль в любом из полей выключает тревогу - тогда второе не проверяем.
+*/
+static void save_alarm_leak(AsyncWebServerRequest *request,
+                            const String &rate_name, const String &hours_name,
+                            uint16_t &rate, uint16_t &hours,
+                            const uint16_t factor, JsonObject &errorsObj)
+{
+    const AsyncWebParameter *p_rate = request->hasParam(rate_name, true)
+                                          ? request->getParam(rate_name, true) : nullptr;
+    const AsyncWebParameter *p_hours = request->hasParam(hours_name, true)
+                                           ? request->getParam(hours_name, true) : nullptr;
+
+    uint16_t new_rate = rate;
+    uint16_t new_hours = hours;
+    bool ok = true;
+
+    if (p_rate)
+    {
+        const ParamError err = parse_uint16(p_rate->value().c_str(), new_rate, true);
+        if (err != PARAM_OK)
+        {
+            report_param_error(p_rate, errorsObj, err);
+            ok = false;
+        }
+    }
+
+    if (p_hours)
+    {
+        const ParamError err = parse_uint16(p_hours->value().c_str(), new_hours, true);
+        if (err != PARAM_OK)
+        {
+            report_param_error(p_hours, errorsObj, err);
+            ok = false;
+        }
+    }
+
+    if (!ok)
+    {
+        return;
+    }
+
+    // Ноль - выключено, пару не проверяем
+    if (new_rate && new_hours && factor_configured(factor))
+    {
+        if (p_rate && new_rate < alarm_min_rate(factor))
+        {
+            report_param_error(p_rate, errorsObj, PARAM_ERR_VALUE);
+            return;
+        }
+        if (p_hours && new_hours < alarm_min_hours(new_rate, factor))
+        {
+            report_param_error(p_hours, errorsObj, PARAM_ERR_VALUE);
+            return;
+        }
+    }
+
+    rate = new_rate;
+    hours = new_hours;
+
+    if (p_rate)
+        LOG_INFO(FPSTR(PARAM_SAVED) << p_rate->name() << F("=") << rate);
+    if (p_hours)
+        LOG_INFO(FPSTR(PARAM_SAVED) << p_hours->name() << F("=") << hours);
+}
+
+/*
+Снятие тревог: маска на ближайший кадр 'A' (#202).
+
+Биты 0-2 - FLOW/LEAK/WET канала 0, биты 3-5 - канала 1. Ноль - снимать нечего.
+Сама тревога не снимается никогда: ни по времени, ни по прекращению расхода.
+*/
+static void save_alarm_reset(const AsyncWebParameter *p, JsonObject &errorsObj)
+{
+    uint8_t mask = 0;
+    const ParamError err = parse_uint8(p->value().c_str(), mask, true);
+
+    if (err != PARAM_OK || mask > ALARM_RESET_ALL)
+    {
+        report_param_error(p, errorsObj, err == PARAM_OK ? PARAM_ERR_VALUE : err);
+        return;
+    }
+
+    alarm_reset_mask |= mask;
+    LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << alarm_reset_mask);
+}
+
+/*
+Режим "я уехал" (#88).
+
+Выключение снимает тревогу, которую режим и поднял. Иначе она осталась бы
+висеть после возвращения: порог объёма в режиме подменён одним импульсом, и
+сработать он обязан был. Снимается только ALARM_FLOW обоих каналов - протечка
+и датчик к режиму отношения не имеют.
+*/
+static void save_vacation(const AsyncWebParameter *p, JsonObject &errorsObj)
+{
+    const uint8_t was = sett.vacation;
+
+    save_bool_param(p, sett.vacation, errorsObj);
+
+    if (was && !sett.vacation)
+    {
+        alarm_reset_mask |= ALARM_FLOW | (ALARM_FLOW << ALARM_RESET_SHIFT1);
     }
 }
 
 void save_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj, const bool zero_ok)
 {
-    if (!zero_ok && p->value().toInt() == 0)
+    ParamError err = parse_uint8(p->value().c_str(), v, zero_ok);
+
+    if (err == PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
     }
     else
     {
-        v = p->value().toInt();
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+        report_param_error(p, errorsObj, err);
     }
 }
 
 void save_bool_param(const AsyncWebParameter *p, uint8_t &v, JsonObject &errorsObj)
 {
-    if (p->value().toInt() > 1)
+    ParamError err = parse_bool(p->value().c_str(), v);
+
+    if (err == PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = String(F("15"));  // Неверное значение
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
     }
     else
     {
-        v = p->value().toInt();
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+        report_param_error(p, errorsObj, err);
     }
 }
 
-void save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj)
+/**
+ * @brief Бит маски "кому доклад о тревоге обязан доехать" (#202).
+ *
+ * Через локальную переменную, а не прямо в поле: маска общая на трёх
+ * получателей, а save_bool_param пишет только при успешном разборе — иначе
+ * отвергнутое значение погасило бы бит, вместо того чтобы оставить как было.
+ */
+static void save_confirm_bit(const AsyncWebParameter *p, const uint8_t bit,
+                             JsonObject &errorsObj)
 {
-    /* Позволяем вводить 0.0 у счётчиков.
-    if (p->value().toFloat() == 0.0)
+    uint8_t on = (sett.alarm_confirm & bit) ? 1 : 0;
+
+    save_bool_param(p, on, errorsObj);
+
+    if (on)
+        sett.alarm_confirm |= bit;
+    else
+        sett.alarm_confirm &= ~bit;
+}
+
+/**
+ * @brief Адрес MQTT брокера. Снимает схему и путь, отвергает шифрование и порт.
+ *
+ * Отдельная функция, а не перегрузка save_param: от текстовой она отличалась бы
+ * только флагом, а рядом уже есть bool required — вызов стал бы нечитаемым.
+ */
+void save_broker_host(const AsyncWebParameter *p, char *dest, size_t size, JsonObject &errorsObj)
+{
+    ParamError err = parse_broker_host(dest, size, p->value().c_str());
+
+    if (err == PARAM_OK)
     {
-        LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
-        errorsObj[p->name()] = FPSTR(ERROR_VALUE);
+        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << dest);
     }
-    else */
+    else
     {
-        const String &value = p->value();
-        if (value.indexOf(',') >= 0)
-        {
-            String copy(value);
-            copy.replace(',', '.');
-            v = copy.toFloat();
-        }
-        else
-        {
-            v = value.toFloat();
-        }
-        LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+        report_param_error(p, errorsObj, err);
     }
+}
+
+/**
+ * @brief Показания счётчика. Показания воды обязаны содержать дробную часть.
+ *
+ * Значение записывается только при успехе: если пользователь забыл запятую,
+ * нельзя ни сохранить показания, ни сбросить стартовые импульсы — иначе
+ * показания уедут даже после ввода правильного числа. Поэтому, в отличие от
+ * остальных save_param, эта возвращает результат.
+ *
+ * @param counter_name тип счётчика: правило действует только для воды
+ * @return true если значение сохранено
+ */
+bool save_param(const AsyncWebParameter *p, float &v, JsonObject &errorsObj, const uint8_t counter_name)
+{
+    ParamError err = check_reading(p->value().c_str(), counter_name);
+    if (err != PARAM_OK)
+    {
+        report_param_error(p, errorsObj, err);
+        return false;
+    }
+
+    float value = 0.0;
+    parse_decimal(p->value().c_str(), value);
+
+    v = value;
+    LOG_INFO(FPSTR(PARAM_SAVED) << p->name() << F("=") << v);
+    return true;
 }
 
 void save_ip_param(const AsyncWebParameter *p, uint32_t &v, JsonObject &errorsObj)
@@ -491,22 +841,25 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
 {
     const String &name = p->name();
 
-    LOG_INFO(F("parameter ") << name << "=" << p->value());
     if (name == FPSTR(PARAM_CHANNEL_START) || name == FPSTR(s_ch)) // portal || ha
     {
         switch (input)
         {
             case INPUT0_RED:
-                save_param(p, sett.channel0_start, errorsObj);
-                sett.impulses0_start = runtime_data.impulses0;
-                sett.impulses0_previous = sett.impulses0_start;
-                LOG_INFO("impulses0_start=" << sett.impulses0_start);
+                if (save_param(p, sett.channel0_start, errorsObj, sett.counter0_name))
+                {
+                    sett.impulses0_start = runtime_data.impulses0;
+                    sett.impulses0_previous = sett.impulses0_start;
+                    LOG_INFO("impulses0_start=" << sett.impulses0_start);
+                }
                 break;
             case INPUT1_BLUE:
-                save_param(p, sett.channel1_start, errorsObj);
-                sett.impulses1_start = runtime_data.impulses1;
-                sett.impulses1_previous = sett.impulses1_start;
-                LOG_INFO("impulses1_start=" << sett.impulses1_start);
+                if (save_param(p, sett.channel1_start, errorsObj, sett.counter1_name))
+                {
+                    sett.impulses1_start = runtime_data.impulses1;
+                    sett.impulses1_previous = sett.impulses1_start;
+                    LOG_INFO("impulses1_start=" << sett.impulses1_start);
+                }
                 break;
         }
     }
@@ -537,6 +890,13 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
     }
     else if (name == FPSTR(PARAM_COUNTER_TYPE) || name == FPSTR(s_ctype))  // portal || ha
     {
+        const long ctype = p->value().toInt();
+        if (ctype < 0 || ctype > UINT8_MAX || !counter_type_supported(ctype, runtime_data.version))
+        {
+            LOG_ERROR(FPSTR(ERROR_VALUE) << ": " << p->name());
+            errorsObj[p->name()] = String(F("15"));  // Неверное значение
+            return;
+        }
         switch (input)
         {
             case INPUT0_RED:
@@ -565,6 +925,58 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
                 break;
         }
 
+    }
+    else if (name == FPSTR(PARAM_ALARM_VOL) || name == FPSTR(s_av)) // portal || ha
+    {
+        // Литров за 30 минут. 0 - выключено
+        switch (input)
+        {
+            case INPUT0_RED:
+                save_param(p, sett.alarm_vol0, errorsObj, true);
+                break;
+            case INPUT1_BLUE:
+                save_param(p, sett.alarm_vol1, errorsObj, true);
+                break;
+        }
+    }
+    else if (name == FPSTR(PARAM_ALARM_RATE) || name == FPSTR(s_ar)) // portal || ha
+    {
+        // Какой расход считать остановкой воды, л/ч. 0 - выключено
+        switch (input)
+        {
+            case INPUT0_RED:
+                save_param(p, sett.alarm_rate0, errorsObj, true);
+                break;
+            case INPUT1_BLUE:
+                save_param(p, sett.alarm_rate1, errorsObj, true);
+                break;
+        }
+    }
+    else if (name == FPSTR(PARAM_ALARM_HOURS) || name == FPSTR(s_ah)) // portal || ha
+    {
+        // Часов, в течение которых расход не падал ниже порога. 0 - выключено
+        switch (input)
+        {
+            case INPUT0_RED:
+                save_param(p, sett.alarm_hours0, errorsObj, true);
+                break;
+            case INPUT1_BLUE:
+                save_param(p, sett.alarm_hours1, errorsObj, true);
+                break;
+        }
+    }
+    else if (name == FPSTR(PARAM_ALARM_STOP) || name == FPSTR(s_as)) // portal || ha
+    {
+        // Минут без расхода. 0 - выключено
+        switch (input)
+        {
+            case INPUT0_RED:
+                save_param(p, sett.alarm_stop0, errorsObj, true);
+                break;
+            case INPUT1_BLUE:
+                save_param(p, sett.alarm_stop1, errorsObj, true);
+                break;
+        }
     }
     else if (name == FPSTR(PARAM_FACTOR) || name == FPSTR(s_f)) // portal || ha
     {
@@ -602,6 +1014,20 @@ void applyInputParameter(const AsyncWebParameter *p, JsonObject &errorsObj, cons
     }
 }
 
+/*
+Значения настроек берутся только из тела запроса.
+
+Так их шлют все формы портала (common.js, formSubmit: POST,
+application/x-www-form-urlencoded), и так же читает пороги тревог
+save_uint16_param, - и так настройку нельзя поменять ссылкой со строкой
+запроса. Служебные признаки маршрута (input, wizard) читаются откуда угодно:
+они ничего не сохраняют.
+*/
+static bool from_form(const AsyncWebParameter *p)
+{
+    return p->isPost();
+}
+
 void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, const uint8_t input)
 {
     const int params = request->params();
@@ -611,7 +1037,8 @@ void applyInputSettings(AsyncWebServerRequest *request, JsonObject &errorsObj, c
     for (int i = 0; i < params; i++)
     {
         const AsyncWebParameter *p = request->getParam(i);
-        applyInputParameter(p, errorsObj, input);
+        if (from_form(p))
+            applyInputParameter(p, errorsObj, input);
     }
 
     store_config(sett);
@@ -621,7 +1048,6 @@ void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
 {
     const String &name = p->name();
 
-    LOG_INFO(F("parameter ") << name << "=" << p->value());
     if (name == FPSTR(PARAM_WATERIUS_ON))
     {
         save_bool_param(p, sett.waterius_on, errorsObj);
@@ -641,6 +1067,30 @@ void applyCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj)
     else if (name == FPSTR(PARAM_MQTT_AUTO_DISCOVERY))
     {
         save_bool_param(p, sett.mqtt_auto_discovery, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_MQTT_RETAIN))
+    {
+        save_bool_param(p, sett.mqtt_retain, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_SEND_ON_CONSUMPTION) || name == FPSTR(s_sc))  // portal || ha
+    {
+        save_bool_param(p, sett.send_on_consumption, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_VACATION) || name == FPSTR(s_vac))  // portal || ha
+    {
+        save_vacation(p, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_CONFIRM_WATERIUS) || name == FPSTR(s_ackw))  // portal || ha
+    {
+        save_confirm_bit(p, CONFIRM_WATERIUS, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_CONFIRM_HTTP) || name == FPSTR(s_ackh))  // portal || ha
+    {
+        save_confirm_bit(p, CONFIRM_HTTP, errorsObj);
+    }
+    else if (name == FPSTR(PARAM_CONFIRM_MQTT) || name == FPSTR(s_ackm))  // portal || ha
+    {
+        save_confirm_bit(p, CONFIRM_MQTT, errorsObj);
     }
 }
 
@@ -671,7 +1121,7 @@ void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj
     {
         if (name == FPSTR(PARAM_MQTT_HOST))
         {
-            save_param(p, sett.mqtt_host, HOST_LEN, errorsObj);
+            save_broker_host(p, sett.mqtt_host, HOST_LEN, errorsObj);
         }
         else if (name == FPSTR(PARAM_MQTT_PORT))
         {
@@ -715,7 +1165,12 @@ void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj
         }
     }
 
-    if (name == FPSTR(s_period_min))
+    if (name == FPSTR(PARAM_ALARM_RESET) || name == FPSTR(s_arst))  // portal || ha
+    {
+        // Не настройка, а действие: маска уедет ближайшим кадром 'A'
+        save_alarm_reset(p, errorsObj);
+    }
+    else if (name == FPSTR(s_period_min))
     {
         save_param(p, sett.wakeup_per_min, errorsObj);
         reset_period_min_tuned(sett);
@@ -730,11 +1185,17 @@ void applyNonCheckBoxParameter(const AsyncWebParameter *p, JsonObject &errorsObj
     }
     else if (name == FPSTR(PARAM_SSID))
     {
+        char before[WIFI_SSID_LEN];
+        memcpy(before, sett.wifi_ssid, sizeof(before));
         save_param(p, sett.wifi_ssid, WIFI_SSID_LEN, errorsObj);
+        forget_fast_connect_if_changed(sett, before, sett.wifi_ssid, sizeof(before));
     }
     else if (name == FPSTR(PARAM_PASSWORD))
     {
+        char before[WIFI_PWD_LEN];
+        memcpy(before, sett.wifi_password, sizeof(before));
         save_param(p, sett.wifi_password, WIFI_PWD_LEN, errorsObj, false);
+        forget_fast_connect_if_changed(sett, before, sett.wifi_password, sizeof(before));
     }
 
     else if (name == FPSTR(PARAM_WIFI_PHY_MODE))
@@ -761,21 +1222,37 @@ void applySettings(AsyncWebServerRequest *request, JsonObject &errorsObj)
     for (int i = 0; i < params; i++)
     {
         const AsyncWebParameter *p = request->getParam(i);
-        applyCheckBoxParameter(p, errorsObj);
+        if (from_form(p))
+            applyCheckBoxParameter(p, errorsObj);
     }
 
     for (int i = 0; i < params; i++)
     {
         const AsyncWebParameter *p = request->getParam(i);
-        applyNonCheckBoxParameter(p, errorsObj);
+        if (from_form(p))
+            applyNonCheckBoxParameter(p, errorsObj);
     }
 
     store_config(sett);
 }
 
+/*
+Необязательное uint16-поле формы: чего нет в запросе, того не трогаем.
+*/
+static void save_uint16_param(AsyncWebServerRequest *request, const String &name,
+                              uint16_t &value, JsonObject &errorsObj)
+{
+    if (!request->hasParam(name, true))
+        return;
+
+    const AsyncWebParameter *p = request->getParam(name, true);
+    save_param(p, value, errorsObj, true);  // ноль допустим: тревога выключена
+}
+
 void post_api_save(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("POST ") << request->url());
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
+    LOG_REQUEST(F("POST ") << request->url());
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
@@ -788,9 +1265,66 @@ void post_api_save(AsyncWebServerRequest *request)
     send_json_response(request, g_json_doc);
 }
 
+/*
+Пороги тревог (#202).
+
+Отдельный обработчик, а не /api/save: та страница настраивает один вход, а
+тревоги показываются обоими каналами сразу, чтобы не гонять пользователя по
+двум формам ради двух чисел.
+
+Пороги тут же уезжают в attiny: у неё они живут в ОЗУ, и ждать следующего
+сеанса значило бы, что настройка вступит в силу через сутки.
+*/
+void post_api_save_alarms(AsyncWebServerRequest *request)
+{
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
+    LOG_REQUEST(F("POST ") << request->url());
+    g_json_doc.clear();
+    JsonObject ret = g_json_doc.to<JsonObject>();
+    JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
+
+    save_uint16_param(request, FPSTR(PARAM_ALARM_VOL0), sett.alarm_vol0, errorsObj);
+    save_uint16_param(request, FPSTR(PARAM_ALARM_VOL1), sett.alarm_vol1, errorsObj);
+    save_alarm_leak(request, FPSTR(PARAM_ALARM_RATE0), FPSTR(PARAM_ALARM_HOURS0),
+                    sett.alarm_rate0, sett.alarm_hours0, sett.factor0, errorsObj);
+    save_alarm_leak(request, FPSTR(PARAM_ALARM_RATE1), FPSTR(PARAM_ALARM_HOURS1),
+                    sett.alarm_rate1, sett.alarm_hours1, sett.factor1, errorsObj);
+
+    // Снятие тревог: маска уедет ближайшим кадром 'A'
+    if (request->hasParam(FPSTR(PARAM_ALARM_RESET), true))
+        save_alarm_reset(request->getParam(FPSTR(PARAM_ALARM_RESET), true), errorsObj);
+
+    save_uint16_param(request, FPSTR(PARAM_ALARM_STOP0), sett.alarm_stop0, errorsObj);
+    save_uint16_param(request, FPSTR(PARAM_ALARM_STOP1), sett.alarm_stop1, errorsObj);
+
+    // Галочка приходит всегда: common.js шлёт 0 или 1, а не отсутствие поля
+    if (request->hasParam(FPSTR(PARAM_VACATION), true))
+        save_vacation(request->getParam(FPSTR(PARAM_VACATION), true), errorsObj);
+
+    // Спрятанная галочка не приходит вовсе - бит выключенного отправителя
+    // остаётся как был. Требование к нему всё равно снимается в alarm_delivered
+    if (request->hasParam(FPSTR(PARAM_CONFIRM_WATERIUS), true))
+        save_confirm_bit(request->getParam(FPSTR(PARAM_CONFIRM_WATERIUS), true), CONFIRM_WATERIUS, errorsObj);
+    if (request->hasParam(FPSTR(PARAM_CONFIRM_HTTP), true))
+        save_confirm_bit(request->getParam(FPSTR(PARAM_CONFIRM_HTTP), true), CONFIRM_HTTP, errorsObj);
+    if (request->hasParam(FPSTR(PARAM_CONFIRM_MQTT), true))
+        save_confirm_bit(request->getParam(FPSTR(PARAM_CONFIRM_MQTT), true), CONFIRM_MQTT, errorsObj);
+
+    if (errorsObj.size() == 0)
+    {
+        store_config(sett);
+        send_alarm_config(sett);
+        send_stop_config(sett);
+        ret[F("redirect")] = F("/index.html");
+    }
+
+    send_json_response(request, g_json_doc);
+}
+
 void post_api_save_input_type(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("POST ") << request->url());
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
+    LOG_REQUEST(F("POST ") << request->url());
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();
     JsonObject errorsObj = ret[F("errors")].to<JsonObject>();
@@ -801,7 +1335,13 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
 
     if (input == INPUT0_RED)
     {
-        if (sett.counter0_name == CounterName::ELECTRO)
+        // Датчик протечки и сигнализация - не счётчики: ни веса импульса, ни показаний (#202)
+        if (runtime_data.counter_type0 == CounterType::LEAKAGE ||
+            runtime_data.counter_type0 == CounterType::SIGNAL_NC)
+        {
+            ret[F("redirect")] = F("/index.html");
+        }
+        else if (sett.counter0_name == CounterName::ELECTRO)
         {
             ret[F("redirect")] = F("/input/0/input_electro_detect.html");
         }
@@ -820,7 +1360,13 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
     }
     else if (input == INPUT1_BLUE)
     {
-        if (sett.counter1_name == CounterName::ELECTRO)
+        // Датчик протечки и сигнализация - не счётчики: ни веса импульса, ни показаний (#202)
+        if (runtime_data.counter_type1 == CounterType::LEAKAGE ||
+            runtime_data.counter_type1 == CounterType::SIGNAL_NC)
+        {
+            ret[F("redirect")] = F("/index.html");
+        }
+        else if (sett.counter1_name == CounterName::ELECTRO)
         {
             ret[F("redirect")] = F("/input/1/input_electro_detect.html");
         }
@@ -851,7 +1397,7 @@ void post_api_save_input_type(AsyncWebServerRequest *request)
 
 void get_api_turnoff(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_REQUEST(F("GET ") << request->url());
     exit_portal_flag = true;
     AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "");
     request->send(response);
@@ -859,7 +1405,8 @@ void get_api_turnoff(AsyncWebServerRequest *request)
 
 void post_api_reset(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("POST ") << request->url());
+    feed_portal_watchdog();   // продлеваем режим настройки (#305)
+    LOG_REQUEST(F("POST ") << request->url());
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();

@@ -8,6 +8,7 @@
 #include "Storage.h"
 #include "counter.h"
 #include "button.h"
+#include "alarm.h"
 #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include <avr/power.h>
@@ -20,6 +21,139 @@ TinyDebugSerial mySerial;
 
 /*
 Версии прошивок
+
+48 - 2026.11.01 - dontsov
+	1. Остановку расхода считает attiny, а не ЕСП: тревога поднимается в ту
+	   минуту, когда истёк порог, и будит ЕСП вне расписания, как протечка, в
+	   том числе в режиме "только при расходе". Первый импульс снимает её в
+	   пределах минуты. Команда 'H' - пороги в минутах, живут в ОЗУ. Отдельная
+	   команда, потому что кадр 'A' занял весь приёмный буфер. Состояние - в
+	   битах 4-5 байта service, размер Header прежний.
+	2. Попытку доставки тратит только сеанс по тревоге, и только он заново
+	   заводит паузу. В режиме "только при расходе" при периоде короче паузы
+	   плановые сеансы без радио съедали попытки и не давали паузе кончиться:
+	   из пяти попыток оставалась одна.
+
+47 - 2026.10.25 - dontsov
+	1. Электронный вход без мёртвого времени: в 38 он считал каждый переход из
+	   покоя, а потолок в 4 импульса/с недосчитывал электросчётчик
+	   3200 имп/кВт·ч уже от 5 кВт.
+	2. Убран тип входа «Электронный (+)» — добавляли для теста счетчика газа
+	   Гранд. Гранд считает при типе «Электронный». Число 4 остаётся занятым,
+	   незнакомый тип = вход выключен.
+	3. Защёлку электронного входа сбрасывает смена типа, а не каждый вход в
+	   сон: фронт с последней миллисекунды сеанса больше не теряется.
+	4. Команда 'R': заводской сброс в ЕСП обнуляет и показания attiny (#326),
+	   а период пробуждения до первого сеанса - сутки. Служебные счётчики
+	   (resets, setup_started_counter) сброс не трогает.
+
+46 - 2026.09.26 - dontsov
+	1. Время в сеансе отмеряется часами, а не оборотами цикла. Такт опроса
+	   входов складывался из 250 оборотов по delayMicroseconds(1000), а выдержка
+	   перед снятием питания ЕСП - из DELAY_SENT_SLEEP таких же оборотов. Оборот
+	   дороже миллисекунды: чтение АЦП, обмен с ЕСП по прерыванию, 50 мс
+	   подтверждения импульса. Замыкание около 350 мс из-за этого могло не
+	   получить подтверждения - замер стенда дал девять импульсов из десяти.
+	   Вне сеанса без изменений: Timer0 выключен, такт даёт watchdog.
+
+45 - 2026.09.21 - dontsov
+	1. Ватериус-2: нажатие кнопки больше не снимает тревоги в самой attiny.
+	   Кнопка там одна на два действия, а длительность нажатия видит только
+	   ЕСП, поэтому снятие приезжало и при долгом нажатии - то есть ровно
+	   тогда, когда человек открывал портал, чтобы тревогу увидеть. Плашки со
+	   снятием на главной он не дождался бы никогда. Теперь снятие приходит
+	   маской в кадре 'A' и только за коротким нажатием. Нужна ЕСП 2.0.51.
+	   У Классика длительность различает сама attiny - там без изменений.
+
+44 - 2026.09.20 - dontsov
+	1. Вход датчика протечки читается АЦП, а не уровнем пина: вода - это
+	   сопротивление в десятки и сотни килоом, а цифровой ноль требовал меньше
+	   9кОм. У двух типов входа разные соглашения и разные пороги, разбор в
+	   wet.h: нормально-разомкнутый (LEAKAGE) считает тревогой любую проводимость, пока её
+	   видно на фоне разомкнутой линии; сигнализация (SIGNAL_NC) считает нормой
+	   замкнутый шлейф - перемычку или 5к6, как у намур, - и поднимает тревогу на
+	   сопротивлении выше, обрыв провода попадает в неё же.
+
+43 - 2026.09.16 - dontsov
+	1. Смена типа входа - в портале настройки или командой с сервера - снимает
+	   тревогу этого входа сразу. Раньше, если датчик протечки оставался
+	   замкнутым, тревога возвращалась и висела до нажатия кнопки на корпусе.
+
+42 - 2026.09.13 - dontsov
+	Версия тестовая: в производство не уходила, поэтому номер оставлен прежним,
+	хотя формат кадра 'A' с прошлой записи сменился.
+
+	1. Протечка считается квантами тишины, а не ритмом импульсов: тревога, если
+	   за заданное время не встретилось ни одного кванта без импульсов. Так её
+	   считают Kamstrup, Badger, Zenner PDC, Neptune и Diehl IZAR. Вместе с
+	   prev_gap и правилом удвоения уходит и класс дефекта #405: сравнивать с
+	   историей больше нечего.
+	2. Много воды сразу - объём за 30 минут, а не интервал между импульсами.
+	   Окно скользящее, кольцо из семи пятиминутных слотов.
+	3. Ни одна тревога не гаснет сама. Снимает человек: кнопкой на корпусе,
+	   маской в кадре 'A' или сменой типа входа. Отсюда уходят гистерезис, held
+	   и бюджет внеплановых сеансов - переходов вниз больше не бывает.
+	4. Кадр 'A' вырос до 13 байт + CRC8: три порога на канал и маска снятия.
+
+41 - 2026.08.26 - dontsov
+	1. Детекция аварий по импульсам счётчика. Issue #202.
+	   Большой расход: интервал между импульсами короче порога.
+	   Протечка: расход не прекращается дольше заданного времени - считается
+	   по ритму импульсов, а не по объёму за окно, иначе капающий кран (один
+	   импульс в 10 минут) не детектировался бы вовсе.
+	   Тревога прерывает сон и поднимает ЕСП вне расписания (ALARM_MODE).
+	2. Новые типы входа: LEAKAGE (5) - проводной датчик протечки, замыкание -
+	   тревога, импульсы не считаются; SIGNAL_NC (6) - сигнализация, тревога
+	   размыкание.
+	3. Команда 'A' - пороги тревог от ЕСП, живут в ОЗУ как период пробуждения.
+	   Команда 'K' - ЕСП подтверждает, что доложила о тревоге получателю. Без
+	   подтверждения будим её снова, до ALARM_MAX_TRIES раз.
+	4. Внеплановых сеансов не больше ALARM_MAX_SESSIONS на период пробуждения.
+	   Пауза задаёт темп, бюджет - потолок: дребезжащий датчик иначе выдавал бы
+	   новости бесконечно, а счёт попыток начинался бы заново на каждой.
+	5. Тревоги уложены в свободные биты Header.flags: размер Header прежний.
+	6. Убраны типы входа DISCRETE (1) и HALL (3). Числа остаются занятыми,
+	   незнакомый тип = вход выключен. Освободилось ~500 байт флеша.
+
+40 - 2026.08.25 - dontsov
+	1. В Header появился байт флагов (бывший reserved2, у старых прошивок
+	   всегда 0). Бит 0 - питание ЕСП подано дольше 5 секунд. Issue #354.
+	   ЕСП грузится за ~300мс, поэтому "давно" на первом же её запросе
+	   означает, что она перезагрузилась при живом питании, и портал может
+	   сказать об этом пользователю.
+	   Отсчёт идёт от отдельной метки времени: wake_up_timestamp сдвигает
+	   команда 'E' на каждое действие пользователя в портале.
+
+39 - 2026.08.23 - dontsov
+	1. Электронный вход считает фронт, а не уровень. Issue #379.
+	   Уровень снимается в ISR(PCINT0_vect) и защёлкивается: импульс газового
+	   счётчика Гранд длится 0,7-1,5мс и до пробуждения главного цикла не
+	   доживал. Мёртвое время после импульса - один тик опроса (250мс).
+	2. Электронный вход больше не меряет АЦП: у цифрового входа уровень
+	   замыкания ничего не значит, а измерение стоит ~100мкс и тока.
+	3. Новый тип входа ELECTRONIC_HIGH (4): импульс - подъём линии, подтяжка
+	   выключена. Вход становится высокоомным - требование Гранда (>=1 МОм)
+	   выполняется без переделки платы.
+	4. Смена типа входа снимает PCMSK: раньше после перехода с электронного
+	   на дискретный вход продолжал будить attiny каждым фронтом.
+
+38 - 2026.06.02 - dontsov
+	1. 250мс замыкание + 50мс подтверждение = импульс. Issue #371.
+	   Было: 2 замыкания подряд, т.е. геркон должен быть замкнут ~500мс - на счетчиках
+	   Ителма импульсы пропускались. Теперь при первом замыкании ждем 50мс и перечитываем
+	   вход: замкнут - импульс, разомкнулся - помеха, игнорируем.
+	   Период опроса входов прежний, 250мс. Импульс засчитывается сразу, а не в конце.
+
+37 - 2026.03.30 - dontsov
+	1. Команда 'P': ЕСП сообщает, что юзер долго держал кнопку - режим
+	   настройки переживает нештатную перезагрузку ЕСП.
+
+36 - 2026.03.30 - dontsov
+	1. Только смена версии, кода не касалось.
+
+35 - 2026.02.05 - dontsov
+	1. Пороги АЦП входа разделены по моделям: у Ватериус-2 другой номинал
+	   подтяжки, старые константы давали неверное состояние входа.
 
 33 - 2025.09.29 - dontsov
     1. 250мс замыкание + 750мс размыкание = импульс
@@ -138,10 +272,18 @@ TinyDebugSerial mySerial;
 //
 // https://github.com/SpenceKonde/ATTinyCore/blob/master/avr/extras/ATtiny_x5.md
 
-static CounterB counter0(4, 2, 3); 	// Вход 1, Blynk: V0, горячая вода PB4 ADC2
+static CounterB counter0(4, 2); 	// Вход 1, Blynk: V0, горячая вода PB4 ADC2
 static CounterB counter1(3, 3); 	// Вход 2, Blynk: V1, холодная вода (или лог) PB3 ADC3
 
 static ESPPowerPin esp(1); // Питание на ESP
+
+// Детекция аварий (issue #202). Счётчик минут, пауза и доклад - общие на оба
+// канала: тревоги уезжают одним сеансом, а ОЗУ у attiny 512 байт
+static AlarmDetector alarm0;
+static AlarmDetector alarm1;
+static AlarmReport alarm_report;
+static uint8_t alarm_minute_ticks = 0;
+static uint8_t alarm_hold_min = 0;
 
 #if WATERIUS_MODEL == WATERIUS_MODEL_1
 static ButtonB button(2);  // PB2 кнопка (на линии SCL)
@@ -158,10 +300,12 @@ static ButtonB2 button(1);  // PB1 кнопка (на линии wakeup)
 struct Header info = {
     .version = FIRMWARE_VER,
     .service = 0,
+    .stop0 = 0,
+    .stop1 = 0,
     .on_pulse0 = 0,
     .on_pulse1 = 0,
     .voltage = 0,
-    .reserved2 = 0,
+    .flags = 0,
     .config = {0, 0, WATERIUS_MODEL, {counter0.type, counter1.type}},
     .data = {0, 0},
     .adc = {0, 0},
@@ -182,7 +326,10 @@ SlaveI2C slaveI2C;
 
 volatile uint32_t 		wdt_count;
 volatile CounterEvent 	event;
-volatile uint8_t		storage_write_limit = 0; 
+volatile uint8_t		storage_write_limit = 0;
+
+volatile bool			types_changed = false;
+volatile bool			clear_requested = false;
 
 /* Вектор прерываний сторожевого таймера watchdog */
 ISR(WDT_vect)
@@ -198,7 +345,63 @@ ISR(WDT_vect)
 /* Вектор прерываний Pin Change */
 ISR(PCINT0_vect)
 {
+	// Уровень входов снимаем прямо здесь: импульс электронного счётчика
+	// бывает короче миллисекунды (у газового Гранда 0,7мс, issue #379) и до
+	// пробуждения главного цикла не доживает. Снимок один на оба счётчика.
+	const uint8_t pins = PINB;
+	counter0.on_front(pins);
+	counter1.on_front(pins);
+
 	event = CounterEvent::FRONT;
+}
+
+/*
+Ход времени для детекции аварий (issue #202).
+
+Тик опроса входов - 250мс, он же единственная мера времени у attiny: и во сне,
+и во время сеанса с ЕСП. Минута считается одним счётчиком на оба канала.
+*/
+inline void alarm_tick(CounterEvent ev)
+{
+	/*
+	Только по тику опроса. По фронту CounterB::discrete выходит, не читая вход,
+	поэтому on_pulse там ещё прошлый - а у сигнализации прошлое
+	значение на старте это ложная тревога: до первого опроса on_pulse нулевой,
+	то есть "разомкнут".
+	*/
+	if (ev != CounterEvent::TIME)
+		return;
+
+	/*
+	Сигнализация (SIGNAL_NC) - то же состояние наоборот: тревога не замыкание, а
+	размыкание.
+	*/
+	if (counter0.type == CounterType::LEAKAGE)
+		alarm0.set_wet(counter0.on_pulse);
+	else if (counter0.type == CounterType::SIGNAL_NC)
+		alarm0.set_wet(!counter0.on_pulse);
+
+	if (counter1.type == CounterType::LEAKAGE)
+		alarm1.set_wet(counter1.on_pulse);
+	else if (counter1.type == CounterType::SIGNAL_NC)
+		alarm1.set_wet(!counter1.on_pulse);
+
+	alarm0.on_tick();
+	alarm1.on_tick();
+
+	if (++alarm_minute_ticks < ALARM_TICKS_PER_MINUTE)
+		return;
+
+	alarm_minute_ticks = 0;
+
+	if (alarm_hold_min)
+		alarm_hold_min--;
+
+	alarm0.on_minute();
+	alarm1.on_minute();
+
+	info.stop0 = alarm0.stopped;
+	info.stop1 = alarm1.stopped;
 }
 
 // Проверяем входы на замыкание.
@@ -209,6 +412,7 @@ inline void counting(CounterEvent ev)
 	{
 		info.data.value0++; 				//нужен т.к. при пробуждении запрашиваем данные
 		info.adc.adc0 = counter0.adc;
+		alarm0.on_pulse();
 #ifdef LOG_ON
 		LOG(F("Input0:"));
 		LOG(info.data.value0);
@@ -227,6 +431,7 @@ inline void counting(CounterEvent ev)
 	{
 		info.data.value1++;
 		info.adc.adc1 = counter1.adc;
+		alarm1.on_pulse();
 		if (storage_write_limit == 0)
 		{
 			storage.add(info.data);
@@ -235,6 +440,8 @@ inline void counting(CounterEvent ev)
 	}
 	info.on_pulse1 = counter1.on_time > 0;
 #endif
+
+	alarm_tick(ev);
 
 #ifdef COUNTER_DEBUG
 	noInterrupts();
@@ -259,6 +466,117 @@ void saveConfig()
 void extendWakeUpPeriod()
 {
 	esp.extend_wake_up();
+}
+
+/*
+Питание ЕСП подано дольше ESP_POWERED_LONG_MSEC.
+
+Зовётся из SlaveI2C при сборке Header. Если ЕСП спрашивает данные первый раз
+после своей загрузки, а мы отвечаем "давно", значит она перезагрузилась при
+живом питании: вывод делает сама ЕСП, attiny только измеряет время (#354).
+*/
+bool is_esp_powered_long()
+{
+	return esp.powered_longer_than(ESP_POWERED_LONG_MSEC);
+}
+
+/*
+Состояние тревог обоих каналов одним байтом (issue #202).
+
+Зовётся из SlaveI2C при сборке Header: главному циклу вести этот байт незачем.
+Раскладка - HEADER_ALARM_* в Setup.h.
+*/
+uint8_t alarm_bits()
+{
+	return (uint8_t)(alarm0.state << HEADER_ALARM_SHIFT0) |
+		   (uint8_t)(alarm1.state << HEADER_ALARM_SHIFT1);
+}
+
+/*
+Пороги тревог от ЕСП: по два uint16 на канал, старшим байтом вперёд.
+*/
+void set_alarm_config(const uint8_t *data)
+{
+	alarm0.configure((uint16_t)(data[0] << 8) | data[1],
+					 (uint16_t)(data[2] << 8) | data[3],
+					 (uint16_t)(data[4] << 8) | data[5]);
+	alarm1.configure((uint16_t)(data[6] << 8) | data[7],
+					 (uint16_t)(data[8] << 8) | data[9],
+					 (uint16_t)(data[10] << 8) | data[11]);
+}
+
+/*
+Пороги остановки расхода от ЕСП в минутах: по uint16 на канал, старшим байтом
+вперёд.
+*/
+void set_stop_config(const uint8_t *data)
+{
+	alarm0.stop_min = (uint16_t)(data[0] << 8) | data[1];
+	alarm1.stop_min = (uint16_t)(data[2] << 8) | data[3];
+}
+
+/*
+Типы входов от ЕСП. Приезжают из портала, когда пользователь сменил тип.
+
+Смена типа снимает тревоги канала: они описывали прежний вход, а снять их
+после смены нечем. Датчик протечки опрашивается, только пока тип входа -
+датчик (alarm_tick), расход и ритм считаются только по импульсам, которых у
+датчика не бывает. Оставленный бит висел бы до перезагрузки attiny.
+
+Простой тоже считается заново: месяц на выключенном входе - не остановка
+расхода на счётчике, который подключили сегодня.
+*/
+void set_counter_types(const uint8_t *data)
+{
+	if (data[0] != info.config.types.type0)
+	{
+		alarm0.reset(ALARM_MASK);
+		alarm0.idle_min = 0;
+		types_changed = true;
+	}
+
+	if (data[1] != info.config.types.type1)
+	{
+		alarm1.reset(ALARM_MASK);
+		alarm1.idle_min = 0;
+		types_changed = true;
+	}
+
+	info.config.types.type0 = data[0];
+	info.config.types.type1 = data[1];
+}
+
+/*
+Снять тревоги по маске от ЕСП: биты 0-2 - FLOW/LEAK/WET канала 0, биты 3-5 -
+канала 1. Ноль - снимать нечего, и это обычное состояние кадра.
+*/
+void reset_alarms(const uint8_t mask)
+{
+	if (!mask)
+		return;
+
+	alarm0.reset(mask & ALARM_MASK);
+	alarm1.reset((mask >> 3) & ALARM_MASK);
+}
+
+/*
+ЕСП доложила о тревоге получателю: повторять сеанс не нужно.
+*/
+void confirm_alarm()
+{
+	alarm_report.confirm();
+}
+
+/*
+Есть ли повод разбудить ЕСП вне расписания.
+
+Пауза после сеанса задаёт темп: это интервал до следующей попытки доставки.
+Потолок ей не нужен - см. AlarmReport.
+*/
+inline bool alarm_pending()
+{
+	return alarm_hold_min == 0 &&
+		   (alarm_report.pending || alarm0.changed || alarm1.changed);
 }
 
 //Запрос периода при инициализции. Также период может изменится после настройки.
@@ -311,19 +629,63 @@ void setup()
 	LOG(info.data.value1);
 }
 
-void counting_1ms(uint8_t &delay_loop_count)
+// Типы от ЕСП: set_type пишет в регистры, поэтому не в обработчике i2c, а здесь
+void apply_counter_types()
+{
+	if (!types_changed)
+		return;
+
+	noInterrupts();
+	types_changed = false;
+	counter0.set_type((CounterType)info.config.types.type0);
+	counter1.set_type((CounterType)info.config.types.type1);
+	interrupts();
+}
+
+/*
+Обнуление показаний по команде 'R' (заводской сброс, #326). Стирается всё
+кольцо, а не пишется один нулевой блок: init() при старте берёт блок с
+наибольшими счётчиками, и старые вернулись бы после первой перезагрузки.
+Стёртый блок недействителен (CRC восьми нулей 0xDD, отметка 0): питание,
+пропавшее посреди стирания, мусора не даст - худшее, вернутся старые показания.
+*/
+void apply_clear_counters()
+{
+	if (!clear_requested)
+		return;
+
+	clear_requested = false;
+	storage.clear();
+	info.data.value0 = 0;
+	info.data.value1 = 0;
+	storage.add(info.data);
+}
+
+/*
+Один оборот опроса входов, пока ЕСП на связи: время отмеряют часы, а не обороты
+цикла - оборот дороже миллисекунды, и замыкание 350 мс терялось.
+
+Часы есть только в сеансе: вне его Timer0 выключен и millis() стоит, поэтому
+спящую attiny будит watchdog.
+*/
+void poll_inputs(unsigned long &last_poll)
 {
 	wdt_reset();
-	if (delay_loop_count < 250)
+	apply_counter_types();
+	apply_clear_counters();
+
+	if (millis() - last_poll >= POLL_PERIOD_MSEC)
 	{
-		delay_loop_count++;
-	}
-	else
-	{
-		// Получаем период опроса входов 250мс, как и от ватчдога
-		delay_loop_count = 0;
+		// Шаг сетки, а не «от сейчас»: иначе задержки внутри такта уезжают в период
+		last_poll += POLL_PERIOD_MSEC;
+		// Отстали больше такта - не догоняем: опросы вплотную оборвут импульс
+		if (millis() - last_poll >= POLL_PERIOD_MSEC)
+		{
+			last_poll = millis();
+		}
 		event = CounterEvent::TIME;
 	}
+
 	if (event != CounterEvent::NONE)
 	{
 		// Если получили фронт изменения сигнала или набежало время - проверяем входы
@@ -333,7 +695,19 @@ void counting_1ms(uint8_t &delay_loop_count)
 		interrupts();
 		counting(ev);
 	}
-	delayMicroseconds(1000);
+
+	delayMicroseconds(1000);   // чтобы не жечь цикл вхолостую; время меряют часы
+}
+
+// Опрашивать входы, пока не выйдет время: выдержка - это время, а не обороты
+
+void poll_inputs_for(unsigned long &last_poll, const unsigned long msec)
+{
+	const unsigned long started = millis();
+	while (millis() - started < msec)
+	{
+		poll_inputs(last_poll);
+	}
 }
 
 // Главный цикл, повторящийся раз в сутки или при настройке вотериуса
@@ -348,7 +722,7 @@ void loop()
 	counter1.set_type((CounterType)info.config.types.type1);
 
 	wdt_count = 0;
-	while ((wdt_count < wakeup_period) && !button.pressed(event))
+	while ((wdt_count < wakeup_period) && !button.pressed(event) && !alarm_pending())
 	{
 		noInterrupts();
 		CounterEvent ev = event;
@@ -380,6 +754,9 @@ void loop()
 
 	unsigned long wake_up_limit = SETUP_TIME_MSEC;  // 10 мин при настройке
 
+	// Разбудила тревога, а не расписание и не кнопка
+	bool alarm_wake = false;
+
 	if (button.press == ButtonPressType::LONG)
 	{ 
 		LOG(F("SETUP pressed"));
@@ -392,11 +769,34 @@ void loop()
 		if (button.press == ButtonPressType::SHORT)
 		{
 			LOG(F("Manual transmit wake up"));
+
+#if WATERIUS_MODEL == WATERIUS_MODEL_1
+			// Сама тревога не гаснет, гасит человек. Нажал - значит увидел:
+			// снимаем сразу, а не после подтверждения доставки, иначе в
+			// шкафу пришлось бы ждать конца сеанса
+			reset_alarms(ALARM_MASK | (ALARM_MASK << 3));
+#endif
+			/*
+			У Ватериуса-2 кнопка одна на два действия, а attiny видит только
+			факт нажатия: длительность меряет ЕСП (button.h, ButtonB2). Снять
+			тревогу здесь значило бы погасить её и при долгом нажатии, то есть
+			ровно тогда, когда человек открывает портал, чтобы её увидеть.
+			Поэтому снятие приезжает маской в кадре 'A' - и только если
+			нажатие оказалось коротким.
+			*/
+
 			slaveI2C.begin(MANUAL_TRANSMIT_MODE);
+		}
+		else if (alarm_pending())
+		{
+			alarm_wake = true;
+			wake_up_limit = WAIT_ESP_MSEC;
+			LOG(F("Alarm wake up"));
+			slaveI2C.begin(ALARM_MODE);
 		}
 		else
 		{
-			wake_up_limit = WAIT_ESP_MSEC; // 15 секунд при передаче данных
+			wake_up_limit = WAIT_ESP_MSEC; // 2 мин при передаче данных
 			LOG(F("wake up for transmitting"));
 			slaveI2C.begin(TRANSMIT_MODE);
 		}
@@ -406,21 +806,50 @@ void loop()
 	button.reset();
 	info.voltage = readVcc(); // Прочитаем Vcc после включения ESP
 
+	/*
+	Любой сеанс показывает серверу текущее состояние тревог: Header ЕСП читает
+	всегда. Поэтому новость считается отданной независимо от режима, а ждём мы
+	не сеанса, а подтверждения доставки.
+
+	Иначе после планового сеанса, увёзшего свежую тревогу, флаг "есть новость"
+	остался бы висеть, и устройство проснулось бы ещё раз - доложить уже
+	доложенное.
+	*/
+	if (alarm0.changed || alarm1.changed)
+	{
+		alarm_report.start();
+		alarm0.changed = 0;
+		alarm1.changed = 0;
+	}
 	esp.power(true);
 
 	LOG(F("ESP turn on"));
 
-	uint8_t delay_loop_count = 0;		
+	unsigned long last_poll = millis();
 	while (!slaveI2C.masterGoingToSleep() && !esp.elapsed(wake_up_limit))
 	{
-		counting_1ms(delay_loop_count);
-	}
-	uint8_t sleep_delay_ms = 20;
-	while (sleep_delay_ms--) {
-		counting_1ms(delay_loop_count);
+		poll_inputs(last_poll);
 	}
 
+	// ЕСП сказала «ухожу спать» - даём ей доспать до deep sleep, не бросая входы
+	poll_inputs_for(last_poll, DELAY_SENT_SLEEP);
+
 	slaveI2C.end(); // выключаем i2c slave.
+
+	/*
+	Итог доклада о тревоге. Квитанцию присылает ЕСП командой 'K', когда данные
+	приняты получателем. Не пришла - пробуем ещё, но не больше ALARM_MAX_TRIES
+	раз: без сети сеансы только жгут батарею, а состояние всё равно уедет со
+	следующим плановым выходом на связь.
+
+	Попытку и паузу тратит только сеанс по тревоге: плановый в режиме "только
+	при расходе" идёт без радио и при коротком периоде съел бы все попытки.
+	*/
+	if (alarm_wake)
+	{
+		alarm_report.failed();
+		alarm_hold_min = ALARM_HOLD_MIN;
+	}
 
 	if (!slaveI2C.masterGoingToSleep())
 	{

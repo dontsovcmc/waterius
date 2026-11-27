@@ -9,12 +9,13 @@
         <script src="/static/strings.js"></script>
     </head>
     <body onload="fill_counter_title(%counter_name%);
+    fill_units(%counter_name%);
     _init({
         back: '/input/%input%/setup.html',
         back_wizard: '/input/%input%/setup.html?wizard=true',
         next: '/index.html',
         next_wizard: get_next_wizard_by_input(%input%)
-    }); getImpulses(%input%);">
+    }); getImpulses(%input%, %counter_name%);">
         <form onsubmit="formSubmit(event, this, '/api/save');">
             <div class="wrap">
                 <div class="container f1">
@@ -41,12 +42,12 @@
                             <p class="error hd" id="serial-error">Введите серийный номер</p>
                         </div>
                         <div class="f-row">
-                            <label for="channel_start">Показания счётчика</label>
+                            <label for="channel_start">Показания счётчика<span data-unit="total"></span></label>
                             <input pattern="^(\d{1,8}([.,]\d{1,3})?)$" id="channel_start" name="channel_start" placeholder="356.89" value="%channel_start%">
                             <p class="error hd" id="channel_start-error">Введите показания счётчика</p>
                         </div>
                         <div class="f-row">
-                            <label for="factor">Вес импульса (литров в 1 импульсе)</label>
+                            <label for="factor">Вес импульса</label>
                             <select class="slct" id="factor" name="factor" option-value="%factor%">
                               <option value="1">1</option>
                               <option value="10">10</option>
@@ -56,7 +57,7 @@
                             </select>
                             <p class="error hd" id="factor-error">Некорректное значение</p>
                         </div>
-                        <p class="note mt16">(прочитано <span id="impulses">1</span> имп.)</p>
+                        <p class="note mt16">(прочитано <span id="impulses">0</span> <span data-unit="impulses"></span><span id="delta"></span>)</p>
                     </main>
                     <footer class="btns">
                         <button class="btn" type="submit">Сохранить</button>

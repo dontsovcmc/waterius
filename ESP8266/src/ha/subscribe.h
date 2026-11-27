@@ -20,6 +20,8 @@ extern void mqtt_callback(Settings &sett, JsonDocument &json_data, PubSubClient 
 extern bool mqtt_connect(Settings &sett, PubSubClient &mqtt_client);
 extern bool mqtt_subscribe(PubSubClient &mqtt_client, String &mqtt_topic);
 extern bool mqtt_unsubscribe(PubSubClient &mqtt_client, String &mqtt_topic);
+extern void clear_applied_commands(PubSubClient &mqtt_client);
+extern bool take_command_arrived();
 
 
 #endif

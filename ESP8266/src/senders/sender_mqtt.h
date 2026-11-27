@@ -23,6 +23,10 @@
 #define MQTT_MAX_PACKET_SIZE 256
 #define MQTT_DELAY_SUBSCRIPTION 100 // задержка для получения данных по подписке
 
+// Потерянный сегмент lwIP перепосылает не раньше чем через 500 мс, а flush
+// внутри PubSubClient::disconnect ждёт 300: хвост публикаций уходил в сон
+#define MQTT_FLUSH_TIMEOUT_MS 3000
+
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -30,12 +34,12 @@
 #include "Logging.h"
 #include "json.h"
 #include "ha/publish_data.h"
+#include "core/connect_log.h"
 #include "ha/publish_discovery.h"
 #include "ha/subscribe.h"
+#include "core/blink.h"
+#include "core/discovery.h"
 #include "utils.h"
-
-extern AttinyData data;
-extern CalculatedData cdata;
 
 WiFiClient wifi_client;
 PubSubClient mqtt_client(wifi_client);
@@ -78,50 +82,182 @@ bool connect_and_subscribe_mqtt(Settings &sett, JsonDocument &json_settings_rece
 }
 
 /**
- * @brief Отправляет показания на укзанный сервер MQTT и создает discovery топик HomeAssistant
+ * @brief Публикует автообнаружение, если опубликованное устарело
+ *
+ * Отпечаток опубликованного сбрасывают настройка и кнопка (main.cpp), поэтому
+ * здесь одно правило: изменилось то, из чего собраны конфиги, - публикуем.
+ *
+ * @param sett настройки, в них запоминается отпечаток опубликованного
+ * @param data данные attiny
+ * @param topic корневой топик
+ */
+void sync_discovery(Settings &sett, const AttinyData &data, const String &topic)
+{
+    if (!sett.mqtt_auto_discovery)
+    {
+        // Включат снова - опубликуем сразу, а не по кнопке
+        sett.discovery_signature = 0;
+        return;
+    }
+
+    String discovery_topic = sett.mqtt_discovery_topic;
+    remove_trailing_slash(discovery_topic);
+
+    const DiscoveryState state = {FIRMWARE_VERSION, data.version, data.model,
+                                  data.counter_type0, data.counter_type1,
+                                  sett.counter0_name, sett.counter1_name,
+                                  topic.c_str(), discovery_topic.c_str()};
+    const uint32_t signature = discovery_signature(state);
+    if (signature == sett.discovery_signature)
+    {
+        return;
+    }
+
+    // Недоехавший конфиг переотправится в следующем сеансе
+    if (publish_discovery(mqtt_client, topic, discovery_topic, data, sett))
+    {
+        sett.discovery_signature = signature;
+    }
+    else
+    {
+        LOG_ERROR(F("MQTT: Discovery not published"));
+    }
+    mqtt_client.loop();
+}
+
+/**
+ * @brief Отправляет показания на указанный сервер MQTT и создает discovery топик HomeAssistant
  *
  * @param sett настройки
- * @param data показания
- * @param cdata расчитанные показатели
+ * @param data данные attiny
  * @param json_data json документ c показаниями
- * @param auto_discovery если true то будет добавляться топик для автоконфигурации
  *
- * @returns true если успешно отправлены данные и false если не отправлено
+ * @returns SEND_OK если показания опубликованы целиком
  */
-bool send_mqtt(const Settings &sett, JsonDocument &json_data)
+SendStatus send_mqtt(Settings &sett, const AttinyData &data, JsonDocument &json_data)
 {
     unsigned long start_time = millis();
     String mqtt_topic = sett.mqtt_topic;
     remove_trailing_slash(mqtt_topic);
 
+    // Подключается connect_and_subscribe_mqtt: здесь отказ - всегда потеря связи
     if (!mqtt_client.connected())
     {
         LOG_ERROR(F("MQTT: Not connected"));
-        return false;
+        return SEND_NO_CONNECTION;
     }
 
     mqtt_client.loop();
-    // autodiscovery после настройки и по нажатию на кнопку
-    if (sett.mqtt_auto_discovery && ((sett.mode == SETUP_MODE) ||
-                                     (sett.mode == MANUAL_TRANSMIT_MODE)))
+    sync_discovery(sett, data, mqtt_topic);
+
+    const bool published = publish_data(mqtt_client, mqtt_topic, json_data,
+                                        sett.mqtt_auto_discovery, sett.mqtt_retain);
+
+    mqtt_client.loop();
+
+    LOG_INFO(F("MQTT: Publish finished. ") << millis() - start_time << F(" milliseconds elapsed"));
+    if (!published)
     {
-        String mqtt_discovery_topic = sett.mqtt_discovery_topic;
-        remove_trailing_slash(mqtt_discovery_topic);
-        publish_discovery(mqtt_client, mqtt_topic, mqtt_discovery_topic, data, sett);
-        mqtt_client.loop();
+        connect_log_push(sett, CONNECT_MQTT, mqtt_client.state());
+    }
+    return published ? SEND_OK : SEND_NO_CONNECTION;
+}
+
+// Шаг опроса сокета, пока ждём опоздавшую команду
+#define MQTT_LATE_STEP_MS 10
+
+/**
+ * @brief Ждёт команды, приехавшие после применения настроек
+ *
+ * Брокер отдаёт удержанное не обязательно в первый loop(), а человек в Home
+ * Assistant может нажать переключатель ровно посреди сеанса. Применение в
+ * сеансе одно, поэтому перед закрытием даём команде шанс приехать.
+ *
+ * @param msec сколько качать сокет
+ * @return true приехала команда, надо применить ещё раз
+ */
+bool mqtt_late_commands(uint16_t msec)
+{
+    if (!mqtt_client.connected())
+    {
+        return false;
     }
 
-    // публикация показаний в MQTT
-    publish_data(mqtt_client, mqtt_topic, json_data, sett.mqtt_auto_discovery);
+    const unsigned long started = millis();
+
+    while (millis() - started < msec)
+    {
+        mqtt_client.loop();
+        delay(MQTT_LATE_STEP_MS);
+    }
+
+    return take_command_arrived();
+}
+
+/**
+ * @brief Отметить, что всё присланное сейчас будет применено
+ *
+ * Снимает признак прихода команды перед применением: всё, что приедет после
+ * этой точки, взведёт его заново и получит свой круг.
+ */
+void note_settings_applied()
+{
+    take_command_arrived();
+}
+
+/**
+ * @brief Снимает у брокера удерживаемые команды, которые уже применены
+ *
+ * Зовётся, пока сеанс с брокером ещё открыт, - иначе стирать будет нечем.
+ */
+void forget_applied_commands()
+{
+    if (mqtt_client.connected())
+    {
+        clear_applied_commands(mqtt_client);
+    }
+}
+
+/**
+ * @brief Закрывает сеанс с брокером
+ *
+ * Отдельно от send_mqtt намеренно (#406): за сеанс данные уходят дважды, если
+ * сервер или Home Assistant прислали настройки, и соединение обязано пережить
+ * первую отправку. Открывает его connect_and_subscribe_mqtt, закрывает эта
+ * функция, обе зовутся из main.cpp.
+ *
+ * @param sett настройки
+ */
+void disconnect_mqtt(const Settings &sett)
+{
+    if (!mqtt_client.connected())
+    {
+        return;
+    }
+
+    String mqtt_topic = sett.mqtt_topic;
+    remove_trailing_slash(mqtt_topic);
 
     mqtt_client.loop();
     mqtt_unsubscribe(mqtt_client, mqtt_topic);
 
     mqtt_client.loop();
+
+    // QoS 0: подтверждение TCP - единственное свидетельство, что публикации
+    // дошли. Таймаут отсчитывается от последнего продвижения, а не от начала
+    const unsigned long flush_start = millis();
+    if (wifi_client.flush(MQTT_FLUSH_TIMEOUT_MS))
+    {
+        LOG_INFO(F("MQTT: Flushed in ") << millis() - flush_start << F(" ms"));
+    }
+    else
+    {
+        LOG_ERROR(F("MQTT: Flush failed, no ack for ") << MQTT_FLUSH_TIMEOUT_MS << F(" ms"));
+    }
+
     mqtt_client.disconnect();
 
-    LOG_INFO(F("MQTT: Disconnect. ") << millis() - start_time << F(" milliseconds elapsed"));
-    return true;
+    LOG_INFO(F("MQTT: Disconnect"));
 }
 
 #endif

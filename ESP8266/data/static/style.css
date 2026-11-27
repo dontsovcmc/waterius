@@ -1,9 +1,8 @@
-*{line-height:1;color:#000;font-weight:400;font-family:Roboto,sans-serif;margin:0;padding:0;border:0;vertical-align:baseline;box-sizing:border-box;outline:0;user-select:none;}
+*{line-height:1;color:#000;font-weight:400;font-family:Roboto,sans-serif;margin:0;padding:0;border:0;vertical-align:baseline;box-sizing:border-box;outline:0;}
 html{height:100%;}
 body{width:100%;min-height:100%;font-size:100%;}
 button,a{cursor:pointer;transition:.5s;text-decoration:none;}
 button,input,select,textarea{border-radius:8px;}
-input,textarea{user-select:text;}
 a.link{color:#1655F5;}
 a.link:hover{color:#F53410;}
 .wrap{
@@ -31,6 +30,8 @@ header{
 header *{color:#232323;}
 .main-logo{padding-left:16px;float:left;font-weight:700;color:#000;}
 .main-logo .icon{width:12.5px;height:12.5px;left:0;}
+/* Спрайт вчетверо крупнее клеток, чтобы на Retina значки были гладкими. Выше .main-logo img: там своя ширина */
+.icon img{width:48px;}
 .main-logo img{width:38px;}
 .logo.icon{left:50%;top:0;margin-left:-8px;width:16px;height:16px;}
 header .icon img{position:absolute;bottom:0;}
@@ -54,12 +55,10 @@ p.text{
 }
 p.text.strong{font-weight:700;line-height: 21px;}
 .note{
-    color:#C3BDBD;
     line-height: 20px;
     font-weight: 400;
     font-family: Helvetica,sans-serif;
 }
-.note *{color:#C3BDBD;}
 footer{
     bottom:0;
     position:absolute;
@@ -142,6 +141,7 @@ a.link-row:hover{background: #E6E9F1;}
 .icon.l4 img{margin-top:-72px;}
 .icon.l5 img{margin-top:-96px;}
 .icon.l6 img{margin-top:-120px;}
+.icon.l7 img{margin-top:-144px;}
 .icon.r img{margin-left:-24px;}
 .link-row .arrow{
     left:auto;
@@ -166,6 +166,8 @@ label{
     font-weight:700;
     margin-bottom:10px;
 }
+/* Правило * сбрасывает вложенный span: подпись теряла и жирность, и цвет */
+label span{font-weight:inherit;color:inherit;}
 input,select,textarea{
     font-family:Roboto,sans-serif;
     color:#000;
@@ -186,6 +188,12 @@ input::placeholder{color: #C3BDBD;}
 input:disabled{color: #C3BDBD;}
 .f-row p{margin-top:10px;}
 .form-error, .wifi-error{border-radius: 8px;border:1px solid #F3F6FE;padding:16px;margin-top: 16px;background: linear-gradient(0deg, #F0EBEB, #F0EBEB),linear-gradient(0deg, #F3F6FE, #F3F6FE);}
+/*
+Без текста плашка оставалась пустым прямоугольником: часть кодов состояния
+(WL_IDLE_STATUS, WL_DISCONNECTED) ошибкой не является, и tr() отдаёт для них
+пустую строку.
+*/
+.form-error:empty,.wifi-error:empty{display:none;}
 .error{color:#F53410;}
 
 #wifi-form,
@@ -200,23 +208,32 @@ textarea {
   padding:10px 8px;
   border:1px solid #1655F5;
 }
+/* Окно лога забирает высоту экрана, чтобы прокручивался лог, а не страница */
+main.fill{display:flex;flex-direction:column;}
+main.fill textarea{flex:1;height:auto;min-height:96px;}
 
 .toggle,.radio{margin-top:16px;}
 .toggle input,.radio input{display:none;}
 .toggle label{
     position: relative;
     padding-left:48px;
+    padding-top:2px;
     margin:0;
-    height:24px;
-    line-height: 26px;
+    min-height:24px;
+    line-height: 20px;
 }
 .toggle label:before,.toggle label:after,.radio label:before{display:block;position: absolute;content:'';}
-.toggle label:before{width:40px;height:24px;background: #C3BDBD;left:0;border-radius: 12px;}
+.toggle label:before{width:40px;height:24px;background: #C3BDBD;left:0;top:0;border-radius: 12px;}
 .toggle label:after{width:20px;height:20px;background: #fff;left:2px;top:2px;border-radius: 50%;transition:.5s;}
 /*.toggle input:checked + label:before{background: #1655F5;}
 .toggle input:checked + label:after{left:18px;}*/
 .toggle.active label:before{background: #1655F5;}
 .toggle.active label:after{left:18px;}
+/* Недоступный переключатель: disabled стоит на input, гасим подпись */
+.toggle input:disabled + label{color:#C3BDBD;cursor:default;}
+.toggle input:disabled + label:before{background:#E9E7E7;}
+/* Положение переключателя видно, а цвет говорит "нельзя" */
+.toggle.active input:disabled + label:before{background:#C3BDBD;}
 
 .radio{margin-top:20px;}
 .radio label{padding-left:44px;display:block;position: relative;line-height:32px;height:32px;font-size:20px;}
@@ -231,6 +248,16 @@ textarea {
 .fr{float:right;}
 .clr{clear: both;}
 .hd{display:none;}
+
+/*
+Состояние входа на странице тревог: прошивка вешает класс на блок канала
+(ESP8266/src/core/alarm.h:AlarmInputState), а показ решает разметка. Поля
+порогов гасит input:disabled, подписи к ним - правило ниже.
+*/
+.no-input-note,.no-attiny-note,.no-factor-note{display:none;}
+.no-input .no-input-note,.no-attiny .no-attiny-note,.no-factor .no-factor-note{display:block;}
+.no-input .thresholds,.no-input .stop,.no-attiny .thresholds{display:none;}
+.no-factor .thresholds label{color:#C3BDBD;}
 .mt10{margin-top:10px;}
 .mt16{margin-top:16px;}
 .mt20{margin-top:20px;}
@@ -299,3 +326,9 @@ textarea {
       transform: translate(24px, 0);
     }
   }
+/*модалка потери связи*/
+.modal{position:fixed;z-index:-1;opacity:0;left:0;top:0;width:100%;height:100%;padding:16px;background:rgba(0,0,0,.5);transition:.2s;display:flex;align-items:center;justify-content:center;}
+.modal.show{z-index:20;opacity:1;}
+.modal-box{width:100%;max-width:328px;padding:24px;border-radius:12px;background:#fff;}
+.modal-box h3{margin-bottom:16px;}
+.modal-box p{margin-bottom:24px;}

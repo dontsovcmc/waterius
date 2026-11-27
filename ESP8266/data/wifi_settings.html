@@ -8,7 +8,7 @@
         <script src="/static/common.js"></script>
         <script src="/static/strings.js"></script>
     </head>
-    <body onload="fill_tr_id(%wifi_connect_status%, 'wifi_connect_status');
+    <body onload="fill_tr_id('%wifi_connect_status%', 'wifi_connect_status');
     _init({
         back: '/index.html',
         back_wizard: '/wifi_list.html?wizard=true',
@@ -52,7 +52,7 @@
                         </div>
                         <div class="hd dhcp-form">
                             <div class="f-row">
-                                <label for="gateway">Адрес шлюза</label>
+                                <label for="gateway">Адрес шлюза (роутера)</label>
                                 <input id="gateway" name="gateway" placeholder="192.168.0.1" value="%gateway%">
                                 <p class="error hd" id="gateway-error">Некорректный ip адрес</p>
                             </div>

@@ -25,8 +25,8 @@ bool perform_ota_update(const JsonObject &ota, MasterI2C &masterI2C, Settings &s
     }
     uint16_t avg_mv = sum_mv / 3;
 
-    bool usb_powered = avg_mv > OTA_USB_VOLTAGE_THRESHOLD_MV;
-    if (usb_powered)
+    bool on_usb = usb_powered(avg_mv);
+    if (on_usb)
     {
         LOG_INFO(F("OTA: USB power detected (") << avg_mv << F(" mV), skip battery check"));
     }

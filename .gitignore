@@ -38,3 +38,13 @@ Release
 .pio
 .DS_Store
 .claude
+simulator/dist
+
+# Браузерные проверки симулятора
+simulator/node_modules/
+simulator/package-lock.json
+
+# Логи прогонов стенда
+Utils/hil/logs/
+# Логи прогонов стенда: logs/ГГГГ-мм-ДД-ЧЧ-ММ.log в корне репозитория
+/logs/

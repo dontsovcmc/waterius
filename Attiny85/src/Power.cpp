@@ -7,7 +7,7 @@
 #include "Setup.h"
 
 ESPPowerPin::ESPPowerPin(const uint8_t p)
-    : power_pin(p), wake_up_timestamp(0)
+    : power_pin(p), wake_up_timestamp(0), power_on_timestamp(0)
 {
     pinMode(power_pin, INPUT);
 }
@@ -24,6 +24,7 @@ void ESPPowerPin::power(const bool on)
         digitalWrite(power_pin, LOW);
 #endif
         wake_up_timestamp = millis();
+        power_on_timestamp = wake_up_timestamp;
     }
     else
     {
@@ -42,6 +43,11 @@ void ESPPowerPin::power(const bool on)
 bool ESPPowerPin::elapsed(const unsigned long msec)
 {
     return millis() - wake_up_timestamp > msec;
+}
+
+bool ESPPowerPin::powered_longer_than(const unsigned long msec)
+{
+    return millis() - power_on_timestamp > msec;
 }
 
 void ESPPowerPin::extend_wake_up()

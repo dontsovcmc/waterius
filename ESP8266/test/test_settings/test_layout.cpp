@@ -1,0 +1,151 @@
+#include <gtest/gtest.h>
+#include <stddef.h>
+#include "core/types.h"
+
+/*
+Раскладка Settings в памяти.
+
+Конфигурация лежит в EEPROM сырыми байтами: store_config делает EEPROM.put
+структурой целиком, load_config — EEPROM.get. Ни имён полей, ни версии полей
+там нет, только смещения. Поэтому вставка поля в середину структуры means,
+что каждое прошитое устройство прочитает чужие байты: пароль от Wi-Fi
+превратится в мусор, показания счётчика — в случайное число.
+
+Защита от этого одна: новые поля берутся из хвостового резерва, а смещения
+старых зафиксированы тестом. Числа ниже подсмотрены не из головы — это
+раскладка, с которой устройства ходят в поле.
+*/
+
+TEST(SettingsVersion, BumpNeedsMigration)
+{
+    // Смена версии стирает настройки, кроме ключа и периода (config.cpp:load_config).
+    // Поднимаешь номер - сначала перенос всех полей, порядок в docs/ota-and-reset.md
+    EXPECT_EQ(CURRENT_VERSION, VER_11);
+}
+
+TEST(SettingsLayout, SizeIsFixed)
+{
+    // Тот же размер проверяет static_assert в types.h — здесь он нужен,
+    // чтобы падение было читаемым, а не стеной ошибок компилятора
+    EXPECT_EQ(sizeof(Settings), 960u);
+}
+
+TEST(SettingsLayout, ConnectLogFitsReservedSpace)
+{
+    EXPECT_EQ(sizeof(ConnectError), 3u);
+    EXPECT_EQ(offsetof(Settings, connect_log), 933u);
+    EXPECT_EQ(offsetof(Settings, wifi_connect_errors), 942u);
+    EXPECT_EQ(offsetof(Settings, reserved9), 944u);
+}
+
+TEST(SettingsLayout, ExistingFieldsDidNotMove)
+{
+    EXPECT_EQ(offsetof(Settings, version), 0u);
+    EXPECT_EQ(offsetof(Settings, wakeup_per_min), 612u);
+    EXPECT_EQ(offsetof(Settings, period_min_tuned), 614u);
+    EXPECT_EQ(offsetof(Settings, last_send), 616u);
+    EXPECT_EQ(offsetof(Settings, base_time), 872u);
+    EXPECT_EQ(offsetof(Settings, voltage_cal), 880u);
+}
+
+TEST(SettingsLayout, NewFieldsLiveInTheReservedTail)
+{
+    // Резерв начинался на 882 байте — всё, что добавляем, обязано лежать
+    // за этой границей, иначе поехали бы старые поля
+    EXPECT_GE(offsetof(Settings, last_time_sync), 882u);
+    EXPECT_GE(offsetof(Settings, wakeups_since_sync), 882u);
+    EXPECT_GE(offsetof(Settings, period_min_full), 882u);
+    EXPECT_GE(offsetof(Settings, minutes_since_send), 882u);
+    EXPECT_GE(offsetof(Settings, send_on_consumption), 882u);
+    EXPECT_LT(offsetof(Settings, send_on_consumption), 960u);
+    EXPECT_GE(offsetof(Settings, alarm_confirm), 882u);
+    EXPECT_LT(offsetof(Settings, alarm_confirm), 960u);
+    EXPECT_GT(offsetof(Settings, discovery_signature), offsetof(Settings, alarm_confirm));
+    EXPECT_LT(offsetof(Settings, discovery_signature), 960u);
+    EXPECT_GT(offsetof(Settings, battery_low), offsetof(Settings, discovery_signature));
+    EXPECT_LT(offsetof(Settings, battery_low), 960u);
+}
+
+TEST(SettingsLayout, ReserveHoldsOnlyBytesThatWereZero)
+{
+    // В релизах с 1.0.2 по 2.0.44 резерв кончался на 955-м байте, дальше было
+    // выравнивание компилятора с непредсказуемым содержимым
+    EXPECT_EQ(offsetof(Settings, reserved9) + sizeof(Settings::reserved9), 956u);
+    EXPECT_EQ(offsetof(Settings, padding5), 956u);
+}
+
+TEST(SettingsLayout, FormerAlignmentBytesAreDeclared)
+{
+    EXPECT_EQ(offsetof(Settings, padding0), 530u);
+    EXPECT_EQ(offsetof(Settings, padding1), 574u);
+    EXPECT_EQ(offsetof(Settings, padding2), 882u);
+    EXPECT_EQ(offsetof(Settings, padding3), 903u);
+    EXPECT_EQ(offsetof(Settings, padding4), 926u);
+}
+
+TEST(SettingsLayout, RepurposedReservedByteStayedInPlace)
+{
+    // ntp_sync_count занял бывший reserved8. Смещение то же самое, значит
+    // у прошитых устройств там ноль — ровно то, что нужно: прогрев пройдёт
+    // заново, а не начнётся с мусора
+    EXPECT_EQ(offsetof(Settings, ntp_sync_count), 881u);
+}
+
+TEST(SettingsLayout, TimeFieldsAreEightBytes)
+{
+    // Раскладка считалась при time_t == 8 байт. Четырёхбайтовый time_t
+    // сдвинул бы всё, что лежит после base_time, и заодно вернул бы
+    // проблему 2038 года
+    Settings sett;
+
+    EXPECT_EQ(sizeof(sett.base_time), 8u);
+    EXPECT_EQ(sizeof(sett.last_send), 8u);
+    EXPECT_EQ(sizeof(sett.last_time_sync), 8u);
+}
+
+TEST(SettingsDefaults, FreshDeviceHasNoSyncHistory)
+{
+    // Нулевое время не проходит is_valid_time, значит первое же пробуждение
+    // пойдёт синхронизироваться. Так же выглядит конфигурация устройства,
+    // прошитого старой версией: в резерве были нули.
+    Settings sett;
+
+    EXPECT_EQ(sett.last_time_sync, 0);
+    EXPECT_EQ(sett.wakeups_since_sync, 0);
+    EXPECT_EQ(sett.ntp_error_counter, 0);
+    EXPECT_EQ(sett.ntp_sync_count, 0);
+    EXPECT_EQ(sett.period_min_full, 0);   // поправка ещё не измерена
+}
+
+TEST(SettingsDefaults, IdleModeIsOffAfterUpgrade)
+{
+    // Байты лежали нулями в резерве, поэтому у прошитых устройств режим
+    // экономии после обновления прошивки не включится сам собой (#361)
+    Settings sett;
+
+    EXPECT_EQ(sett.send_on_consumption, 0);
+    EXPECT_EQ(sett.minutes_since_send, 0);
+}
+
+TEST(SettingsDefaults, AlarmConfirmAcceptsAnyRecipient)
+{
+    /*
+    Ноль в резерве означает "достаточно любого получателя" - ровно то, как
+    квитанция о тревоге работала до появления настройки. Иначе обновление
+    прошивки молча ужесточило бы условие и добавило устройству внеплановых
+    сеансов.
+    */
+    Settings sett;
+
+    EXPECT_EQ(sett.alarm_confirm, CONFIRM_ANY);
+    EXPECT_EQ(CONFIRM_ANY, 0);
+}
+
+TEST(SettingsDefaults, DiscoveryIsRepublishedAfterUpgrade)
+{
+    // Ноль - "ничего не опубликовано": первый сеанс после обновления
+    // переотправит конфиги Home Assistant
+    Settings sett;
+
+    EXPECT_EQ(sett.discovery_signature, 0u);
+}

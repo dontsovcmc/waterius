@@ -8,6 +8,7 @@
 #define SETUP_MODE 1
 #define TRANSMIT_MODE 2
 #define MANUAL_TRANSMIT_MODE 3
+#define ALARM_MODE 4
 
 class SlaveI2C
 {
@@ -21,8 +22,10 @@ protected:
     static void requestEvent();
     static void newCommand();
     static void receiveEvent(int howMany);
-    static void getWakeUpPeriod();
     static void getCounterTypes();
+    static void getWakeUpPeriod();
+    static void getAlarmConfig();
+    static void getStopConfig();
     static void extendWakeUp();
 
 public:

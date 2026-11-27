@@ -1,0 +1,712 @@
+#include <gtest/gtest.h>
+#include <math.h>
+#include "core/wakeup.h"
+#include "core/timekeeping.h"
+
+/*
+Тесты фиксируют текущее поведение подстройки периода пробуждения.
+
+Единицы измерения: period_min_tuned — это "кривые минуты attiny", то есть
+сколько минут заказать сторожевому таймеру. Реальное время сна отличается,
+потому что частота watchdog у каждого attiny своя. Задача алгоритма —
+выходить на связь в одно и то же время суток, отсчитывая от base_time.
+*/
+
+namespace
+{
+    const time_t BASE = 1700000000;   // время настройки пользователем
+    const time_t LOOP_START = 1767225600;  // 2026-01-01, старше START_VALID_TIME
+    const long MIN = 60;              // секунд в минуте
+}
+
+// --- нормальная работа ---
+
+TEST(Wakeup, PerfectSleepKeepsPeriod)
+{
+    // Заказали 60, проспали ровно 60 реальных минут — attiny точен, k = 1.
+    WakeupTune tune = tune_wakeup(BASE + 60 * MIN, BASE, BASE, 60, 60, 1);
+
+    EXPECT_EQ(tune.period_min_tuned, 60);
+    EXPECT_DOUBLE_EQ(tune.slept_min, 60.0);
+}
+
+TEST(Wakeup, AttinyRunsFastOrdersMoreMinutes)
+{
+    // Заказали 60, проспали 54 реальных минуты: минута attiny короче реальной.
+    // Чтобы попасть в следующую точку, надо заказать больше кривых минут,
+    // чем до неё реальных.
+    WakeupTune tune = tune_wakeup(BASE + 54 * MIN, BASE, BASE, 60, 60, 1);
+
+    EXPECT_EQ(tune.period_min_tuned, 73);   // до цели 66 реальных минут / k=0.9
+    EXPECT_GT(tune.period_min_tuned, 66);
+}
+
+TEST(Wakeup, AttinyRunsSlowOrdersFewerMinutes)
+{
+    // Заказали 60, проспали 66: минута attiny длиннее реальной.
+    WakeupTune tune = tune_wakeup(BASE + 66 * MIN, BASE, BASE, 60, 60, 1);
+
+    EXPECT_EQ(tune.period_min_tuned, 49);   // до цели 54 реальных минуты / k=1.1
+    EXPECT_LT(tune.period_min_tuned, 54);
+}
+
+// --- нештатные ситуации ---
+
+TEST(Wakeup, MissedWakeupsDoNotBreakCorrection)
+{
+    // Не было интернета: устройство просыпалось три раза, но время узнало
+    // только сейчас. Три пробуждения по 60 минут — attiny точен, k = 1.
+    WakeupTune tune = tune_wakeup(BASE + 180 * MIN, BASE, BASE, 60, 60, 3);
+
+    EXPECT_EQ(tune.period_min_tuned, 60);
+}
+
+TEST(Wakeup, MissedWakeupsWithDriftKeepFraction)
+{
+    // Проспали два периода, при этом attiny отстаёт: 2 * 66 = 132 минуты.
+    // k = 132 / (60 * 2) = 1.1 — ровно то же отставание, что и на одном
+    // периоде, число пропусков на поправку не влияет.
+    WakeupTune tune = tune_wakeup(BASE + 132 * MIN, BASE, BASE, 60, 60, 2);
+
+    EXPECT_EQ(tune.period_min_tuned, 44);
+    EXPECT_LT(tune.period_min_tuned, 60);   // поправка учитывает отставание
+}
+
+TEST(Wakeup, ZeroTunedPeriodDoesNotDivideByZero)
+{
+    // period_min_tuned == 0 — конфиг ещё не подстроен.
+    WakeupTune tune = tune_wakeup(BASE + 60 * MIN, BASE, BASE, 60, 0, 1);
+
+    EXPECT_EQ(tune.period_min_tuned, 60);
+}
+
+TEST(Wakeup, NoSleepAtAllDoesNotDivideByZero)
+{
+    // now == last_send: проснулись мгновенно (ручное пробуждение кнопкой).
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE, 60, 60, 1);
+
+    EXPECT_GT(tune.period_min_tuned, 0);
+    EXPECT_LE(tune.period_min_tuned, 60);
+}
+
+// --- защита от "ловушки" у самой цели ---
+
+TEST(Wakeup, TargetCloserThanOneMinuteSkipsToNextSlot)
+{
+    // До целевой точки 0.1 минуты — целиться в неё бессмысленно,
+    // берём следующую.
+    time_t now = BASE + 120 * MIN - 6;   // 6 секунд до цели
+    WakeupTune tune = tune_wakeup(now, BASE, BASE, 60, 60, 1);
+
+    EXPECT_GT(tune.period_min_tuned, 30);   // не 0 и не доли минуты
+}
+
+TEST(Wakeup, TargetCloserThan30PercentSkipsToNextSlot)
+{
+    // До цели 6 минут при периоде 60 — это меньше 30%, целимся в следующую.
+    WakeupTune tune = tune_wakeup(BASE + 54 * MIN, BASE, BASE, 60, 60, 1);
+
+    EXPECT_GT(tune.period_min_tuned, 60);
+}
+
+TEST(Wakeup, TargetJustOver30PercentIsKept)
+{
+    // До цели 20 минут при периоде 60 — больше 30%, цель не переносим.
+    WakeupTune tune = tune_wakeup(BASE + 40 * MIN, BASE, BASE, 60, 60, 1);
+
+    EXPECT_LT(tune.period_min_tuned, 60);
+}
+
+// --- разные периоды ---
+
+TEST(Wakeup, Period15Min)
+{
+    WakeupTune tune = tune_wakeup(BASE + 15 * MIN, BASE, BASE, 15, 15, 1);
+    EXPECT_EQ(tune.period_min_tuned, 15);
+}
+
+TEST(Wakeup, Period720Min)
+{
+    WakeupTune tune = tune_wakeup(BASE + 720 * MIN, BASE, BASE, 720, 720, 1);
+    EXPECT_EQ(tune.period_min_tuned, 720);
+}
+
+TEST(Wakeup, Period1440MinFitsUint16)
+{
+    // Сутки — максимальный период. Даже с максимальной поправкой (k = 0.7)
+    // результат обязан влезать в uint16_t, иначе устройство проснётся не тогда.
+    WakeupTune tune = tune_wakeup(BASE + 1440 * MIN * 7 / 10, BASE, BASE, 1440, 1440, 1);
+
+    EXPECT_GT(tune.period_min_tuned, 0);
+    EXPECT_LT(tune.period_min_tuned, 65535);
+}
+
+TEST(Wakeup, ResultIsAlwaysPositiveAcrossSchedule)
+{
+    // Проходим сутки с шагом в минуту: период не должен обнуляться никогда —
+    // ноль означает, что attiny больше не разбудит ESP.
+    for (long m = 0; m <= 1440; ++m)
+    {
+        WakeupTune tune = tune_wakeup(BASE + m * MIN, BASE, BASE, 60, 60, 1);
+        ASSERT_GT(tune.period_min_tuned, 0) << "минута " << m;
+    }
+}
+
+// --- сброс после смены периода пользователем ---
+
+TEST(Wakeup, UserChangeGives90PercentOfPeriod)
+{
+    EXPECT_EQ(period_after_user_change(60), 54);
+    EXPECT_EQ(period_after_user_change(1440), 1296);
+}
+
+TEST(Wakeup, UserChangeTruncatesTowardsZero)
+{
+    // 15 * 0.9 = 13.5, приведение к uint16_t отбрасывает дробную часть
+    EXPECT_EQ(period_after_user_change(15), 13);
+}
+
+// --- долгий обрыв связи ---
+
+TEST(Wakeup, OfflineFor48HoursWithDailyPeriod)
+{
+    // Период сутки, устройство двое суток не могло выйти на связь: сервер
+    // лежал или роутер был выключен. Проснулось оно при этом дважды.
+    //
+    // Раньше здесь получалось 1178 вместо 1440: k считался как 2880/1296 =
+    // 2.222, целая часть отбрасывалась, и дробные 0.222 принимались за уход
+    // частоты attiny — хотя это был остаток от пропущенных периодов. Время
+    // выхода на связь уезжало на 4 часа (#345, #347).
+    //
+    // Со счётчиком пробуждений k = 2880 / (1296 * 2) = 1.111 — это настоящая
+    // поправка, и заказ 1296 кривых минут снова даёт сутки реальных.
+    WakeupTune tune = tune_wakeup(BASE + 2880 * MIN, BASE, BASE, 1440, 1296, 2);
+
+    EXPECT_EQ(tune.period_min_tuned, 1296);
+    EXPECT_DOUBLE_EQ(tune.slept_min, 2880.0);
+}
+
+TEST(Wakeup, OfflineFor48HoursWithHourlyPeriod)
+{
+    // Тот же обрыв, но период час: 48 пробуждений по 60 минут.
+    WakeupTune tune = tune_wakeup(BASE + 2880 * MIN, BASE, BASE, 60, 60, 48);
+
+    EXPECT_EQ(tune.period_min_tuned, 60);
+}
+
+TEST(Wakeup, OfflineForMonthKeepsSchedule)
+{
+    // Месяц без связи — 30 пробуждений. Раньше выходило 1080 (сдвиг около
+    // 6 часов), теперь поправка не зависит от длины обрыва.
+    WakeupTune tune = tune_wakeup(BASE + 43200L * MIN, BASE, BASE, 1440, 1296, 30);
+
+    EXPECT_EQ(tune.period_min_tuned, 1296);
+}
+
+// --- attiny перезагрузился ---
+
+TEST(Wakeup, AttinyRebootWakesEspMuchEarlier)
+{
+    // При перезагрузке attiny теряет заказанный период и будит ESP через
+    // свой период по умолчанию (#350): вместо 1296 минут сон вышел 15.
+    // Алгоритм всё равно целится в суточную отметку — 1409 минут.
+    WakeupTune tune = tune_wakeup(BASE + 15 * MIN, BASE, BASE, 1440, 1296, 1);
+
+    EXPECT_EQ(tune.period_min_tuned, 1409);
+}
+
+TEST(Wakeup, AttinyRebootDoesNotPoisonCorrection)
+{
+    // Ранний выход на связь читается как "attiny спешит на 25%", поэтому
+    // на 45 реальных минут заказывается 36 кривых. Ошибка небольшая и
+    // уходит на следующем цикле — в мусор поправка не превращается.
+    WakeupTune tune = tune_wakeup(BASE + 15 * MIN, BASE, BASE, 60, 60, 1);
+
+    EXPECT_EQ(tune.period_min_tuned, 36);
+}
+
+// --- время ушло назад ---
+
+TEST(Wakeup, ClockMovedBackwardsAfterNtp)
+{
+    // NTP может перевести часы назад: до синхронизации время было выдуманным.
+    // Тогда now < last_send и сон получается отрицательным.
+    //
+    // Отрицательный сон ничего не говорит о частоте attiny, поэтому поправка
+    // остаётся нейтральной и устройство просто целится в следующую точку
+    // расписания. Раньше здесь было неопределённое поведение: приведение
+    // отрицательного double к uint16_t.
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE + 120 * MIN, 60, 60, 1);
+
+    EXPECT_EQ(tune.period_min_tuned, 60);
+    EXPECT_DOUBLE_EQ(tune.slept_min, -120.0);
+}
+
+TEST(Wakeup, ClockMovedBackwardsADay)
+{
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE + 1440 * MIN, 1440, 1296, 1);
+
+    EXPECT_EQ(tune.period_min_tuned, 1440);
+}
+
+// --- длинные периоды: результат обязан влезать в uint16_t ---
+
+TEST(Wakeup, ThirtyDayPeriodFitsWithoutClamp)
+{
+    // 30 суток — законный период, до предела типа ещё есть запас
+    const uint16_t PER = 43200;
+    WakeupTune tune = tune_wakeup(BASE + 60, BASE, BASE + 60 - 30240L * MIN, PER, 43200, 1);
+
+    EXPECT_EQ(tune.period_min_tuned, 61713);
+}
+
+TEST(Wakeup, PeriodBeyond32DaysFallsBackInsteadOfWrapping)
+{
+    // 47000 минут (32.6 суток): деление на k = 0.7 даёт 67141, что не влезает
+    // в uint16_t. Раньше приведение оборачивалось в 1605 — устройство
+    // просыпалось через сутки вместо 46. Теперь откат к номинальному периоду.
+    const uint16_t PER = 47000;
+    WakeupTune tune = tune_wakeup(BASE + 60, BASE, BASE + 60 - 32900L * MIN, PER, 47000, 1);
+
+    EXPECT_EQ(tune.period_min_tuned, PER);
+}
+
+TEST(Wakeup, MaximumPeriodFallsBack)
+{
+    const uint16_t PER = 65535;
+    WakeupTune tune = tune_wakeup(BASE + 60, BASE, BASE + 60 - 45874L * MIN, PER, 65530, 1);
+
+    EXPECT_EQ(tune.period_min_tuned, PER);
+}
+
+TEST(Wakeup, HugeSleepDoesNotOverflowCorrection)
+{
+    // Сон, деление которого на период даёт k больше 65535: приведение к
+    // uint16_t было бы неопределённым, floor — нет
+    WakeupTune tune = tune_wakeup(BASE + 900000L * MIN, BASE, BASE, 60, 13, 1);
+
+    EXPECT_GT(tune.period_min_tuned, 0);
+    EXPECT_LE(tune.period_min_tuned, 65535);
+}
+
+
+// --- число пропущенных периодов не влияет на поправку (#345, #347) ---
+
+TEST(Wakeup, DriftEstimateIsIndependentOfMissedPeriods)
+{
+    // attiny отстаёт на 10%: реальный сон длиннее заказанного в 1.1 раза.
+    // Сколько бы периодов подряд ни прошло без связи, поправка обязана
+    // получиться одна и та же — это свойство железа, а не длины обрыва.
+    //
+    // base_time == now, поэтому до следующей точки расписания ровно период,
+    // и результат зависит только от поправки: 60 / 1.1 = 55.
+    const uint16_t PER = 60;
+
+    for (uint16_t n = 1; n <= 24; ++n)
+    {
+        const long slept = 66L * n;
+        WakeupTune tune = tune_wakeup(BASE, BASE, BASE - slept * MIN, PER, PER, n);
+
+        EXPECT_EQ(tune.period_min_tuned, 55) << "периодов: " << n;
+    }
+}
+
+TEST(Wakeup, DriftEstimateBreaksWithoutPeriodCount)
+{
+    // Тот же обрыв, но число периодов не передали (как считалось до #357):
+    // 1.1 превращается в 13.2, целая часть отбрасывается, и вместо поправки
+    // 1.1 получается 1.2 — период уезжает.
+    WakeupTune honest = tune_wakeup(BASE, BASE, BASE - 66L * 12 * MIN, 60, 60, 12);
+    WakeupTune blind = tune_wakeup(BASE, BASE, BASE - 66L * 12 * MIN, 60, 60, 1);
+
+    EXPECT_EQ(honest.period_min_tuned, 55);
+    EXPECT_NE(blind.period_min_tuned, honest.period_min_tuned);
+}
+
+TEST(Wakeup, WeeklySyncGivesUsableCorrection)
+{
+    // Реальный сценарий #357: синхронизация раз в неделю. Период час,
+    // attiny спешит на 5% — за 168 пробуждений разница накапливается,
+    // и поправка обязана её увидеть.
+    const long slept = 57L * 168;   // 57 реальных минут вместо 60 заказанных
+
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE - slept * MIN, 60, 60, 168);
+
+    // k = 0.95, значит на час реального времени надо заказать ~63 кривых минуты
+    EXPECT_EQ(tune.period_min_tuned, 63);
+}
+
+TEST(Wakeup, ZeroPeriodsSleptFallsBackToOne)
+{
+    // Счётчик пробуждений потерялся: считаем, что проспали один период —
+    // прежнее поведение, лишь бы не делить на ноль
+    WakeupTune zero = tune_wakeup(BASE + 66 * MIN, BASE, BASE, 60, 60, 0);
+    WakeupTune one = tune_wakeup(BASE + 66 * MIN, BASE, BASE, 60, 60, 1);
+
+    EXPECT_EQ(zero.period_min_tuned, one.period_min_tuned);
+}
+
+
+// --- целый период с поправкой: для ручного пробуждения (#380) ---
+
+TEST(FullPeriod, EqualsNominalWhenAttinyIsExact)
+{
+    // k = 1: кривая минута равна реальной
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE - 60 * MIN, 60, 60, 1);
+
+    EXPECT_EQ(tune.period_min_full, 60);
+}
+
+TEST(FullPeriod, ShorterWhenAttinyRunsSlow)
+{
+    // attiny спит на 10% дольше заказанного: чтобы получить час реального
+    // времени, заказывать надо 55 кривых минут
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE - 66 * MIN, 60, 60, 1);
+
+    EXPECT_EQ(tune.period_min_full, 55);
+}
+
+TEST(FullPeriod, LongerWhenAttinyRunsFast)
+{
+    // attiny спешит: 57 реальных минут вместо 60 заказанных
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE - 57 * MIN, 60, 60, 1);
+
+    EXPECT_EQ(tune.period_min_full, 63);
+}
+
+TEST(FullPeriod, DoesNotDependOnDistanceToNextSlot)
+{
+    // Главное свойство: period_min_tuned меняется от того, куда целимся,
+    // а целый период — только от поправки. Из-за этого нажатие кнопки и
+    // промахивалось: в attiny уходило "сколько осталось до точки".
+    const time_t SLEPT = BASE - 66 * MIN;
+
+    WakeupTune near_slot = tune_wakeup(BASE, BASE - 1380 * MIN, SLEPT, 1440, 1309, 1);
+    WakeupTune far_slot = tune_wakeup(BASE, BASE, SLEPT, 1440, 1309, 1);
+
+    EXPECT_NE(near_slot.period_min_tuned, far_slot.period_min_tuned);
+    EXPECT_EQ(near_slot.period_min_full, far_slot.period_min_full);
+}
+
+TEST(FullPeriod, DailyPeriodWithDrift)
+{
+    // Сутки при attiny, спящем на 10% дольше: 1440 / 1.1 = 1309
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE - 1584 * MIN, 1440, 1440, 1);
+
+    EXPECT_EQ(tune.period_min_full, 1309);
+}
+
+TEST(FullPeriod, FitsUint16OnLongPeriods)
+{
+    // 65535 / 0.7 не влезает в uint16_t — как и period_min_tuned,
+    // откатываемся к номиналу вместо неопределённого поведения
+    const uint16_t PER = 65535;
+    WakeupTune tune = tune_wakeup(BASE, BASE, BASE - 45874L * MIN, PER, 65530, 1);
+
+    EXPECT_EQ(tune.period_min_full, PER);
+}
+
+TEST(ManualWakeup, UsesMeasuredFullPeriod)
+{
+    // Нажали кнопку: расписание начинается с этой минуты, значит заказать
+    // надо целый период с поправкой
+    EXPECT_EQ(period_after_manual_wakeup(1309, 1440), 1309);
+}
+
+TEST(ManualWakeup, FallsBackWhenDriftUnknown)
+{
+    // Поправку ещё не измеряли (новое устройство): заказываем как при смене
+    // периода — на 10% меньше номинала. Проснуться раньше цели не страшно,
+    // поправка доберёт на следующем цикле; проснуться сильно позже — хуже,
+    // ближайшая точка расписания будет уже пропущена.
+    EXPECT_EQ(period_after_manual_wakeup(0, 1440), period_after_user_change(1440));
+}
+
+// --- период, который уезжает в attiny (#350) ---
+
+TEST(PeriodToAttiny, CatchupOrdersTunedPeriod)
+{
+    // Сеанс, в котором посчитали доводку: её и заказываем
+    EXPECT_EQ(period_to_attiny(1309, 1440, true, 1440), 1309);
+}
+
+TEST(PeriodToAttiny, WithoutCatchupOrdersFullPeriod)
+{
+    // Все остальные сеансы до следующей синхронизации идут целым периодом.
+    // Ради этого правка и делалась: доводка в 5 минут, повторённая каждым
+    // сном, превращала период 15 минут в 288 пробуждений за сутки
+    EXPECT_EQ(period_to_attiny(5, 15, false, 15), 15);
+}
+
+TEST(PeriodToAttiny, FallsBackWhenTunedIsZero)
+{
+    // Ноль attiny игнорирует и остаётся со своим умолчанием в 15 минут.
+    // Такой конфиг встречается у старых устройств, поэтому подставляем
+    // номинал с запасом в 10%.
+    EXPECT_EQ(period_to_attiny(0, 0, true, 1440), period_after_user_change(1440));
+    EXPECT_GT(period_to_attiny(0, 0, true, 1440), 0);
+}
+
+TEST(PeriodToAttiny, FallsBackToTunedWhileFullIsUnknown)
+{
+    // Первое окно: целый период ещё не измеряли, остаётся прежнее поведение
+    EXPECT_EQ(period_to_attiny(13, 0, false, 15), 13);
+}
+
+TEST(PeriodToAttiny, ShortPeriodSurvives)
+{
+    // 5 минут при отладке — тот самый период, который терялся
+    EXPECT_EQ(period_to_attiny(4, 4, true, 5), 4);
+}
+
+// --- период переживает смену версии конфига (#350) ---
+
+TEST(RestoreWakeupPeriod, KeepsUserPeriod)
+{
+    // Ради этого всё и делается: после обновления прошивки период
+    // пользователя остаётся, а не превращается в сутки молчания
+    EXPECT_EQ(restore_wakeup_period(5, 1440), 5);
+    EXPECT_EQ(restore_wakeup_period(60, 1440), 60);
+    EXPECT_EQ(restore_wakeup_period(1440, 1440), 1440);
+}
+
+TEST(RestoreWakeupPeriod, ZeroIsRejected)
+{
+    // Нулевого периода не бывает: в старом конфиге по этому смещению
+    // лежало что-то другое
+    EXPECT_EQ(restore_wakeup_period(0, 1440), 1440);
+}
+
+TEST(RestoreWakeupPeriod, TooLongIsRejected)
+{
+    // Мусор из чужого поля мог бы усыпить устройство на месяц.
+    // Откат к умолчанию — это прежнее поведение, оно безопасно.
+    EXPECT_EQ(restore_wakeup_period(MAX_RESTORED_PERIOD_MIN + 1, 1440), 1440);
+    EXPECT_EQ(restore_wakeup_period(60000, 1440), 1440);
+    EXPECT_EQ(restore_wakeup_period(65535, 1440), 1440);
+}
+
+TEST(RestoreWakeupPeriod, FallbackIsUsedAsIs)
+{
+    // Умолчание задаёт вызывающий код, ядро своего не выдумывает
+    EXPECT_EQ(restore_wakeup_period(0, 720), 720);
+}
+
+
+// --- знаменатель поправки: сны в окне разной длины ---
+
+TEST(Wakeup, DriftCountsCatchupSeparately)
+{
+    /*
+    Окно из 96 снов: первый — доводка в 10 минут, остальные 95 — целый период
+    в 15. Заказано 10 + 95*15 = 1435 кривых минут, столько же и проспали,
+    значит attiny точна и целый период остаётся прежним.
+
+    Если считать всё окно по доводке (10 * 96 = 960), выйдет k = 1.49, то есть
+    несуществующий дрейф в полтора раза.
+    */
+    const long slept = 1435;
+
+    WakeupTune tune = tune_wakeup(BASE + slept * MIN, BASE, BASE, 15, 10, 96, 15);
+
+    EXPECT_EQ(tune.period_min_full, 15);
+}
+
+TEST(Wakeup, DriftWithoutFullPeriodKeepsOldFormula)
+{
+    // Ноль означает "целый период ещё не измеряли": все сны окна шли одним
+    // значением, как было до появления доводки
+    WakeupTune with_zero = tune_wakeup(BASE + 1440 * MIN, BASE, BASE, 15, 15, 96, 0);
+    WakeupTune without = tune_wakeup(BASE + 1440 * MIN, BASE, BASE, 15, 15, 96);
+
+    EXPECT_EQ(with_zero.period_min_full, without.period_min_full);
+    EXPECT_EQ(with_zero.period_min_tuned, without.period_min_tuned);
+}
+
+/*
+--- замкнутый контур: сутки за сутками ---
+
+Все проверки выше — на один вызов. Ошибка, ради которой писан этот блок, на
+одном вызове не видна вовсе: tune_wakeup возвращает верное число, а ломается
+то, что это число потом заказывается каждым сном до следующей синхронизации.
+
+Модель повторяет цикл прошивки: сон на заказанное, пробуждение, срок NTP по
+need_ntp_sync, подстройка в update_config, заказ периода через
+period_to_attiny.
+*/
+namespace
+{
+    struct Device
+    {
+        uint16_t wakeup_per_min;
+        double drift;            // во сколько раз реальный сон длиннее заказанного
+
+        // Цикл идёт через is_valid_time, поэтому стартуем с достоверной даты:
+        // BASE выше — ноябрь 2023, то есть для прошивки "часы не выставлены"
+        time_t now = LOOP_START;
+        time_t base_time = 0;
+        time_t last_sync = 0;
+        uint16_t period_min_tuned = 0;
+        uint16_t period_min_full = 0;
+        uint16_t wakeups_since_sync = 0;
+        uint8_t sync_count = 0;
+        bool synced_now = false;
+
+        long wakeups = 0;        // всего пробуждений
+        double min_sleep = 1e9;  // самый короткий реальный сон, минут
+        double max_sleep = 0;
+
+        Device(uint16_t period, double k) : wakeup_per_min(period), drift(k)
+        {
+            period_min_tuned = period_after_user_change(period);
+        }
+
+        // Насколько устройство разошлось с расписанием base_time + N * период
+        double phase_min() const
+        {
+            const double since = difftime(now, base_time) / 60.0;
+            double phase = since - floor(since / wakeup_per_min) * wakeup_per_min;
+            return phase > wakeup_per_min / 2.0 ? phase - wakeup_per_min : phase;
+        }
+
+        void one_wakeup()
+        {
+            const uint16_t ordered = period_to_attiny(period_min_tuned, period_min_full,
+                                                      synced_now, wakeup_per_min);
+            const double slept = ordered * drift;
+            now += (time_t)llround(slept * 60);
+            wakeups++;
+            if (slept < min_sleep) min_sleep = slept;
+            if (slept > max_sleep) max_sleep = slept;
+
+            wakeups_since_sync = bump_wakeups(wakeups_since_sync);
+            if (!is_valid_time(base_time)) base_time = now;
+
+            synced_now = need_ntp_sync(last_sync, wakeups_since_sync, 0,
+                                       wakeup_per_min, sync_count);
+            if (!synced_now) return;
+
+            if (sync_count < NTP_WARMUP_SYNCS) sync_count++;
+            if (is_valid_time(last_sync) && wakeups_since_sync > 0)
+            {
+                WakeupTune tune = tune_wakeup(now, base_time, last_sync, wakeup_per_min,
+                                              period_min_tuned, wakeups_since_sync,
+                                              period_min_full);
+                period_min_tuned = tune.period_min_tuned;
+                period_min_full = tune.period_min_full;
+            }
+            last_sync = now;
+            wakeups_since_sync = 0;
+        }
+
+        void run_days(int days)
+        {
+            const time_t finish = now + (time_t)days * 24 * 3600;
+            while (now < finish) one_wakeup();
+        }
+    };
+}
+
+TEST(WakeupLoop, CadenceMatchesUserPeriod)
+{
+    /*
+    Ради этого всё и делается. Период 15 минут, attiny точна: за пять суток
+    ожидается 5 * 96 = 480 пробуждений.
+
+    До правки устройство залипало на доводке в 5 минут и просыпалось 288 раз
+    в сутки вместо 96 — почти полторы тысячи за тот же срок.
+    */
+    Device device(15, 1.0);
+    device.run_days(5);
+
+    EXPECT_NEAR(device.wakeups, 5 * 96, 5);
+}
+
+TEST(WakeupLoop, CadenceSurvivesAttinyDrift)
+{
+    // Attiny спешит на 15%: поправка обязана это съесть, а не переложить
+    // ошибку в период
+    Device device(15, 1.15);
+    device.run_days(5);
+
+    EXPECT_NEAR(device.wakeups, 5 * 96, 5);
+}
+
+TEST(WakeupLoop, ShortAndLongPeriodsKeepCadence)
+{
+    Device fast(5, 1.0);
+    fast.run_days(3);
+    EXPECT_NEAR(fast.wakeups, 3 * 288, 5);
+
+    Device hourly(60, 0.9);
+    hourly.run_days(3);
+    EXPECT_NEAR(hourly.wakeups, 3 * 24, 3);
+
+    Device daily(1440, 1.1);
+    daily.run_days(5);
+    EXPECT_NEAR(daily.wakeups, 5, 2);
+}
+
+TEST(WakeupLoop, ScheduleHoldsAndRecoversFromShift)
+{
+    /*
+    Внеплановый сеанс (тревога, кнопка) сдвигает фазу. Расписание обязано
+    сойтись обратно: пользователь ждёт показания в то же время суток.
+    */
+    Device device(15, 1.15);
+    device.run_days(2);
+
+    device.now += 7 * 60;   // сеанс не по расписанию сдвинул устройство на 7 минут
+    device.run_days(3);
+
+    EXPECT_LT(fabs(device.phase_min()), 2.0);
+}
+
+TEST(WakeupLoop, SleepsStayCloseToPeriod)
+{
+    /*
+    Доводка допускается ровно одна на окно, и она короче периода. Все
+    остальные сны — целый период: разброс не должен превращаться в
+    "просыпаемся когда придётся".
+    */
+    Device device(15, 1.0);
+    device.run_days(5);
+
+    EXPECT_GE(device.min_sleep, 15 * 0.3);   // короче защита не пускает
+    EXPECT_LE(device.max_sleep, 15 * 1.4);
+}
+
+TEST(WakeupLoop, RoundingErrorDoesNotPileUpBetweenSyncs)
+{
+    /*
+    Attiny принимает период в целых минутах, и 60 / 1.008 = 59.52 округляется
+    до 60: полминуты ошибки на каждый сон, всегда в одну сторону. При
+    синхронизации раз в сутки к её концу набегало до 9 минут, а доводка
+    выходила сном в 54 или 71 минуту вместо 60.
+
+    Проверяем каждое пробуждение, а не конец прогона: худший момент — перед
+    самой синхронизацией.
+    */
+    struct Case { uint16_t period; double drift; double max_phase; };
+    const Case cases[] = {
+        {60, 1.008, 1.0},   // синхронизация каждое пробуждение
+        {60, 0.97, 1.0},
+        {15, 1.02, 2.0},    // каждое третье: между ними копится до трёх округлений
+    };
+
+    for (const Case &c : cases)
+    {
+        Device device(c.period, c.drift);
+        device.run_days(1);   // прогрев и первые подстройки
+
+        double worst = 0;
+        const time_t finish = device.now + 3L * 24 * 3600;
+        while (device.now < finish)
+        {
+            device.one_wakeup();
+            worst = std::max(worst, fabs(device.phase_min()));
+        }
+
+        EXPECT_LT(worst, c.max_phase) << "период " << c.period << ", дрейф " << c.drift;
+    }
+}

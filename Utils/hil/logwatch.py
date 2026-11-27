@@ -1,0 +1,1313 @@
+"""
+Лог Ватериуса как объект: строки одного сеанса и разобранные из них поля.
+
+Почему не regex прямо в тестах. Блоки отправки печатаются дважды за сеанс, если
+сервер прислал настройки (main.cpp: apply_settings, затем повторный send_data),
+а `HTTP: Send OK` одинаков для waterius.ru и для своего сервера. Искать строку по
+всему буферу - значит рано или поздно поймать не ту. Поэтому буфер режется на
+сеансы (от `Startup mode:` до `Going to sleep`), и утверждения пишутся про сеанс.
+
+Склейка разрезанных строк. Плата METF хранит лог кольцом строк по 60 символов, а
+префикс лога Ватериуса (`01:23:456-025/03%  INFO  : `) занимает 27 - на текст
+остаётся 32, и почти каждая строка приезжает кусками. Куски узнаются по началу:
+настоящая строка начинается с временной метки, продолжение - нет. Клиентский
+параметр prefix='00:' делает то же самое, но перестаёт работать через минуту
+после включения ЕСП, когда минуты в метке становятся не нулевыми.
+"""
+
+from __future__ import annotations
+
+import re
+import time
+from dataclasses import dataclass, field
+from typing import Any
+
+import requests
+from loguru import logger
+
+from .hostclock import host
+
+# Осечка связи, а не отказ платы. Свой список, а не импорт из metf.py: разбор
+# лога проверяется без железа, и тянуть сюда клиент METF незачем
+NETWORK_ERRORS = (requests.RequestException, OSError)
+
+# Начало настоящей строки лога: MM:SS:mmm (Logging.h, LOG_FORMAT_TIME).
+LINE_START = re.compile(r'^\d{2}:\d{2}:\d{3}')
+
+# Режимы пробуждения, core/types.h
+SETUP_MODE = 1
+TRANSMIT_MODE = 2
+MANUAL_TRANSMIT_MODE = 3
+ALARM_MODE = 4
+
+# SendStatus, core/blink.h
+SEND_SKIPPED = 0
+SEND_OK = 1
+SEND_BAD_ANSWER = 2
+SEND_NO_CONNECTION = 3
+
+# Коды ошибок = число вспышек светодиода на TX (core/blink.h, ErrorBlynks).
+# Стенд их не считает, а только читает выбранный прошивкой код из лога.
+BLYNK_LOW_VOLTAGE = 1
+BLYNK_ROUTER = 2
+BLYNK_CLOUD = 3          # и облако, и свой сервер: у них общий код
+BLYNK_MQTT = 4
+BLYNK_CONFIG = 5
+BLYNK_CLOUD_ANSWER = 6
+
+BLYNK_NAMES = {
+    BLYNK_LOW_VOLTAGE: 'низкое питание',
+    BLYNK_ROUTER: 'нет роутера',
+    BLYNK_CLOUD: 'облако или свой сервер',
+    BLYNK_MQTT: 'брокер',
+    BLYNK_CONFIG: 'настройки',
+    BLYNK_CLOUD_ANSWER: 'ответ облака',
+}
+
+# Коды про отправку. Отделены от остальных, потому что проверки отправки
+# сверялись с «моргания нет вовсе», а низкое питание (код 1) - беда стенда, и
+# от неё падали тесты с текстом про получателей, которые были ни при чём
+SENDING_BLYNKS = (BLYNK_ROUTER, BLYNK_CLOUD, BLYNK_MQTT, BLYNK_CLOUD_ANSWER)
+
+
+def blynk_name(code: int | None) -> str:
+    """Код моргания словами: в тексте падения «3» ничего не объясняет."""
+    if code is None:
+        return 'молчит'
+    return f'код {code} ({BLYNK_NAMES.get(code, "неизвестный")})'
+
+RE_MODE = re.compile(r'Startup mode: (\d)')
+RE_ATTINY_VER = re.compile(r'attiny firmware ver: (\d+)')
+RE_RESET_REASON = re.compile(r'Reset reason: (\d+), esp restarted: ([01])')
+RE_ESP_VER = re.compile(r'Firmware ver: (\d+)\.(\d+)\.(\d+)')
+RE_MAC = re.compile(r'MAC Address:\s*((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})')
+RE_IMP0 = re.compile(r'\bimp0:(\d+)')
+RE_IMP1 = re.compile(r'\bimp1:(\d+)')
+RE_ALARM_CONFIG = re.compile(
+    r'Alarm config: quantum0=(\d+) quanta0=(\d+) vol0=(\d+)'
+    r' quantum1=(\d+) quanta1=(\d+) vol1=(\d+)'
+    r' vacation=([01]) reset=(\d+)')
+RE_ALARM_CONFIRM = re.compile(
+    r'Alarm confirm: mask=(\d+) waterius=(\d) http=(\d) mqtt=(\d) any=([01]) -> ([01])')
+RE_STOP_CONFIG = re.compile(r'Stop config: min0=(\d+) min1=(\d+)')
+RE_IDLE_SEND = re.compile(r'Idle: consumed=([01]), silence_min=(\d+), transmit=([01])')
+RE_HTTP_CODE = re.compile(r'HTTP: Response code: (-?\d+)')
+
+# Попытки подключиться к сети: прошивка печатает их по одной (`wifi.cpp`).
+# Число попыток - улика к отказу подключения: одна значит, что устройству
+# больше и не разрешали, две - что сеть не отозвалась ни разу.
+RE_WIFI_ATTEMPT = re.compile(r'WIFI: Attempt #(\d+)')
+
+# Публикация в MQTT глазами самой прошивки: по строке на топик и итог. Нужны,
+# чтобы отличить «устройство не опубликовало» от «брокер не получил»: раньше
+# отказ говорил только про брокер, и виноватым выглядело устройство.
+RE_MQTT_PUB = re.compile(r'MQTT: pub (\S+) size=(\d+) retain=([01])')
+RE_MQTT_DONE = re.compile(r'MQTT: Publish data finished: (\d+) topics, (\d+) ms')
+RE_MQTT_FAIL = re.compile(r'MQTT: Publish failed: (\S+) \(([^)]*)\)')
+# «pub» значит «легло в буфер TCP»; дошло ли до брокера, говорит только
+# ожидание подтверждения перед закрытием (sender_mqtt.h, disconnect_mqtt)
+RE_MQTT_FLUSHED = re.compile(r'MQTT: Flushed in (\d+) ms')
+RE_MQTT_FLUSH_FAILED = re.compile(r'MQTT: Flush failed, no ack for (\d+) ms')
+# Код ошибки, который прошивка собралась моргать (wleds.cpp, blynk_error).
+# Успех не моргается вовсе, поэтому строки в удачном сеансе нет.
+RE_BLYNK = re.compile(r'Blynk: code=(\d+)')
+RE_CONNECT_LOG = re.compile(r'Connect log: (\S*), errors: \d+')
+RE_PERIOD_ATTINY = re.compile(r'Wakeup period, min \(attiny\):(\d+)')
+RE_APPLY = re.compile(r'Apply setting: (\S+)=(\S*)')
+# Значение, прошедшее валидацию и попавшее в настройки. Единственный
+# способ проверить параметр, которого нет в посылке: адрес брокера, порт,
+# включённость получателя.
+RE_SAVED = re.compile(r'Saved: (\S+)=(\S*)')
+
+# Настройки, напечатанные при загрузке (config.cpp: print_settings). Секции
+# идут заголовками, а `state=` и `host=` внутри них называются одинаково -
+# поэтому разбор идёт с оглядкой на текущую секцию, а не по одной строке.
+RE_SECTION = re.compile(r'--- (\S+) ---')
+SECTION_KEYS = {'Waterius.ru': 'waterius', 'HTTP': 'http', 'MQTT': 'mqtt',
+                'Network': 'network'}
+# Остальные поля секций - именами параметров прошивки: их нет в посылке, и
+# без них стенд не знал бы, выполнены ли требования теста
+SECTION_FIELDS = {
+    'waterius': (('waterius_email', re.compile(r'\bemail=(\S*)')),),
+    'mqtt': (('mqtt_auto_discovery', re.compile(r'\bauto discovery=(\d)')),
+             ('mqtt_retain', re.compile(r'\bretain=(\d)'))),
+    'network': (('ntp_server', re.compile(r'\bntp_server=(\S*)')),),
+}
+RE_STATE = re.compile(r'\bstate=(ON|OFF)\b')
+RE_HOST = re.compile(r'\bhost=(\S*)')
+# У брокера порт печатается той же строкой, что и адрес (config.cpp).
+RE_PORT = re.compile(r'\bport=(\d+)')
+RE_WIFI_SSID = re.compile(r'\bwifi_ssid=(\S*)')
+
+SESSION_END = 'Going to sleep'
+
+# Первая строка нового включения ЕСП. Нужна как вторая граница сеанса: сеанс
+# режима настройки заканчивается перезапуском и `Going to sleep` не печатает,
+# поэтому по одной строке засыпания два пробуждения склеивались в одно, а с
+# фильтром по режиму нужный сеанс выбрасывался вместе с чужим.
+RE_BOOT = re.compile(r'\bChipId: ')
+
+# Стартовый лог ЕСП (main.cpp: setup, master_i2c.cpp) печатается до разговора с
+# attiny: по нему видно, что ЕСП жива и чем прошита, даже когда сеанса не будет.
+RE_ESP_BOOT_VER = re.compile(r'ESP firmware ver: (\S+)')
+RE_BUILD = re.compile(r'Build: (.+?)\s*$')
+RE_ERROR = re.compile(r'\bERROR\s*:\s*(.+?)\s*$')
+ATTINY_LOST = 'Attiny not found.'
+
+MODE_NAMES = {SETUP_MODE: 'настройка', TRANSMIT_MODE: 'по расписанию',
+              MANUAL_TRANSMIT_MODE: 'кнопка', ALARM_MODE: 'тревога'}
+
+# Строки, которые прошивка печатает о своих главных событиях: подключение к
+# сети и брокеру, исход отправки, уход в сон.
+RE_WIFI_JOINED = re.compile(r'WIFI: SSID: (\S+) Channel: (\d+)')
+RE_WIFI_FAILED = re.compile(r'WIFI: Connection failed\.')
+RE_MQTT_JOINED = re.compile(r'MQTT: Connected\.')
+RE_MQTT_REFUSED = re.compile(r'MQTT: Connect(?:ing)? failed(?: with state (-?\d+))?')
+RE_SEND_START = re.compile(r'(WATR|HTTP): Send new data')
+RE_SENT = re.compile(r'(WATR|HTTP): Data sent\. Time (\d+) ms')
+RE_SEND_FAILED = re.compile(r'(WATR|HTTP): Failed send data\. Time (\d+) ms')
+RE_SLEEP = re.compile(re.escape(SESSION_END))
+SENDER_NAMES = {'WATR': 'waterius.ru', 'HTTP': 'свой сервер'}
+
+# Метки лога прогона: что сказать человеку про строку устройства. Разбирается
+# первое подходящее правило, поэтому ошибка «вообще» стоит последней - иначе
+# она перехватывала бы и отказ сети, и потерянную attiny.
+DEVICE_MARKS: tuple[tuple[re.Pattern[str], str, Any], ...] = (
+    (RE_MODE, 'info',
+     lambda m: f'проснулся, режим {m[1]} - {MODE_NAMES.get(int(m[1]), "?")}'),
+    (RE_WIFI_JOINED, 'info', lambda m: f'подключился к «{m[1]}», канал {m[2]}'),
+    (RE_WIFI_FAILED, 'warning', lambda m: 'к сети не подключился'),
+    (RE_MQTT_JOINED, 'info', lambda m: 'подключился к брокеру'),
+    (RE_MQTT_REFUSED, 'warning',
+     lambda m: f'к брокеру не подключился{f" (state {m[1]})" if m[1] else ""}'),
+    (RE_MQTT_DONE, 'info', lambda m: f'опубликовал {m[1]} топиков за {m[2]} мс'),
+    (RE_MQTT_FAIL, 'warning', lambda m: f'не опубликовал {m[1]} ({m[2]})'),
+    (RE_MQTT_FLUSH_FAILED, 'warning',
+     lambda m: f'брокер не подтвердил хвост публикаций за {m[1]} мс - он потерян'),
+    (RE_HTTP_CODE, 'info', lambda m: f'сервер ответил {m[1]}'),
+    (RE_SENT, 'info',
+     lambda m: f'отправил на {SENDER_NAMES[m[1]]} за {m[2]} мс'),
+    (RE_SEND_FAILED, 'warning',
+     lambda m: f'не отправил на {SENDER_NAMES[m[1]]} ({m[2]} мс)'),
+    (RE_SLEEP, 'info', lambda m: 'ушёл в сон'),
+    (re.compile(re.escape(ATTINY_LOST)), 'warning',
+     lambda m: 'attiny не отвечает по i2c («Attiny not found.»): сеанса не '
+               'будет - шлейф, питание и фьюзы attiny, docs/flashing.md'),
+    (RE_ERROR, 'warning', lambda m: f'ошибка: {m[1]}'),
+)
+
+# Чем кончилось пробуждение по кнопке (LogWatcher.wait_wake)
+WAKE_SESSION = 'session'        # attiny ответила, сеанс начался
+WAKE_NO_ATTINY = 'no_attiny'    # ЕСП жива, attiny молчит на i2c
+WAKE_SILENT = 'silent'          # на UART ни строки
+WAKE_STUCK = 'stuck'            # ЕСП печатает, но ни сеанса, ни ошибки attiny
+
+
+def parse_reset_reason(text: str) -> tuple[int, bool] | None:
+    """Строка `Reset reason: N, esp restarted: X` из лога загрузки ЕСП."""
+    m = RE_RESET_REASON.search(text)
+    return (int(m.group(1)), m.group(2) == '1') if m else None
+
+
+@dataclass
+class Wake:
+    """Стартовый лог одного пробуждения: жива ли ЕСП и ответила ли ей attiny."""
+
+    state: str
+    lines: list[str]
+    waited: float
+    raw: str = ''       # всё, что отдала METF, включая недописанную строку
+
+    def dump(self) -> str:
+        """Всё прочитанное платой после нажатия, как есть."""
+        if not self.raw:
+            return 'METF не отдала ни байта'
+        if not self.lines:
+            return f'METF отдала {len(self.raw)} байт, ни одной полной строки: {self.raw!r}'
+        return f'METF отдала {len(self.raw)} байт:\n{self.raw.rstrip()}'
+
+    def _first(self, pattern: re.Pattern[str]) -> str | None:
+        for line in self.lines:
+            m = pattern.search(line)
+            if m:
+                return m.group(1)
+        return None
+
+    @property
+    def esp_version(self) -> str | None:
+        return self._first(RE_ESP_BOOT_VER)
+
+    @property
+    def build(self) -> str | None:
+        return self._first(RE_BUILD)
+
+    @property
+    def errors(self) -> list[str]:
+        return [m.group(1) for m in map(RE_ERROR.search, self.lines) if m]
+
+    @property
+    def blynk(self) -> int | None:
+        code = self._first(RE_BLYNK)
+        return int(code) if code is not None else None
+
+    def describe(self, button: str) -> str:
+        """Что сказать человеку, когда сеанс не начался. button - чем нажимали."""
+        if self.state == WAKE_NO_ATTINY:
+            blynk = f', Blynk: code={self.blynk}' if self.blynk is not None else ''
+            return (f'ЕСП жива и прошита (ЕСП {self.esp_version or "?"}, сборка '
+                    f'{self.build or "?"}), но attiny не отвечает по i2c: '
+                    f'{"; ".join(self.errors)}{blynk}. Проверьте прошивку и фьюзы '
+                    f'attiny - docs/flashing.md\n{self.dump()}')
+        if self.state == WAKE_SILENT:
+            return (f'Ватериус не проснулся: за {self.waited:.1f} с после нажатия '
+                    f'{button} на UART ни одной строки. Кнопка не доходит до '
+                    f'attiny, нет питания, или к UART ЕСП подключён программатор - '
+                    f'он держит её в загрузчике\n{self.dump()}')
+        if self.state == WAKE_STUCK:
+            errors = f', ошибки: {"; ".join(self.errors)}' if self.errors else ''
+            return (f'ЕСП печатает, но сеанс не начался: за {self.waited:.1f} с '
+                    f'ни `Startup mode:`, ни `{ATTINY_LOST}`{errors}\n{self.dump()}')
+        return 'сеанс начался'
+
+
+# Как часто опрашивается лог платы. С протокола 12 плата держит окно до
+# подтверждения, поэтому потерянный ответ ничего не стоит - и частый опрос
+# перестал быть риском. Осталась только его польза: чем чаще читаем, тем
+# меньше лежит в кольце.
+#
+# А кольцо - узкое место: 64 КБ (`ASB_BUFFER_BYTES`), это ~511 строк при пике
+# 222 строки/с (публикация в MQTT, 05_air-and-loss.md), то есть 2,3 с потока.
+# Замер 25 сентября: одна заминка связи на 1,4 с стоила 217 строк, и кольцо
+# переполнялось. Полсекунды держат в кольце ~111 строк - пятая часть его
+# объёма, и запас остаётся даже с непрочитанным окном.
+#
+# Два раза в секунду - решение владельца стенда: чаще опрашивать плату по
+# радио незачем, а лог сеанса вдобавок худеет впятеро, когда прошивка перейдёт
+# на одну строку на публикацию.
+POLL_INTERVAL = 0.5
+
+# Как часто долгое ожидание подаёт признак жизни. Без него «жду», «завис» и
+# «хост спал» в логе выглядят одинаково
+HEARTBEAT_S = 30.0
+
+# Сколько молчания UART считаем концом печати, когда строки начатого сеанса ещё
+# лежат в окне, а строки ухода в сон в нём нет. Внутри сеанса пауз такой длины
+# не бывает: самая долгая - ответ сервера, единицы секунд
+SESSION_QUIET_S = 10.0
+
+# Во сколько раз окно ожидания первых строк может растянуться за счёт неудачных
+# чтений. Устройству полагается своё время наблюдения целиком, но и ждать
+# бесконечно нельзя: при мёртвой связи возврат упирается в этот предел, и стенд
+# честно говорит, что ослеп
+BLIND_EXTRA = 3.0
+
+# Потолок питания ЕСП, а не нормальный конец сеанса. Обычно сеанс кончается
+# командой «сон» по i2c: attiny доигрывает DELAY_SENT_SLEEP оборотов опроса
+# (десятки миллисекунд) и снимает питание (`Attiny85/src/main.cpp`, esp.power).
+# WAIT_ESP_MSEC подписан в прошивке как аварийное отключение на случай, если ЕСП
+# зависнет и команду не пришлёт (`Attiny85/src/Setup.h`), - две минуты. Молчание
+# дольше этого значит, что ЕСП обесточена в любом случае: строки ухода в сон не
+# будет, ждать нечего. Число живёт здесь, а не в constants.py, потому что разбор
+# лога проверяется без железа и ничего из стенда не тянет
+ATTINY_POWER_S = 120.0
+
+
+@dataclass
+class Session:
+    """Один сеанс ЕСП: от включения питания attiny до `Going to sleep`."""
+
+    lines: list[str] = field(default_factory=list)
+    # Строки до `Startup mode:`: баннер загрузки и напечатанные настройки. Они
+    # относятся к этому же пробуждению, но в сеанс не входят - утверждения
+    # пишутся про сеанс, а не про то, что было до него.
+    preamble: list[str] = field(default_factory=list)
+    payload: dict[str, Any] | None = None          # посылка, пойманная приёмником
+    payloads: list[dict[str, Any]] = field(default_factory=list)
+    mqtt: list[tuple[str, str, bool]] = field(default_factory=list)
+    # Сколько тел посылок приехало оборванными. Проставляет `stand.py`,
+    # wait_session: без этого числа тест, недосчитавшийся посылки, винит
+    # прошивку в том, что сделал эфир.
+    broken: int = 0
+    # Начало сеанса не доехало: собран по строке ухода в сон. Режим у такого
+    # сеанса неизвестен - угадывать его нечем
+    headless: bool = False
+
+    # --- разобранные поля ---
+
+    @property
+    def air_note(self) -> str:
+        """
+        Приписка про эфир к отказу, где посылок пришло меньше ожидаемого.
+
+        Обрыв тела рождается в эфире стенда, а не в устройстве: гибнет один
+        сегмент, буфер отправки ЕСП не освобождается, и клиент сдаётся
+        (05_air-and-loss.md). Приёмнику такая посылка не достаётся вовсе -
+        отсюда недосчитанная посылка в тесте.
+        """
+        if not self.broken:
+            return ''
+        return (f'\nПри этом {self.broken} тел(а) посылок приехали оборванными: '
+                f'эфир стенда теряет сегмент, и недостающая посылка - про него, '
+                f'а не про прошивку (05_air-and-loss.md)')
+
+    @property
+    def text(self) -> str:
+        return '\n'.join(self.lines)
+
+    @property
+    def full_text(self) -> str:
+        """
+        Всё пробуждение целиком, вместе с преамбулой.
+
+        Часть фактов о себе прошивка печатает до `Startup mode:` - версии,
+        MAC, настройки и итог загрузки конфига. Утверждения о ходе сеанса
+        пишутся про `text`, а вот эти факты искать надо здесь.
+        """
+        return '\n'.join(self.preamble + self.lines)
+
+    @property
+    def mode(self) -> int | None:
+        m = RE_MODE.search(self.text)
+        return int(m.group(1)) if m else None
+
+    @property
+    def attiny_version(self) -> int | None:
+        m = RE_ATTINY_VER.search(self.full_text)
+        return int(m.group(1)) if m else None
+
+    @property
+    def reset_reason(self) -> tuple[int, bool] | None:
+        """Причина ресета ЕСП и вывод прошивки «перезагрузилась внештатно» (`main.cpp`)."""
+        return parse_reset_reason(self.full_text)
+
+    @property
+    def esp_version(self) -> tuple[int, int, int] | None:
+        """Версия прошивки ЕСП кортежем - чтобы сравнивать, а не сличать строки."""
+        m = RE_ESP_VER.search(self.full_text)
+        return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
+    @property
+    def mac(self) -> str | None:
+        """MAC устройства. Прошивка печатает его в каждом сеансе со связью."""
+        m = RE_MAC.search(self.full_text)
+        return m.group(1).lower() if m else None
+
+    @property
+    def impulses(self) -> tuple[int | None, int | None]:
+        m0 = RE_IMP0.search(self.text)
+        m1 = RE_IMP1.search(self.text)
+        return (int(m0.group(1)) if m0 else None,
+                int(m1.group(1)) if m1 else None)
+
+    @property
+    def alarm_config(self) -> dict[str, int] | None:
+        """
+        Пороги, уехавшие в ОЗУ attiny. Отсутствие строки означает, что тревоги
+        настроить не удалось (старая attiny) - без неё вся группа E бессмысленна.
+
+        Печатается уже в единицах attiny: длина кванта тишины в тиках по 250мс,
+        сколько таких квантов подряд считать протечкой и сколько импульсов за
+        полчаса считать прорывом. Человеческие л/ч и часы сюда не доезжают -
+        пересчёт остаётся в ЕСП, и стенд проверяет то, что реально уехало.
+        """
+        m = RE_ALARM_CONFIG.search(self.text)
+        if not m:
+            return None
+        return {'quantum0': int(m.group(1)), 'quanta0': int(m.group(2)),
+                'vol0': int(m.group(3)),
+                'quantum1': int(m.group(4)), 'quanta1': int(m.group(5)),
+                'vol1': int(m.group(6)),
+                'vacation': int(m.group(7)), 'reset': int(m.group(8))}
+
+    @property
+    def confirm(self) -> dict[str, int] | None:
+        """
+        Квитанция тревоги и заодно статусы всех трёх получателей числами.
+        Единственная строка, по которой виден итог сеанса целиком; печатается
+        только при удачном Wi-Fi.
+        """
+        m = RE_ALARM_CONFIRM.search(self.text)
+        if not m:
+            return None
+        return {'mask': int(m.group(1)), 'waterius': int(m.group(2)),
+                'http': int(m.group(3)), 'mqtt': int(m.group(4)),
+                'any': int(m.group(5)), 'confirmed': int(m.group(6))}
+
+    @property
+    def stop_config(self) -> dict[str, int] | None:
+        """Пороги остановки расхода, уехавшие в ОЗУ attiny, в её минутах."""
+        m = RE_STOP_CONFIG.search(self.text)
+        if not m:
+            return None
+        return {'min0': int(m.group(1)), 'min1': int(m.group(2))}
+
+    @property
+    def idle_send(self) -> dict[str, int] | None:
+        m = RE_IDLE_SEND.search(self.text)
+        if not m:
+            return None
+        return {'consumed': int(m.group(1)), 'silence_min': int(m.group(2)),
+                'transmit': int(m.group(3))}
+
+    @property
+    def config(self) -> dict[str, str]:
+        """
+        Настройки устройства, как оно само их напечатало при загрузке.
+
+        Печатаются они до `Startup mode:`, то есть в преамбуле, а не в сеансе.
+
+        Нужны, чтобы стенд мог заметить чужую сеть или чужой сервер до первого
+        теста: спрашивать об этом человека - значит однажды прогнать весь набор
+        против домашнего роутера и разбираться, почему приёмник пуст.
+        """
+        out: dict[str, str] = {}
+        section = ''
+        for line in self.preamble + self.lines:
+            m = RE_SECTION.search(line)
+            if m:
+                section = SECTION_KEYS.get(m.group(1), '')
+                continue
+            ssid = RE_WIFI_SSID.search(line)
+            if ssid:
+                out['wifi_ssid'] = ssid.group(1)
+                continue
+            if not section:
+                continue
+            for name, regex in SECTION_FIELDS.get(section, ()):
+                found = regex.search(line)
+                if found:
+                    out[name] = found.group(1)
+            state = RE_STATE.search(line)
+            if state:
+                out[f'{section}_on'] = '1' if state.group(1) == 'ON' else '0'
+                continue
+            host = RE_HOST.search(line)
+            if host:
+                out[f'{section}_host'] = host.group(1)
+                port = RE_PORT.search(line)
+                if port:
+                    out[f'{section}_port'] = port.group(1)
+        return out
+
+    @property
+    def wifi_connected(self) -> bool:
+        return 'WIFI: Connected.' in self.text
+
+    @property
+    def wifi_attempts(self) -> int:
+        return len(RE_WIFI_ATTEMPT.findall(self.text))
+
+    @property
+    def http_codes(self) -> list[int]:
+        return [int(x) for x in RE_HTTP_CODE.findall(self.text)]
+
+    def _sender_codes(self, sender: str) -> list[int]:
+        """
+        Коды ответа одного получателя.
+
+        Строку `HTTP: Response code:` печатают облако и свой сервер одним
+        текстом (https_helpers.cpp), поэтому чьи они, видно только по месту:
+        между `<получатель>: Send new data` и итогом этой отправки.
+        """
+        codes: list[int] = []
+        inside = False
+        for line in self.lines:
+            start = RE_SEND_START.search(line)
+            if start:
+                inside = start.group(1) == sender
+            elif inside and (RE_SENT.search(line) or RE_SEND_FAILED.search(line)):
+                inside = False
+            elif inside:
+                codes += [int(x) for x in RE_HTTP_CODE.findall(line)]
+        return codes
+
+    @property
+    def cloud_codes(self) -> list[int]:
+        """Коды ответа облака."""
+        return self._sender_codes('WATR')
+
+    @property
+    def own_codes(self) -> list[int]:
+        """Коды ответа своего сервера."""
+        return self._sender_codes('HTTP')
+
+    @property
+    def mqtt_published(self) -> list[tuple[str, int, bool]]:
+        """
+        Что прошивка доложила об опубликованном: топик, размер, retain.
+
+        Это её собственный взгляд, а не взгляд брокера, и в этом вся польза:
+        при расхождении сразу видно, чья беда. Прошивка старше одной строки на
+        публикацию ничего такого не печатает - тогда список пуст, и утверждать
+        по нему нечего.
+        """
+        return [(topic, int(size), flag == '1')
+                for topic, size, flag in RE_MQTT_PUB.findall(self.text)]
+
+    @property
+    def mqtt_failed(self) -> list[tuple[str, str]]:
+        """Топики, о которых прошивка сказала, что публикация не удалась."""
+        return RE_MQTT_FAIL.findall(self.text)
+
+    @property
+    def mqtt_done(self) -> tuple[int, int] | None:
+        """Итог публикации показаний: сколько топиков и за сколько миллисекунд."""
+        m = RE_MQTT_DONE.search(self.text)
+        return (int(m.group(1)), int(m.group(2))) if m else None
+
+    @property
+    def mqtt_note(self) -> str:
+        """
+        Приписка к отказу про MQTT: что об этом говорит само устройство.
+
+        Отказ «в брокере пусто» без неё обвиняет прошивку в том, что могло быть
+        бедой стенда - потерей подписки, обрывом связи с брокером.
+        """
+        published = self.mqtt_published
+        if not published and self.mqtt_done is None:
+            return ('\nУстройство о публикации ничего не сказало: либо оно не '
+                    'дошло до MQTT, либо на нём прошивка старше строки '
+                    '«MQTT: pub»')
+        parts = []
+        if self.mqtt_done is not None:
+            topics, ms = self.mqtt_done
+            parts.append(f'устройство отчиталось о {topics} топиках за {ms} мс')
+        if published:
+            parts.append(f'в логе {len(published)} публикаций, последняя - '
+                         f'{published[-1][0]}')
+        if self.mqtt_failed:
+            parts.append(f'неудачные: {self.mqtt_failed}')
+        flushed = RE_MQTT_FLUSHED.search(self.text)
+        lost = RE_MQTT_FLUSH_FAILED.search(self.text)
+        if lost:
+            parts.append(f'брокер не подтвердил хвост за {lost[1]} мс - '
+                         'устройство уснуло, не отправив его')
+        elif flushed:
+            parts.append(f'брокер подтвердил всё отправленное за {flushed[1]} мс')
+        return '\nЧто говорит устройство: ' + '; '.join(parts)
+
+    @property
+    def period_attiny(self) -> int | None:
+        m = RE_PERIOD_ATTINY.search(self.text)
+        return int(m.group(1)) if m else None
+
+    @property
+    def applied(self) -> dict[str, str]:
+        """Настройки, приехавшие в ответе сервера или по MQTT."""
+        return dict(RE_APPLY.findall(self.text))
+
+    @property
+    def saved(self) -> dict[str, str]:
+        """
+        Настройки, которые прошивка приняла и записала.
+
+        Отличается от `applied` тем, что там - полученное, а здесь - выжившее
+        после валидации: отвергнутый параметр печатается ошибкой, и строки
+        `Saved:` для него не будет.
+        """
+        return dict(RE_SAVED.findall(self.text))
+
+    @property
+    def complete(self) -> bool:
+        return SESSION_END in self.text
+
+    # --- утверждения на языке предметной области ---
+
+    @property
+    def last_error(self) -> str | None:
+        """Последняя запись журнала ошибок связи: `этап:код`."""
+        match = RE_CONNECT_LOG.search(self.text)
+        return match.group(1).split(',')[-1] if match else None
+
+    @property
+    def blynk(self) -> int | None:
+        """
+        Код ошибки, который прошивка собралась моргать. None - не моргала.
+
+        Это слово самого устройства, а не наша реконструкция по условиям:
+        восстановленный стендом код согласился бы с ошибкой, если ошибка в
+        самой модели. Число вспышек отсюда не следует - стенд их не видит.
+        """
+        m = RE_BLYNK.search(self.text)
+        return int(m.group(1)) if m else None
+
+    @property
+    def no_payload_note(self) -> str:
+        """
+        Почему приёмник пуст - словами самого устройства.
+
+        Пустой приёмник бывает от разных бед: устройство не подключилось к сети,
+        свой сервер не ответил двумястами, тело оборвалось в эфире. Отказ «посылки
+        нет» их не различает и винит отправку в том, что сделал Wi-Fi.
+        """
+        if not self.wifi_connected:
+            if not self.wifi_attempts:
+                return 'радио в этом сеансе не включалось: подключения не было и не могло быть'
+            wifi = [m.group(1) for m in map(RE_ERROR.search, self.lines)
+                    if m and m.group(1).startswith('WIFI:')]
+            return (f'устройство не подключилось к сети ({self.wifi_attempts} '
+                    f'попыток: {"; ".join(dict.fromkeys(wifi)) or "без строк ошибок"}) '
+                    f'и до отправки не дошло - это отказ Wi-Fi, а не отправки')
+        codes = self.own_codes
+        said = (f'свой сервер ответил {codes}' if codes else
+                'до своего сервера оно не дошло: кодов его ответа в сеансе нет')
+        confirm = self.confirm
+        verdict = f', итог получателя http={confirm["http"]}' if confirm else ''
+        return f'устройство в сети, {said}{verdict}{self.air_note}'
+
+    def expect_payload(self, what: str = 'приёмник не получил посылку') -> dict[str, Any]:
+        """Посылка сеанса, а без неё - отказ с причиной и строками устройства."""
+        if self.payload is None:
+            raise AssertionError(f'{what}: {self.no_payload_note}\n{self.text}')
+        return self.payload
+
+    def assert_alarm(self, **expected: int) -> None:
+        """assert_alarm(flow1=1, flow0=0) - по полям посылки."""
+        payload = self.expect_payload('посылки не было, проверять нечего')
+        for name, want in expected.items():
+            got = payload.get(f'alarm_{name}')
+            assert got == want, f'alarm_{name}: ожидали {want}, получили {got}\n{self.text}'
+
+    def assert_confirm(self, **expected: int) -> None:
+        c = self.confirm
+        assert c is not None, f'в сеансе нет строки Alarm confirm\n{self.text}'
+        for name, want in expected.items():
+            assert c[name] == want, f'{name}: ожидали {want}, получили {c[name]}\n{self.text}'
+
+    def assert_delta(self, channel: int, liters: int) -> None:
+        got = self.expect_payload('посылки не было').get(f'delta{channel}')
+        assert got == liters, f'delta{channel}: ожидали {liters}, получили {got}'
+
+
+class LogWatcher:
+    """
+    Читает UART Ватериуса через плату METF и нарезает поток на сеансы.
+
+    Берём сырой текст (`serial_read`) и склеиваем сами: кольцо METF режет
+    длинные строки на куски.
+
+    Полноту лога сверяем со счётчиком потерь платы (`serial_stat`, METF 5 и
+    клиент 0.4). Вытеснение молчаливое: лог приходит короче, а не с ошибкой,
+    поэтому любое утверждение о его содержимом после потери ничего не стоит -
+    отсюда падение теста, а не предупреждение в отчёт.
+    """
+
+    def __init__(self, api: Any) -> None:
+        self.api = api
+        self.lines: list[str] = []
+        # Когда в последний раз приходили строки: по нему видно, что устройство
+        # замолчало посреди сеанса, а не что стенд его проморгал
+        self._line_at: float | None = None
+        self._tail = ''
+        # Всё прочитанное с последнего clear() как есть: недописанная строка и
+        # мусор в lines не попадают, а при отказе показывать надо и их
+        self.raw = ''
+        self._can_stat: bool | None = None      # None - ещё не спрашивали
+        # Удачные и неудачные чтения лога. По ним видно, слеп ли стенд: пока
+        # METF не отвечает, пустой лог не говорит об устройстве ничего
+        self.reads_ok = 0
+        self.reads_failed = 0
+        self._mark_at: float | None = None      # начало окна наблюдения потерь
+        # Сколько ждали в последнем ожидании: в отказ идёт наблюдённое время, а
+        # не потолок - иначе «не доиграл за 125 с» печаталось при 2,5 с ожидания
+        self.waited = 0.0
+        self._beats = 0                         # признаков жизни за это ожидание
+        # Строка, которую ещё дописывает плата: метку по ней ставить рано,
+        # кольцо режет длинные строки и хвост приедет следующим чтением
+        self._mark_line: str | None = None
+
+    def poll(self) -> None:
+        """Забрать накопленное с платы и склеить разрезанные строки."""
+        try:
+            chunk = self.api.serial_read()
+        except Exception as err:                     # плата могла не ответить
+            self.reads_failed += 1
+            logger.warning(f'METF не отдал лог: {err}')
+            return
+        self.reads_ok += 1
+        if not chunk:
+            # Плата молчит - значит последняя строка дописана. Иначе метка про
+            # уход в сон лежала бы до следующего пробуждения
+            self._flush_mark()
+            return
+        self.raw += chunk
+
+        raw = (self._tail + chunk).split('\n')
+        # Последний кусок может быть незавершённым - придержим до следующего раза
+        self._tail = raw.pop() if not chunk.endswith('\n') else ''
+
+        if raw:
+            self._line_at = time.monotonic()
+
+        for piece in raw:
+            piece = piece.rstrip('\r')
+            if not piece:
+                continue
+            if LINE_START.match(piece) or not self.lines:
+                self._flush_mark()
+                self.lines.append(piece)
+                self._mark_line = piece
+            else:
+                # Продолжение строки, разрезанной кольцом METF
+                self.lines[-1] += piece
+                if self._mark_line is not None:
+                    self._mark_line += piece
+
+    def _flush_mark(self) -> None:
+        """Строка дописана - сказать о ней в логе прогона, если есть что."""
+        line, self._mark_line = self._mark_line, None
+        if line is None:
+            return
+        for pattern, level, say in DEVICE_MARKS:
+            m = pattern.search(line)
+            if m:
+                getattr(logger, level)(f'Ватериус: {say(m)}')
+                return
+
+    @property
+    def attiny_lost(self) -> bool:
+        """В окне есть `Attiny not found.`: ЕСП жива, а сеанса не будет."""
+        return any(ATTINY_LOST in line for line in self.lines)
+
+    def attiny_note(self) -> str:
+        """Приписка к отказу, когда сеанса не дала потерянная attiny."""
+        if not self.attiny_lost:
+            return ''
+        return ('. ЕСП проснулась, но attiny не ответила по i2c («Attiny not '
+                'found.»), а `Startup mode:` печатается только после её ответа - '
+                'сеанса не было бы и через час. Смотрите шлейф i2c, питание '
+                'платы и фьюзы attiny (docs/flashing.md)')
+
+    def tail(self, count: int = 30) -> str:
+        """
+        Хвост лога устройства для отказа.
+
+        Про иные события прошивка молчит, но соседние строки говорят, чем она в
+        этот миг занята: без них слово стенда не отличить от слова прошивки.
+        """
+        self.poll()
+        return '\n'.join(self.lines[-count:])
+
+    def unfinished(self) -> bool:
+        """
+        В окне есть начало сеанса и нет его конца: устройство ещё печатает.
+
+        Режим настройки не в счёт: он кончается не сном, а перезапуском -
+        портал живёт, пока его не закроют, и строки ухода в сон у него нет
+        вовсе. Ожидание такого «конца» стоило E10 заводского сброса: стенд
+        прождал тринадцать секунд и выбросил вместе с окном перезапуск и
+        подъём точки портала, которых сам же и ждал следующие две минуты.
+        """
+        режим = None
+        for line in self.lines:
+            m = RE_MODE.search(line)
+            if m:
+                режим = int(m.group(1))
+        if режим is None or режим == SETUP_MODE:
+            return False
+        return not any(SESSION_END in line for line in self.lines)
+
+    def settle(self, timeout: float = ATTINY_POWER_S) -> float:
+        """
+        Дождаться конца начатого сеанса. Возвращает, сколько ждали.
+
+        Выброшенное начало сеанса не пропадает бесследно: устройство печатает
+        дальше, следующий разбор соберёт тот же сеанс по одному хвосту, режим
+        окажется неизвестен, и тест объявит «начало сеанса не доехало» - приговор
+        прошивке за то, что сделал стенд. Так упал B3 28 сентября: настройка
+        второго канала пришлась на сеанс, который ещё шёл.
+
+        Ждать бесконечно нельзя: сеанс мог оборваться, не напечатав строки ухода
+        в сон. Тогда его выдаёт молчание UART - пауз в SESSION_QUIET_S внутри
+        сеанса не бывает.
+        """
+        if not self.unfinished():
+            return 0.0
+        started = time.monotonic()
+        while True:
+            self.poll()
+            if not self.unfinished():
+                break
+            ждём = time.monotonic() - started
+            молчит = time.monotonic() - (self._line_at or started)
+            if молчит > SESSION_QUIET_S:
+                logger.warning(f'начатый сеанс молчит {молчит:.0f} с и конца не '
+                               f'напечатал: выбрасываю окно вместе с его началом')
+                break
+            if ждём >= timeout:
+                logger.warning(f'начатый сеанс не кончился за {ждём:.0f} с: '
+                               f'выбрасываю окно вместе с его началом')
+                break
+            host.check('ожидание конца сеанса')
+            self.heartbeat('ожидание конца сеанса', ждём, timeout)
+            time.sleep(POLL_INTERVAL)
+        return time.monotonic() - started
+
+    def clear(self) -> None:
+        """
+        Начать наблюдение с чистого листа - и сказать, что для этого выброшено.
+
+        Выбросить приходится: `poll()` уже забрал у платы всё, что лежало в
+        кольце, и прежнее окно нельзя оставлять - иначе хвост чужого сеанса
+        разберётся как начало нового. Но молча этого делать нельзя: если
+        устройство в этот миг печатает, в выброшенное уходит и `Startup mode:`,
+        и дальше стенд честно доказывает, что «ЕСП печатает, а сеанс не начался».
+        Ровно так выглядел отказ подъёма 27 сентября, где METF «отдала 11811
+        байт», начиная с середины сеанса.
+
+        Идущий сеанс сперва доигрывается (`settle`), и только потом окно летит в
+        корзину: резать сеанс посередине - значит отнять у следующего голову.
+
+        Кольцо платы чистим её же средствами (`serial_flush`): наш `poll()` мог и
+        не удаться, и тогда старый лог приехал бы следующим опросом как новый.
+        """
+        self.poll()
+        ждали = self.settle()
+        if self.lines:
+            начатый = self.unfinished()
+            сказать = logger.warning if начатый else logger.info
+            беда = ', и в них начало сеанса без конца' if начатый else ''
+            дождались = f', дождавшись конца сеанса за {ждали:.0f} с' if ждали else ''
+            сказать(f'начинаю наблюдение заново{дождались}: выброшено '
+                    f'{len(self.lines)} строк ({len(self.raw)} байт){беда}. '
+                    f'Последняя: «{self.lines[-1].strip()[:80]}»')
+        flush = getattr(self.api, 'serial_flush', None)
+        if flush is not None:
+            try:
+                flush()
+            except Exception as err:                 # плата могла не ответить
+                logger.warning(f'кольцо METF не очистилось ({err}): в нём мог '
+                               f'остаться прошлый сеанс')
+        self.lines.clear()
+        self._tail = ''
+        self._mark_line = None
+        self.raw = ''
+
+    # --- потери лога ---
+
+    def _losses(self) -> tuple[int, int] | None:
+        """
+        Счётчики потерь платы: вытеснено кольцом и переполнений буфера UART.
+
+        Это разные дыры. Первая - читатель не поспел за кольцом. Вторая раньше:
+        `loop()` платы не поспел за драйвером UART, и байты не дошли даже до
+        кольца - считать ему нечего, и `dropped` при такой потере равен нулю
+        (METF, протокол 13).
+
+        Ниже - про оба.
+
+        METF считает потери с последнего `flush()`, то есть значение
+        накопительное, и смысл имеет только его прирост за окно наблюдения.
+        Клиент 0.3 метода не знает, прошивка младше 5 не отвечает JSON - в обоих
+        случаях проверка выключается один раз, с объяснением в логе. Обрыв связи
+        к таким причинам не относится: он временный, и проверку не гасит.
+        """
+        if self._can_stat is False:
+            return None
+        try:
+            stat = self.api.serial_stat()
+            losses = int(stat['dropped']), int(stat.get('overruns', 0))
+        except AttributeError:
+            logger.warning('metf_python_client 0.3: потери лога не проверяются, '
+                           'нужен 0.4 с serial_stat()')
+            self._can_stat = False
+            return None
+        except Exception as err:                     # прошивка младше 5 или плата молчит
+            # Выключаем проверку только если причина постоянная. Обрыв связи
+            # временный: METF ходит по радио и отваливается, а раньше одна
+            # такая осечка молча гасила проверку потерь до конца прогона
+            if not isinstance(err, NETWORK_ERRORS):
+                logger.warning(
+                    f'METF не отдал /read/stat, потери лога не проверяются: {err}')
+                self._can_stat = False
+            else:
+                logger.warning(f'METF не отдал /read/stat в этот раз: {err}')
+            return None
+        self._can_stat = True
+        return losses
+
+    def loss_mark(self) -> tuple[int, int] | None:
+        """Снимок счётчиков перед ожиданием - опора для `assert_no_loss`."""
+        self._mark_at = time.monotonic()
+        return self._losses()
+
+    def assert_no_loss(self, mark: tuple[int, int] | None, context: str) -> None:
+        """
+        Убедиться, что за окно наблюдения кольцо METF ничего не выбросило.
+
+        Это причина, по которой тест падает не там, где ломается: из кольца
+        уезжает `Startup mode:`, сеанс не собирается, и виноватым выглядит
+        устройство. Поэтому проверка стоит и на удачном исходе, и на таймауте.
+        """
+        if mark is None:
+            return
+        reboot = getattr(self.api, 'reboot_since', None)
+        when = reboot(self._mark_at) if reboot and self._mark_at is not None else None
+        assert when is None, (
+            f'METF перезагружалась за {context} ({time.monotonic() - when:.0f} с назад): '
+            f'кольцо она при этом очищает целиком, а счётчики потерь начинает с '
+            f'нуля - о логе этого окна сказать нечего')
+        now = self._losses()
+        if now is None:
+            return
+        lost, overruns = now[0] - mark[0], now[1] - mark[1]
+        # Счётчики платы только растут, поэтому отрицательная разность - не
+        # «потерь не было», а сброшенный счётчик: потеря максимальна
+        assert lost >= 0 and overruns >= 0, (
+            f'счётчики потерь METF пошли назад за {context} '
+            f'(dropped {mark[0]} -> {now[0]}, overruns {mark[1]} -> {now[1]}): '
+            f'плату перезагрузили или кольцо очистили, лог этого окна неполон')
+        assert lost <= 0, (
+            f'METF потерял {lost} строк лога за {context}: кольцо переполнилось, '
+            f'и лог неполон - утверждать по нему нечего. Читайте чаще или '
+            f'соберите прошивку платы с большим ASB_BUFFER_BYTES'
+            f'{self._why_lost()}')
+        assert overruns <= 0, (
+            f'METF {overruns} раз переполнила приёмный буфер UART за {context}: '
+            f'байты не дошли даже до кольца, поэтому в логе дыра, а счётчик '
+            f'кольца о ней не знает. Первой пропадает голова сеанса - она же '
+            f'самый плотный залп. Ищите, чем занят loop() платы'
+            f'{self._why_lost()}')
+
+    def _why_lost(self) -> str:
+        """
+        Приписка о том, кто виноват в потере, если это известно.
+
+        Кольцо METF держит 511 строк, а сеанс с включённым MQTT печатает около
+        тысячи: прошивка кладёт каждое поле в свой топик и на каждую публикацию
+        печатает пять строк (замер 24 сентября 2026 - 05_air-and-loss.md). Лог
+        живёт только непрерывным чтением, а связь с платой идёт по радио и
+        пропадает сама по себе. Без этой приписки отлучку ищут в прошивке
+        устройства, хотя устройство тут ни при чём.
+        """
+        if self._mark_at is None:
+            return ''
+
+        beda = []
+        reboot = getattr(self.api, 'reboot_since', None)
+        when = reboot(self._mark_at) if reboot else None
+        if when is not None:
+            beda.append(f'METF перезагружалась {time.monotonic() - when:.0f} с назад - '
+                        f'кольцо она при этом очищает')
+
+        stall = getattr(self.api, 'stall_since', None)
+        gap = stall(self._mark_at) if stall else None
+        if gap is not None:
+            since, seconds = gap
+            beda.append(f'связь с METF пропадала на {seconds:.1f} с '
+                        f'({time.monotonic() - since:.0f} с назад)')
+
+        if not beda:
+            return ''
+        return (f'. В этом окне {"; ".join(beda)} - виноват стенд, а не прошивка')
+
+    def heartbeat(self, what: str, waited: float, timeout: float) -> None:
+        """Строка раз в HEARTBEAT_S: сколько ждём, что видим и цел ли лог."""
+        beats = int(waited // HEARTBEAT_S)
+        if not beats:
+            self._beats = 0
+            return
+        if beats <= self._beats:
+            return
+        self._beats = beats
+        losses = self._losses()
+        кольцо = (f', кольцо dropped={losses[0]} overruns={losses[1]}'
+                  if losses else '')
+        logger.info(f'{what}: {waited:.0f} из {timeout:.0f} с, строк {len(self.lines)}, '
+                    f'чтений {self.reads_ok} удачных / {self.reads_failed} неудачных'
+                    f'{кольцо}')
+
+    def wait_session(self, timeout: float, mode: int | None = None,
+                     poll_interval: float = POLL_INTERVAL) -> Session | None:
+        """
+        Дождаться завершённого сеанса. Началом считаем `Startup mode:`, концом -
+        `Going to sleep`: только так видно, что ЕСП дошла до конца, а не была
+        обесточена посреди отправки по таймауту attiny.
+
+        Опрашиваем непрерывно: сеанс с автодискавери печатает сотни строк, а
+        кольцо METF хоть и вмещает их (511 строк по 128 символов, полный сеанс -
+        193), но за секунду молчания успевает набрать лишнего. Один опрос стоит
+        15 мс, так что десять раз в секунду - это не нагрузка.
+
+        По краям окна снимаем счётчик потерь: если кольцо всё-таки переполнилось,
+        и «сеанс пришёл», и «сеанса не было» - утверждения ни о чём.
+        """
+        mark = self.loss_mark()
+        started = time.monotonic()
+        while True:
+            host.check('ожидание сеанса')
+            self.poll()
+            session = self._take_session(mode)
+            if session:
+                self.assert_no_loss(mark, 'ожидание сеанса')
+                return session
+            self.waited = time.monotonic() - started
+            if self.waited >= timeout or self.dead() or self.attiny_lost:
+                break
+            self.heartbeat('ожидание сеанса', self.waited, timeout)
+            time.sleep(poll_interval)
+        self.assert_no_loss(mark, f'ожидание сеанса {self.waited:.0f} с')
+        return None
+
+    def wait_start(self, timeout: float) -> bool:
+        """
+        Дождаться первых строк на UART устройства.
+
+        По кнопке устройство просыпается сразу, поэтому тишина здесь - отказ
+        самого устройства, а не повод ждать дальше. Слепоту стенда с ней путать
+        нельзя: пока METF не отдала ни одного чтения, о Ватериусе не известно
+        ничего, и приговор выносить нечем.
+
+        Отсюда же возврат потраченного на осечки. Окно приговора - две секунды,
+        а одно чтение ждёт ответа секунду и повторяется трижды: одна заминка
+        связи съедала окно целиком, и стенд объявлял себя слепым на исправном
+        устройстве (прогон 25 сентября, `test_E10`). Поэтому время неудачных
+        чтений устройству не засчитывается - оно получает свои две секунды
+        наблюдения, а не две секунды по настенным часам. Возврат ограничен
+        тройным окном: иначе при мёртвой связи ждали бы бесконечно.
+        """
+        reads, failed = self.reads_ok, self.reads_failed
+        started = time.monotonic()
+        deadline = started + timeout
+        limit = started + timeout * BLIND_EXTRA
+        while time.monotonic() < deadline:
+            host.check('ожидание первых строк')
+            before = time.monotonic()
+            ok = self.reads_ok
+            self.poll()
+            if self.lines:
+                return True
+            time.sleep(POLL_INTERVAL)
+            if self.reads_ok == ok:
+                # Ни одного чтения за круг: это время стенда, а не устройства,
+                # и возвращается круг целиком - вместе с паузой опроса
+                deadline = min(limit, deadline + (time.monotonic() - before))
+        assert self.reads_ok > reads, (
+            f'стенд ослеп: за {time.monotonic() - started:.1f} с METF ни разу не '
+            f'отдала лог ({self.reads_failed - failed} неудачных чтений), '
+            f'поэтому о пробуждении Ватериуса сказать нечего')
+        return False
+
+    def wait_line(self, text: str, timeout: float,
+                  poll_interval: float = 0.5) -> float | None:
+        """
+        Дождаться строки в логе и вернуть, сколько секунд её ждали.
+
+        Нужно там, где событие не сеанс: портал закрывается по сторожевому
+        таймеру и печатает про это одну строку. Время возвращается потому, что
+        в таких проверках важно не только «случилось», но и «не раньше».
+        """
+        mark = self.loss_mark()
+        started = time.monotonic()
+        deadline = started + timeout
+        while time.monotonic() < deadline:
+            host.check(f'ожидание строки {text!r}')
+            self.poll()
+            if any(text in line for line in self.lines):
+                self.assert_no_loss(mark, f'ожидание строки {text!r}')
+                return time.monotonic() - started
+            self.heartbeat(f'ожидание строки {text!r}',
+                           time.monotonic() - started, timeout)
+            time.sleep(poll_interval)
+        self.assert_no_loss(mark, f'ожидание строки {text!r} {timeout:.0f} с')
+        return None
+
+    def wait_wake(self, timeout: float, poll_interval: float = POLL_INTERVAL) -> Wake:
+        """
+        Разобрать стартовый лог после нажатия кнопки, не досиживая таймаут.
+
+        `Startup mode:` ЕСП печатает только после ответа attiny (main.cpp:
+        loop), поэтому одна эта строка не отличает живую ЕСП без attiny от
+        отсутствующего устройства. Решает первая строка, которая определяет
+        исход; таймаут - только для молчания.
+        """
+        mark = self.loss_mark()
+        reads, reads_failed = self.reads_ok, self.reads_failed
+        started = time.monotonic()
+        while True:
+            host.check('стартовый лог')
+            self.poll()
+            waited = time.monotonic() - started
+            state = self._wake_state()
+            if state is None and waited >= timeout:
+                # Молчание на UART - приговор устройству, и выносить его, не
+                # прочитав ни разу, нельзя: пока METF не отвечала, о Ватериусе
+                # не известно ничего. Прежде стенд в этом случае писал
+                # «Ватериус не проснулся» и советовал искать кнопку, питание и
+                # программатор - при исправном устройстве.
+                assert self.reads_ok > reads, (
+                    f'стенд ослеп: за {waited:.1f} с METF ни разу не отдала лог '
+                    f'({self.reads_failed - reads_failed} неудачных чтений), '
+                    f'поэтому о пробуждении Ватериуса сказать нечего')
+                state = WAKE_STUCK if self.lines else WAKE_SILENT
+            if state is not None:
+                if state == WAKE_NO_ATTINY:
+                    # `Blynk: code=` идёт следом через 4 мс - в этот опрос или в следующий
+                    time.sleep(poll_interval)
+                    self.poll()
+                self.assert_no_loss(mark, 'стартовый лог')
+                return Wake(state, list(self.lines), waited, self.raw)
+            time.sleep(poll_interval)
+
+    def _wake_state(self) -> str | None:
+        for line in self.lines:
+            if RE_MODE.search(line):
+                return WAKE_SESSION
+            if ATTINY_LOST in line:
+                return WAKE_NO_ATTINY
+        return None
+
+    def expect_no_session(self, timeout: float, mode: int | None = None,
+                          poll_interval: float = 0.5) -> bool:
+        """
+        Убедиться, что сеанса не было. С mode - что не было сеанса именно этого
+        вида: в тестах квитанции важно, что устройство не будит себя по тревоге,
+        а плановые пробуждения при этом идут своим чередом.
+
+        Тишину подтверждаем только по полному логу: потерянные строки - ровно то
+        место, где мог быть пропущенный сеанс.
+        """
+        mark = self.loss_mark()
+        started = time.monotonic()
+        deadline = started + timeout
+        while time.monotonic() < deadline:
+            host.check('ожидание тишины')
+            self.poll()
+            for line in self.lines:
+                m = RE_MODE.search(line)
+                if m and (mode is None or int(m.group(1)) == mode):
+                    return False
+            # Сеанс без начала - тоже сеанс. Не заметить его здесь значит
+            # позеленеть на утверждении о тишине, которой не было
+            if mode is None and self.headless_pending:
+                logger.warning('тишины не было: в логе конец сеанса без начала')
+                return False
+            self.heartbeat('ожидание тишины', time.monotonic() - started, timeout)
+            time.sleep(poll_interval)
+        self.assert_no_loss(mark, f'ожидание тишины {timeout:.0f} с')
+        return True
+
+    def dead(self) -> bool:
+        """
+        Начатый сеанс уже не доиграет - ждать потолок нечего.
+
+        С последней строки прошло больше аварийного потолка attiny
+        (`WAIT_ESP_MSEC`, две минуты на зависшую ЕСП), значит питание снято в
+        любом случае и строки ухода в сон не будет никогда. Прежде это знание жило только в тексте отказа, то есть
+        доставалось после отсидки всего потолка.
+
+        Требуется именно незакрытый сеанс - начало без конца. Просто «строки в
+        буфере и тишина» тут не годятся: тест, ждущий планового сеанса, держит в
+        буфере прошлый, полный, и между пробуждениями молчит куда дольше двух
+        минут - по такому признаку отказ прилетал бы вместо ожидания.
+        """
+        if self._line_at is None or time.monotonic() - self._line_at < ATTINY_POWER_S:
+            return False
+        return self.unfinished()
+
+    def stuck_note(self) -> str:
+        """
+        Приписка о том, где оборвался лог сеанса.
+
+        Прошивка внутри сетевого вызова не печатает ничего - ни при отправке в
+        облако, ни при публикации в MQTT, - поэтому оборвавшийся лог выглядит
+        так же, как потерянный. Разница в том, что видно по последней строке:
+        если после неё прошло больше аварийного потолка attiny (WAIT_ESP_MSEC,
+        две минуты - столько она держит питание зависшей ЕСП, не дождавшись
+        команды «сон»), устройство уже обесточено, и строки ухода в сон не будет
+        никогда - ждать нечего, искать надо связь.
+        """
+        if self._line_at is None or not self.lines:
+            return ''
+        молчит = time.monotonic() - self._line_at
+        if молчит < 5.0:
+            return ''
+        конец = self.lines[-1].strip()
+        приписка = (f'. Устройство молчит {молчит:.0f} с, последняя строка: '
+                    f'«{конец[:100]}»')
+        if молчит >= ATTINY_POWER_S:
+            приписка += (f' - это дольше, чем attiny держит питание '
+                         f'({ATTINY_POWER_S:.0f} с), то есть ЕСП уже обесточена '
+                         f'и строки ухода в сон не будет. Прошивка внутри '
+                         f'сетевого вызова молчит - смотрите связь устройства '
+                         f'с точкой стенда')
+        return приписка
+
+    @property
+    def headless_pending(self) -> bool:
+        """В буфере лежит конец сеанса, а начала нет."""
+        return (any(SESSION_END in line for line in self.lines)
+                and not any(RE_MODE.search(line) for line in self.lines))
+
+    def _take_headless(self, mode: int | None) -> Session | None:
+        """
+        Сеанс, у которого не доехало начало.
+
+        `Startup mode:` печатается в самом плотном месте лога - полсотни строк
+        за треть секунды сразу после загрузки, - и пропадает первым. Пока такой
+        сеанс не считался сеансом вовсе, стенд ждал его до потолка и выносил
+        приговор «сеанс не доиграл», хотя в буфере лежал целый сеанс со строкой
+        ухода в сон: устройство отработало за восемь секунд и спало ещё сорок,
+        пока стенд ждал метку, которая уже не придёт (прогон 25 сентября 2026).
+
+        Режим такого сеанса неизвестен, и брать его неоткуда: в логе метка одна.
+        Поэтому ожидание конкретного режима он не закрывает - тест дождётся
+        своего сеанса или скажет, что был сеанс без начала.
+        """
+        if mode is not None:
+            return None
+        end = next((i for i, line in enumerate(self.lines)
+                    if SESSION_END in line), None)
+        if end is None:
+            return None
+        logger.warning('начало сеанса не дошло: сеанс собран по строке ухода в '
+                       'сон, режим неизвестен')
+        session = Session(lines=self.lines[:end + 1], headless=True)
+        del self.lines[:end + 1]
+        return session
+
+    def _take_session(self, mode: int | None) -> Session | None:
+        start = None
+        for i, line in enumerate(self.lines):
+            m = RE_MODE.search(line)
+            if m:
+                if mode is not None and int(m.group(1)) != mode:
+                    # Не тот сеанс: выбрасываем его целиком, чтобы не мешал.
+                    # В журнал он всё-таки попадает: тест, ждущий сеанса, что
+                    # именно устройство делало вместо него, иначе не расскажет.
+                    end = self._find_end(i)
+                    if end is None:
+                        return None
+                    logger.info(f'пропускаем сеанс mode={m.group(1)}, '
+                                f'ждём mode={mode}')
+                    del self.lines[:end + 1]
+                    return self._take_session(mode)
+                start = i
+                break
+        if start is None:
+            return self._take_headless(mode)
+
+        end = self._find_end(start)
+        if end is None:
+            return None
+
+        session = Session(lines=self.lines[start:end + 1],
+                          preamble=self.lines[:start])
+        del self.lines[:end + 1]
+        return session
+
+    def _find_end(self, start: int) -> int | None:
+        """
+        Конец сеанса: строка засыпания либо начало следующего включения.
+
+        Второй случай - не редкость: из режима настройки прошивка уходит
+        перезапуском (`ESP.restart()` в main.cpp), и строки про сон там не
+        будет никогда.
+        """
+        for i in range(start, len(self.lines)):
+            if SESSION_END in self.lines[i]:
+                return i
+            if i > start and (RE_BOOT.search(self.lines[i])
+                              or RE_MODE.search(self.lines[i])):
+                return i - 1        # дальше уже следующее пробуждение
+        return None

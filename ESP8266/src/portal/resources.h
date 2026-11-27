@@ -25,10 +25,14 @@ static const char PARAM_PLACE[] PROGMEM = "place";
 static const char PARAM_MQTT_AUTO_DISCOVERY[] PROGMEM = "mqtt_auto_discovery";
 static const char PARAM_MQTT_DISCOVERY_TOPIC[] PROGMEM = "mqtt_discovery_topic";
 static const char PARAM_MQTT_RETAIN[] PROGMEM = "mqtt_retain";
+static const char PARAM_SEND_ON_CONSUMPTION[] PROGMEM = "send_on_consumption";
 static const char PARAM_NTP_SERVER[] PROGMEM = "ntp_server";
 static const char PARAM_SSID[] PROGMEM = "ssid";
 static const char PARAM_PASSWORD[] PROGMEM = "password";
 static const char PARAM_WIFI_PHY_MODE[] PROGMEM = "wifi_phy_mode";
+// Скрытые поля формы: канал и MAC точки, выбранной в списке сетей
+static const char PARAM_WIFI_CHANNEL[] PROGMEM = "wifi_channel";
+static const char PARAM_BSSID[] PROGMEM = "bssid";
 
 static const char PARAM_WATERIUS_ON[] PROGMEM = "waterius_on";
 static const char PARAM_HTTP_ON[] PROGMEM = "http_on";
@@ -46,6 +50,51 @@ static const char PARAM_COUNTER0_TYPE[] PROGMEM = "counter0_type";
 static const char PARAM_COUNTER1_TYPE[] PROGMEM = "counter1_type";
 static const char PARAM_COUNTER_IMG[] PROGMEM = "counter_img";
 static const char PARAM_FACTOR[] PROGMEM = "factor";
+static const char PARAM_ALARM_VOL[] PROGMEM = "alarm_vol";
+static const char PARAM_ALARM_RATE[] PROGMEM = "alarm_rate";
+static const char PARAM_ALARM_HOURS[] PROGMEM = "alarm_hours";
+static const char PARAM_ALARM_VOL0[] PROGMEM = "alarm_vol0";
+static const char PARAM_ALARM_VOL1[] PROGMEM = "alarm_vol1";
+static const char PARAM_ALARM_RATE0[] PROGMEM = "alarm_rate0";
+static const char PARAM_ALARM_RATE1[] PROGMEM = "alarm_rate1";
+static const char PARAM_ALARM_HOURS0[] PROGMEM = "alarm_hours0";
+static const char PARAM_ALARM_HOURS1[] PROGMEM = "alarm_hours1";
+static const char PARAM_ALARM_RESET[] PROGMEM = "alarm_reset";
+static const char PARAM_ALARM_STOP[] PROGMEM = "alarm_stop";
+static const char PARAM_ALARM_STOP0[] PROGMEM = "alarm_stop0";
+static const char PARAM_ALARM_STOP1[] PROGMEM = "alarm_stop1";
+static const char PARAM_VACATION[] PROGMEM = "vacation";
+
+/*
+Квитанция о тревоге: кому доклад обязан доехать (#202). Имена не
+оканчиваются цифрой - иначе ha/apply_settings.cpp принял бы их за
+поканальные и срезал бы последний символ.
+*/
+static const char PARAM_CONFIRM_WATERIUS[] PROGMEM = "confirm_waterius";
+static const char PARAM_CONFIRM_HTTP[] PROGMEM = "confirm_http";
+static const char PARAM_CONFIRM_MQTT[] PROGMEM = "confirm_mqtt";
+/* Выключенный отправитель: галочку видно, но тронуть нельзя */
+static const char PARAM_ACK_OFF_WATERIUS[] PROGMEM = "ack_off_waterius";
+static const char PARAM_ACK_OFF_HTTP[] PROGMEM = "ack_off_http";
+static const char PARAM_ACK_OFF_MQTT[] PROGMEM = "ack_off_mqtt";
+/*
+Состояние входа на странице тревог: класс на блоке канала и disabled на
+полях порогов. Что показывать, решает прошивка - страница приезжает готовой,
+без вспышки лишних полей на onload (core/alarm.h:AlarmInputState).
+*/
+/* Блок снятия на странице тревог: прячется, пока ни одна не поднята */
+static const char PARAM_ALARM_RAISED[] PROGMEM = "alarm_raised";
+static const char CLASS_HIDDEN[] PROGMEM = "hd";
+static const char PARAM_STOP_HIDDEN[] PROGMEM = "stop_hidden";
+static const char PARAM_ALARM_STATE0[] PROGMEM = "alarm_state0";
+static const char PARAM_ALARM_STATE1[] PROGMEM = "alarm_state1";
+static const char PARAM_THRESHOLDS_OFF0[] PROGMEM = "thresholds_off0";
+static const char PARAM_THRESHOLDS_OFF1[] PROGMEM = "thresholds_off1";
+static const char PARAM_LEAK_OFF[] PROGMEM = "leak_off";
+static const char CLASS_NO_FACTOR[] PROGMEM = "no-factor";
+static const char CLASS_NO_ATTINY[] PROGMEM = "no-attiny";
+static const char CLASS_NO_INPUT[] PROGMEM = "no-input";
+static const char ATTR_DISABLED[] PROGMEM = "disabled";
 static const char PARAM_ASTERICS[] PROGMEM = "********";
 
 
@@ -56,6 +105,9 @@ static const char ERROR_LENGTH_ERROR[] PROGMEM = "Превышена длина 
 static const char ERROR_VALUE[] PROGMEM = "Неверное значение";
 static const char ERROR_ATTINY_ERROR[] PROGMEM = "Ошибка связи с attiny";
 static const char ERROR_EMPTY[] PROGMEM = "Значение не может быть пустым";
+static const char ERROR_NO_COMMA[] PROGMEM = "Похоже, забыта запятая";
+static const char ERROR_TLS[] PROGMEM = "Шифрованное подключение к MQTT не поддерживается";
+static const char ERROR_PORT_IN_HOST[] PROGMEM = "Порт указывайте в отдельном поле";
 
 // не из конфигурации
 static const char PARAM_BUILD_DATE_TIME[] PROGMEM = "build_date_time";

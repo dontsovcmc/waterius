@@ -1,10 +1,68 @@
 #include "wifi_helpers.h"
 #include "Logging.h"
 #include "utils.h"
+#include "core/wifi.h"
+#include "core/connect_log.h"
 #include <LittleFS.h>
 #include <ESP8266WiFiScan.h>
 
 #define WIFI_SET_MODE_ATTEMPTS 2
+
+static WiFiEventHandler disconnected_handler;
+static WiFiDisconnectReason last_disconnect_reason;
+static bool connecting = false;
+
+// Без атрибута GCC сворачивает switch в таблицу на 204 указателя, а она живёт в RAM
+__attribute__((optimize("no-tree-switch-conversion")))
+static const __FlashStringHelper *disconnect_reason_title(const WiFiDisconnectReason reason)
+{
+    switch (reason)
+    {
+    case WIFI_DISCONNECT_REASON_UNSPECIFIED: return F("UNSPECIFIED");
+    case WIFI_DISCONNECT_REASON_AUTH_EXPIRE: return F("AUTH_EXPIRE");
+    case WIFI_DISCONNECT_REASON_AUTH_LEAVE: return F("AUTH_LEAVE");
+    case WIFI_DISCONNECT_REASON_ASSOC_EXPIRE: return F("ASSOC_EXPIRE");
+    case WIFI_DISCONNECT_REASON_ASSOC_TOOMANY: return F("ASSOC_TOOMANY");
+    case WIFI_DISCONNECT_REASON_NOT_AUTHED: return F("NOT_AUTHED");
+    case WIFI_DISCONNECT_REASON_NOT_ASSOCED: return F("NOT_ASSOCED");
+    case WIFI_DISCONNECT_REASON_ASSOC_LEAVE: return F("ASSOC_LEAVE");
+    case WIFI_DISCONNECT_REASON_ASSOC_NOT_AUTHED: return F("ASSOC_NOT_AUTHED");
+    case WIFI_DISCONNECT_REASON_DISASSOC_PWRCAP_BAD: return F("DISASSOC_PWRCAP_BAD");
+    case WIFI_DISCONNECT_REASON_DISASSOC_SUPCHAN_BAD: return F("DISASSOC_SUPCHAN_BAD");
+    case WIFI_DISCONNECT_REASON_IE_INVALID: return F("IE_INVALID");
+    case WIFI_DISCONNECT_REASON_MIC_FAILURE: return F("MIC_FAILURE");
+    case WIFI_DISCONNECT_REASON_4WAY_HANDSHAKE_TIMEOUT: return F("4WAY_HANDSHAKE_TIMEOUT");
+    case WIFI_DISCONNECT_REASON_GROUP_KEY_UPDATE_TIMEOUT: return F("GROUP_KEY_UPDATE_TIMEOUT");
+    case WIFI_DISCONNECT_REASON_IE_IN_4WAY_DIFFERS: return F("IE_IN_4WAY_DIFFERS");
+    case WIFI_DISCONNECT_REASON_GROUP_CIPHER_INVALID: return F("GROUP_CIPHER_INVALID");
+    case WIFI_DISCONNECT_REASON_PAIRWISE_CIPHER_INVALID: return F("PAIRWISE_CIPHER_INVALID");
+    case WIFI_DISCONNECT_REASON_AKMP_INVALID: return F("AKMP_INVALID");
+    case WIFI_DISCONNECT_REASON_UNSUPP_RSN_IE_VERSION: return F("UNSUPP_RSN_IE_VERSION");
+    case WIFI_DISCONNECT_REASON_INVALID_RSN_IE_CAP: return F("INVALID_RSN_IE_CAP");
+    case WIFI_DISCONNECT_REASON_802_1X_AUTH_FAILED: return F("802_1X_AUTH_FAILED");
+    case WIFI_DISCONNECT_REASON_CIPHER_SUITE_REJECTED: return F("CIPHER_SUITE_REJECTED");
+    case WIFI_DISCONNECT_REASON_BEACON_TIMEOUT: return F("BEACON_TIMEOUT");
+    case WIFI_DISCONNECT_REASON_NO_AP_FOUND: return F("NO_AP_FOUND");
+    case WIFI_DISCONNECT_REASON_AUTH_FAIL: return F("AUTH_FAIL");
+    case WIFI_DISCONNECT_REASON_ASSOC_FAIL: return F("ASSOC_FAIL");
+    case WIFI_DISCONNECT_REASON_HANDSHAKE_TIMEOUT: return F("HANDSHAKE_TIMEOUT");
+    }
+    return F("");
+}
+
+/*
+Почему роутер не пустил: статус после попытки этого не говорит, а причина
+приходит только событием. Вне попытки событие порождает наш же disconnect или
+фоновое переподключение SDK, а повтор той же причины ничего не добавляет.
+*/
+static void on_disconnected(const WiFiEventStationModeDisconnected &event)
+{
+    if (!connecting || event.reason == last_disconnect_reason)
+        return;
+
+    last_disconnect_reason = event.reason;
+    LOG_ERROR(F("WIFI: disconnected, reason ") << (int)event.reason << F(" ") << disconnect_reason_title(event.reason));
+}
 
 // Adoption of Tasmota wifi module
 // https://github.com/arendst/Tasmota/blob/development/tasmota/tasmota_support/support_wifi.ino
@@ -80,10 +138,18 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
 
     delay(100); // подождем чтобы проинициализировалась сеть
 
+    last_disconnect_reason = (WiFiDisconnectReason)0;
+    connecting = true;
+
     if (sett.wifi_channel)
     {
+        // WiFi.begin считает BSSID заданным по самому факту ненулевого
+        // указателя, а в настройках лежит массив: нулевой адрес превратился бы
+        // в попытку подключиться к точке 00:00:00:00:00:00
+        const uint8_t *bssid = has_bssid(sett.wifi_bssid) ? sett.wifi_bssid : nullptr;
+
         LOG_INFO(F("WIFI: begin channel: ") << sett.wifi_channel);
-        WiFi.begin(sett.wifi_ssid, sett.wifi_password, sett.wifi_channel, sett.wifi_bssid);
+        WiFi.begin(sett.wifi_ssid, sett.wifi_password, sett.wifi_channel, bssid);
     }
     else
     {
@@ -92,6 +158,7 @@ void wifi_begin(Settings &sett, WiFiMode_t wifi_mode)
     }
 
     int8_t ret = WiFi.waitForConnectResult(ESP_CONNECT_TIMEOUT); //        ждем результата подключения
+    connecting = false;
     if (ret == -1) 
     {
         LOG_ERROR(F("WIFI: connect timeout"));
@@ -112,7 +179,6 @@ void wifi_shutdown()
 
 String wifi_phy_mode_title(const WiFiPhyMode_t m)
 {
-    // WiFi.setPhyMode(WIFI_PHY_MODE_11B = 1, WIFI_PHY_MODE_11G = 2, WIFI_PHY_MODE_11N = 3);
     switch (m)
     {
     case WIFI_PHY_MODE_11B:
@@ -131,6 +197,11 @@ bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
 {
     uint32_t start_time = millis();
     LOG_INFO(F("WIFI: Connecting..."));
+
+    if (!disconnected_handler)
+    {
+        disconnected_handler = WiFi.onStationModeDisconnected(on_disconnected);
+    }
     sett.wifi_connect_attempt = WIFI_CONNECT_ATTEMPTS;
     do
     {
@@ -152,9 +223,9 @@ bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
         }
         sett.wifi_channel = 0;
         LOG_ERROR(F("WIFI: Connection failed."));
+        connect_log_push(sett, CONNECT_WIFI, last_disconnect_reason);
     } while (--sett.wifi_connect_attempt);
 
-    sett.wifi_connect_errors++;
     LOG_ERROR(F("WIFI: Connection failed.") << millis() - start_time << F(" ms"));
     return false;
 }
@@ -162,7 +233,6 @@ bool wifi_connect(Settings &sett, WiFiMode_t wifi_mode /*= WIFI_STA*/)
 /* Важно: вызывать функцию, после сканирования WiFi сетей */
 void write_ssid_to_file()
 {
-    // LittleFS.remove("/ssid.txt");
     File file = LittleFS.open("/ssid.txt", "w");
     if (!file)
     {
@@ -201,7 +271,6 @@ void write_ssid_to_file()
                 file.printf("is_hidden:%d\n", it->is_hidden);
                 file.printf("freq_offset:%d\n", it->freq_offset);
                 file.printf("freqcal_val:%d\n", it->freqcal_val);
-                // file.printf("freqcal_val:%d\n",it->freqcal_val);        //uint8 *esp_mesh_ie;
                 file.printf("simple_pair:%d\n", it->simple_pair);
                 file.printf("pairwise_cipher:%d\n", it->pairwise_cipher);
                 file.printf("group_cipher:%d\n", it->group_cipher);
