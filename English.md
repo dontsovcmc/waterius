@@ -71,7 +71,7 @@ The electronic input has been tested at 20 pulses per second: enough for a 3200 
 * in Domoticz: [guide](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
 * in SprutHub: [guide](https://wiki.spruthub.ru/%D0%A1%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5_%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D0%BB%D0%B5%D1%80%D0%B0_MQTT)
 * on your own [HTTP/HTTPS server](https://github.com/dontsovcmc/waterius/blob/master/Export.md#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B8-%D0%BF%D0%BE-http-%D1%81%D0%B2%D0%BE%D0%B9-%D1%81%D0%B5%D1%80%D0%B2%D0%B5%D1%80)
-* in an MQTT client: [fields and setup](https://github.com/dontsovcmc/waterius/blob/master/Export.md#настройка-отправки-по-mqtt)
+* in an MQTT client: [fields and setup](https://github.com/dontsovcmc/waterius/blob/master/Export.md#настройка-отправки-в-home-assistant-по-mqtt)
 * wherever you program it to go
   * [httpwaterius](https://github.com/grffio/httpwaterius) - a web server with a simple UI by [grffio](https://github.com/grffio)
 * straight to your housing management company through [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github)
@@ -89,8 +89,6 @@ The electronic input has been tested at 20 pulses per second: enough for a 3200 
 [Flash the ESP from a browser](https://waterius.github.io/update/): the page writes a downloaded `.bin` to the ESP8266 over USB-TTL, with nothing to install (Chrome or Edge)
 
 [Update Waterius 2 over the air](https://account.waterius.ru/update/) from your personal account: upload the firmware and the file system, and the update starts when the device next connects
-
-Beta version (built from the `dev` branch, for those ready to try new things): [2.0.56-48-beta](https://github.com/dontsovcmc/waterius/releases/tag/2.0.56-48-beta)
 
 Community guide in the Telegram chat info: [waterius_forum](https://t.me/waterius_forum)
 - [Parts list and making the board](https://github.com/dontsovcmc/waterius/blob/master/Making.md)

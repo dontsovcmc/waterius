@@ -66,7 +66,7 @@
 * в Domoticz [инструкция](https://www.hackster.io/dontsovcmc/domoticz-4346d5)
 * в SprutHub [инструкция](https://wiki.spruthub.ru/%D0%A1%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%B8%D0%B5_%D0%BA%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D0%BB%D0%B5%D1%80%D0%B0_MQTT)
 * на вашем [HTTP/HTTPS сервере](https://github.com/dontsovcmc/waterius/blob/master/Export.md#%D0%BD%D0%B0%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B0-%D0%BE%D1%82%D0%BF%D1%80%D0%B0%D0%B2%D0%BA%D0%B8-%D0%BF%D0%BE-http-%D1%81%D0%B2%D0%BE%D0%B9-%D1%81%D0%B5%D1%80%D0%B2%D0%B5%D1%80)
-* в MQTT клиенте [описание полей и настройка](https://github.com/dontsovcmc/waterius/blob/master/Export.md#настройка-отправки-по-mqtt)
+* в MQTT клиенте [описание полей и настройка](https://github.com/dontsovcmc/waterius/blob/master/Export.md#настройка-отправки-в-home-assistant-по-mqtt)
 * там, куда сами запрограммируете
   * [httpwaterius](https://github.com/grffio/httpwaterius) - web сервер с простым UI от [grffio](https://github.com/grffio)
 * передать сразу в управляющую компанию через сайт [waterius.ru](https://waterius.ru?utm_source=github&utm_medium=link&utm_campaign=github_16092021&utm_content=github&utm_term=github).
@@ -84,8 +84,6 @@
 [Прошить ESP из браузера](https://waterius.github.io/update/): страница заливает скачанный `.bin` в ESP8266 по USB-TTL, без установки программ (Chrome или Edge)
 
 [Обновить Ватериус 2 по воздуху](https://account.waterius.ru/update/) из личного кабинета: загрузите прошивку и файловую систему, обновление начнётся, когда устройство выйдет на связь
-
-Бета-версия (сборка из ветки `dev`, для тех, кто готов проверять новое): [2.0.56-48-beta](https://github.com/dontsovcmc/waterius/releases/tag/2.0.56-48-beta)
 
 Народная инструкция в инфо Телеграм чата: [waterius_forum](https://t.me/waterius_forum)
 - [Список деталей и создание платы](https://github.com/dontsovcmc/waterius/blob/master/Making.md)
