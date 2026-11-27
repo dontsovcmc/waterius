@@ -31,6 +31,11 @@ extern bool sync_ntp_time(const String &ntp_server_name, const time_t known_good
 
 extern String get_current_time();
 
+// Возвращает 0, пока время неизвестно. Нужна успешная синхронизация с NTP
+// или сохранённая дата предыдущей синхронизации. Начальная дата из прошивки
+// для проверки сертификатов не подходит.
+extern time_t get_tls_time();
+
 // is_valid_time() объявлена в core/timekeeping.h
 
 #endif

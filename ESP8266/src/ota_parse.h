@@ -3,6 +3,7 @@
 
 #include <ArduinoJson.h>
 #include "core/types.h"
+#include "core/url.h"
 
 struct OtaParams
 {
@@ -37,7 +38,7 @@ inline OtaParams parse_ota_params(const JsonObject &ota)
         p.fw_md5 = fw["md5"].as<const char *>();
         p.fw_size = fw["size"] | (size_t)0;
 
-        if (!p.fw_url || !p.fw_md5)
+        if (!is_https_url(p.fw_url) || !p.fw_md5)
         {
             p.error = OTA_ERR_PARSE;
             return p;
@@ -51,7 +52,7 @@ inline OtaParams parse_ota_params(const JsonObject &ota)
         p.fs_md5 = fs["md5"].as<const char *>();
         p.fs_size = fs["size"] | (size_t)0;
 
-        if (!p.fs_url || !p.fs_md5)
+        if (!is_https_url(p.fs_url) || !p.fs_md5)
         {
             p.error = OTA_ERR_PARSE;
             return p;

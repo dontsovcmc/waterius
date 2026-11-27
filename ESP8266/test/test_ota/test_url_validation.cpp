@@ -136,6 +136,35 @@ TEST(ParseOtaParams, FirmwareNotObject)
     EXPECT_EQ(p.error, OTA_ERR_PARSE);
 }
 
+TEST(ParseOtaParams, RejectsHttpFirmwareBeforeUpdatingFilesystem)
+{
+    JsonDocument doc;
+    doc["firmware"]["url"] = "http://example.com/fw.bin";
+    doc["firmware"]["md5"] = "abc";
+    doc["filesystem"]["url"] = "https://example.com/fs.bin";
+    doc["filesystem"]["md5"] = "def";
+
+    EXPECT_EQ(parse_ota_params(doc.as<JsonObject>()).error, OTA_ERR_PARSE);
+}
+
+TEST(ParseOtaParams, RejectsHttpFilesystem)
+{
+    JsonDocument doc;
+    doc["filesystem"]["url"] = "http://example.com/fs.bin";
+    doc["filesystem"]["md5"] = "abc";
+
+    EXPECT_EQ(parse_ota_params(doc.as<JsonObject>()).error, OTA_ERR_PARSE);
+}
+
+TEST(ParseOtaParams, RejectsEmptyUrl)
+{
+    JsonDocument doc;
+    doc["firmware"]["url"] = "";
+    doc["firmware"]["md5"] = "abc";
+
+    EXPECT_EQ(parse_ota_params(doc.as<JsonObject>()).error, OTA_ERR_PARSE);
+}
+
 // Коды ошибок — проверяем значения
 TEST(OtaErrorCodes, Values)
 {

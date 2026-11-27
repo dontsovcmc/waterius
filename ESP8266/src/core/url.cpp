@@ -83,6 +83,18 @@ ParamError parse_broker_host(char *dest, const size_t size, const char *value)
     return parse_text(dest, size, host, true);
 }
 
+bool is_https_url(const char *url)
+{
+    if (url == nullptr)
+        return false;
+
+    const char *separator = strstr(url, SCHEME_SEPARATOR);
+    char host[HOST_LEN];
+    return separator != nullptr
+        && scheme_equals(url, separator - url, "https")
+        && url_host(url, host, sizeof(host));
+}
+
 bool url_host(const char *url, char *dest, const size_t size)
 {
     const char *scheme_end = strstr(url, SCHEME_SEPARATOR);
