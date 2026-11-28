@@ -191,7 +191,7 @@ Disable modules via build_flags in `platformio.ini`:
 ## Running HIL tests (`Utils/hil`)
 
 **Never redirect pytest output to `/tmp` or any file outside the repo.** The run
-writes `logs/ГГГГ-мм-ДД-ЧЧ-ММ.log` itself (pytest output + stand loguru + METF
+writes `logs/ГГГГ-мм-ДД-ЧЧ-ММ.log` itself (pytest output + stand loguru + stdlib
 logging), prints its path in the session header, and flushes line by line, so an
 aborted run keeps everything it printed. A redirect to `/tmp` makes a second,
 worse copy that nobody can find afterwards and that dies with the sandbox.
@@ -212,10 +212,16 @@ the closed pipe raises `BrokenPipeError` inside the stand's log tee and kills th
 run with `INTERNALERROR`. Details — `Utils/hil/README.md`, «Запуск».
 
 Addresses in `stand.ini` are not settings to maintain: the run asks the kernel for
-its own IP and finds the boards itself (written address → mDNS → sweep of its own
+its own IP and finds the router itself (written address → mDNS → sweep of its own
 /24), then pins what it found back into the file. A `stand.ini` from another
 directory is passed as a single argument, `--stand-config=<path>`, not separated by
 a space.
+
+One clip for flashing and testing: the stand drives the board through the
+`waterius_flasher` programmer (0.7.0+) over USB (`programmer.py`, found by VID 303a),
+the router console is SSH (`router.py`, host key pinned in `stand.ini`), and NTP for
+block N is the router's `ntp` command. The `/factory/waterius2` page and the stand
+never hold the programmer's port at the same time.
 
 **The rules the stand is built on — `Utils/hil/rules.md`.** They are written without
 reference to this hardware, so they hold for any hardware-in-the-loop bench: read
