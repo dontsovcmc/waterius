@@ -1,5 +1,5 @@
 """
-Настройки стенда в одном месте: адреса, пины и порты, которые меняются от
+Настройки стенда в одном месте: адреса и порты, которые меняются от
 стенда к стенду. Файл `stand.ini` не коммитится, рядом лежит stand.ini.example.
 """
 
@@ -15,7 +15,7 @@ from loguru import logger
 
 DEFAULT_PATH = Path(__file__).with_name('stand.ini')
 
-# Куда спрашивать дорогу, если в файле нет ни роутера, ни METF. Адрес из
+# Куда спрашивать дорогу, если в файле нет роутера. Адрес из
 # TEST-NET-3 (RFC 5737): маршрут до него уходит в шлюз по умолчанию, а пакетов
 # не будет - connect() у UDP ничего не шлёт.
 ELSEWHERE = '203.0.113.1'
@@ -68,19 +68,37 @@ def _pin(path: Path, section: str, key: str, value: str) -> bool:
     return False
 
 
+def pin_router_key(path: str | os.PathLike[str] | None, key: str) -> bool:
+    """
+    Записать ключ хоста роутера в stand.ini: в `host_key`, а если строки нет - сразу
+    под заголовком `[router]`.
+    """
+    file = Path(path or DEFAULT_PATH)
+    if _pin(file, 'router', 'host_key', key):
+        return True
+    try:
+        lines = file.read_text(encoding='utf-8').splitlines(keepends=True)
+    except OSError:
+        return False
+    for i, line in enumerate(lines):
+        if line.strip().lower() == '[router]':
+            lines.insert(i + 1, f'host_key = {key}\n')
+            file.write_text(''.join(lines), encoding='utf-8')
+            return True
+    return False
+
+
 @dataclass(frozen=True)
 class StandConfig:
-    # Плата-манипулятор
-    metf_host: str
-    button_pin: int
-    ch0_pin: int
-    ch1_pin: int
-    reset_pin: int
+    # Программатор на гребёнке: пусто - искать по USB (programmer.find_port)
+    programmer_port: str
 
     # Лабораторная точка доступа
     router_port: str
     router_host: str
     router_password: str
+    # Отпечаток ключа хоста SSH-консоли; пусто - первый вход, стенд его запишет
+    router_host_key: str
     ap_ssid: str          # пусто - спросим у самой точки доступа
     ap_password: str      # у роутера не прочитать: show config печатает звёздочки
     # Канал точки стенда закреплён, а не оставлен на «как получилось»: эфир
@@ -123,6 +141,9 @@ class StandConfig:
     broker_port: int
     mqtt_topic: str
 
+    # Откуда прочитан: сюда стенд дописывает найденное (ключ хоста роутера)
+    path: str = ''
+
     @property
     def dut_ssid(self) -> str:
         """
@@ -157,7 +178,7 @@ def load(path: str | os.PathLike[str] | None = None,
          nocloud: bool = False) -> StandConfig:
     """
     Прочитать stand.ini. Любое значение перекрывается переменной окружения
-    вида HIL_METF_HOST - удобно, когда стендов два.
+    вида HIL_ROUTER_HOST - удобно, когда стендов два.
 
     `search` - искать ли платы, чей записанный адрес молчит (discover.py).
     Прогону и спасательным инструментам это нужно, разбору настроек - нет:
@@ -179,8 +200,8 @@ def load(path: str | os.PathLike[str] | None = None,
 
     # Дорогу спрашиваем к роутеру стенда, а не «в интернет»: приёмник и брокер
     # ждут Ватериус, который приходит к ним через NAT точки доступа, - значит
-    # нужен адрес Мака в той же проводной сети, где стоят роутер и METF.
-    towards = get('router', 'host', '') or get('metf', 'host', '') or ELSEWHERE
+    # нужен адрес Мака в той же проводной сети, где стоит роутер.
+    towards = get('router', 'host', '') or ELSEWHERE
     try:
         mine = own_ip(towards)
     except OSError as err:
@@ -235,14 +256,11 @@ def load(path: str | os.PathLike[str] | None = None,
         return fix(section, found, 'плата нашлась на') if found else written
 
     return StandConfig(
-        metf_host=board('metf', 'metf'),
-        button_pin=int(get('metf', 'button_pin', '1')),
-        ch0_pin=int(get('metf', 'ch0_pin', '3')),
-        ch1_pin=int(get('metf', 'ch1_pin', '2')),
-        reset_pin=int(get('metf', 'reset_pin', '0')),
+        programmer_port=get('programmer', 'port', ''),
         router_port=get('router', 'port', ''),
         router_host=board('router', 'router'),
         router_password=get('router', 'password', ''),
+        router_host_key=get('router', 'host_key', ''),
         ap_ssid=get('router', 'ap_ssid', ''),
         ap_password=get('router', 'ap_password', ''),
         ap_channel=int(get('router', 'ap_channel', '11')),
@@ -262,4 +280,5 @@ def load(path: str | os.PathLike[str] | None = None,
         broker_host=here('broker'),
         broker_port=int(get('broker', 'port', '1883')),
         mqtt_topic=get('broker', 'topic', 'waterius'),
+        path=str(file),
     )

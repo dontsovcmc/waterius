@@ -81,7 +81,7 @@ def save(board: AtBoard, path: str, **params: Any) -> dict[str, str]:
 
 def find_line(stand: Any, pattern: re.Pattern[str],
               timeout: float = 5.0) -> re.Match[str] | None:
-    """Строка лога по шаблону: METF отдаёт UART с задержкой, ждём немного."""
+    """Строка лога по шаблону: лог приезжает с задержкой опроса, ждём немного."""
     deadline = time.monotonic() + timeout
     while True:
         stand.log.poll()

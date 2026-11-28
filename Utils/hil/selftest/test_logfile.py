@@ -111,9 +111,9 @@ def test_трейсбек_amqtt_в_лог_прогона_не_идёт() -> None
 
 
 def test_чужие_трейсбеки_остаются() -> None:
-    """Стек клиента METF - улика, а не шум: его режут только у amqtt."""
+    """Стек paramiko - улика, а не шум: его режут только у amqtt."""
     from ..conftest import _LogFormat
 
-    текст = _LogFormat('%(message)s').format(запись('metf_python_client'))
+    текст = _LogFormat('%(message)s').format(запись('paramiko.transport'))
 
     assert 'Traceback' in текст

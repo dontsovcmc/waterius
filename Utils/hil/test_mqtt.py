@@ -493,7 +493,7 @@ def test_I4c_commands_need_discovery(stand: Stand) -> None:
 
     # Главное утверждение - положительное: команду никто не забрал, она так и
     # лежит в брокере удерживаемой. Отсутствие строк в логе доказывало бы то же
-    # самое, но только пока METF не теряет строки кольца
+    # самое, но только пока кольцо программатора не теряет строк
     left = [m.topic for m in stand.mqtt.fetch_retained(stand.mqtt_root)]
     assert stand.mqtt.command_topic('period_min') in left, (
         f'команда исчезла из брокера, а подписки не было: {left}')

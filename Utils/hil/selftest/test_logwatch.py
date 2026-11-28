@@ -3,8 +3,8 @@
 
 Смысл этих тестов - не «регулярное выражение написано», а «строка из прошивки
 разбирается в том виде, в каком она приезжает со стенда». А приезжает она
-кусками: плата METF режет строки по 60 символов, из которых 27 занимает
-префикс лога Ватериуса. Поэтому образцы здесь режутся ровно так же.
+иногда кусками: чтение лога режет поток где придётся. Образцы здесь режутся
+нарочно мелко - склейка обязана собрать строку из любых кусков.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ def fw(text: str, level: str = 'INFO ') -> str:
 
 def through_ring(lines: list[str]) -> str:
     """
-    Пропустить строки через кольцо METF: всё длиннее 59 символов разрезается,
+    Нарезать строки кусками: всё длиннее 59 символов разрезается,
     продолжение начинается с новой строки без префикса.
     """
     chunks: list[str] = []
@@ -47,14 +47,14 @@ def through_ring(lines: list[str]) -> str:
 
 
 class FakeApi:
-    """Плата METF, отдающая заранее подготовленный лог."""
+    """Программатор, отдающий заранее подготовленный лог."""
 
     def __init__(self, text: str) -> None:
         self._text = text
 
-    def serial_read(self) -> str:
+    def log_read(self) -> tuple[str, bool]:
         text, self._text = self._text, ''
-        return text
+        return text, False
 
 
 SESSION_ALARM = [
@@ -304,141 +304,62 @@ def test_принятая_настройка_не_значит_сохранён�
     assert session.saved['mqtt_host'] == '192.168.50.252'
 
 
-class BlindApi(FakeApi):
-    """METF, которая не отвечает вовсе: стенд не видит ни строки."""
-
-    def serial_read(self) -> str:
-        raise ConnectionError('host is down')
-
-
-def test_слепой_стенд_не_судит_об_устройстве() -> None:
-    """
-    METF молчала всё окно - о пробуждении Ватериуса сказать нечего.
-
-    Прежде стенд писал «Ватериус не проснулся» и отправлял искать кнопку,
-    питание и программатор, хотя устройство было исправно, а слеп был он сам.
-    """
-    watcher = LogWatcher(BlindApi(''))
-    with pytest.raises(AssertionError, match='стенд ослеп'):
-        watcher.wait_wake(timeout=0.3)
-
-
 def test_молчание_при_живой_связи_остаётся_приговором() -> None:
-    """METF отвечает, а на UART пусто - это уже про устройство."""
+    """Программатор отвечает, а на UART пусто - это уже про устройство."""
     watcher = LogWatcher(FakeApi(''))
     wake = watcher.wait_wake(timeout=0.3)
     assert wake.state == WAKE_SILENT
     assert 'не проснулся' in wake.describe('кнопки')
 
 
-class CountingApi(FakeApi):
-    """METF со счётчиком потерь: `dropped` растёт по заданному списку."""
+class LossyApi(FakeApi):
+    """Программатор, который на чтении номер `lost_on` говорит о потерях."""
 
-    def __init__(self, text: str, dropped: list[int]) -> None:
+    def __init__(self, text: str, lost_on: int) -> None:
         super().__init__(text)
-        self._dropped = list(dropped)
+        self._reads = 0
+        self._lost_on = lost_on
 
-    def serial_stat(self) -> dict:
-        value = self._dropped.pop(0) if len(self._dropped) > 1 else self._dropped[0]
-        return {'lines': 0, 'dropped': value, 'baud': 115200,
-                'capacity': 511, 'line_len': 128, 'bytes': 65536}
+    def log_read(self) -> tuple[str, bool]:
+        self._reads += 1
+        text, _ = super().log_read()
+        return text, self._reads == self._lost_on
 
 
-def test_потеря_строк_валит_тест_а_не_прячется() -> None:
+def test_потеря_лога_валит_тест_а_не_прячется() -> None:
     """
     Кольцо переполнилось - сеанс собрался, но лог неполон.
 
-    Это тот случай, ради которого счётчик и заводился: без него утверждения
-    делаются по обрезанному логу, и тест зеленеет на дыре в нём.
+    Без признака потерь утверждения делаются по обрезанному логу, и тест
+    зеленеет на дыре в нём.
     """
-    watcher = LogWatcher(CountingApi(through_ring(SESSION_ALARM), [0, 17]))
+    watcher = LogWatcher(LossyApi(through_ring(SESSION_ALARM), lost_on=1))
 
-    with pytest.raises(AssertionError, match='17'):
+    with pytest.raises(AssertionError, match='терял лог'):
         watcher.wait_session(timeout=1.0)
 
 
-class StallingApi(CountingApi):
-    """METF, отлучившаяся посреди окна наблюдения: потеря объясняется отлучкой."""
+def test_потеря_до_окна_окно_не_портит() -> None:
+    """Потеря, случившаяся до снимка, к этому окну не относится."""
+    watcher = LogWatcher(LossyApi('', lost_on=1))
+    watcher.poll()
+    watcher.api._text = through_ring(SESSION_ALARM)
 
-    def __init__(self, text: str, dropped: list[int], seconds: float) -> None:
-        super().__init__(text, dropped)
-        self._seconds = seconds
-        self._stall: tuple[float, float] | None = None
+    session = watcher.wait_session(timeout=1.0, mode=ALARM_MODE)
 
-    def serial_read(self) -> str:
-        # Отлучка случается внутри окна - иначе она к этой потере не относится
-        self._stall = (time.time(), self._seconds)
-        return super().serial_read()
-
-    def stall_since(self, mark: float) -> tuple[float, float] | None:
-        return self._stall if self._stall and self._stall[0] >= mark else None
-
-
-def test_потеря_после_отлучки_платы_названа_отлучкой() -> None:
-    """
-    Кольцо METF держит треть секунды потока, а связь с платой идёт по радио:
-    односекундная отлучка съедает лог целиком. Молчать об этом - значит послать
-    человека искать поломку в прошивке устройства, которое всё сделало верно.
-    """
-    watcher = LogWatcher(StallingApi(through_ring(SESSION_ALARM), [0, 17], 1.1))
-    with pytest.raises(AssertionError, match='1.1 с'):
-        watcher.wait_session(timeout=1.0)
-
-
-class RebootedApi(CountingApi):
-    """METF, перезагрузившаяся посреди окна наблюдения."""
-
-    def __init__(self, text: str, dropped: list[int]) -> None:
-        super().__init__(text, dropped)
-        self._reboot: float | None = None
-
-    def serial_read(self) -> str:
-        self._reboot = time.time()
-        return super().serial_read()
-
-    def reboot_since(self, mark: float) -> float | None:
-        return self._reboot if self._reboot and self._reboot >= mark else None
-
-
-def test_потеря_после_перезагрузки_платы_названа_перезагрузкой() -> None:
-    """
-    Перезагрузка METF объясняет пустое кольцо сама по себе: плата очищает его
-    при старте. Без этой приписки потерю ищут в прошивке устройства.
-    """
-    watcher = LogWatcher(RebootedApi(through_ring(SESSION_ALARM), [0, 17]))
-    with pytest.raises(AssertionError, match='METF перезагружалась'):
-        watcher.wait_session(timeout=1.0)
-
-
-def test_потеря_без_отлучки_ни_на_кого_не_кивает() -> None:
-    """Связь не пропадала - значит причина другая, и выдумывать её нельзя."""
-    watcher = LogWatcher(CountingApi(through_ring(SESSION_ALARM), [0, 17]))
-    with pytest.raises(AssertionError) as err:
-        watcher.wait_session(timeout=1.0)
-    assert 'связь с METF пропадала' not in str(err.value)
+    assert session is not None
 
 
 def test_целый_лог_проверку_проходит() -> None:
-    """Счётчик не вырос - сеанс отдаётся как обычно."""
-    watcher = LogWatcher(CountingApi(through_ring(SESSION_ALARM), [4]))
+    """Потерь не было - сеанс отдаётся как обычно."""
+    watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM)))
     session = watcher.wait_session(timeout=1.0, mode=ALARM_MODE)
     assert session is not None
     assert session.alarm_config is not None
 
 
-def test_старый_клиент_не_ломает_ожидание() -> None:
-    """
-    Клиент 0.3 не знает `serial_stat` - проверка выключается, а не падает.
-
-    Иначе обновление прошивки платы стало бы обязательным для любого прогона.
-    """
-    watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM)))
-    session = watcher.wait_session(timeout=1.0, mode=ALARM_MODE)
-    assert session is not None
-
-
 # Нажатие кнопки на стенде 13.09.2026: ЕСП прошита и жива, attiny на i2c не
-# отвечает. Первые строки - обрывки загрузки, как их принял METF.
+# отвечает. Первые строки - обрывки загрузки, как их принял стенд.
 WAKE_NO_ATTINY_LOG = [
     'n',
     '========',
@@ -592,57 +513,12 @@ def test_молчащий_лог_не_обвиняет_прошивку() -> Non
     assert 'ничего не сказало' in note and 'старше' in note
 
 
-class DeafApi(FakeApi):
-    """METF, которая не отвечает вовсе: стенд слеп, а не устройство молчит."""
-
-    def serial_read(self) -> str:
-        raise TimeoutError('нет ответа')
-
-
-def test_молчание_после_нажатия_видно_сразу() -> None:
-    """
-    По кнопке устройство просыпается сразу, поэтому пустой UART - готовый
-    ответ, а не повод ждать дальше.
-    """
-    watcher = LogWatcher(FakeApi(''))
-    assert watcher.wait_start(0.3) is False
-
-
-def test_первые_строки_прекращают_ожидание() -> None:
-    watcher = LogWatcher(FakeApi(through_ring(SESSION_ALARM)))
-    assert watcher.wait_start(5.0) is True
-
-
-def test_слепой_стенд_не_судит_о_пробуждении() -> None:
-    """
-    Пока METF не отдала ни одного чтения, о Ватериусе не известно ничего:
-    «не проснулся» здесь было бы приговором наугад.
-    """
-    watcher = LogWatcher(DeafApi(''))
-    with pytest.raises(AssertionError, match='ослеп'):
-        watcher.wait_start(0.3)
-
-
 # --- сеанс, у которого не доехало начало ---
 
 # То же пробуждение, но без метки `Startup mode:` - ровно то, что видел стенд
 # 25 сентября 2026: устройство отработало и ушло спать, а строка начала
 # потерялась в приёмном буфере UART платы, до кольца
 БЕЗ_НАЧАЛА = SESSION_ALARM[1:]
-
-
-class OverrunApi(FakeApi):
-    """METF, у которой растёт счётчик переполнений буфера UART."""
-
-    def __init__(self, text: str, overruns: list[int]) -> None:
-        super().__init__(text)
-        self._overruns = list(overruns)
-
-    def serial_stat(self) -> dict:
-        value = (self._overruns.pop(0) if len(self._overruns) > 1
-                 else self._overruns[0])
-        return {'lines': 0, 'dropped': 0, 'overruns': value, 'baud': 115200,
-                'capacity': 511, 'line_len': 128, 'bytes': 65536}
 
 
 def test_сеанс_без_начала_всё_равно_сеанс() -> None:
@@ -672,42 +548,6 @@ def test_сеанс_без_начала_ломает_утверждение_о_�
     """Не заметить его здесь значит позеленеть на тишине, которой не было."""
     watcher = LogWatcher(FakeApi(through_ring(БЕЗ_НАЧАЛА)))
     assert watcher.expect_no_session(timeout=1.0) is False
-
-
-def test_переполнение_буфера_платы_валит_тест() -> None:
-    """
-    Дыра, которой не видит счётчик кольца: байты не дошли даже до него.
-    Молчать о ней нельзя - именно она съедает начало сеанса.
-    """
-    watcher = LogWatcher(OverrunApi(through_ring(SESSION_ALARM), [0, 3]))
-
-    with pytest.raises(AssertionError, match='приёмный буфер UART'):
-        watcher.wait_session(timeout=1.0)
-
-
-class StumblingApi(FakeApi):
-    """METF, которая спотыкается на первых чтениях, а потом отвечает."""
-
-    def __init__(self, text: str, промахов: int) -> None:
-        super().__init__(text)
-        self._промахов = промахов
-
-    def serial_read(self) -> str:
-        if self._промахов > 0:
-            self._промахов -= 1
-            time.sleep(0.4)          # чтение ждёт ответа и не дожидается
-            raise TimeoutError('нет ответа')
-        return super().serial_read()
-
-
-def test_осечка_чтения_не_отнимает_время_у_устройства() -> None:
-    """
-    Окно приговора - две секунды, одно чтение ждёт секунду и повторяется:
-    одна заминка связи съедала окно целиком, и стенд объявлял себя слепым на
-    исправном устройстве. Теперь время неудачных чтений ему возвращается.
-    """
-    watcher = LogWatcher(StumblingApi(through_ring(SESSION_ALARM), промахов=2))
-    assert watcher.wait_start(1.0) is True
 
 
 def test_оборванный_лог_называет_последнюю_строку() -> None:
@@ -762,17 +602,13 @@ def test_молчание_между_плановыми_сеансами_не_с
 
 
 class ПлатаПоЧастям:
-    """METF, отдающая лог порциями: сеанс приходит не разом."""
+    """Программатор, отдающий лог порциями: сеанс приходит не разом."""
 
     def __init__(self, porcii: list[str]) -> None:
         self.porcii = list(porcii)
-        self.flushed = 0
 
-    def serial_read(self) -> str:
-        return self.porcii.pop(0) if self.porcii else ''
-
-    def serial_flush(self) -> None:
-        self.flushed += 1
+    def log_read(self) -> tuple[str, bool]:
+        return (self.porcii.pop(0) if self.porcii else ''), False
 
 
 def test_clear_дожидается_конца_начатого_сеанса() -> None:
@@ -789,7 +625,6 @@ def test_clear_дожидается_конца_начатого_сеанса() -
 
     assert not плата.porcii, 'конец сеанса надо было дочитать, а не выбросить'
     assert watcher.lines == [], 'после clear окно должно быть пустым'
-    assert плата.flushed == 1
 
 
 def test_clear_не_ждёт_замолчавший_сеанс(monkeypatch: pytest.MonkeyPatch) -> None:

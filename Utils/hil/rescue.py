@@ -2,7 +2,7 @@
 Вернуть стенд в рабочее состояние одной командой.
 
 Упавший или убитый прогон оставляет стенд там, куда его увёл тест: точка
-доступа погашена, в фильтре роутера лежит правило, линии METF прижаты к земле,
+доступа погашена, в фильтре роутера лежит правило, линии программатора прижаты к земле,
 радио AT-платы ищет пропавшую точку и греет модуль. Следующий прогон тогда
 падает по чужой вине, и разбор начинается с чужого мусора.
 
@@ -20,18 +20,17 @@ from loguru import logger
 
 from . import config
 from .atboard import AtBoard
-from .dut import Dut
-from .metf import Metf
+from .programmer import find_port
 from .router import connect
 
 
 def _router(cfg: config.StandConfig, check: bool) -> list[str]:
     """Снять правила фильтра и поднять точку: без них стенд слеп и нем."""
     router = connect(cfg.router_port or None, cfg.router_host or None,
-                     cfg.router_password, cfg.ap_password)
+                     cfg.router_password, cfg.ap_password, host_key=cfg.router_host_key,
+                     pin_key=lambda key: config.pin_router_key(cfg.path, key))
     try:
-        # version() отвечает многострочным баннером - в отчёт берём первую строку
-        banner = router.version().strip().splitlines()[0]
+        banner = router.version()
         done = [f'роутер: {banner}, канал {router.config().get("channel", "?")}']
         rules = sum(len(router.acl_rules(name)) for name in ('block', 'allow'))
         ap_on = router.ap_enabled()
@@ -49,14 +48,18 @@ def _router(cfg: config.StandConfig, check: bool) -> list[str]:
         router.close()
 
 
-def _metf(cfg: config.StandConfig, check: bool) -> list[str]:
+def _programmer(cfg: config.StandConfig, check: bool) -> list[str]:
     """Отпустить линии: прижатый вход даёт чужие импульсы весь прогон."""
-    api = Metf(cfg.metf_host)
-    api.ping()
-    if check:
-        return [f'METF {cfg.metf_host}: отвечает']
-    Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin).init()
-    return [f'METF {cfg.metf_host}: линии отпущены']
+    api = find_port(cfg.programmer_port)
+    try:
+        version, uptime = api.info()
+        shown = '.'.join(map(str, version))
+        if check:
+            return [f'программатор {api.port}: прошивка {shown}, с пуска {uptime} с']
+        api.lines_off()
+        return [f'программатор {api.port}: линии отпущены']
+    finally:
+        api.close()
 
 
 def _atboard(cfg: config.StandConfig, check: bool) -> list[str]:
@@ -102,7 +105,7 @@ def main() -> None:
     cfg = config.load(args.config, search=True,   # чинить нечего, если плату не нашли
                       norouter=args.norouter)
     lines: list[str] = []
-    steps = (_metf, _atboard) if args.norouter else (_router, _metf, _atboard)
+    steps = (_programmer, _atboard) if args.norouter else (_router, _programmer, _atboard)
     for step in steps:
         try:
             lines += step(cfg, args.check)

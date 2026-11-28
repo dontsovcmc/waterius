@@ -18,8 +18,8 @@ from ..conftest import live_cloud
 from ..stand import Stand
 
 СТЕНД = """\
-[metf]
-host = 192.168.100.21
+[programmer]
+port =
 
 [router]
 host = 192.168.100.20
@@ -50,6 +50,7 @@ class Стенд:
     """Стенд, у которого спрашивают только требования к устройству."""
 
     mqtt = None
+    clock = None             # без роутера: сервер времени не прописывается
 
     def __init__(self, cfg: Any) -> None:
         self.cfg = cfg
@@ -58,7 +59,6 @@ class Стенд:
 class Настройки:
     """Часть stand.ini, которую читает Stand.requirements."""
 
-    metf_host = '192.168.100.21'
     http_url = 'http://192.168.100.18:8010/'
 
     def __init__(self, email: str, nocloud: bool = False) -> None:

@@ -317,7 +317,7 @@ def ap_in_air(board: AtBoard, ssid: str, timeout: float = 15.0):
     """
     Точка портала глазами AT-платы: скан по имени, не входя в неё.
 
-    Свидетель, независимый от METF: лог приезжает по сети, скан - по проводу.
+    Свидетель, независимый от лога: лог приезжает с программатора, скан - с AT-платы.
     """
     deadline = time.monotonic() + timeout
     while True:
@@ -528,7 +528,7 @@ if __name__ == '__main__':
     from .config import load
     from .dut import Dut
     from .logwatch import LogWatcher
-    from .metf import Metf
+    from .programmer import find_port
 
     parser = argparse.ArgumentParser(description='обход портала через AT-плату')
     parser.add_argument('--port', default='/dev/cu.usbserial-0001',
@@ -546,8 +546,9 @@ if __name__ == '__main__':
 
     ssid = args.ssid
     if args.press or not ssid:
-        api = Metf(cfg.metf_host)
-        dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin)
+        api = find_port(cfg.programmer_port)
+        api.log_begin()
+        dut = Dut(api)
         log = LogWatcher(api)
         if args.press:
             dut.init()

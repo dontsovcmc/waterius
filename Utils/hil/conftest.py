@@ -139,7 +139,7 @@ class _LogFormat(logging.Formatter):
     Брокер печатает отказ доставки через `logger.exception`, то есть девятью
     строками стека на каждое сообщение: 29 сентября это была четверть файла, и
     строки стенда тонули. Сама строка о беде остаётся - режется только стек, и
-    только у amqtt: стек клиента METF в разборе нужен.
+    только у amqtt: стеки остальных в разборе нужны.
     """
 
     def format(self, record: logging.LogRecord) -> str:
@@ -157,7 +157,7 @@ def _open_log(config: pytest.Config) -> Path | None:
     Прогон стенда идёт часами, и единственный способ понять, что он делает
     сейчас и на чём умер, - лог на диске. Пишется построчно, поэтому оборванный
     прогон сохраняет всё, что успел напечатать. Три источника в одном файле:
-    вывод pytest, loguru (сам стенд) и стандартный logging (клиент METF).
+    вывод pytest, loguru (сам стенд) и стандартный logging (paramiko, amqtt).
     """
     where = config.getoption('--stand-log')
     if where == 'off':
@@ -280,24 +280,24 @@ def pytest_configure(config: pytest.Config) -> None:   # pytest_configure - жд
 @pytest.hookimpl(tryfirst=True)
 def pytest_exception_interact(node: Any, call: Any, report: Any) -> None:
     """
-    METF замолчал надолго или простоял хост - останавливаем прогон целиком.
+    Программатор пропал или простоял хост - останавливаем прогон целиком.
 
-    Без платы стенд не может ни нажать кнопку, ни прочитать лог, поэтому
+    Без программатора стенд не может ни нажать кнопку, ни прочитать лог, поэтому
     продолжать бессмысленно: каждый следующий тест выдаст тот же traceback.
     Один раз это стоило часа прогона и 23 одинаковых ошибок подряд.
 
     Простой хоста хуже: он не виден вовсе. Пока Мак спал, лог никто не
-    вычитывал, кольцо METF переполнялось, и обстановка устройства неизвестна -
+    вычитывал, кольцо лога переполнялось, и обстановка устройства неизвестна -
     дальнейшие вердикты не стоят ничего. Прогон 2026-09-27 дал так девять
     ложных падений из десяти.
     """
     from .hostclock import HostAsleep
-    from .metf import MetfGone
+    from .programmer import ProgrammerGone
     from .stand import DeviceLost
 
     if call.excinfo is None:
         return
-    if isinstance(call.excinfo.value, (MetfGone, HostAsleep, DeviceLost)):
+    if isinstance(call.excinfo.value, (ProgrammerGone, HostAsleep, DeviceLost)):
         pytest.exit(str(call.excinfo.value), returncode=1)
 
 
@@ -381,23 +381,22 @@ def mqtt(cfg: Any, broker: Any) -> Iterator[Any]:
 
 def bring_up(step: Callable[[], Any], what: str) -> Any:
     """
-    Шаг подъёма стенда, переживающий одну осечку связи с METF.
+    Шаг подъёма стенда, переживающий одну беду стенда.
 
     Это не обезболивающее для мигающих тестов, а разница в цене: шаги подъёма
     ничего не утверждают о прошивке и повторяются без последствий, а их отказ
-    уносит весь прогон целиком. Так и вышло: отлучка платы на 1,1 с переполнила
-    кольцо лога, и 45 медленных тестов не начались вовсе.
+    уносит весь прогон целиком: переполненное кольцо лога однажды не дало
+    начаться 45 медленным тестам.
 
-    Повторяется только то, что случилось со стендом: переполнение кольца, слепота,
-    когда METF не отдала ни одного чтения, и сеанс, целое тело которого не
-    доехало - о состоянии устройства такой сеанс не говорит ничего, это его
-    собственные слова. Отказ по делу - устройство молчит при живой связи, сеть
+    Повторяется только то, что случилось со стендом: потеря лога и сеанс, целое
+    тело которого не доехало - о состоянии устройства такой сеанс не говорит
+    ничего, это его собственные слова. Отказ по делу - устройство молчит, сеть
     чужая - летит сразу, как раньше.
     """
     try:
         return step()
     except AssertionError as err:
-        beda = ('METF потерял', 'стенд ослеп', 'не говорит ничего')
+        beda = ('терял лог', 'не говорит ничего')
         if not any(mark in str(err) for mark in beda):
             raise
         logger.warning(f'подъём стенда: {what} сорвался на беде стенда, повторяю\n{err}')
@@ -444,7 +443,7 @@ def preflight(step: Callable[[], Any], what: str, device: Any = None) -> Any:
     окружением другой модели, и ЕСП её не нашла.
 
     Ловится не только assert. Подъём срывается и обычным исключением - приёмник
-    не встал на порт, METF не открыла UART, - а стоит это ровно столько же:
+    не встал на порт, программатора нет на USB, - а стоит это ровно столько же:
     железа нет, и каждый следующий тест выдаст тот же traceback. Свои
     исключения pytest (выход из прогона) пролетают как есть.
     """
@@ -460,21 +459,17 @@ def preflight(step: Callable[[], Any], what: str, device: Any = None) -> Any:
 @pytest.fixture(scope='session')
 def stand(cfg: Any, mqtt: Any) -> Iterator[Any]:
     from .stand import Stand
-    # Платы - такой же шаг подъёма, как и все прочие, и мимо preflight он шёл
-    # зря: 29 сентября стенд переехал на другие адреса, METF не отозвалась за
-    # свои тридцать секунд, и прогон отпечатал этот отказ по разу на каждый
-    # тест вместо одной строки о причине. Без METF нечем ни нажать кнопку, ни
-    # прочитать лог - проверять дальше нечего.
+    # Платы - такой же шаг подъёма, как и все прочие: без программатора нечем ни
+    # нажать кнопку, ни прочитать лог - отказ печатается одной строкой о причине,
+    # а не по разу на каждый тест.
     device = preflight(lambda: Stand.create(cfg, mqtt), 'платы стенда')
-    global _metf
-    _metf = device.api
     global _stand
     _stand = device
     preflight(device.check_atboard, 'AT-плата', device)      # до первого теста, а не на сороковой минуте
     preflight(device.identify, 'опрос устройства', device)   # версии и MAC - до первого теста
     preflight(device.ensure_network, 'сеть стенда', device)  # в чужой сети стенд бесполезен
     preflight(device.ensure_mqtt, 'брокер стенда', device)   # если он поднялся
-    preflight(device.ensure_clock, 'часы платы', device)     # иначе время придёт из интернета
+    preflight(device.ensure_clock, 'часы роутера', device)   # иначе время придёт из интернета
     _log_air('первый тест')   # у первого файла улик иначе нет: стенд встал позже хука
     try:
         yield device
@@ -575,10 +570,10 @@ def clean_net(request: pytest.FixtureRequest) -> Iterator[None]:
 @pytest.fixture(autouse=True)
 def clean_dut(request: pytest.FixtureRequest) -> Iterator[None]:
     """
-    Возврат линий METF в высокоомное состояние после каждого теста стенда.
+    Возврат линий программатора в отпущенное состояние после каждого теста стенда.
 
     Стенд держит линии, пока их не отпустят: `dut.wet(closed=True)` - это
-    pinMode(OUTPUT) плюс digitalWrite(LOW) до отдельной команды. Тест, упавший
+    `#hold` до отдельного `#release`. Тест, упавший
     между замыканием входа и своим `finally`, оставляет вход прижатым к земле
     на весь оставшийся прогон, и следующий тест считает чужие импульсы или
     видит вечную тревогу датчика.
@@ -602,22 +597,11 @@ def clean_dut(request: pytest.FixtureRequest) -> Iterator[None]:
         device.release_lines()
 
 
-# Тесты, в которых плата-манипулятор перезагружалась: имя -> сколько раз. Нужны
-# и сразу (припиской к отказу), и в конце прогона сводкой: перезагрузка METF
-# объясняет пустое кольцо, выключенный сервер времени и отпущенные выводы, и
-# упавший рядом с ней тест - повод смотреть на стенд, а не на прошивку.
-_reboots: dict[str, int] = {}
-
-# Клиент METF, пока живёт стенд. Счётчик перезагрузок снимается хуком вокруг
-# всего теста, а не фикстурой: тест, упавший в подготовке, до фикстуры не
-# доходит - а именно в подготовке перезагрузка и мешает чаще всего.
-_metf: Any = None
-
 # Сам стенд, пока он жив: нужен для улик про эфир перед каждым файлом тестов.
 _stand: Any = None
 
 # Файл, перед которым улики уже сняты: снимаем один раз на файл, а не на тест -
-# опрос METF идёт по тому же радио, о котором мы и собираем улики.
+# в начале каждого файла стоит строка об эфире, и чаще она не нужна.
 _air_at: Any = None
 
 
@@ -633,12 +617,6 @@ def _log_air(where: str) -> None:
     if _stand is None:
         return
     parts = []
-    try:
-        net = _stand.api.wifi()
-        parts.append(f'METF {net.get("rssi")} дБм (сеть «{net.get("ssid")}», '
-                     f'канал {net.get("channel")})')
-    except Exception as err:                 # опрос по радио: сам может не дойти
-        parts.append(f'METF о себе не сказала ({type(err).__name__})')
     payload = _stand.last_payload or {}
     if 'rssi' in payload:
         # Возраст обязателен: 28 сентября устройство двадцать минут лежало без
@@ -649,7 +627,8 @@ def _log_air(where: str) -> None:
         parts.append(f'Ватериус {payload["rssi"]} дБм на канале '
                      f'{payload.get("channel")}, ошибок связи '
                      f'{payload.get("wifi_connect_errors")} - из посылки {возраст}')
-    logger.info(f'эфир перед {where}: ' + '; '.join(parts))
+    if parts:
+        logger.info(f'эфир перед {where}: ' + '; '.join(parts))
 
 
 def _version(text: str) -> tuple[int, ...]:
@@ -834,26 +813,10 @@ def capture(request: pytest.FixtureRequest,
         path.unlink()
 
 
-def _metf_note() -> str:
-    """
-    Время METF от её перегрузки - в каждый отказ.
-
-    По нему видно, падала ли плата: вся картина о Ватериусе приходит через неё,
-    и перезагрузившаяся посреди теста плата объясняет и пустой лог, и потерянный
-    импульс. Спрашивать плату не нужно, аптайм приезжает заголовком
-    `X-Uptime-Ms` на каждом ответе и лежит в `Metf.uptime_ms`.
-    """
-    if _metf is None or _metf.uptime_ms is None:
-        return 'METF: аптайм неизвестен (плата ни разу не ответила)'
-    return (f'METF: от перегрузки {_metf.uptime_ms / 1000:.0f} с, '
-            f'перезагрузок за прогон {_metf.reboots}')
-
-
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
     """
-    Вокруг теста - улики стенда: эфир перед новым файлом, перезагрузки платы и
-    причина падения сразу.
+    Вокруг теста - улики стенда: эфир перед новым файлом и причина падения сразу.
 
     Время теста печатает сам pytest (`console_output_style = times` в pytest.ini
     вместе с `-v`), поэтому своего учёта здесь нет: самописная строка вдобавок
@@ -865,12 +828,7 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
     if item.path != _air_at:
         _air_at = item.path
         _log_air(item.path.name)
-    before = _metf.reboots if _metf is not None else 0
     yield
-    if _metf is not None and _metf.reboots > before:
-        _reboots[item.nodeid] = _metf.reboots - before
-        logger.warning(f'METF перезагружалась во время теста {item.name}: '
-                       f'{_metf.reboots - before} раз')
 
     terminal = item.config.pluginmanager.get_plugin('terminalreporter')
     if terminal is None:
@@ -881,16 +839,8 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
         if report is not None and report.failed:
             terminal.write_line(f'--- причина падения ({when}) ---')
             terminal.write_line(report.longreprtext)
-            terminal.write_line(f'--- {_metf_note()}{host.note()} ---')
-            if item.nodeid in _reboots:
-                terminal.write_line(
-                    f'--- во время теста METF перезагружалась '
-                    f'({_reboots[item.nodeid]} раз): отказ может быть про стенд, '
-                    f'а не про Ватериус ---')
-    if nextitem is None and _reboots:
-        terminal.write_line('--- METF перезагружалась в тестах ---')
-        for nodeid, times in _reboots.items():
-            terminal.write_line(f'    {nodeid}: {times}')
+            if host.note():
+                terminal.write_line(f'--- {host.note().lstrip(". ")} ---')
     if nextitem is None and _stand is not None:
         note = _stand.power_note()
         if note:
