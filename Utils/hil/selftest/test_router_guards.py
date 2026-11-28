@@ -5,7 +5,7 @@
 следующем старте падает в abort() до запуска консолей - плата чинится только
 прошивальщиком. А перезагрузка, судимая по живому сокету, объявляется
 состоявшейся, даже когда плата и не думала перезагружаться: запись в
-полуоткрытый сокет проходит успешно.
+полуоткрытое соединение проходит успешно.
 
 Железо не нужно: консоль подменена.
 """
@@ -24,18 +24,12 @@ class Console:
         self.sent: list[str] = []
         self._uptimes = uptimes or ['00:10:00']
 
-    def write_line(self, line: str) -> None:
+    def run(self, line: str, timeout: float) -> str:
         self.sent.append(line)
-
-    def read_idle(self, timeout: float, idle: float) -> str:
-        line = self.sent[-1] if self.sent else ''
         if line == 'show status':
             up = self._uptimes.pop(0) if len(self._uptimes) > 1 else self._uptimes[0]
-            return f'{line}\nRouter Status:\nUptime: {up} (since 2026-09-23 13:00:00)\nesp32>'
-        return f'{line}\nesp32>'
-
-    def drain(self) -> None:
-        pass
+            return f'Router Status:\nUptime: {up} (since 2026-09-23 13:00:00)\n'
+        return ''
 
     def close(self) -> None:
         pass
@@ -82,12 +76,12 @@ def test_аптайм_разбирается() -> None:
 class КонсольБезAP(Console):
     """Консоль, у которой точка доступа всегда «включена»: гашение не видно."""
 
-    def read_idle(self, timeout: float, idle: float) -> str:
-        line = self.sent[-1] if self.sent else ''
+    def run(self, line: str, timeout: float) -> str:
+        self.sent.append(line)
         if line == 'show status':
-            return (f'{line}\nRouter Status:\nAP interface: enabled\n'
-                    f'Uptime: 00:10:00 (since 2026-09-23 13:00:00)\nesp32>')
-        return f'{line}\nesp32>'
+            return ('Router Status:\nAP interface: enabled\n'
+                    'Uptime: 00:10:00 (since 2026-09-23 13:00:00)\n')
+        return ''
 
 
 def test_упавшее_гашение_поднимает_точку_обратно() -> None:

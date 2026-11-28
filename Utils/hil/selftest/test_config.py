@@ -21,9 +21,8 @@ from .. import config as stand_config
 СТЕНД = """\
 ; Стенд Ватериуса.
 
-[metf]
-host = 192.168.100.21
-button_pin = 1
+[programmer]
+port = /dev/cu.usbmodem1
 
 [router]
 host = 192.168.100.20
@@ -69,7 +68,7 @@ def test_адрес_приёмника_и_брокера_берут_у_маши�
     assert cfg.receiver_host == чужой_адрес
     assert cfg.broker_host == чужой_адрес
     # Платы стенда стоят на своих адресах: их подменять нечем.
-    assert cfg.metf_host == '192.168.100.21'
+    assert cfg.programmer_port == '/dev/cu.usbmodem1'
     assert cfg.router_host == '192.168.100.20'
 
 
@@ -187,7 +186,7 @@ def нашлась(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str]
 
     def find(kind: str, written: str, near: str) -> str:
         звали.append((kind, written, near))
-        return '192.168.100.3' if kind == 'metf' else ''
+        return '192.168.100.3' if kind == 'router' else ''
 
     monkeypatch.setattr(discover, 'find', find)
     return звали
@@ -198,7 +197,7 @@ def test_по_умолчанию_платы_не_ищут(файл: Path, чуж
     """Разбору настроек сеть не нужна: поиск ходит по ней и стоит секунды."""
     cfg = stand_config.load(файл)
 
-    assert cfg.metf_host == '192.168.100.21'
+    assert cfg.router_host == '192.168.100.20'
     assert нашлась == []
 
 
@@ -206,14 +205,17 @@ def test_с_поиском_адрес_платы_берут_у_найденно�
                                                  нашлась: list[Any]) -> None:
     cfg = stand_config.load(файл, search=True)
 
-    assert cfg.metf_host == '192.168.100.3'
+    assert cfg.router_host == '192.168.100.3'
     assert 'host = 192.168.100.3' in файл.read_text(encoding='utf-8')
-    assert ('metf', '192.168.100.21', чужой_адрес) in нашлась
+    assert ('router', '192.168.100.20', чужой_адрес) in нашлась
 
 
 def test_не_нашлась_значит_остаётся_записанное(файл: Path, чужой_адрес: str,
-                                               нашлась: list[Any]) -> None:
+                                               monkeypatch: pytest.MonkeyPatch) -> None:
     """Роутер поиск не нашёл: адрес из файла лучше пустоты - по нему хоть отказ понятен."""
+    from .. import discover
+    monkeypatch.setattr(discover, 'find', lambda kind, written, near: '')
+
     cfg = stand_config.load(файл, search=True)
 
     assert cfg.router_host == '192.168.100.20'
@@ -222,12 +224,12 @@ def test_не_нашлась_значит_остаётся_записанное(
 def test_переменная_окружения_главнее_поиска(файл: Path, чужой_адрес: str,
                                              нашлась: list[Any],
                                              monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv('HIL_METF_HOST', '10.0.0.7')
+    monkeypatch.setenv('HIL_ROUTER_HOST', '10.0.0.7')
 
     cfg = stand_config.load(файл, search=True)
 
-    assert cfg.metf_host == '10.0.0.7'
-    assert [k for k, *_ in нашлась] == ['router']
+    assert cfg.router_host == '10.0.0.7'
+    assert нашлась == []
 
 
 def test_без_роутера_сеть_устройства_берут_из_wifi(файл: Path, чужой_адрес: str) -> None:
@@ -256,4 +258,16 @@ def test_без_роутера_плату_точки_не_ищут(файл: Pat
     """Обход /24 ради платы, которой нет, стоит секунд и строки лжи в stand.ini."""
     stand_config.load(файл, search=True, norouter=True)
 
-    assert [k for k, *_ in нашлась] == ['metf']
+    assert нашлась == []
+
+
+def test_ключ_роутера_дописывается_под_заголовок(файл: Path) -> None:
+    """Строки host_key в файле нет - ключ встаёт в [router], комментарии целы."""
+    assert stand_config.pin_router_key(файл, 'SHA256:раз')
+    assert stand_config.pin_router_key(файл, 'SHA256:два')
+
+    text = файл.read_text(encoding='utf-8')
+    assert text.count('host_key') == 1
+    assert '[router]\nhost_key = SHA256:два\n' in text
+    assert 'Комментарий про host' in text
+    assert stand_config.load(файл).router_host_key == 'SHA256:два'

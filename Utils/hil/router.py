@@ -13,14 +13,14 @@
    "сеть есть, а сервер недоступен" и "облако молчит, брокер отвечает" (ради чего
    заводилась маска квитанции) не получить ничем другим.
 
-Транспорт по умолчанию - USB-serial. Команды ap/set_ap рвут Wi-Fi, а сетевая
-консоль живёт в той же сети; по проводу канал управления от этого не зависит.
+Консоль - SSH на порту 2323 по Ethernet (прошивка 2.5.0 и новее): команды ap/set_ap
+рвут Wi-Fi, а провод от них не зависит. USB-TTL нужен только немой плате.
 
-Утилита для рук:
+Утилита для рук (пароль и ключ хоста - из stand.ini):
 
-    python router.py --port /dev/cu.usbserial-XXXX ap off
-    python router.py --port /dev/cu.usbserial-XXXX channel 11
-    python router.py --port /dev/cu.usbserial-XXXX raw "show config"
+    python -m hil.router ap off
+    python -m hil.router channel 11
+    python -m hil.router raw "show config"
 """
 
 from __future__ import annotations
@@ -33,17 +33,22 @@ import time
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Any, Protocol
 
+import paramiko
 import serial
 from loguru import logger
 
 ROUTER_BAUD = 115200
 CONSOLE_PORT = 2323
+SSH_USER = 'admin'
+# Роутер молча закрывает простаивающее соединение; keepalive держит его живым
+SSH_KEEPALIVE_S = 30
+RECONNECT_S = 60.0
 PCAP_PORT = 19000
 
-# Прошивка отвечает по-разному в зависимости от команды, поэтому конца ответа
-# ждём по тишине в эфире, а не по приглашению.
+# По проводу конца ответа ждём по тишине, а не по приглашению: прошивка отвечает
+# по-разному в зависимости от команды. По SSH конец ответа - конец канала.
 IDLE_GAP = 0.25
 CMD_TIMEOUT = 4.0
 
@@ -76,11 +81,7 @@ class RouterError(RuntimeError):
 
 
 class Transport(Protocol):
-    def write_line(self, line: str) -> None: ...
-
-    def read_idle(self, timeout: float, idle: float) -> str: ...
-
-    def drain(self) -> None: ...
+    def run(self, line: str, timeout: float) -> str: ...
 
     def close(self) -> None: ...
 
@@ -113,102 +114,117 @@ class SerialTransport:
     def drain(self) -> None:
         self._ser.reset_input_buffer()
 
+    def run(self, line: str, timeout: float) -> str:
+        """Команда и ответ без эха: консоль по проводу повторяет введённое."""
+        self.drain()
+        self.write_line(line)
+        return _strip_echo(self.read_idle(timeout, IDLE_GAP), line)
+
     def close(self) -> None:
         self._ser.close()
 
 
-class TcpTransport:
+class SshTransport:
     """
-    Сетевая консоль (remote_console). Удобна, когда плата стоит далеко, но
-    командой ap disable вы рискуете отрезать сами себя, если консоль привязана
-    к точке доступа. Пароль тот же, что у веб-интерфейса, спрашивается сразу
-    после подключения.
+    Консоль по SSH: одно соединение на прогон, на каждую команду - свой канал
+    `exec_command`, ответ - всё, что команда напечатала до закрытия канала.
+
+    Ключ хоста сверяется с `host_key` (отпечаток `SHA256:…`). Пустое поле -
+    первый вход: ключ принимается и отдаётся `pin_key`, чтобы стенд записал его
+    в stand.ini. Чужой ключ - отказ: за адресом роутера стоит не он.
     """
 
-    def __init__(self, host: str, password: str, port: int = CONSOLE_PORT) -> None:
+    def __init__(self, host: str, password: str, host_key: str = '',
+                 port: int = CONSOLE_PORT,
+                 pin_key: Callable[[str], None] | None = None,
+                 client: Callable[[], Any] = paramiko.SSHClient) -> None:
         self._host = host
         self._password = password
         self._port = port
+        self.host_key = host_key
+        self._pin_key = pin_key
+        self._new_client = client
+        self._client: Any = None
         self._connect()
 
+    def _check_key(self, key: Any) -> None:
+        got = key.fingerprint
+        if not self.host_key:
+            self.host_key = got
+            logger.warning(f'роутер {self._host}: первый вход, ключ хоста {got} '
+                           f'принят и записан в stand.ini ([router] host_key)')
+            if self._pin_key is not None:
+                self._pin_key(got)
+            return
+        if got != self.host_key:
+            raise RouterError(
+                f'роутер {self._host}: ключ хоста {got}, а в stand.ini записан '
+                f'{self.host_key}. Если плату перепрошили с очисткой NVS - сотрите '
+                f'[router] host_key, иначе за этим адресом не наш роутер')
+
     def _connect(self) -> None:
-        self._sock = socket.create_connection((self._host, self._port), timeout=5.0)
-        self._sock.settimeout(0.2)
-        time.sleep(0.3)
-        self._sock.sendall(self._password.encode() + b'\r\n')
-        time.sleep(0.3)
-        self.drain()
+        transport = self
 
-    def reconnect(self, timeout: float = 60.0) -> None:
-        """
-        Поднять консоль заново после перезагрузки платы.
+        class Policy(paramiko.MissingHostKeyPolicy):
+            def missing_host_key(self, client: Any, hostname: str, key: Any) -> None:
+                transport._check_key(key)
 
-        Перезагрузка рвёт сокет, и это не ошибка: на проводе тот же restart
-        оставляет порт живым, а по сети консоль умирает вместе с платой.
-        """
+        client = self._new_client()
+        client.set_missing_host_key_policy(Policy())
         try:
-            self._sock.close()
-        except OSError:
-            pass
+            client.connect(self._host, port=self._port, username=SSH_USER,
+                           password=self._password, timeout=10.0, banner_timeout=10.0,
+                           auth_timeout=10.0, allow_agent=False, look_for_keys=False)
+        except paramiko.AuthenticationException as err:
+            raise RouterError(f'роутер {self._host}: пароль консоли не подошёл '
+                              f'([router] password в stand.ini)') from err
+        client.get_transport().set_keepalive(SSH_KEEPALIVE_S)
+        self._client = client
+
+    def reconnect(self, timeout: float = RECONNECT_S) -> None:
+        """
+        Поднять консоль заново: после перезагрузки платы или обрыва соединения.
+
+        Перезагрузка рвёт соединение, и это не ошибка: консоль умирает вместе с платой.
+        """
+        self.close()
         deadline = time.monotonic() + timeout
         while True:
             try:
                 self._connect()
                 return
-            except OSError:
+            except (OSError, EOFError, paramiko.SSHException):
                 if time.monotonic() > deadline:
                     raise
                 time.sleep(2.0)
 
-    def write_line(self, line: str) -> None:
+    def run(self, line: str, timeout: float) -> str:
         """
-        Отправить команду, подняв консоль заново, если она успела оборваться.
+        Команда и её вывод.
 
-        Плата закрывает сокет и сама по себе - за многочасовой прогон это
-        случается. Повтор здесь безопасен: отправить не удалось, значит до
-        роутера не дошло ничего, и команда не выполнится дважды.
+        Не открылся канал - команда до роутера не дошла, и повтор на поднятом заново
+        соединении безопасен. Оборвалось посреди ответа - ответ потерян, и выдать
+        обрывок значит соврать о состоянии роутера: `RouterError`.
         """
         try:
-            self._sock.sendall(line.encode() + b'\r\n')
-        except OSError:
+            _, out, err = self._client.exec_command(line, timeout=timeout)
+        except (OSError, EOFError, paramiko.SSHException):
             logger.warning('консоль роутера оборвалась, поднимаю заново')
             self.reconnect()
-            self._sock.sendall(line.encode() + b'\r\n')
-
-    def read_idle(self, timeout: float, idle: float) -> str:
-        deadline = time.monotonic() + timeout
-        chunks: list[bytes] = []
-        last = time.monotonic()
-        while time.monotonic() < deadline:
-            try:
-                data = self._sock.recv(4096)
-            except TimeoutError:
-                data = b''
-            except OSError as err:
-                # Консоль умерла на середине ответа. Ответ потерян, и выдать
-                # обрывок значит соврать о состоянии роутера, - поэтому
-                # поднимаем сокет ради следующих команд и говорим прямо.
-                self.reconnect()
-                raise RouterError(
-                    'консоль роутера оборвалась на середине ответа; '
-                    'связь восстановлена, но эту команду придётся повторить'
-                ) from err
-            if data:
-                chunks.append(data)
-                last = time.monotonic()
-            elif chunks and time.monotonic() - last >= idle:
-                break
-        return b''.join(chunks).decode(errors='replace')
-
-    def drain(self) -> None:
+            _, out, err = self._client.exec_command(line, timeout=timeout)
         try:
-            while self._sock.recv(4096):
-                pass
-        except (TimeoutError, OSError):
-            pass
+            data = out.read() + err.read()
+        except (OSError, EOFError, paramiko.SSHException) as error:
+            self.reconnect()
+            raise RouterError(
+                f'консоль роутера оборвалась на середине ответа на {line!r}; связь '
+                f'восстановлена, но команду придётся повторить') from error
+        return data.decode(errors='replace')
 
     def close(self) -> None:
-        self._sock.close()
+        if self._client is not None:
+            self._client.close()
+            self._client = None
 
 
 @dataclass
@@ -253,19 +269,19 @@ class NatRouter:
     # --- основа ----------------------------------------------------------
 
     def cmd(self, line: str, timeout: float = CMD_TIMEOUT) -> str:
-        """Отправить команду и вернуть ответ без эха самой команды."""
-        self._t.drain()
-        self._t.write_line(line)
-        out = self._t.read_idle(timeout, IDLE_GAP)
+        """Отправить команду и вернуть ответ."""
+        out = self._t.run(line, timeout)
 
         for marker in ERROR_MARKERS:
             if marker in out:
                 raise RouterError(f'{line!r}: {marker}\n{out.strip()}')
 
-        return _strip_echo(out, line)
+        return out.strip()
 
     def version(self) -> str:
-        return self.cmd('version').strip()
+        """Версия прошивки из `show ota` (`Firmware version: 2.5.0-waterius.1`)."""
+        m = re.search(r'Firmware version:\s*(\S+)', self.show('ota'))
+        return m.group(1) if m else '?'
 
     def show(self, section: str = 'config') -> str:
         return self.cmd(f'show {section}', timeout=6.0)
@@ -341,22 +357,19 @@ class NatRouter:
         команду приедет вперемешку с баннером.
 
         Факт перезагрузки судим по аптайму, а не по живому соединению: плата
-        уходит молча, не закрывая сокет, и запись в полуоткрытый проходит
-        успешно - данные просто ложатся в буфер. Сравниваем не с прежним
+        уходит молча, не закрывая соединение. Сравниваем не с прежним
         аптаймом, а с тем, каким он стал бы без перезагрузки: команда сразу
         после прошлого ребута иначе выглядит невыполненной.
         """
         before = self.uptime()
         try:
-            self._t.write_line('restart')
-        except OSError:
-            pass                       # плата успела уйти в перезагрузку
+            self._t.run('restart', 2.0)
+        except (RouterError, OSError, EOFError, paramiko.SSHException):
+            pass                       # плата ушла в перезагрузку, не дописав ответ
         time.sleep(wait)
         reconnect = getattr(self._t, 'reconnect', None)
         if reconnect is not None:
-            reconnect()                # сетевая консоль умирает вместе с платой
-        else:
-            self._t.drain()
+            reconnect()                # консоль по SSH умирает вместе с платой
         self.version()                 # готовность консоли - по ответу, а не по порту
         after = self.uptime()
         if before is not None and after is not None and after >= before + wait:
@@ -398,7 +411,7 @@ class NatRouter:
         молча, кладёт в NVS и применяет при следующем старте. Со страной `01`
         разрешены 1-11, и на 12-13 `ESP_ERROR_CHECK` роняет плату в abort()
         ещё до старта консолей - команду отдать будет уже нечем, лечится
-        только прошивальщиком (стенд metf этим переболел).
+        только прошивальщиком (соседний стенд этим переболел).
         """
         if channel not in range(0, MAX_AP_CHANNEL + 1):
             raise RouterError(
@@ -727,20 +740,21 @@ def _parse_kv(text: str) -> dict[str, str]:
 
 
 def connect(port: str | None = None, host: str | None = None,
-            password: str = '', ap_password: str = '') -> NatRouter:
-    """Собрать роутер поверх порта или поверх сетевой консоли."""
+            password: str = '', ap_password: str = '', host_key: str = '',
+            pin_key: Callable[[str], None] | None = None) -> NatRouter:
+    """Собрать роутер поверх провода или поверх консоли SSH."""
     if port:
         return NatRouter(SerialTransport(port), ap_password)
     if host:
-        return NatRouter(TcpTransport(host, password), ap_password)
+        return NatRouter(SshTransport(host, password, host_key, pin_key=pin_key),
+                         ap_password)
     raise ValueError('нужен --port или --host')
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description='Лабораторная точка доступа Ватериуса')
-    parser.add_argument('--port', help='последовательный порт, например /dev/cu.usbserial-XXXX')
-    parser.add_argument('--host', help='адрес сетевой консоли вместо порта')
-    parser.add_argument('--password', default='', help='пароль сетевой консоли')
+    parser.add_argument('--port', help='USB-TTL немой платы, например /dev/cu.usbserial-XXXX')
+    parser.add_argument('--config', default=None, help='путь к stand.ini: адрес, пароль, ключ')
 
     sub = parser.add_subparsers(dest='action', required=True)
     p_ap = sub.add_parser('ap', help='включить или выключить точку доступа')
@@ -763,7 +777,11 @@ def main() -> None:
     p_raw.add_argument('line')
 
     args = parser.parse_args()
-    router = connect(args.port, args.host, args.password)
+    from . import config
+    cfg = config.load(args.config)
+    router = connect(args.port, cfg.router_host, cfg.router_password,
+                     host_key=cfg.router_host_key,
+                     pin_key=lambda key: config.pin_router_key(args.config, key))
     try:
         if args.action == 'ap':
             router.ap(args.state == 'on')

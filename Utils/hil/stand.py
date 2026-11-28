@@ -1,5 +1,5 @@
 """
-Стенд целиком: плата-манипулятор, точка доступа, приёмник, брокер.
+Стенд целиком: программатор на гребёнке, точка доступа, приёмник, брокер.
 
 Тест должен читаться как сценарий, а не как разбор лога, поэтому здесь три
 вещи. Первая - setup(): любая настройка устройства одной строкой, без портала.
@@ -22,8 +22,8 @@ from typing import TYPE_CHECKING, Any
 from loguru import logger
 
 from .air import check as air_check
-from .clock import BoardClock
-from .config import StandConfig
+from .clock import RouterClock
+from .config import StandConfig, pin_router_key
 from .constants import (
     BASE_FACTOR,
     BUTTON_SESSION_WAIT_S,
@@ -39,9 +39,9 @@ from .constants import (
 )
 from .dut import BUTTON_SHORT_MS, Dut
 from .logwatch import MANUAL_TRANSMIT_MODE, WAKE_SESSION, LogWatcher, Session
-from .metf import Metf
-from .metf import check as metf_check
 from .net import Net
+from .programmer import Programmer, find_port
+from .programmer import check as programmer_check
 from .receiver import Receiver
 from .state import merge, same_value, unmet
 
@@ -110,32 +110,6 @@ REJOIN_TRIES = 3
 # Порог прошивки: `ESP8266/src/voltage.h`, ALERT_POWER_DIFF_MV
 ALERT_POWER_DIFF_MV = 100
 
-# Сколько опрашиваем METF, прежде чем считать её пропавшей. На слабой связи
-# плата переподключается сама, и одна осечка не значит ничего.
-METF_WAIT_S = 30.0
-METF_POLL_S = 3.0
-
-
-def _wait_metf(api: Metf, host: str) -> float:
-    """Дождаться METF. Вернуть, сколько ждали; 0 - отозвалась сразу."""
-    started = time.monotonic()
-    deadline = started + METF_WAIT_S
-    last: Exception | None = None
-    while True:
-        try:
-            api.ping()
-        except Exception as err:
-            last = err
-            if time.monotonic() >= deadline:
-                raise AssertionError(
-                    f'стенд: METF {host} не отозвалась за {METF_WAIT_S:.0f} с: '
-                    f'без неё нечем ни жать кнопку, ни читать лог. Последняя '
-                    f'ошибка\n{last}') from last
-            time.sleep(METF_POLL_S)
-            continue
-        return 0.0 if last is None else time.monotonic() - started
-
-
 class StandPowerWarning(UserWarning):
     """Питание стенда просело настолько, что прошивка сочла батарейки севшими."""
 
@@ -175,7 +149,7 @@ def _ensure_ap_channel(router: NatRouter, want: int) -> dict[str, str]:
 class Stand:
     """Фасад над всем железом стенда."""
 
-    def __init__(self, cfg: StandConfig, api: Metf, router: NatRouter | None,
+    def __init__(self, cfg: StandConfig, api: Programmer, router: NatRouter | None,
                  receiver: Receiver, mqtt: MqttWatch | None) -> None:
         self.cfg = cfg
         self.api = api
@@ -189,19 +163,19 @@ class Stand:
         self.power_sags = 0
         self.power_sag_max_mv = 0
         self.sessions = 0
-        # Паузы между импульсами тоже вычитывают лог: иначе кольцо METF
+        # Паузы между импульсами тоже вычитывают лог: иначе кольцо программатора
         # переполняется плановым сеансом, и тест падает на неполном логе
-        self.dut = Dut(api, cfg.button_pin, cfg.ch0_pin, cfg.ch1_pin, cfg.reset_pin,
-                       idle=self.log.poll, settle=self.settle_before_press)
+        self.dut = Dut(api, idle=self.log.poll, settle=self.settle_before_press)
         # Когда кончился последний увиденный сеанс: по нему отмеряется выдержка
         # перед нажатием кнопки
         self._session_at = 0.0
         # Когда последний раз жали кнопку: по нему wait_session понимает, что
         # сеанс заказан и устройство обязано проснуться сразу
         self._press_at = 0.0
-        # Время устройству отдаёт та же плата: тесты синхронизации не должны
-        # зависеть ни от интернета, ни от серверов на машине с прогоном
-        self.clock = BoardClock(cfg.metf_host)
+        # Время устройству отдаёт роутер стенда: тесты синхронизации не должны
+        # зависеть ни от интернета, ни от серверов на машине с прогоном. Без
+        # роутера его нет, и блок N пропускается
+        self.clock = RouterClock(router) if router else None
         # Сетевые сценарии ставит фильтр точки стенда: без неё их нет, и тесты,
         # которым они нужны, пропускает фикстура `net`
         self.net = Net(router, cfg.dut_ip, cfg.dut_mac,
@@ -226,36 +200,28 @@ class Stand:
 
     @classmethod
     def create(cls, cfg: StandConfig, mqtt: MqttWatch | None = None) -> Stand:
-        # До железа: полминуты ожидания METF ради отказа про незаполненный файл
-        # никому не нужны
+        # До железа: отказ про незаполненный файл дешевле поиска плат
         assert not cfg.norouter or cfg.wifi_ssid, (
             'прогон без роутера (--norouter) требует [wifi] ssid в stand.ini: '
             'точки стенда нет, и спросить имя сети устройства не у кого')
 
-        api = Metf(cfg.metf_host)
-        waited = _wait_metf(api, cfg.metf_host)
-        try:
-            api.serial_begin()
-        except Exception as err:
-            raise AssertionError(
-                f'стенд: METF {cfg.metf_host} отвечает, но не открыла UART '
-                f'устройства: читать лог нечем\n{err}') from err
-        if waited:
-            logger.info(f'стенд: METF {cfg.metf_host} отозвалась через {waited:.0f} с')
+        api = find_port(cfg.programmer_port)
+        programmer_check(api)
+        api.log_begin()
 
         router: NatRouter | None = None
         if cfg.norouter:
-            # Точки стенда нет: ломать в эфире нечего, поэтому и запрет «METF
-            # сидит на точке стенда» не про этот режим. Канал сверять не с чем -
-            # сеть чужая, и в скане остаётся то, ради чего он и нужен: соседи
+            # Точки стенда нет: канал сверять не с чем - сеть чужая, и в скане
+            # остаётся то, ради чего он и нужен: соседи
             logger.info(f'стенд: без роутера, сеть устройства «{cfg.wifi_ssid}»')
-            metf_check(api, cfg.metf_host)
             air_check(cfg.wifi_ssid)
         else:
             router_at = cfg.router_port or cfg.router_host
             try:
                 router = connect(cfg.router_port or None, cfg.router_host or None,
-                                 cfg.router_password, cfg.ap_password)
+                                 cfg.router_password, cfg.ap_password,
+                                 host_key=cfg.router_host_key,
+                                 pin_key=lambda key: pin_router_key(cfg.path, key))
                 version = router.version()
             except Exception as err:
                 raise AssertionError(
@@ -267,12 +233,7 @@ class Stand:
             # точку на запасной канал и возвращают; если прогон умер посреди них,
             # здесь точка и вернётся на своё место.
             ap = _ensure_ap_channel(router, cfg.ap_channel)
-
-            # Досмотр METF идёт после роутера: имя точки стенда спрашивается у него,
-            # а без имени не проверить главного - что управляющий канал не лежит на
-            # том, что тесты ломают
             ap_ssid = cfg.ap_ssid or ap.get('ssid', '')
-            metf_check(api, cfg.metf_host, ap_ssid, int(ap.get('channel', 0) or 0))
             air_check(ap_ssid, int(ap.get('channel', 0) or 0), cfg.ap_bandwidth)
 
             # Прошлый прогон мог умереть с выключенной точкой или правилом фильтра.
@@ -294,22 +255,14 @@ class Stand:
         return stand
 
     def release_lines(self) -> None:
-        """
-        Отпустить линии METF после теста, пережив её отлучку.
-
-        Плата отвечает по радио и пропадает на секунды сама по себе. Прежде
-        уборка падала на первом же отказе, и упавший тест получал вдогонку
-        ошибку в teardown - а линии оставались прижатыми к земле на весь
-        оставшийся прогон. Ждём схождения и только потом отпускаем; не
-        дождались - отказ по делу: следующему тесту плата нужна не меньше.
-        """
-        _wait_metf(self.api, self.cfg.metf_host)
+        """Отпустить линии после теста, не закрывая приём лога (`Dut.init`)."""
         self.dut.init()
 
     def close(self) -> None:
         self.receiver.stop()
         if self.router is not None:
             self.router.close()
+        self.api.close()
 
     @property
     def ap_ssid(self) -> str:
@@ -365,10 +318,10 @@ class Stand:
             if not self.log.wait_start(WAKE_FIRST_LINE_S):
                 raise AssertionError(
                     f'Ватериус не проснулся по кнопке: за {WAKE_FIRST_LINE_S:.0f} с '
-                    f'на UART ни одной строки при живой связи с METF. По кнопке '
-                    f'устройство просыпается сразу, так что ждать дольше нечего - '
-                    f'ищите нажатие: дошло ли оно до платы (строка «линия … '
-                    f'расписка 202»), питание и сам шлейф')
+                    f'на UART ни одной строки. По кнопке устройство просыпается '
+                    f'сразу, так что ждать дольше нечего - ищите нажатие: дошло ли '
+                    f'оно до платы (строка «пачка «button …»» в логе прогона), '
+                    f'питание и прищепку')
             # Потолок вызова отвечает на вопрос «придёт ли сеанс», а он уже
             # пришёл: начатый сеанс живёт ровно до аварийного потолка attiny.
             # На 20 с падали G4a и G4b - первый сеанс после восстановления
@@ -660,18 +613,11 @@ class Stand:
         живую ЕСП без attiny и лог без начала сеанса (программатор на том же
         UART рвёт поток), и каждое называет своими словами.
         """
-        try:
-            self.dut.api.ping()
-        except Exception as err:
-            raise AssertionError(
-                f'плата METF {self.cfg.metf_host} не отвечает: без неё стенду '
-                f'нечем ни жать кнопку, ни читать лог\n{err}') from err
-
         wake = self.log.wait_wake(timeout)
         logger.info(f'стартовый лог за {wake.waited:.1f} с: {wake.dump()}')
         if wake.state != WAKE_SESSION:
             raise AssertionError(
-                wake.describe(f'кнопки METF (GPIO{self.cfg.button_pin})'))
+                wake.describe('кнопки (линия button программатора)'))
 
     def identify(self, timeout: float = 180.0) -> None:
         """
@@ -816,35 +762,51 @@ class Stand:
         растёт, метка в посылке идёт по оценке. Ни один тест от этого не
         покраснеет, просто проверять будет слегка другое устройство.
 
-        Часы платы ставятся настоящие: сдвиг - приём блока N и только его,
+        Часы роутера ставятся настоящие: сдвиг - приём блока N и только его,
         во всех остальных метка времени сверяется с реальной.
 
         Адрес сервера в посылку не попадает (`json.cpp` отдаёт только
         `ntp_errors`), поэтому в эталон его не положить и сверять при каждом
         тесте нечем: ставим один раз за прогон, а блок N возвращает своё сам.
+
+        Без роутера сервера на стенде нет: устройство берёт время из своего
+        `ntp_server`, и прогон об этом говорит.
         """
+        if self.clock is None:
+            logger.warning('без роутера сервера времени на стенде нет: устройство '
+                           'берёт время откуда настроено, блок N пропускается')
+            return
         assert self.clock.available(), (
-            f'на плате {self.cfg.metf_host} нет сервера времени: нужен METF 6. '
-            f'Прошейте плату - иначе время придёт из интернета, и прогон будет '
-            f'зависеть от него молча')
+            'на роутере стенда нет сервера времени (`ntp stat` не отвечает): нужна '
+            'прошивка 2.5.0-waterius.1 и новее (01_wt32-eth01.md) - иначе время '
+            'придёт из интернета, и прогон будет зависеть от него молча')
 
         self.clock.start(int(time.time()))
-        self.setup(ntp_server=self.cfg.metf_host, timeout=timeout)
-        logger.info(f'источник времени устройства: плата {self.cfg.metf_host}')
+        self.setup(ntp_server=self.ntp_server, timeout=timeout)
+        logger.info(f'источник времени устройства: роутер стенда {self.ntp_server}')
+
+    @property
+    def ntp_server(self) -> str:
+        """Адрес сервера времени для устройства: точка стенда, как её печатает роутер."""
+        assert self.router is not None
+        address = self.router.config().get('ip_address', '')
+        assert address, ('роутер не назвал адрес точки (`show config`, строка '
+                         '«IP Address»): прописать устройству сервер времени нечем')
+        return address
 
     def arm_clock(self) -> None:
         """
         Переподнять часы платы, если она их потеряла.
 
-        Часов реального времени у платы нет: перезагрузка или перепрошивка
-        стирают назначенный момент, и сервер начинает молча выбрасывать
-        запросы. Проверка стоит одного HTTP-запроса и ни одного сеанса
-        устройства, поэтому её не жалко делать перед каждым тестом.
+        Перезагрузка роутера (её делают тесты смены канала) останавливает
+        сервер, и устройство получило бы отказ. Проверка стоит одной команды
+        консоли и ни одного сеанса устройства, поэтому её не жалко делать
+        перед каждым тестом.
         """
-        if self.clock.stat()['running']:
+        if self.clock is None or self.clock.stat()['running']:
             return
 
-        logger.warning('плата потеряла часы, поднимаем заново')
+        logger.warning('роутер остановил сервер времени (перезагружался), поднимаем заново')
         self.clock.start(int(time.time()))
 
     def ensure_mqtt(self, timeout: float = 300.0) -> bool:
@@ -1158,7 +1120,7 @@ class Stand:
         ЕСП до 2.0.53 применяет параметры в порядке ключей ответа.
 
         Автодискавери по умолчанию выключено: сеанс с ним печатает сотни строк и
-        вытесняет из кольца METF начало следующего.
+        вытесняет из кольца программатора начало следующего.
 
         Облако - отдельный получатель со своим тумблером. Прогон без него
         (`--nocloud`) тумблер выключает: в интернет устройство не ходит, а
@@ -1172,8 +1134,9 @@ class Stand:
         и почту прошивка принимает под одним `if (sett.waterius_on)`
         (active_point_api.cpp, applyNonCheckBoxParameter).
         """
-        want: dict[str, Any] = {'http_on': 1, 'http_url': self.cfg.http_url,
-                                'ntp_server': self.cfg.metf_host}
+        want: dict[str, Any] = {'http_on': 1, 'http_url': self.cfg.http_url}
+        if self.clock is not None:
+            want['ntp_server'] = self.ntp_server
         if self.cfg.nocloud:
             want['waterius_on'] = 0
         else:

@@ -55,7 +55,7 @@ def test_скан_называет_канал_полосу_и_сигнал(scann
     ours = next(n for n in scanned if n.ssid == 'waterius_stand')
     assert (ours.channel, ours.width, ours.rssi) == (6, 40, -41)
     # Своя сеть лежит в другом разделе вывода, но нужна так же: в ней сидят
-    # Мак с приёмником и METF
+    # Мак с приёмником и брокером
     assert next(n for n in scanned if n.ssid == 'dav').channel == 4
     # Заголовки разделов - не сети
     assert not [n for n in scanned if n.ssid.endswith(('Networks', 'Information'))]

@@ -8,7 +8,6 @@
 
 from __future__ import annotations
 
-import threading
 import time
 from typing import TYPE_CHECKING, Any
 
@@ -30,7 +29,7 @@ pytestmark = pytest.mark.stand
 PULSES = 3
 
 # Импульс электронного выхода короткий: у газового счётчика Гранд 0,7-1,5 мс.
-# Миллисекунда - предел стенда: выдержку отмеряет плата, а заказывается она в
+# Миллисекунда - предел стенда: выдержку отмеряет программатор, а заказывается она в
 # миллисекундах
 SHORT_PULSE_MS = 1
 
@@ -122,13 +121,13 @@ def test_D3_electricity_counts_kilowatt_hours(stand: Stand, channel: int) -> Non
     # неизвестной
     got = float(session.payload[f'ch{channel}'])
     counted = int(session.payload[f'imp{channel}']) - imp_before
-    # Сперва воздействие: плата отдаёт расписку о фронтах, которые правда выдала
+    # Сперва воздействие: программатор отдаёт расписку о фронтах, которые правда выдал
     # (`/pulse/stat`), и без неё «дошло 9 из 10» не отличить от «стенд не довёл»
     assert подано == per_kwh, (
-        f'плата выдала {подано} замыканий из {per_kwh} по своей расписке: '
+        f'программатор выдал {подано} замыканий из {per_kwh} по своей расписке: '
         f'воздействия не было, и об учёте прошивки этот тест ничего не говорит')
     assert counted == per_kwh, (
-        f'плата выдала {per_kwh} замыканий, а attiny насчитала {counted}: '
+        f'программатор выдал {per_kwh} замыканий, а attiny насчитала {counted}: '
         f'импульс потерян между выводом платы и входом устройства - шлейф, '
         f'уровень или сам вход. Показания: было {kwh_before}, стало {got}')
     assert abs(got - kwh_before - 1.0) < 0.001, (
@@ -200,8 +199,8 @@ def test_D5b_electronic_input_counts_fast_pulses(stand: Stand) -> None:
     подано = stand.dut.pulse(channel=1, count=FAST_PULSES, width_ms=FAST_PULSE_MS,
                              gap=(FAST_STEP_MS - FAST_PULSE_MS) / 1000)
     assert подано == FAST_PULSES, (
-        f'стенд заказал {FAST_PULSES} импульсов по {FAST_PULSE_MS} мс, а плата '
-        f'по своей расписке выдала {подано}: это про стенд, а не про прошивку\n'
+        f'стенд заказал {FAST_PULSES} импульсов по {FAST_PULSE_MS} мс, а программатор '
+        f'по своей расписке выдал {подано}: это про стенд, а не про прошивку\n'
         f'{stand.dut.delivered(channel=1)}')
     stand.dut.press_button()
     session = stand.wait_session(timeout=120, mode=MANUAL_TRANSMIT_MODE)
@@ -209,11 +208,10 @@ def test_D5b_electronic_input_counts_fast_pulses(stand: Stand) -> None:
     session.assert_delta(channel=1, liters=FAST_PULSES * BASE_FACTOR)
 
 
-# Серия поверх сеанса: импульс раз в две секунды двадцать секунд, нажатие на
-# четвёртой - сеанс по кнопке длится столько же, и серия его накрывает
+# Серия поверх сеанса: импульс раз в две секунды, двадцать секунд, нажатие после
+# второго - сеанс по кнопке длится столько же, и серия его накрывает
 DURING_PULSES = 10
-DURING_GAP_S = 2.0
-PRESS_AFTER_S = 4.0
+DURING_STEP_MS = 2000
 
 
 def counted(session: Any, channel: int = 1) -> str:
@@ -232,48 +230,13 @@ def test_D7_pulses_during_session_are_not_lost(stand: Stand) -> None:
     импульсы обязаны приехать следующим. Утверждается сумма двух приростов.
     """
     stand.setup(channel=1, factor=BASE_FACTOR, ctype=NAMUR, period_min=120)
-    stand.reset_observers()
 
-    # Поток молча съедает исключение, а join о нём не скажет: серия, сорвавшаяся
-    # на осечке связи с платой, выглядела бы как потерянные приросты
-    итог: list[int] = []
-    беда: list[BaseException] = []
+    # Серия и нажатие - одна пачка: расписка программатора помнит только последнюю,
+    # и нажатие отдельной командой затёрло бы расписку серии
+    series, first, second = over_session(
+        stand, {1: (IMPULSE_WIDTH_MS, 0)}, count=DURING_PULSES, step_ms=DURING_STEP_MS)
 
-    def поезд() -> None:
-        try:
-            итог.append(stand.dut.pulses(
-                channel=1, count=DURING_PULSES, gap=DURING_GAP_S))
-        except BaseException as err:            # noqa: BLE001
-            беда.append(err)
-
-    train = threading.Thread(target=поезд)
-    train.start()
-    try:
-        time.sleep(PRESS_AFTER_S)
-        stand.dut.press_button()
-        first = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
-    finally:
-        train.join()
-
-    stand.reset_observers()
-    stand.dut.press_button()
-    second = stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
-
-    got = (first.expect_payload('первый сеанс')['delta1']
-           + second.expect_payload('второй сеанс')['delta1'])
-    # Счётчик attiny в отказ: он делит вину. Насчитала attiny все импульсы -
-    # прирост потеряла ЕСП; насчитала меньше - импульс не доехал до платы, и
-    # виноват стенд или дребезг, а не прошивка
-    if беда:
-        raise AssertionError(
-            f'стенд не довёл серию импульсов: {беда[0]!r}') from беда[0]
-    assert итог == [DURING_PULSES], (
-        f'плата приняла {итог} замыканий из {DURING_PULSES}: воздействия не было, '
-        f'и о потере приростов этот тест не говорит')
-    assert got == DURING_PULSES * BASE_FACTOR, (
-        f"приросты {first.payload['delta1']} + {second.payload['delta1']}, "
-        f'плата выдала {DURING_PULSES} замыканий по {BASE_FACTOR} л\n'
-        f'счёт attiny: {counted(first)} -> {counted(second)}')
+    assert_counted_over_session(series, first, second, channel=1, count=DURING_PULSES)
 
 
 # Серия начинается до нажатия и идёт дальше, через пробуждение и сеанс
@@ -310,7 +273,7 @@ def assert_counted_over_session(series: Series, first: Any, second: Any,
     """Импульсы входа поданы целиком, и сумма двух приростов равна поданному."""
     closures = series.closures[channel]
     assert len(closures) == count, (
-        f'на входе {channel} плата по расписке выдала {len(closures)} импульсов '
+        f'на входе {channel} программатор по расписке выдал {len(closures)} импульсов '
         f'из {count}: это про стенд, а не про прошивку')
 
     got = (first.expect_payload('первый сеанс')[f'delta{channel}']
@@ -318,7 +281,7 @@ def assert_counted_over_session(series: Series, first: Any, second: Any,
     assert got == count * BASE_FACTOR, (
         f"delta{channel}: {first.payload[f'delta{channel}']} + "
         f"{second.payload[f'delta{channel}']}, а подано {count} импульсов "
-        f'по {BASE_FACTOR} л, нажатие {series.press} по часам платы\n'
+        f'по {BASE_FACTOR} л, нажатие {series.press} по часам программатора\n'
         f'счёт attiny: {counted(first, channel)} -> {counted(second, channel)}')
 
 
@@ -414,10 +377,10 @@ def test_D9_glitches_and_bounce_are_not_counted(stand: Stand) -> None:
     прошло три пустых опроса. Первое проверяют короткие всплески, второе - два
     замыкания с паузой в треть секунды: это один импульс с дребезгом.
 
-    Воздействие уходит одной пачкой, и интервалы в ней отмеряет плата. Пока
+    Воздействие уходит одной пачкой, и интервалы в ней отмеряет программатор. Пока
     паузу набирал стенд, к ней приклеивалась дорога запроса - заказанные 0,3 с
     приходили как 2 с, attiny справедливо считала два импульса, а падал тест
-    прошивки. Поэтому перед приговором стенд спрашивает плату, что подал.
+    прошивки. Поэтому перед приговором стенд спрашивает программатор, что подано.
     """
     stand.setup(channel=1, factor=BASE_FACTOR, ctype=NAMUR, period_min=120)
 
@@ -549,7 +512,7 @@ def test_D11_two_input_types_count_together(stand: Stand) -> None:
     лишнего от чужих фронтов.
 
     Одновременность здесь заказана, а не подгадана: обе линии уезжают одной
-    пачкой, и плата выставляет их от одного старта.
+    пачкой, и программатор выставляет их от одного старта.
     """
     closed_ms = IMPULSE_WIDTH_MS
     gap_ms = int(IMPULSE_GAP_S * 1000)

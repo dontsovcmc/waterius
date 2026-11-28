@@ -61,7 +61,7 @@ def after_reset(cfg: Any, stand: Any) -> Iterator[dict]:
     for channel in (HOT, COLD):
         подано = stand.dut.pulse(channel=channel, count=PULSES_BEFORE_RESET)
         assert подано == PULSES_BEFORE_RESET, (
-            f'вход {channel}: плата выдала {подано} импульсов из {PULSES_BEFORE_RESET}')
+            f'вход {channel}: программатор выдал {подано} импульсов из {PULSES_BEFORE_RESET}')
     stand.dut.press_button()
     stand.wait_session(timeout=180, mode=MANUAL_TRANSMIT_MODE)
 

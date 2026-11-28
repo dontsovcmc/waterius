@@ -1,21 +1,20 @@
 """
-Поиск плат стенда, когда адрес из `stand.ini` устарел.
+Поиск роутера стенда, когда адрес из `stand.ini` устарел. Программатор ищется по USB
+(`programmer.find_port`).
 
 Адреса раздаёт DHCP домашнего роутера, и они переезжают сами: 29 сентября
-после перезагрузки роутера METF, точка стенда и Мак получили новые, а в файле
+после перезагрузки роутера точка стенда и Мак получили новые, а в файле
 остались вчерашние. Стенд от этого не жалуется - он молчит по таймауту и
 падает на первой же фикстуре, не назвав причины.
 
 Ищем в три хода, от дешёвого к дорогому:
 
 1. записанный адрес - если отвечает, никакого поиска не нужно;
-2. имя в mDNS - `metf.local` (прошивка METF с пятнадцатого протокола),
-   `esp32-nat-router.local` (прошивка точки стенда);
+2. имя в mDNS - `esp32-nat-router.local` (прошивка точки стенда);
 3. обход своей сети - последнее средство, когда имя не разошлось или плата
    старее.
 
-Опознаём каждую плату её собственным ответом, а не просто открытым портом:
-в домашней сети живут чужие устройства, и «кто-то ответил по 80» - не улика.
+Опознаём плату её консолью на порту 2323: в домашней сети он больше ничей.
 """
 
 from __future__ import annotations
@@ -24,7 +23,6 @@ import socket
 from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 
-import requests
 from loguru import logger
 
 # Плата отвечает за доли секунды; секунды здесь - это уже чужое устройство,
@@ -34,20 +32,6 @@ PROBE_S = 1.0
 WORKERS = 64
 # Консоль точки стенда (router.py: CONSOLE_PORT)
 CONSOLE_PORT = 2323
-
-
-def metf_answers(host: str) -> bool:
-    """
-    METF по `GET /version`: она отвечает голым числом протокола.
-
-    Не `/wifi`: он есть только с девятого протокола и отдаёт объект, в котором
-    легко узнать чужой JSON, а `/version` короток и есть у любой прошивки METF.
-    """
-    try:
-        answer = requests.get(f'http://{host}/version', timeout=PROBE_S)
-    except (requests.RequestException, OSError):
-        return False
-    return answer.ok and answer.text.strip().isdigit()
 
 
 def router_answers(host: str) -> bool:
@@ -61,7 +45,6 @@ def router_answers(host: str) -> bool:
 
 # Плата: как зовётся в mDNS и чем себя выдаёт
 BOARDS = {
-    'metf': ('metf.local', metf_answers),
     'router': ('esp32-nat-router.local', router_answers),
 }
 
